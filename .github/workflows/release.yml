@@ -1,0 +1,262 @@
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'package.json' ]
+
+env:
+  DOCKERHUB_REGISTRY: docker.io
+  GHCR_REGISTRY: ghcr.io
+
+jobs:
+  check-version:
+    name: Check Version Change
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      should_release: ${{ steps.check_version.outputs.should_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Check if version changed
+        id: check_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Check if tag already exists
+          if git show-ref --tags --quiet --verify -- "refs/tags/v$CURRENT_VERSION"; then
+            echo "Tag v$CURRENT_VERSION already exists. Skipping release."
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected: $CURRENT_VERSION"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+  docker-amd64:
+    name: Build and Push Docker Image (AMD64)
+    runs-on: ubuntu-latest
+    needs: [check-version]
+    if: needs.check-version.outputs.should_release == 'true'
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images (AMD64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-amd64
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:latest-amd64
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-amd64
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:latest-amd64
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+
+  docker-arm64:
+    name: Build and Push Docker Image (ARM64)
+    runs-on: ubuntu-24.04-arm
+    needs: [check-version]
+    if: needs.check-version.outputs.should_release == 'true'
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images (ARM64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-arm64
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:latest-arm64
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-arm64
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:latest-arm64
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+
+  docker-manifest:
+    name: Create Multi-Architecture Manifest
+    runs-on: ubuntu-latest
+    needs: [check-version, docker-amd64, docker-arm64]
+    if: needs.check-version.outputs.should_release == 'true'
+    permissions:
+      packages: write
+      contents: read
+    outputs:
+      docker_tags: ${{ steps.meta.outputs.tags }}
+      ghcr_tags: ${{ steps.ghcr_meta.outputs.tags }}
+
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker Hub
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website
+          tags: |
+            type=raw,value=${{ needs.check-version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Extract metadata for GitHub Container Registry
+        id: ghcr_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website
+          tags: |
+            type=raw,value=${{ needs.check-version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Create and push multi-arch manifests
+        run: |
+          # Docker Hub manifests
+          docker buildx imagetools create -t ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }} \
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-amd64 \
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-arm64
+          
+          docker buildx imagetools create -t ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:latest \
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:latest-amd64 \
+            ${{ env.DOCKERHUB_REGISTRY }}/EmberlyOSS/Website:latest-arm64
+          
+          # GitHub Container Registry manifests
+          docker buildx imagetools create -t ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }} \
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-amd64 \
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}-arm64
+          
+          docker buildx imagetools create -t ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:latest \
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:latest-amd64 \
+            ${{ env.GHCR_REGISTRY }}/EmberlyOSS/Website:latest-arm64
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [check-version, docker-manifest]
+    if: needs.check-version.outputs.should_release == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get commit messages
+        id: get_commits
+        run: |
+          # Get the latest tag (if any)
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            # If no previous tag exists, get all commits
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+          else
+            # Get commits between previous tag and current
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges ${PREV_TAG}..HEAD)
+          fi
+          
+          # If no commits found, add a default message
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- Version bump to ${{ needs.check-version.outputs.version }}"
+          fi
+          
+          echo "COMMITS<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate Release Body
+        id: release_body
+        run: |
+          cat << 'EOF' > release_body.md
+          ## What's Changed
+
+          ${{ steps.get_commits.outputs.COMMITS }}
+
+          ## Docker Images
+          - `docker.io/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}`
+          - `ghcr.io/EmberlyOSS/Website:${{ needs.check-version.outputs.version }}`
+
+          **Deploy with Railway:** https://railway.com/template/JVT41u?referralCode=R5s8WT
+          EOF
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ needs.check-version.outputs.version }}" -m "Release v${{ needs.check-version.outputs.version }}"
+          git push origin "v${{ needs.check-version.outputs.version }}"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: v${{ needs.check-version.outputs.version }}
+          draft: false
+          prerelease: false
+          body_path: release_body.md 
