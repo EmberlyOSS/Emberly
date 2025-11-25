@@ -277,7 +277,7 @@ function SimpleThemeCustomizer({
               background: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/20 pointer-events-none" />
             <div className="absolute inset-0 flex items-center justify-center font-medium tracking-wide text-[13px] text-white text-shadow-sm">
               {name}
             </div>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import MiniGame from '@/components/games/mini-game'
 import { Icons } from '@/components/shared/icons'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,7 +28,7 @@ export default function NotFound() {
             <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
               <div>
                 <h1 className="text-5xl md:text-6xl font-extrabold">
-                  404 — Page not found
+                  Page not found
                 </h1>
                 <p className="mt-4 text-muted-foreground max-w-xl">
                   The page you were looking for doesn't exist or has been moved.
@@ -39,9 +40,12 @@ export default function NotFound() {
                     <Link href="/">Go home</Link>
                   </Button>
 
-                  <Button asChild variant="ghost" size="lg">
-                    <Link href="/discord">Join Discord</Link>
-                  </Button>
+                  <div>
+                    {/* Mini-game launcher */}
+                    {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+                    {/* MiniGame is a client component */}
+                    <MiniGame />
+                  </div>
                 </div>
               </div>
 
@@ -55,45 +59,51 @@ export default function NotFound() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-md bg-primary/10 flex items-center justify-center h-10 w-10">
-                        🏠
-                      </div>
-                      <div>
-                        <Link href="/" className="font-medium">
+                      <Link href="/" className="font-medium inline-flex gap-3">
+                        <div className="p-2 rounded-md bg-primary/10 flex items-center justify-center h-10 w-10">
+                          🏠
+                        </div>
+                        <div>
                           Home
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          Start from the Emberly homepage
+                          <div className="text-xs text-muted-foreground">
+                            Start from the Emberly homepage
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-md bg-accent/10 flex items-center justify-center h-10 w-10">
-                        💬
-                      </div>
-                      <div>
-                        <Link href="/discord" className="font-medium">
+                      <Link
+                        href="/discord"
+                        className="font-medium inline-flex gap-3"
+                      >
+                        <div className="p-2 rounded-md bg-primary/10 flex items-center justify-center h-10 w-10">
+                          💬
+                        </div>
+                        <div>
                           Discord
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          Get help and chat with the community
+                          <div className="text-xs text-muted-foreground">
+                            Get help and chat with the community
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-md bg-primary/10 flex items-center justify-center h-10 w-10">
-                        ⚖️
-                      </div>
-                      <div>
-                        <Link href="/legal/terms" className="font-medium">
-                          Legal
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          Terms, privacy, and cookies
+                      <Link
+                        href="/legal"
+                        className="font-medium inline-flex gap-3"
+                      >
+                        <div className="p-2 rounded-md bg-primary/10 flex items-center justify-center h-10 w-10">
+                          ⚖️
                         </div>
-                      </div>
+                        <div>
+                          Legal
+                          <div className="text-xs text-muted-foreground">
+                            Terms, privacy, and cookies
+                          </div>
+                        </div>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>
