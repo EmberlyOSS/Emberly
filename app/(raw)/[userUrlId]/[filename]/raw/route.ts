@@ -190,7 +190,21 @@ export async function GET(
 
     return new NextResponse(createRobustStream(stream), { headers })
   } catch (error) {
-    console.error('File serve error:', error)
+    // Log richer error details for debugging (AWS SDK errors include $metadata)
+    const errAny = error as any
+    console.error('File serve error:', errAny)
+    try {
+      console.error('File serve error details:', {
+        name: errAny?.name,
+        code: errAny?.code || errAny?.name,
+        fault: errAny?.$fault,
+        awsMetadata: errAny?.$metadata,
+        message: errAny?.message,
+      })
+    } catch {
+      // ignore logging errors
+    }
+
     if (error instanceof Error && error.message.includes('NoSuchKey')) {
       return new Response(null, { status: 404 })
     }

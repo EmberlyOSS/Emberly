@@ -109,7 +109,20 @@ export async function GET(
 
     return new NextResponse(stream as unknown as ReadableStream, { headers })
   } catch (error) {
+    const errAny = error as any
     logger.error('File serve error:', error as Error)
+    try {
+      logger.error('File serve error details', {
+        name: errAny?.name,
+        code: errAny?.code || errAny?.name,
+        fault: errAny?.$fault,
+        awsMetadata: errAny?.$metadata,
+        message: errAny?.message,
+      })
+    } catch {
+      // ignore logging errors
+    }
+
     return new Response(null, { status: 404 })
   }
 }
