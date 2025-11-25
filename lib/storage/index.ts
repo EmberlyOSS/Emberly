@@ -20,10 +20,22 @@ export async function getStorageProvider(): Promise<StorageProvider> {
 
   if (provider === 's3') {
     try {
+      // Decide whether to use path-style addressing. If the admin explicitly
+      // set `forcePathStyle` use that. Otherwise, default to `true` for custom
+      // endpoints (non-AWS) to avoid virtual-host DNS issues like
+      // `bucket.custom-endpoint.example` failing to resolve.
+      const explicitForce = typeof s3.forcePathStyle === 'boolean'
+      const isAwsEndpoint =
+        !!s3.endpoint && /(^|\.)amazonaws\.com$/.test(s3.endpoint)
+      const forcePathStyle = explicitForce
+        ? s3.forcePathStyle
+        : !!s3.endpoint && !isAwsEndpoint
+
       logger.info('Initializing S3 storage provider', {
         bucket: s3.bucket,
         region: s3.region,
         endpoint: s3.endpoint,
+        forcePathStyle,
       })
 
       storageProvider = new S3StorageProvider({
@@ -32,7 +44,7 @@ export async function getStorageProvider(): Promise<StorageProvider> {
         accessKeyId: s3.accessKeyId,
         secretAccessKey: s3.secretAccessKey,
         endpoint: s3.endpoint || undefined,
-        forcePathStyle: s3.forcePathStyle,
+        forcePathStyle,
       })
 
       logger.info('S3 storage provider initialized successfully')
