@@ -50,10 +50,10 @@ export default async function HomePage() {
               </Button>
 
               <Link
-                href="/auth/login"
+                href="/docs"
                 className="text-sm underline text-muted-foreground"
               >
-                Sign in
+                Documentation
               </Link>
             </div>
 

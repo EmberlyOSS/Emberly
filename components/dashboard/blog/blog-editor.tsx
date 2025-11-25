@@ -8,6 +8,15 @@ import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
 type Props = {
   postId?: string
   onSaved?: () => void
@@ -107,43 +116,47 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
     >
       <div className="grid grid-cols-1 gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
+          <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
-            className="input w-full"
+            className="w-full"
           />
-          <input
+          <Input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
             placeholder="Slug (url-friendly)"
-            className="input w-full"
+            className="w-full"
           />
         </div>
 
         <div>
-          <input
+          <Input
             value={excerpt}
             onChange={(e) => setExcerpt(e.target.value)}
             placeholder="Excerpt"
-            className="input w-full"
+            className="w-full"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border rounded-md overflow-hidden">
+          <div className="border rounded-md overflow-hidden bg-background/60">
             <div className="px-3 py-2 bg-muted/10 border-b">
               Editor (Markdown)
             </div>
-            <CodeMirror
-              value={content}
-              height="320px"
-              extensions={[markdown()]}
-              onChange={(value) => setContent(value)}
-            />
+            <div className="p-2">
+              <CodeMirror
+                value={content}
+                height="320px"
+                extensions={[markdown()]}
+                onChange={(value) => setContent(value)}
+                theme="dark"
+                className="text-foreground rounded"
+              />
+            </div>
           </div>
 
-          <div className="border rounded-md overflow-hidden">
+          <div className="border rounded-md overflow-hidden bg-background/60">
             <div className="px-3 py-2 bg-muted/10 border-b">Preview</div>
             <div className="p-4 prose max-w-none overflow-auto">
               <ReactMarkdown
@@ -156,22 +169,23 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="select"
-          >
-            <option value="DRAFT">Draft</option>
-            <option value="PUBLISHED">Published</option>
-            <option value="ARCHIVED">Archived</option>
-          </select>
+        <div className="grid grid-cols-1 gap-4 md:flex md:items-center md:space-x-4">
+          <Select value={status} onValueChange={(v) => setStatus(v)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="PUBLISHED">Published</SelectItem>
+              <SelectItem value="ARCHIVED">Archived</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <input
+          <Input
             type="datetime-local"
             value={publishedAt || ''}
             onChange={(e) => setPublishedAt(e.target.value || null)}
-            className="input"
+            className="w-56"
           />
 
           <div className="ml-auto flex items-center space-x-2">

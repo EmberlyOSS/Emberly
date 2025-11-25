@@ -4,8 +4,14 @@ export async function register() {
     const { loggers } = await import('./lib/logger')
     const logger = loggers.startup
 
-    await runStartupTasks()
-    logger.debug('Startup tasks completed via instrumentation hook')
+    // Run startup tasks asynchronously so they don't block server startup.
+    // This prevents long-running or retrying startup work from delaying
+    // the app process (useful for containerized environments).
+    runStartupTasks()
+      .then(() =>
+        logger.debug('Startup tasks completed via instrumentation hook')
+      )
+      .catch((err) => logger.error('Startup tasks failed', err as Error))
 
     // Monitor memory usage in production
     if (process.env.NODE_ENV === 'production') {
