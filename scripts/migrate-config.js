@@ -75,7 +75,6 @@ const DEFAULT_CONFIG = {
 }
 
 const CONFIG_KEY = 'emberly_config'
-const LEGACY_KEY = 'flare_config'
 
 async function migrateConfig() {
   try {
@@ -84,30 +83,15 @@ async function migrateConfig() {
     let config = await prisma.config.findFirst({ where: { key: CONFIG_KEY } })
 
     if (!config) {
-      // check for legacy key
-      const legacy = await prisma.config.findFirst({
-        where: { key: LEGACY_KEY },
+      console.log('No config found, creating default config...')
+      await prisma.config.create({
+        data: {
+          key: CONFIG_KEY,
+          value: DEFAULT_CONFIG,
+        },
       })
-      if (legacy) {
-        console.log('Found legacy config, migrating to new key...')
-        await prisma.config.upsert({
-          where: { key: CONFIG_KEY },
-          create: { key: CONFIG_KEY, value: legacy.value },
-          update: { value: legacy.value },
-        })
-        console.log('Migrated legacy config to new key')
-        config = legacy
-      } else {
-        console.log('No config found, creating default config...')
-        await prisma.config.create({
-          data: {
-            key: CONFIG_KEY,
-            value: DEFAULT_CONFIG,
-          },
-        })
-        console.log('Created default config')
-        return
-      }
+      console.log('Created default config')
+      return
     }
 
     const currentConfig = config.value

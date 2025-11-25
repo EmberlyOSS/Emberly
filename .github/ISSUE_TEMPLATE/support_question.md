@@ -1,6 +1,6 @@
 ---
 name: Support Question
-about: Ask a question about using Flare
+about: Ask a question about using Emberly
 title: '[SUPPORT] '
 labels: ['question']
 assignees: ''
@@ -20,7 +20,7 @@ assignees: ''
 
 - **OS**: [e.g. Windows 10, macOS 12.0, Ubuntu 20.04]
 - **Browser**: [e.g. Chrome 96, Firefox 95, Safari 15]
-- **Flare Version**: [e.g. 1.4.2]
+- **Emberly Version**: [e.g. 1.4.2]
 - **Deployment Method**: [e.g. Docker, Railway, Manual]
 - **Storage Method**: [e.g. S3, local storage]
 

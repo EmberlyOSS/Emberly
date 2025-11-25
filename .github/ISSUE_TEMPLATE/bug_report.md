@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Create a report to help Flare improve
+about: Create a report to help Emberly improve
 title: '[BUG] '
 labels: ['bug']
 assignees: ''
@@ -8,7 +8,7 @@ assignees: ''
 
 ## Bug Description
 
-<!-- Explain what the bug is, and how it effects Flare -->
+<!-- Explain what the bug is, and how it effects Emberly -->
 
 ## Reproduction Steps
 
@@ -37,6 +37,6 @@ assignees: ''
 
 - **OS**: [e.g. Windows 10, macOS 12.0, Ubuntu 20.04]
 - **Browser**: [e.g. Chrome 96, Firefox 95, Safari 15]
-- **Flare Version**: [e.g. 1.4.2]
+- **Emberly Version**: [e.g. 1.4.2]
 - **Deployment Method**: [e.g. Docker, Railway, Manual]
 - **Storage Method**: [e.g. S3, local storage]

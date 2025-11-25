@@ -39,21 +39,21 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: false
           load: true
-          tags: flare:test-${{ steps.generate_tag.outputs.TAG_SUFFIX }}
+          tags: emberly:test-${{ steps.generate_tag.outputs.TAG_SUFFIX }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.platform }}
 
       - name: Test Docker container
         run: |
           # Create network
-          docker network create flare-network
+          docker network create emberly-network
 
           # Start PostgreSQL
           docker run -d --name postgres \
-            --network flare-network \
+            --network emberly-network \
             -e POSTGRES_USER=postgres \
             -e POSTGRES_PASSWORD=postgres \
-            -e POSTGRES_DB=flare_test \
+            -e POSTGRES_DB=emberly_test \
             postgres:16
 
           # Wait for PostgreSQL to be ready
@@ -72,23 +72,23 @@ jobs:
 
           # Run migrations
           docker run --rm \
-            --network flare-network \
-            -e DATABASE_URL=postgresql://postgres:postgres@postgres:5432/flare_test \
-            flare:test-${{ steps.generate_tag.outputs.TAG_SUFFIX }} \
+            --network emberly-network \
+            -e DATABASE_URL=postgresql://postgres:postgres@postgres:5432/emberly_test \
+            emberly:test-${{ steps.generate_tag.outputs.TAG_SUFFIX }} \
             npx prisma migrate deploy
 
           # Start the application
-          docker run --name flare-test -d \
-            -e DATABASE_URL=postgresql://postgres:postgres@postgres:5432/flare_test \
+          docker run --name emberly-test -d \
+            -e DATABASE_URL=postgresql://postgres:postgres@postgres:5432/emberly_test \
             -e NEXTAUTH_SECRET=test-secret \
             -e NEXTAUTH_URL=http://localhost:3000 \
-            --network flare-network \
-            flare:test-${{ steps.generate_tag.outputs.TAG_SUFFIX }}
+            --network emberly-network \
+            emberly:test-${{ steps.generate_tag.outputs.TAG_SUFFIX }}
           
           # Wait for container to be healthy
           timeout=60
           while [ $timeout -gt 0 ]; do
-            if docker inspect flare-test --format='{{.State.Health.Status}}' | grep -q healthy; then
+            if docker inspect emberly-test --format='{{.State.Health.Status}}' | grep -q healthy; then
               echo "Container is healthy"
               exit 0
             fi
@@ -96,12 +96,12 @@ jobs:
             timeout=$((timeout-1))
           done
           echo "Container failed to become healthy"
-          docker logs flare-test
+          docker logs emberly-test
           exit 1
 
       - name: Cleanup
         if: always()
         run: |
-          docker stop flare-test postgres || true
-          docker rm flare-test postgres || true
-          docker network rm flare-network || true 
+          docker stop emberly-test postgres || true
+          docker rm emberly-test postgres || true
+          docker network rm emberly-network || true 

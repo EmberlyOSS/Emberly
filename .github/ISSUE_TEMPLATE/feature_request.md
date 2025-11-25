@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea for Flare
+about: Suggest an idea for Emberly
 title: '[FEATURE] '
 labels: ['enhancement']
 assignees: ''
