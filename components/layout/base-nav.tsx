@@ -181,6 +181,12 @@ export function BaseNav() {
                     Home
                   </Link>
                   <Link
+                    href="/about"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    About
+                  </Link>
+                  <Link
                     href="/blog"
                     className="py-2 text-sm text-muted-foreground hover:text-foreground"
                   >
