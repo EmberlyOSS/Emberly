@@ -23,7 +23,7 @@ export default function DiscordPage() {
               <div className="mt-6 flex items-center gap-3">
                 <Button asChild size="lg">
                   <a
-                    href="https://discord.gg/k2QAfkwDwK"
+                    href="https://discord.gg/m37GZABfnX"
                     target="_blank"
                     rel="noopener noreferrer"
                   >

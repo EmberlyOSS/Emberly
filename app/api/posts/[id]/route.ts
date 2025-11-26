@@ -4,10 +4,10 @@ import * as blog from '@/lib/blog'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id
+    const { id } = await params
 
     const { searchParams } = new URL(request.url)
     const adminView = searchParams.get('admin') === 'true'
@@ -37,7 +37,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, response } = await requireAuth(request)
@@ -45,8 +45,14 @@ export async function PUT(
     if (!user || user.role !== 'ADMIN')
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
 
-    const id = params.id
-    const body = await request.json()
+    const { id } = await params
+
+    let body
+    try {
+      body = await request.json()
+    } catch (error) {
+      return apiError('Invalid JSON body', HTTP_STATUS.BAD_REQUEST)
+    }
 
     const updated = await blog.updatePost(id, body)
     return apiResponse(updated)
@@ -60,7 +66,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, response } = await requireAuth(request)
@@ -68,7 +74,7 @@ export async function DELETE(
     if (!user || user.role !== 'ADMIN')
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
 
-    const id = params.id
+    const { id } = await params
     const deleted = await blog.deletePost(id)
     return apiResponse(deleted)
   } catch (error) {

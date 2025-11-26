@@ -21,7 +21,12 @@ export async function POST(req: Request) {
     const { user, response } = await requireAuth(req)
     if (response) return response
 
-    const json = await req.json()
+    let json
+    try {
+      json = await req.json()
+    } catch (error) {
+      return apiError('Invalid JSON body', HTTP_STATUS.BAD_REQUEST)
+    }
 
     const result = CreateUrlSchema.safeParse(json)
     if (!result.success) {
@@ -30,9 +35,19 @@ export async function POST(req: Request) {
 
     const { url } = result.data
 
+    // Validate URL format
+    try {
+      new URL(url)
+    } catch {
+      return apiError('Invalid URL format', HTTP_STATUS.BAD_REQUEST)
+    }
+
     let shortCode = generateShortCode()
     let isUnique = false
-    while (!isUnique) {
+    let attempts = 0
+    const maxAttempts = 100
+
+    while (!isUnique && attempts < maxAttempts) {
       const existing = await prisma.shortenedUrl.findUnique({
         where: { shortCode },
       })
@@ -40,7 +55,18 @@ export async function POST(req: Request) {
         isUnique = true
       } else {
         shortCode = generateShortCode()
+        attempts++
       }
+    }
+
+    if (!isUnique) {
+      logger.error(
+        'Failed to generate unique short code after maximum attempts'
+      )
+      return apiError(
+        'Failed to generate unique short code',
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
+      )
     }
 
     const shortenedUrl = await prisma.shortenedUrl.create({

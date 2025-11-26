@@ -64,26 +64,28 @@ export default function PartnersCarousel() {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const rafRef = useRef<number | null>(null)
   const pausedRef = useRef(false)
-  const [paused, setPaused] = useState(false)
-  const [activeIndex, setActiveIndex] = useState<number | null>(null) // base index within PARTNERS
+
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
+  // --- Auto scroll ---
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
 
     let last = performance.now()
-    const speed = 60 // pixels per second
+    const speed = 60
 
     function frame(now: number) {
       const dt = Math.min(100, now - last) / 1000
       last = now
+
       if (!pausedRef.current && scrollerRef.current) {
         const scrollEl = scrollerRef.current
         const half = scrollEl.scrollWidth / 2
-        // advance by speed * dt and wrap when past half
         scrollEl.scrollLeft = (scrollEl.scrollLeft + speed * dt) % half
       }
+
       rafRef.current = requestAnimationFrame(frame)
     }
 
@@ -94,59 +96,34 @@ export default function PartnersCarousel() {
     }
   }, [])
 
-  // Close expanded/active state and resume when clicking/tapping outside
-  useEffect(() => {
-    function onPointerDown(e: PointerEvent) {
-      const target = e.target as Node | null
-      const el = scrollerRef.current
-      if (!el) return
-      if (target && !el.contains(target)) {
-        // clicked outside carousel -> collapse any expanded/active and resume
-        setExpandedIndex(null)
-        setActiveIndex(null)
-        pausedRef.current = false
-        setPaused(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [])
-
   function pause() {
     pausedRef.current = true
-    setPaused(true)
   }
 
   function resume() {
-    // only resume if nothing is expanded/active
     if (expandedIndex === null && activeIndex === null) {
       pausedRef.current = false
-      setPaused(false)
     }
   }
 
-  // when an item is hovered/clicked we pause and set active/expanded indices
-  function handleEnter(baseIdx: number) {
-    setActiveIndex(baseIdx)
-    setExpandedIndex(null)
+  function handleEnter(i: number) {
+    setActiveIndex(i)
     pause()
   }
 
   function handleLeave() {
     setActiveIndex(null)
-    // don't automatically collapse an expanded item here
     if (expandedIndex === null) resume()
   }
 
-  function handleToggleExpand(baseIdx: number) {
-    if (expandedIndex === baseIdx) {
+  function handleToggleExpand(i: number) {
+    if (expandedIndex === i) {
       setExpandedIndex(null)
       setActiveIndex(null)
       resume()
     } else {
-      setExpandedIndex(baseIdx)
-      setActiveIndex(baseIdx)
+      setExpandedIndex(i)
+      setActiveIndex(i)
       pause()
     }
   }
@@ -163,8 +140,7 @@ export default function PartnersCarousel() {
       <div
         ref={scrollerRef}
         className="flex gap-6 items-center whitespace-nowrap overflow-hidden py-4"
-        onMouseLeave={() => resume()}
-        onPointerLeave={() => resume()}
+        onMouseLeave={resume}
       >
         {[...PARTNERS, ...PARTNERS].map((p, idx) => {
           const baseIdx = idx % PARTNERS.length
@@ -174,22 +150,25 @@ export default function PartnersCarousel() {
           return (
             <div
               key={`${p.id}-${idx}`}
-              className={`inline-flex items-center gap-4 px-3 py-2 rounded-lg min-w-[120px] flex-shrink-0 transition-transform duration-300 ease-in-out cursor-pointer ${isExpanded ? 'bg-background/60 border border-border/60 shadow-lg scale-105 z-40' : 'bg-transparent'} relative overflow-visible`}
               onMouseEnter={() => handleEnter(baseIdx)}
-              onMouseLeave={() => handleLeave()}
+              onMouseLeave={handleLeave}
               onClick={() => handleToggleExpand(baseIdx)}
-              onTouchStart={() => handleEnter(baseIdx)}
-              onTouchEnd={() => handleToggleExpand(baseIdx)}
+              className={`inline-flex flex-col items-center px-4 py-3 rounded-lg min-w-[140px] flex-shrink-0 cursor-pointer transition-all duration-300
+                ${isExpanded ? 'bg-background/60 border border-border/60 shadow-lg scale-105' : ''}
+              `}
             >
+              {/* LOGO */}
               <div
-                className={`flex-shrink-0 rounded-md overflow-hidden transition-all duration-300 ${isExpanded ? 'w-20 h-20' : 'w-16 h-16'}`}
+                className={`rounded-md overflow-hidden transition-all duration-300 
+                  ${isExpanded ? 'w-20 h-20' : 'w-16 h-16'}
+                `}
               >
                 {p.imageUrl ? (
                   <img
                     src={p.imageUrl}
                     alt={`${p.name} logo`}
                     loading="lazy"
-                    className="w-full h-full object-contain bg-white/0"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
                   <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
@@ -202,18 +181,15 @@ export default function PartnersCarousel() {
                 )}
               </div>
 
-              {/* overlay info shown when expanded or active - positioned absolutely to avoid layout shift */}
+              {/* TEXT BELOW */}
               <div
-                className={`absolute top-1/2 left-full ml-3 transform -translate-y-1/2 transition-opacity duration-200 pointer-events-auto ${isExpanded ? 'opacity-100 w-[320px] z-50' : isActive ? 'opacity-100 w-[220px] z-30' : 'opacity-0 w-0 overflow-hidden'}`}
+                className={`mt-3 text-center transition-all duration-300
+                  ${isExpanded || isActive ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0'}
+                  overflow-hidden
+                `}
               >
-                <div
-                  className={`bg-background border border-border/50 rounded-lg p-3 shadow`}
-                >
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {p.tagline}
-                  </div>
-                </div>
+                <div className="font-medium">{p.name}</div>
+                <div className="text-xs text-muted-foreground">{p.tagline}</div>
               </div>
             </div>
           )

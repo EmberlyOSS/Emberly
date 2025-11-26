@@ -91,6 +91,7 @@ Please use the provided PR template and include:
 ### Maintainers
 
 - `@CodeMeAPixel` — primary maintainer
+- `@Miya25`- primary maintainer
 
 ### Security
 

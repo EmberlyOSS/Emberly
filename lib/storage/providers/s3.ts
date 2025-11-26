@@ -176,13 +176,107 @@ export class S3StorageProvider implements StorageProvider {
   async getFileSize(path: string): Promise<number> {
     const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
-    const command = new HeadObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-    })
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      })
 
-    const response = await this.client.send(command)
-    return response.ContentLength || 0
+      const response = await this.client.send(command)
+      return response.ContentLength || 0
+    } catch (error) {
+      const err = error as any
+      const httpStatusCode = err?.$metadata?.httpStatusCode
+      const errorCode = err?.name || err?.code
+
+      logger.error(`Failed to get file size for ${key}`, error as Error, {
+        key,
+        httpStatusCode,
+        errorCode,
+        fault: err?.$fault,
+      })
+
+      // If HeadObject is forbidden (403), try fallback to GetObject with Range header
+      // Some S3 configurations allow GetObject but not HeadObject
+      if (httpStatusCode === 403 || errorCode === 'Forbidden') {
+        try {
+          logger.info(
+            `HeadObject forbidden for ${key}, attempting GetObject fallback`,
+            { key }
+          )
+
+          const getObjectCommand = new GetObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+            Range: 'bytes=0-0', // Request only first byte to minimize data transfer
+          })
+
+          const response = await this.client.send(getObjectCommand)
+          const contentRange = response.ContentRange
+
+          // Clean up the stream if present (we only need headers)
+          if (response.Body) {
+            const stream = response.Body as Readable
+            if (!stream.destroyed) {
+              stream.destroy()
+            }
+          }
+
+          // Parse Content-Range header: "bytes 0-0/12345" -> extract total size
+          if (contentRange) {
+            const match = contentRange.match(/\/(\d+)/)
+            if (match) {
+              const size = parseInt(match[1], 10)
+              if (!isNaN(size) && size > 0) {
+                logger.info(
+                  `Successfully got file size via GetObject fallback`,
+                  {
+                    key,
+                    size,
+                  }
+                )
+                return size
+              }
+            }
+          }
+
+          // If Content-Range parsing failed, throw the original error
+          logger.warn(
+            `GetObject fallback succeeded but couldn't parse file size from Content-Range`,
+            { key, contentRange }
+          )
+        } catch (fallbackError) {
+          logger.error(
+            `Fallback GetObject also failed for ${key}`,
+            fallbackError as Error,
+            { key }
+          )
+          // Re-throw the original error, not the fallback error
+          throw error
+        }
+      }
+
+      // Re-throw the error with additional context
+      const errorMessage =
+        httpStatusCode === 404 ||
+        errorCode === 'NotFound' ||
+        errorCode === 'NoSuchKey'
+          ? `File not found: ${key}`
+          : httpStatusCode === 403
+            ? `Access denied to file: ${key}. Check IAM permissions for s3:HeadObject and s3:GetObject.`
+            : `Failed to get file size for ${key}: ${err?.message || 'Unknown error'}`
+
+      const enhancedError = new Error(errorMessage)
+      // Preserve original error properties
+      Object.assign(enhancedError, {
+        originalError: error,
+        httpStatusCode,
+        errorCode,
+        key,
+      })
+
+      throw enhancedError
+    }
   }
 
   async uploadChunkedFile(
