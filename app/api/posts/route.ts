@@ -62,7 +62,13 @@ export async function POST(request: Request) {
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (error) {
+      return apiError('Invalid JSON body', HTTP_STATUS.BAD_REQUEST)
+    }
+
     const { slug, title, content, excerpt, status, publishedAt } = body
 
     if (!slug || !title || !content) {

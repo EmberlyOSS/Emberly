@@ -123,6 +123,12 @@ export async function GET(
       // ignore logging errors
     }
 
-    return new Response(null, { status: 404 })
+    // Return appropriate error status based on error type
+    if (error instanceof Error && error.message.includes('NoSuchKey')) {
+      return new Response(null, { status: 404 })
+    }
+
+    // Return 500 for other errors instead of always 404
+    return new Response(null, { status: 500 })
   }
 }

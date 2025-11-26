@@ -29,6 +29,7 @@ export function Footer() {
                   <Link
                     href="https://github.com/EmberlyOSS/Website"
                     target="_blank"
+                    rel="noopener noreferrer"
                   >
                     <Github className="mr-2 h-4 w-4" />
                     View on GitHub
@@ -41,7 +42,11 @@ export function Footer() {
                   className="bg-background/60 backdrop-blur-sm border-border/50"
                   asChild
                 >
-                  <Link href="https://twitter.com/TryEmberly" target="_blank">
+                  <Link
+                    href="https://twitter.com/TryEmberly"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Twitter className="mr-2 h-4 w-4" />
                     Follow
                   </Link>

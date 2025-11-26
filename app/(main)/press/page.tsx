@@ -1,6 +1,13 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { Card, CardContent } from '@/components/ui/card'
+
+export const metadata: Metadata = {
+  title: 'Press & Media - Emberly',
+  description:
+    'Press resources, media kit, logos, and brand guidelines for Emberly. Download assets and contact information for press inquiries.',
+}
 
 export default function PressPage() {
   return (
@@ -36,6 +43,8 @@ export default function PressPage() {
               <div className="mt-4">
                 <Link
                   href="https://github.com/EmberlyOSS/Website/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm underline"
                 >
                   Open an issue

@@ -17,7 +17,14 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const body = await request.json()
+
+    let body
+    try {
+      body = await request.json()
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const schema = z.object({
       visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
       password: z.string().nullable().optional(),
@@ -25,7 +32,7 @@ export async function PATCH(
     const result = schema.safeParse(body)
     if (!result.success) {
       return NextResponse.json(
-        { error: 'Invalid request body' },
+        { error: result.error.errors[0]?.message || 'Invalid request body' },
         { status: 400 }
       )
     }
@@ -66,6 +73,14 @@ export async function PATCH(
 
     if (typeof password !== 'undefined') {
       updates.password = password ? await hash(password, 10) : null
+    }
+
+    // Check if there are any updates to apply
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      )
     }
 
     const updatedFile = await prisma.file.update({

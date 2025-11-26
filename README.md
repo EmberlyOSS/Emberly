@@ -47,4 +47,4 @@ See `CONTRIBUTING.md` for guidelines on contributing, coding standards, and the 
 
 Refer to the repository license and `CONTRIBUTING.md` for the code of conduct.
 
-If you have questions, open an issue or reach out to the maintainer `@CodeMeAPixel` on GitHub.
+If you have questions, open an issue or reach out to the primary maintainers on GitHub.

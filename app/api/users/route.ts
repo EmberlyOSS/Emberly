@@ -69,7 +69,12 @@ export async function POST(req: Request) {
     const { response } = await requireAdmin()
     if (response) return response
 
-    const json = await req.json()
+    let json
+    try {
+      json = await req.json()
+    } catch (error) {
+      return apiError('Invalid JSON body', HTTP_STATUS.BAD_REQUEST)
+    }
 
     const result = UserSchema.safeParse(json)
     if (!result.success) {
@@ -95,7 +100,10 @@ export async function POST(req: Request) {
 
     let urlId = generateUrlId()
     let isUnique = false
-    while (!isUnique) {
+    let attempts = 0
+    const maxAttempts = 100
+
+    while (!isUnique && attempts < maxAttempts) {
       const existing = await prisma.user.findUnique({
         where: { urlId },
       })
@@ -103,7 +111,16 @@ export async function POST(req: Request) {
         isUnique = true
       } else {
         urlId = generateUrlId()
+        attempts++
       }
+    }
+
+    if (!isUnique) {
+      logger.error('Failed to generate unique URL ID after maximum attempts')
+      return apiError(
+        'Failed to generate unique user ID',
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
+      )
     }
 
     const user = await prisma.user.create({
@@ -144,7 +161,12 @@ export async function PUT(req: Request) {
     const { response } = await requireAdmin()
     if (response) return response
 
-    const json = await req.json()
+    let json
+    try {
+      json = await req.json()
+    } catch (error) {
+      return apiError('Invalid JSON body', HTTP_STATUS.BAD_REQUEST)
+    }
 
     const result = UserSchema.safeParse(json)
     if (!result.success) {

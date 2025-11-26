@@ -18,4 +18,4 @@ Thanks for contributing! Please try to fill out as much as the below info as you
 
 ---
 
-\*Please make sure your PR follows the [contributing guidelines](../CONTRIBUTING.md). All PRs will be manually reviewed by @CodeMeAPixel. If you have any questions, feel free to ask in the PR or reach out to me on [Discord](https://discord.gg/t4rGHBJy). TY for your help :D
+\*Please make sure your PR follows the [contributing guidelines](../CONTRIBUTING.md). All PRs will be manually reviewed by @CodeMeAPixel. If you have any questions, feel free to ask in the PR or reach out to me on [Discord](https://discord.gg/m37GZABfnX). TY for your help :D

@@ -126,7 +126,12 @@ export async function POST(req: Request) {
     const { response } = await requireAdmin()
     if (response) return response
 
-    const config: EmberlyConfig = await req.json()
+    let config: EmberlyConfig
+    try {
+      config = await req.json()
+    } catch (error) {
+      return apiError('Invalid JSON body', HTTP_STATUS.BAD_REQUEST)
+    }
 
     if (config.settings.advanced.customCSS) {
       config.settings.advanced.customCSS = config.settings.advanced.customCSS

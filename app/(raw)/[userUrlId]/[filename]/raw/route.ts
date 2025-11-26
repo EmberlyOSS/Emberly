@@ -192,12 +192,16 @@ export async function GET(
   } catch (error) {
     // Log richer error details for debugging (AWS SDK errors include $metadata)
     const errAny = error as any
+    const httpStatusCode =
+      errAny?.httpStatusCode || errAny?.$metadata?.httpStatusCode
+
     console.error('File serve error:', errAny)
     try {
       console.error('File serve error details:', {
         name: errAny?.name,
         code: errAny?.code || errAny?.name,
         fault: errAny?.$fault,
+        httpStatusCode,
         awsMetadata: errAny?.$metadata,
         message: errAny?.message,
       })
@@ -205,9 +209,33 @@ export async function GET(
       // ignore logging errors
     }
 
-    if (error instanceof Error && error.message.includes('NoSuchKey')) {
+    // Check for specific AWS/S3 error types
+    if (
+      error instanceof Error &&
+      (error.message.includes('NoSuchKey') ||
+        error.message.includes('File not found') ||
+        httpStatusCode === 404)
+    ) {
       return new Response(null, { status: 404 })
     }
+
+    // Log permission errors with more detail
+    if (
+      error instanceof Error &&
+      (error.message.includes('Access denied') ||
+        error.message.includes('permission') ||
+        httpStatusCode === 403)
+    ) {
+      console.error(
+        'S3 permission error detected. Check IAM permissions for s3:HeadObject and s3:GetObject operations.',
+        {
+          path: errAny?.key || 'unknown',
+          error: error.message,
+          httpStatusCode,
+        }
+      )
+    }
+
     return new Response(null, { status: 500 })
   }
 }
