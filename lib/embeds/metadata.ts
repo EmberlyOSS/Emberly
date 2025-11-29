@@ -9,13 +9,17 @@ import { classifyMimeType } from './file-classification'
 /**
  * Get file URL with fallback - primarily uses /raw endpoint, but prepares a fallback URL
  * from the storage provider. If /raw endpoint fails (403, 500, etc.), the fallback can be used.
- * Returns an object with both primary (/raw) and fallback (storage provider) URLs.
+ * If everything fails, uses /api/files endpoint as guaranteed fallback.
+ * Returns an object with both primary (/raw) and fallback (storage provider or /api/files) URLs.
  */
 async function getFileUrlWithFallbackOption(
   rawUrl: string,
-  filePath: string
+  filePath: string,
+  baseUrl: string,
+  fileUrlPath: string
 ): Promise<{ primary: string; fallback?: string }> {
   const primary = rawUrl
+  const guaranteedFallback = `${baseUrl}/api/files${fileUrlPath}`
   let fallback: string | undefined
 
   // Get fallback URL from storage provider
@@ -26,7 +30,7 @@ async function getFileUrlWithFallbackOption(
     }
   } catch (error) {
     // If storage provider fails, fallback won't be available
-    // This is okay - we'll still use the primary /raw URL
+    // This is okay - we'll still use the primary /raw URL or guaranteed /api/files fallback
     console.error('Failed to get fallback URL from storage provider:', error)
   }
 
@@ -44,29 +48,44 @@ async function getFileUrlWithFallbackOption(
     clearTimeout(timeoutId)
 
     // If /raw returns an error status (403, 500, etc.), use fallback if available
-    if (!response.ok && fallback) {
-      console.warn(
-        `/raw endpoint returned ${response.status} for ${rawUrl}, using storage provider fallback`
-      )
-      useFallback = true
+    if (!response.ok) {
+      if (fallback) {
+        console.warn(
+          `/raw endpoint returned ${response.status} for ${rawUrl}, using storage provider fallback`
+        )
+        useFallback = true
+      } else {
+        // If storage provider fallback is not available, use /api/files as guaranteed fallback
+        console.warn(
+          `/raw endpoint returned ${response.status} for ${rawUrl}, using /api/files as guaranteed fallback`
+        )
+        return { primary: guaranteedFallback, fallback: rawUrl }
+      }
     }
   } catch (error) {
-    // If check fails (timeout, network error, etc.), assume /raw will work
-    // and use it as primary - the actual request might succeed
-    // Only log if it's not a timeout (expected in some cases)
+    // If check fails (timeout, network error, etc.), check if we have storage provider fallback
+    // If not, use /api/files as guaranteed fallback
     if (error instanceof Error && error.name !== 'AbortError') {
       console.debug(
         `Could not verify /raw endpoint accessibility: ${error.message}`
       )
     }
+
+    // If no storage provider fallback is available, use /api/files as guaranteed fallback
+    if (!fallback) {
+      return { primary: guaranteedFallback, fallback: rawUrl }
+    }
   }
 
   // Return primary and fallback - if /raw failed verification, use storage provider as primary
+  // with /api/files as final fallback
   if (useFallback && fallback) {
-    return { primary: fallback, fallback: rawUrl }
+    return { primary: fallback, fallback: guaranteedFallback }
   }
 
-  return { primary, fallback }
+  // If everything works, return /raw as primary with storage provider as fallback (if available)
+  // and /api/files as final guaranteed fallback
+  return { primary, fallback: fallback || guaranteedFallback }
 }
 
 interface BuildMetadataOptions {
@@ -106,13 +125,13 @@ export async function buildRichMetadata({
 
   // Get URLs with fallback options for media files
   const imageUrl = classification.isImage
-    ? await getFileUrlWithFallbackOption(rawUrl, filePath)
+    ? await getFileUrlWithFallbackOption(rawUrl, filePath, baseUrl, fileUrlPath)
     : null
   const videoUrl = classification.isVideo
-    ? await getFileUrlWithFallbackOption(rawUrl, filePath)
+    ? await getFileUrlWithFallbackOption(rawUrl, filePath, baseUrl, fileUrlPath)
     : null
   const audioUrl = classification.isAudio
-    ? await getFileUrlWithFallbackOption(rawUrl, filePath)
+    ? await getFileUrlWithFallbackOption(rawUrl, filePath, baseUrl, fileUrlPath)
     : null
 
   const metadata: Metadata = {

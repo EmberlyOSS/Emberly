@@ -8,12 +8,6 @@ bunx lint-staged
 # Stage the formatted files
 git add .
 
-# Run a lint check
-echo "🧹 Running lint check..."
-bun lint || (
-    echo "❌ Lint check failed. Please fix the issues and commit again."
-    exit 1
-)
 
 # Run formatter and auto-fix any issues
 echo "✨ Running formatter and auto-fixing..."

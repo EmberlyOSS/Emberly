@@ -5,7 +5,7 @@ import { checkAuthentication } from './lib/middleware/auth-checker'
 import { handleBotRequest } from './lib/middleware/bot-handler'
 import { PUBLIC_PATHS } from './lib/middleware/constants'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (
     request.nextUrl.pathname.endsWith('/raw') ||
     request.nextUrl.pathname.endsWith('/direct')
