@@ -279,8 +279,10 @@ function buildTwitterMetadata(
       description,
       players: [
         {
-          url: fileUrl,
-          stream: rawUrl, // Primary: /raw endpoint
+          playerUrl: fileUrl,
+          streamUrl: rawUrl, // Primary: /raw endpoint
+          width: 1280,
+          height: 720,
         },
       ],
     }
