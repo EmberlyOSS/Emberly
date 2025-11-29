@@ -145,9 +145,48 @@ export async function GET(
     const storageProvider = await getStorageProvider()
     const range = req.headers.get('range')
 
-    const size = await storageProvider.getFileSize(file.path)
+    // Try to get file size, but handle failures gracefully
+    // Some S3 configurations forbid HeadObject, and GetObject fallback may also fail
+    let size: number | undefined
+    try {
+      size = await storageProvider.getFileSize(file.path)
+    } catch (sizeError) {
+      // If getFileSize fails, log a warning but continue
+      // We can still serve the file without Content-Length using chunked encoding
+      const errAny = sizeError as any
+      const httpStatusCode =
+        errAny?.httpStatusCode || errAny?.$metadata?.httpStatusCode
+
+      // Only log if it's not a permission error (those are expected in some configs)
+      if (httpStatusCode !== 403) {
+        console.warn(
+          `Failed to get file size for ${file.path}, will serve without Content-Length:`,
+          errAny?.message || sizeError
+        )
+      }
+    }
 
     if (range) {
+      // For range requests, we need the file size to calculate Content-Range
+      if (!size) {
+        // Without size, we can't properly serve range requests
+        // Fall back to serving the full file
+        console.warn(
+          `Range request received but file size unknown for ${file.path}, serving full file`
+        )
+        const stream = await storageProvider.getFileStream(file.path)
+        const headers = {
+          'Accept-Ranges': 'bytes',
+          'Content-Type': file.mimeType,
+          'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          Connection: 'keep-alive',
+          'Keep-Alive': 'timeout=300, max=1000',
+          'Transfer-Encoding': 'chunked',
+        }
+        return new NextResponse(createRobustStream(stream), { headers })
+      }
+
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
       const end = parts[1] ? parseInt(parts[1], 10) : size - 1
@@ -176,16 +215,24 @@ export async function GET(
       })
     }
 
+    // For non-range requests, we can serve without knowing the size upfront
     const stream = await storageProvider.getFileStream(file.path)
-    const headers = {
+    const headers: Record<string, string> = {
       'Accept-Ranges': 'bytes',
-      'Content-Length': size.toString(),
       'Content-Type': file.mimeType,
       'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
       'Cache-Control': 'public, max-age=31536000, immutable',
       Connection: 'keep-alive',
       'Keep-Alive': 'timeout=300, max=1000',
-      'Transfer-Encoding': 'identity',
+    }
+
+    // Only set Content-Length if we have the size
+    if (size) {
+      headers['Content-Length'] = size.toString()
+      headers['Transfer-Encoding'] = 'identity'
+    } else {
+      // Use chunked encoding if we don't know the size
+      headers['Transfer-Encoding'] = 'chunked'
     }
 
     return new NextResponse(createRobustStream(stream), { headers })

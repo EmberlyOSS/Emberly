@@ -24,6 +24,7 @@ export class S3StorageProvider implements StorageProvider {
   private client: S3Client
   private bucket: string
   private endpoint?: string
+  private accessKeyId?: string
 
   constructor(config: S3Config) {
     if (!config.bucket) throw new Error('S3 bucket name is required')
@@ -34,6 +35,7 @@ export class S3StorageProvider implements StorageProvider {
 
     this.bucket = config.bucket
     this.endpoint = config.endpoint
+    this.accessKeyId = config.accessKeyId
     this.client = new S3Client({
       region: config.region,
       credentials: {
@@ -177,6 +179,13 @@ export class S3StorageProvider implements StorageProvider {
     const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     try {
+      // Log the bucket/key being requested to aid diagnostics (do not log secrets)
+      logger.info('S3 HeadObject request', {
+        bucket: this.bucket,
+        key,
+        accessKeyId: this.accessKeyId,
+      })
+
       const command = new HeadObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -186,6 +195,12 @@ export class S3StorageProvider implements StorageProvider {
       return response.ContentLength || 0
     } catch (error) {
       const err = error as any
+      // Attach the object key to the original error so upstream handlers can log it
+      try {
+        err.key = key
+      } catch {
+        // ignore if the error object is not extensible
+      }
       const httpStatusCode = err?.$metadata?.httpStatusCode
       const errorCode = err?.name || err?.code
 
@@ -196,8 +211,9 @@ export class S3StorageProvider implements StorageProvider {
         fault: err?.$fault,
       })
 
-      // If HeadObject is forbidden (403), try fallback to GetObject with Range header
+      // If HeadObject is forbidden (403), try fallback to GetObject
       // Some S3 configurations allow GetObject but not HeadObject
+      // Note: We avoid using Range header to prevent signature issues with some S3-compatible services
       if (httpStatusCode === 403 || errorCode === 'Forbidden') {
         try {
           logger.info(
@@ -208,28 +224,52 @@ export class S3StorageProvider implements StorageProvider {
           const getObjectCommand = new GetObjectCommand({
             Bucket: this.bucket,
             Key: key,
-            Range: 'bytes=0-0', // Request only first byte to minimize data transfer
+            // Don't use Range header - some S3-compatible services have issues signing it
+            // We'll get ContentLength from headers instead
           })
 
           const response = await this.client.send(getObjectCommand)
-          const contentRange = response.ContentRange
 
-          // Clean up the stream if present (we only need headers)
-          if (response.Body) {
-            const stream = response.Body as Readable
-            if (!stream.destroyed) {
-              stream.destroy()
+          // Try to get size from ContentLength header first (most reliable)
+          if (
+            response.ContentLength !== undefined &&
+            response.ContentLength > 0
+          ) {
+            // Clean up the stream if present (we only need headers)
+            if (response.Body) {
+              const stream = response.Body as Readable
+              if (!stream.destroyed) {
+                stream.destroy()
+              }
             }
+
+            logger.info(
+              `Successfully got file size via GetObject fallback (ContentLength)`,
+              {
+                key,
+                size: response.ContentLength,
+              }
+            )
+            return response.ContentLength
           }
 
-          // Parse Content-Range header: "bytes 0-0/12345" -> extract total size
+          // Fallback to Content-Range parsing if ContentLength is not available
+          const contentRange = response.ContentRange
           if (contentRange) {
             const match = contentRange.match(/\/(\d+)/)
             if (match) {
               const size = parseInt(match[1], 10)
               if (!isNaN(size) && size > 0) {
+                // Clean up the stream if present
+                if (response.Body) {
+                  const stream = response.Body as Readable
+                  if (!stream.destroyed) {
+                    stream.destroy()
+                  }
+                }
+
                 logger.info(
-                  `Successfully got file size via GetObject fallback`,
+                  `Successfully got file size via GetObject fallback (Content-Range)`,
                   {
                     key,
                     size,
@@ -240,18 +280,39 @@ export class S3StorageProvider implements StorageProvider {
             }
           }
 
-          // If Content-Range parsing failed, throw the original error
+          // If both methods failed, throw the original error
+          // Clean up the stream if present
+          if (response.Body) {
+            const stream = response.Body as Readable
+            if (!stream.destroyed) {
+              stream.destroy()
+            }
+          }
+
           logger.warn(
-            `GetObject fallback succeeded but couldn't parse file size from Content-Range`,
-            { key, contentRange }
+            `GetObject fallback succeeded but couldn't determine file size`,
+            { key, contentLength: response.ContentLength, contentRange }
           )
         } catch (fallbackError) {
+          const fallbackErr = fallbackError as any
+          const fallbackHttpStatus = fallbackErr?.$metadata?.httpStatusCode
+          const fallbackErrorCode = fallbackErr?.name || fallbackErr?.code
+
           logger.error(
             `Fallback GetObject also failed for ${key}`,
             fallbackError as Error,
-            { key }
+            {
+              key,
+              httpStatusCode: fallbackHttpStatus,
+              errorCode: fallbackErrorCode,
+            }
           )
-          // Re-throw the original error, not the fallback error
+          // Ensure the original error carries the key (if possible) and re-throw it
+          try {
+            ;(error as any).key = key
+          } catch {
+            /* noop */
+          }
           throw error
         }
       }
