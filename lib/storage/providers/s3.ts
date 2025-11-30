@@ -6,309 +6,216 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-    const key = this.normalizeKey(path)
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import type { Writable as NodeWritable, Readable } from 'node:stream'
 
-// Diagnostic info: log the effective key and endpoint (no credentials).
-logger.info('S3 GetObject request', {
-  key,
-  bucket: this.bucket,
-  endpoint: this.endpoint,
-  forcePathStyle: this.forcePathStyle ?? false,
-})
+import { loggers } from '@/lib/logger'
 
-const options: { Range?: string } = {}
-if (range) {
-  options.Range = `bytes=${range.start || 0}-${typeof range.end !== 'undefined' ? range.end : ''}`
-}
+import type { RangeOptions, S3Config, StorageProvider } from '../types'
 
-try {
-  const response = await this.client.send(
-    new GetObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      ...options,
+const logger = loggers.storage.getChildLogger('s3')
+
+export class S3StorageProvider implements StorageProvider {
+  private client: S3Client
+  private bucket: string
+  private endpoint?: string
+
+  constructor(config: S3Config) {
+    if (!config.bucket) throw new Error('S3 bucket name is required')
+    if (!config.region) throw new Error('S3 region is required')
+    if (!config.accessKeyId) throw new Error('S3 access key ID is required')
+    if (!config.secretAccessKey)
+      throw new Error('S3 secret access key is required')
+
+    this.bucket = config.bucket
+    this.endpoint = config.endpoint
+    this.client = new S3Client({
+      region: config.region,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+      requestHandler: {
+        requestTimeout: 300000, // 5 minutes
+        connectionTimeout: 30000, // 30 seconds
+        socketTimeout: 300000, // 5 minutes
+      },
+      maxAttempts: 3,
+      retryMode: 'adaptive',
+      ...(config.endpoint && {
+        endpoint: config.endpoint,
+        forcePathStyle: config.forcePathStyle ?? false,
+      }),
     })
-  )
-
-  if (!response.Body) {
-    throw new Error('No file body returned from S3')
   }
 
-  const stream = response.Body as Readable
-
-  // Set high water mark to prevent buffering issues
-  if (stream.setMaxListeners) {
-    stream.setMaxListeners(0)
-  }
-
-  // Don't pause/resume - let the stream flow naturally
-  stream.on('error', (error) => {
-    const err = error as Error & { code?: string }
-
-    // Only log if it's not a client disconnect during active streaming
-    if (
-      err.code !== 'ECONNRESET' &&
-      err.code !== 'ERR_STREAM_PREMATURE_CLOSE' &&
-      !err.message?.includes('aborted')
-    ) {
-      logger.error(`S3 stream error for ${key}`, err, {
-        key,
-        code: err.code,
-      })
-    }
-  })
-
-  return stream
-} catch (error) {
-  const errAny = error as any
-  logger.error(`Failed to get S3 stream for ${key}`, errAny, {
-    key,
-    code: errAny?.code || errAny?.name,
-    message: errAny?.message,
-    awsMetadata: errAny?.$metadata,
-  })
-  throw error
-}
-
-  async deleteFile(path: string): Promise < void> {
-  const key = this.normalizeKey(path)
+  async uploadFile(
+    file: Buffer,
+    path: string,
+    mimeType: string
+  ): Promise<void> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     await this.client.send(
-    new DeleteObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-    })
-  )
-}
-
-  async getFileStream(path: string, range ?: RangeOptions): Promise < Readable > {
-  const baseKey = this.normalizeKey(path)
-
-    // Try multiple key candidates in order: normalized key, then with
-    // `uploads/` prefix. This helps when objects were stored with the
-    // `uploads/` prefix but the DB `file.path` includes it or vice versa.
-    const candidates = [baseKey, `uploads/${baseKey}`]
-
-    const options: { Range ?: string } = { }
-if (range) {
-  options.Range = `bytes=${range.start || 0}-${typeof range.end !== 'undefined' ? range.end : ''}`
-}
-
-let lastError: any = null
-for (const key of candidates) {
-  // Diagnostic info: log the effective key and endpoint (no credentials).
-  logger.info('S3 GetObject request', {
-    key,
-    bucket: this.bucket,
-    endpoint: this.endpoint,
-    forcePathStyle: this.forcePathStyle ?? false,
-  })
-
-  try {
-    const response = await this.client.send(
-      new GetObjectCommand({
+      new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        ...options,
+        Body: file,
+        ContentType: mimeType,
+        ACL: key.startsWith('avatars/') ? 'public-read' : undefined,
       })
     )
+  }
 
-    if (!response.Body) {
-      throw new Error('No file body returned from S3')
+  async deleteFile(path: string): Promise<void> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      })
+    )
+  }
+
+  async getFileStream(path: string, range?: RangeOptions): Promise<Readable> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+
+    const options: { Range?: string } = {}
+    if (range) {
+      options.Range = `bytes=${range.start || 0}-${typeof range.end !== 'undefined' ? range.end : ''}`
     }
 
-    const stream = response.Body as Readable
-
-    // Set high water mark to prevent buffering issues
-    if (stream.setMaxListeners) {
-      stream.setMaxListeners(0)
-    }
-
-    // Don't pause/resume - let the stream flow naturally
-    stream.on('error', (error) => {
-      const err = error as Error & { code?: string }
-
-      // Only log if it's not a client disconnect during active streaming
-      if (
-        err.code !== 'ECONNRESET' &&
-        err.code !== 'ERR_STREAM_PREMATURE_CLOSE' &&
-        !err.message?.includes('aborted')
-      ) {
-        logger.error(`S3 stream error for ${key}`, err, {
-          key,
-          code: err.code,
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          ...options,
         })
-      }
-    })
+      )
 
-    return stream
-  } catch (error) {
-    const errAny = error as any
-    lastError = errAny
-    // If this was a NoSuchKey, try the next candidate. Otherwise log and rethrow.
-    const status = errAny?.$metadata?.httpStatusCode
-    logger.warn('S3 GetObject candidate failed', {
-      candidate: key,
-      code: errAny?.code || errAny?.name,
-      message: errAny?.message,
-      awsMetadata: errAny?.$metadata,
-    })
-    if (status && status !== 404) {
-      logger.error(`Failed to get S3 stream for ${key}`, errAny, {
+      if (!response.Body) {
+        throw new Error('No file body returned from S3')
+      }
+
+      const stream = response.Body as Readable
+
+      // Set high water mark to prevent buffering issues
+      if (stream.setMaxListeners) {
+        stream.setMaxListeners(0)
+      }
+
+      // Don't pause/resume - let the stream flow naturally
+      stream.on('error', (error) => {
+        const err = error as Error & { code?: string }
+
+        // Only log if it's not a client disconnect during active streaming
+        if (
+          err.code !== 'ECONNRESET' &&
+          err.code !== 'ERR_STREAM_PREMATURE_CLOSE' &&
+          !err.message?.includes('aborted')
+        ) {
+          logger.error(`S3 stream error for ${key}`, err, {
+            key,
+            code: err.code,
+          })
+        }
+      })
+
+      return stream
+    } catch (error) {
+      logger.error(`Failed to get S3 stream for ${key}`, error as Error, {
         key,
-        code: errAny?.code || errAny?.name,
-        message: errAny?.message,
-        awsMetadata: errAny?.$metadata,
       })
       throw error
     }
-    // otherwise continue to next candidate
-  }
-}
-
-// All candidates failed
-if (lastError) {
-  const errAny = lastError as any
-  logger.error('All S3 GetObject candidates failed', errAny, {
-    path,
-    candidates,
-    awsMetadata: errAny?.$metadata,
-  })
-  throw lastError
-}
-throw new Error('No S3 key candidates available')
   }
 
-  async getFileUrl(
-  path: string,
-  expiresIn: number = 3600,
-  hostOverride ?: string
-): Promise < string > {
-  const key = this.normalizeKey(path)
+  async getFileUrl(path: string, expiresIn: number = 3600): Promise<string> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
-    if(key.startsWith('avatars/')) {
-  if (hostOverride) {
-    const host = hostOverride.replace(/\/$/, '')
-    const base = host.startsWith('http') ? host : urlForHost(host)
-    return `${base}/${key}`
-  }
-  if (this.endpoint) {
-    return `${this.endpoint.replace(/\/$/, '')}/${this.bucket}/${key}`
-  }
-  return `https://${this.bucket}.s3.amazonaws.com/${key}`
-}
-
-const command = new GetObjectCommand({
-  Bucket: this.bucket,
-  Key: key,
-})
-
-const downloadExpiresIn = expiresIn > 3600 ? expiresIn : 21600
-try {
-  if (hostOverride) {
-    // If caller requests a host override (custom domain), return a
-    // non-signed URL using that host. Use `urlForHost` so localhost and
-    // development hosts can be served over http when appropriate.
-    const host = hostOverride.replace(/\/$/, '')
-    const base = host.startsWith('http') ? host : urlForHost(host)
-    return `${base}/${key}`
-  }
-
-  return await getSignedUrl(this.client, command, {
-    expiresIn: downloadExpiresIn,
-  })
-} catch (error) {
-  const errAny = error as any
-  logger.error('Failed to generate signed URL', errAny, {
-    key,
-    message: errAny?.message,
-    awsMetadata: errAny?.$metadata,
-  })
-  // Last-resort fallback: if an endpoint is configured, return a
-  // path-style URL so the app can still return a usable URL instead
-  // of failing outright. The caller may still encounter 403s from the
-  // object server, but this avoids throwing here.
-  if (this.endpoint) {
-    return `${this.endpoint.replace(/\/$/, '')}/${this.bucket}/${key}`
-  }
-  throw error
-}
-  }
-
-  async getDownloadUrl(
-  path: string,
-  filename ?: string,
-  hostOverride ?: string
-): Promise < string > {
-  const key = this.normalizeKey(path)
+    if (key.startsWith('avatars/')) {
+      if (this.endpoint) {
+        return `${this.endpoint}/${this.bucket}/${key}`
+      }
+      return `https://${this.bucket}.s3.amazonaws.com/${key}`
+    }
 
     const command = new GetObjectCommand({
-    Bucket: this.bucket,
-    Key: key,
-    ResponseContentDisposition: filename
-      ? `attachment; filename="${filename}"`
-      : undefined,
-  })
-    if(hostOverride) {
-    const host = hostOverride.replace(/\/$/, '')
-    const base = host.startsWith('http') ? host : urlForHost(host)
-    return `${base}/${key}`
+      Bucket: this.bucket,
+      Key: key,
+    })
+
+    const downloadExpiresIn = expiresIn > 3600 ? expiresIn : 21600
+
+    return await getSignedUrl(this.client, command, {
+      expiresIn: downloadExpiresIn,
+    })
   }
 
+  async getDownloadUrl(path: string, filename?: string): Promise<string> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ResponseContentDisposition: filename
+        ? `attachment; filename="${filename}"`
+        : undefined,
+    })
+
     return await getSignedUrl(this.client, command, { expiresIn: 21600 })
-}
+  }
 
-  async getFileSize(path: string): Promise < number > {
-  const key = this.normalizeKey(path)
-
-    // Diagnostic info: log the effective key and endpoint used for HEAD.
-    logger.info('S3 HeadObject request', {
-    key,
-    bucket: this.bucket,
-    endpoint: this.endpoint,
-    forcePathStyle: this.forcePathStyle ?? false,
-  })
+  async getFileSize(path: string): Promise<number> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     const command = new HeadObjectCommand({
-    Bucket: this.bucket,
-    Key: key,
-  })
+      Bucket: this.bucket,
+      Key: key,
+    })
 
     const response = await this.client.send(command)
     return response.ContentLength || 0
-}
-
-  async uploadChunkedFile(
-  chunksDir: string,
-  targetPath: string,
-  mimeType: string
-): Promise < void> {
-  const key = this.normalizeKey(targetPath)
-    const createResponse = await this.client.send(
-    new CreateMultipartUploadCommand({
-      Bucket: this.bucket,
-      Key: key,
-      ContentType: mimeType,
-    })
-  )
-
-    const uploadId = createResponse.UploadId
-    if(!uploadId) {
-    throw new Error('Failed to create multipart upload')
   }
 
+  async uploadChunkedFile(
+    chunksDir: string,
+    targetPath: string,
+    mimeType: string
+  ): Promise<void> {
+    const key = targetPath.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const createResponse = await this.client.send(
+      new CreateMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: mimeType,
+      })
+    )
+
+    const uploadId = createResponse.UploadId
+    if (!uploadId) {
+      throw new Error('Failed to create multipart upload')
+    }
+
     try {
-    const { readdir, readFile } = await import('fs/promises')
+      const { readdir, readFile } = await import('fs/promises')
       const { join } = await import('path')
 
       const chunkFiles = await readdir(chunksDir)
       const sortedChunks = chunkFiles
-      .filter((file) => file.startsWith('chunk-'))
-      .sort((a, b) => {
-        const numA = parseInt(a.split('-')[1])
-        const numB = parseInt(b.split('-')[1])
-        return numA - numB
-      })
+        .filter((file) => file.startsWith('chunk-'))
+        .sort((a, b) => {
+          const numA = parseInt(a.split('-')[1])
+          const numB = parseInt(b.split('-')[1])
+          return numA - numB
+        })
 
       const uploadPromises = sortedChunks.map(async (chunkFile, index) => {
         const chunkPath = join(chunksDir, chunkFile)
@@ -343,219 +250,7 @@ try {
           MultipartUpload: { Parts: parts },
         })
       )
-  } catch(error) {
-    await this.client.send(
-      new AbortMultipartUploadCommand({
-        Bucket: this.bucket,
-        Key: key,
-        UploadId: uploadId,
-      })
-    )
-    throw error
-  }
-}
-
-  async createWriteStream(
-  path: string,
-  mimeType: string
-): Promise < NodeWritable > {
-  const key = this.normalizeKey(path)
-    const { PassThrough } = await import('stream')
-    const passThrough = new PassThrough()
-
-    const createResponse = await this.client.send(
-    new CreateMultipartUploadCommand({
-      Bucket: this.bucket,
-      Key: key,
-      ContentType: mimeType,
-    })
-  )
-
-    const uploadId = createResponse.UploadId
-    if(!uploadId) {
-    throw new Error('Failed to create multipart upload')
-  }
-
-    let currentPartBuffer = Buffer.alloc(0)
-    let currentPartNumber = 1
-    let totalBytesUploaded = 0
-    let isUploading = false
-    let hasEnded = false
-    let uploadError: Error | null = null
-    const parts: { ETag: string; PartNumber: number } [] = []
-const maxPartSize = 5 * 1024 * 1024
-const maxConcurrentUploads = 3
-let activeUploads = 0
-
-const getPresignedUrl = async (partNumber: number): Promise<string> => {
-  const command = new UploadPartCommand({
-    Bucket: this.bucket,
-    Key: key,
-    UploadId: uploadId,
-    PartNumber: partNumber,
-  })
-  return getSignedUrl(this.client, command, { expiresIn: 3600 })
-}
-
-const uploadPart = async (data: Buffer, partNum: number): Promise<void> => {
-  try {
-    activeUploads++
-
-    const presignedUrl = await getPresignedUrl(partNum)
-
-    // Retry transient failures (network / 5xx / some 4xx) with exponential backoff
-    let attempt = 0
-    let response: Response | null = null
-    const maxAttempts = 3
-    while (attempt < maxAttempts) {
-      try {
-        response = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: data as BodyInit,
-        })
-
-        if (response.ok) break
-
-        const bodyText = await response.text().catch(() => '')
-        logger.warn('Presigned upload part non-ok response', {
-          key,
-          part: partNum,
-          attempt,
-          status: response.status,
-          statusText: response.statusText,
-          body: bodyText.slice(0, 200),
-        })
-        // Retry on server errors and some client errors (502, 503, 504, 429)
-        if ([502, 503, 504, 429].includes(response.status)) {
-          attempt++
-          const backoff =
-            Math.pow(2, attempt) * 100 + Math.floor(Math.random() * 100)
-          await new Promise((r) => setTimeout(r, backoff))
-          continue
-        }
-
-        // otherwise, do not retry
-        break
-      } catch (err) {
-        logger.warn('Presigned upload part fetch error', {
-          key,
-          part: partNum,
-          attempt,
-          error: err,
-        })
-        attempt++
-        const backoff =
-          Math.pow(2, attempt) * 100 + Math.floor(Math.random() * 100)
-        await new Promise((r) => setTimeout(r, backoff))
-        continue
-      }
-    }
-
-    if (!response || !response.ok) {
-      const status = response ? response.status : 'NO_RESPONSE'
-      const statusText = response ? response.statusText : ''
-      throw new Error(
-        `Failed to upload part ${partNum}: ${status} ${statusText}`
-      )
-    }
-
-    const etag = response.headers.get('ETag')
-    if (!etag) {
-      throw new Error('Missing ETag in upload part response')
-    }
-
-    parts.push({
-      ETag: etag.replace(/['"]/g, ''),
-      PartNumber: partNum,
-    })
-
-    totalBytesUploaded += data.length
-
-    passThrough.emit('s3Progress', {
-      part: partNum,
-      uploaded: totalBytesUploaded,
-      etag,
-    })
-  } catch (error) {
-    uploadError = error as Error
-    throw error
-  } finally {
-    activeUploads--
-    if (hasEnded && activeUploads === 0) {
-      completeUpload().catch((error) => {
-        passThrough.destroy(error as Error)
-      })
-    }
-  }
-}
-
-passThrough.on('data', async (chunk: Buffer) => {
-  if (uploadError) {
-    passThrough.destroy(uploadError)
-    return
-  }
-
-  currentPartBuffer = Buffer.concat([currentPartBuffer, chunk])
-
-  while (
-    currentPartBuffer.length >= maxPartSize &&
-    activeUploads < maxConcurrentUploads &&
-    !isUploading
-  ) {
-    isUploading = true
-    const partData = currentPartBuffer.subarray(0, maxPartSize)
-    currentPartBuffer = currentPartBuffer.subarray(maxPartSize)
-
-    try {
-      await uploadPart(partData, currentPartNumber++)
-    } finally {
-      isUploading = false
-    }
-  }
-})
-
-passThrough.on('end', () => {
-  hasEnded = true
-  if (activeUploads === 0) {
-    completeUpload().catch((error) => {
-      passThrough.destroy(error as Error)
-    })
-  }
-})
-
-const completeUpload = async () => {
-  try {
-    if (currentPartBuffer.length > 0) {
-      await uploadPart(currentPartBuffer, currentPartNumber)
-      currentPartBuffer = Buffer.alloc(0)
-    }
-
-    while (activeUploads > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
-
-    const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber)
-
-    await this.client.send(
-      new CompleteMultipartUploadCommand({
-        Bucket: this.bucket,
-        Key: key,
-        UploadId: uploadId,
-        MultipartUpload: {
-          Parts: sortedParts,
-        },
-      })
-    )
-
-    await this.client.send(
-      new HeadObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      })
-    )
-    passThrough.emit('s3Complete')
-  } catch (error) {
-    try {
+    } catch (error) {
       await this.client.send(
         new AbortMultipartUploadCommand({
           Bucket: this.bucket,
@@ -563,178 +258,340 @@ const completeUpload = async () => {
           UploadId: uploadId,
         })
       )
-    } catch (abortError) {
-      logger.error('Error aborting multipart upload', abortError as Error, {
-        key,
-        uploadId,
-      })
+      throw error
     }
-    uploadError = error as Error
-    passThrough.destroy(error as Error)
   }
-}
 
-passThrough.on('error', async (error) => {
-  logger.error('Stream error during multipart upload', error as Error, {
-    key,
-  })
-  try {
-    await this.client.send(
-      new AbortMultipartUploadCommand({
+  async createWriteStream(
+    path: string,
+    mimeType: string
+  ): Promise<NodeWritable> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const { PassThrough } = await import('stream')
+    const passThrough = new PassThrough()
+
+    const createResponse = await this.client.send(
+      new CreateMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: mimeType,
+      })
+    )
+
+    const uploadId = createResponse.UploadId
+    if (!uploadId) {
+      throw new Error('Failed to create multipart upload')
+    }
+
+    let currentPartBuffer = Buffer.alloc(0)
+    let currentPartNumber = 1
+    let totalBytesUploaded = 0
+    let isUploading = false
+    let hasEnded = false
+    let uploadError: Error | null = null
+    const parts: { ETag: string; PartNumber: number }[] = []
+    const maxPartSize = 5 * 1024 * 1024
+    const maxConcurrentUploads = 3
+    let activeUploads = 0
+
+    const getPresignedUrl = async (partNumber: number): Promise<string> => {
+      const command = new UploadPartCommand({
         Bucket: this.bucket,
         Key: key,
         UploadId: uploadId,
+        PartNumber: partNumber,
       })
-    )
-  } catch (abortError) {
-    logger.error(
-      'Error aborting multipart upload after stream error',
-      abortError as Error,
-      {
-        key,
-        uploadId,
+      return getSignedUrl(this.client, command, { expiresIn: 3600 })
+    }
+
+    const uploadPart = async (data: Buffer, partNum: number): Promise<void> => {
+      try {
+        activeUploads++
+
+        const presignedUrl = await getPresignedUrl(partNum)
+
+        const response = await fetch(presignedUrl, {
+          method: 'PUT',
+          body: data as BodyInit,
+        })
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to upload part ${partNum}: ${response.statusText}`
+          )
+        }
+
+        const etag = response.headers.get('ETag')
+        if (!etag) {
+          throw new Error('Missing ETag in upload part response')
+        }
+
+        parts.push({
+          ETag: etag.replace(/['"]/g, ''),
+          PartNumber: partNum,
+        })
+
+        totalBytesUploaded += data.length
+
+        passThrough.emit('s3Progress', {
+          part: partNum,
+          uploaded: totalBytesUploaded,
+          etag,
+        })
+      } catch (error) {
+        uploadError = error as Error
+        throw error
+      } finally {
+        activeUploads--
+        if (hasEnded && activeUploads === 0) {
+          completeUpload().catch((error) => {
+            passThrough.destroy(error as Error)
+          })
+        }
       }
-    )
-  }
-})
+    }
 
-return passThrough
+    passThrough.on('data', async (chunk: Buffer) => {
+      if (uploadError) {
+        passThrough.destroy(uploadError)
+        return
+      }
+
+      currentPartBuffer = Buffer.concat([currentPartBuffer, chunk])
+
+      while (
+        currentPartBuffer.length >= maxPartSize &&
+        activeUploads < maxConcurrentUploads &&
+        !isUploading
+      ) {
+        isUploading = true
+        const partData = currentPartBuffer.subarray(0, maxPartSize)
+        currentPartBuffer = currentPartBuffer.subarray(maxPartSize)
+
+        try {
+          await uploadPart(partData, currentPartNumber++)
+        } finally {
+          isUploading = false
+        }
+      }
+    })
+
+    passThrough.on('end', () => {
+      hasEnded = true
+      if (activeUploads === 0) {
+        completeUpload().catch((error) => {
+          passThrough.destroy(error as Error)
+        })
+      }
+    })
+
+    const completeUpload = async () => {
+      try {
+        if (currentPartBuffer.length > 0) {
+          await uploadPart(currentPartBuffer, currentPartNumber)
+          currentPartBuffer = Buffer.alloc(0)
+        }
+
+        while (activeUploads > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+
+        const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber)
+
+        await this.client.send(
+          new CompleteMultipartUploadCommand({
+            Bucket: this.bucket,
+            Key: key,
+            UploadId: uploadId,
+            MultipartUpload: {
+              Parts: sortedParts,
+            },
+          })
+        )
+
+        await this.client.send(
+          new HeadObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+          })
+        )
+        passThrough.emit('s3Complete')
+      } catch (error) {
+        try {
+          await this.client.send(
+            new AbortMultipartUploadCommand({
+              Bucket: this.bucket,
+              Key: key,
+              UploadId: uploadId,
+            })
+          )
+        } catch (abortError) {
+          logger.error('Error aborting multipart upload', abortError as Error, {
+            key,
+            uploadId,
+          })
+        }
+        uploadError = error as Error
+        passThrough.destroy(error as Error)
+      }
+    }
+
+    passThrough.on('error', async (error) => {
+      logger.error('Stream error during multipart upload', error as Error, {
+        key,
+      })
+      try {
+        await this.client.send(
+          new AbortMultipartUploadCommand({
+            Bucket: this.bucket,
+            Key: key,
+            UploadId: uploadId,
+          })
+        )
+      } catch (abortError) {
+        logger.error(
+          'Error aborting multipart upload after stream error',
+          abortError as Error,
+          {
+            key,
+            uploadId,
+          }
+        )
+      }
+    })
+
+    return passThrough
   }
 
-  async renameFolder(oldPath: string, newPath: string): Promise < void> {
-  const oldPrefix = this.normalizeKey(oldPath).replace(/\/$/, '') + '/'
-    const newPrefix = this.normalizeKey(newPath).replace(/\/$/, '') + '/'
+  async renameFolder(oldPath: string, newPath: string): Promise<void> {
+    const oldPrefix =
+      oldPath
+        .replace(/^\/+/, '')
+        .replace(/^uploads\//, '')
+        .replace(/\/$/, '') + '/'
+    const newPrefix =
+      newPath
+        .replace(/^\/+/, '')
+        .replace(/^uploads\//, '')
+        .replace(/\/$/, '') + '/'
 
     let continuationToken: string | undefined
 
     do {
-    const listCommand = new ListObjectsV2Command({
-      Bucket: this.bucket,
-      Prefix: oldPrefix,
-      ContinuationToken: continuationToken,
-    })
+      const listCommand = new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: oldPrefix,
+        ContinuationToken: continuationToken,
+      })
 
       const response = await this.client.send(listCommand)
       const objects = response.Contents || []
 
       await Promise.all(
-      objects.map(async (object) => {
-        if (!object.Key) return
+        objects.map(async (object) => {
+          if (!object.Key) return
 
-        const newKey = object.Key.replace(oldPrefix, newPrefix)
-        await this.client.send(
-          new CopyObjectCommand({
-            Bucket: this.bucket,
-            CopySource: `${this.bucket}/${object.Key}`,
-            Key: newKey,
-          })
-        )
+          const newKey = object.Key.replace(oldPrefix, newPrefix)
+          await this.client.send(
+            new CopyObjectCommand({
+              Bucket: this.bucket,
+              CopySource: `${this.bucket}/${object.Key}`,
+              Key: newKey,
+            })
+          )
 
-        await this.client.send(
-          new DeleteObjectCommand({
-            Bucket: this.bucket,
-            Key: object.Key,
-          })
-        )
-      })
-    )
+          await this.client.send(
+            new DeleteObjectCommand({
+              Bucket: this.bucket,
+              Key: object.Key,
+            })
+          )
+        })
+      )
 
       continuationToken = response.NextContinuationToken
-  } while(continuationToken)
-}
+    } while (continuationToken)
+  }
 
   async initializeMultipartUpload(
-  path: string,
-  mimeType: string,
-  metadata ?: Record<string, string>
-): Promise < string > {
-  const key = this.normalizeKey(path)
+    path: string,
+    mimeType: string
+  ): Promise<string> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
-    let response
-    try {
-    response = await this.client.send(
+    const response = await this.client.send(
       new CreateMultipartUploadCommand({
         Bucket: this.bucket,
         Key: key,
         ContentType: mimeType,
-        Metadata: metadata,
       })
     )
-  } catch(err) {
-    const errAny = err as any
-    logger.error('S3 initialize multipart upload failed', errAny, {
-      key,
-      message: errAny?.message,
-      awsMetadata: errAny?.$metadata,
-    })
-    throw err
-  }
 
-    if(!response.UploadId) {
-  throw new Error('Failed to initialize multipart upload')
-}
+    if (!response.UploadId) {
+      throw new Error('Failed to initialize multipart upload')
+    }
 
-return response.UploadId
+    return response.UploadId
   }
 
   async getPresignedPartUploadUrl(
-  path: string,
-  uploadId: string,
-  partNumber: number
-): Promise < string > {
-  const key = this.normalizeKey(path)
+    path: string,
+    uploadId: string,
+    partNumber: number
+  ): Promise<string> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     const command = new UploadPartCommand({
-    Bucket: this.bucket,
-    Key: key,
-    UploadId: uploadId,
-    PartNumber: partNumber,
-  })
-
-    return getSignedUrl(this.client, command, { expiresIn: 3600 })
-}
-
-  async completeMultipartUpload(
-  path: string,
-  uploadId: string,
-  parts: { ETag: string; PartNumber: number }[]
-): Promise < void> {
-  const key = this.normalizeKey(path)
-
-    await this.client.send(
-    new CompleteMultipartUploadCommand({
-      Bucket: this.bucket,
-      Key: key,
-      UploadId: uploadId,
-      MultipartUpload: {
-        Parts: parts.sort((a, b) => a.PartNumber - b.PartNumber),
-      },
-    })
-  )
-}
-
-  async uploadPart(
-  path: string,
-  uploadId: string,
-  partNumber: number,
-  data: Buffer
-): Promise < { ETag: string } > {
-  const key = this.normalizeKey(path)
-
-    const response = await this.client.send(
-    new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       PartNumber: partNumber,
-      Body: data,
     })
-  )
 
-    if(!response.ETag) {
-  throw new Error('Missing ETag in upload part response')
-}
+    return getSignedUrl(this.client, command, { expiresIn: 3600 })
+  }
 
-return { ETag: response.ETag }
+  async completeMultipartUpload(
+    path: string,
+    uploadId: string,
+    parts: { ETag: string; PartNumber: number }[]
+  ): Promise<void> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+
+    await this.client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: parts.sort((a, b) => a.PartNumber - b.PartNumber),
+        },
+      })
+    )
+  }
+
+  async uploadPart(
+    path: string,
+    uploadId: string,
+    partNumber: number,
+    data: Buffer
+  ): Promise<{ ETag: string }> {
+    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+
+    const response = await this.client.send(
+      new UploadPartCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+        Body: data,
+      })
+    )
+
+    if (!response.ETag) {
+      throw new Error('Missing ETag in upload part response')
+    }
+
+    return { ETag: response.ETag }
   }
 }
