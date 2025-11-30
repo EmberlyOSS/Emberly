@@ -3,13 +3,14 @@ FROM node:lts AS deps
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json yarn.lock* ./
 COPY prisma ./prisma
 
-# Install dependencies
-RUN npm ci
+# Install dependencies using Yarn (project specifies Yarn as package manager)
+RUN yarn install --frozen-lockfile
 
-RUN npx prisma generate
+# Generate Prisma client
+RUN yarn prisma generate
 
 # Stage 2: Builder
 FROM node:lts AS builder
@@ -23,7 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Build the application
-RUN npm run build
+RUN yarn build
 
 # Stage 3: Runner
 FROM node:lts AS runner
@@ -66,14 +67,11 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
   echo 'exec su nextjs -s /bin/bash -c "$*"' >> /entrypoint.sh && \
   chmod +x /entrypoint.sh
 
-EXPOSE 3000
-
-ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Add healthcheck
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
+  CMD curl -f http://localhost:$PORT/api/health || exit 1
 
 # The entrypoint script runs as root but switches to nextjs user
 ENTRYPOINT ["/entrypoint.sh"]

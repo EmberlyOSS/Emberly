@@ -145,13 +145,30 @@ export async function GET(
     const storageProvider = await getStorageProvider()
     const range = req.headers.get('range')
 
+    // Diagnostic logging: capture request context to aid debugging when
+    // origin requests fail (Cloudflare shows 500s). These logs include the
+    // DB file path, mime type, which storage provider is in use, and the
+    // incoming Range header so we can correlate with object storage logs.
+    try {
+      console.info('Raw file request', {
+        urlPath,
+        path: file.path,
+        mimeType: file.mimeType,
+        provider: storageProvider?.constructor?.name,
+        range,
+        host: req.headers.get('host'),
+      })
+    } catch (logErr) {
+      // non-fatal
+    }
+
     const mapAwsErrorToStatus = (errAny: any): number | null => {
       try {
         const status = errAny?.$metadata?.httpStatusCode
         if (status === 403) return 403
         if (status === 404) return 404
         if (status && status >= 500 && status < 600) return 502
-      } catch {}
+      } catch { }
       return null
     }
 
@@ -161,7 +178,14 @@ export async function GET(
     } catch (err) {
       const status = mapAwsErrorToStatus(err as any)
       if (status) return new Response(null, { status })
-      console.error('Error fetching file size for', file.path, err)
+      try {
+        // Log SDK $metadata when present to help correlate with MinIO logs
+        console.error('Error fetching file size for', file.path, err, {
+          awsMetadata: (err as any)?.$metadata,
+        })
+      } catch (logErr) {
+        console.error('Error fetching file size for', file.path, err)
+      }
       return new Response(null, { status: 502 })
     }
 
@@ -196,7 +220,13 @@ export async function GET(
       } catch (err) {
         const status = mapAwsErrorToStatus(err as any)
         if (status) return new Response(null, { status })
-        console.error('Error creating ranged stream for', file.path, err)
+        try {
+          console.error('Error creating ranged stream for', file.path, err, {
+            awsMetadata: (err as any)?.$metadata,
+          })
+        } catch (logErr) {
+          console.error('Error creating ranged stream for', file.path, err)
+        }
         return new Response(null, { status: 502 })
       }
     }
@@ -218,7 +248,13 @@ export async function GET(
     } catch (err) {
       const status = mapAwsErrorToStatus(err as any)
       if (status) return new Response(null, { status })
-      console.error('Error creating stream for', file.path, err)
+      try {
+        console.error('Error creating stream for', file.path, err, {
+          awsMetadata: (err as any)?.$metadata,
+        })
+      } catch (logErr) {
+        console.error('Error creating stream for', file.path, err)
+      }
       return new Response(null, { status: 502 })
     }
   } catch (error) {

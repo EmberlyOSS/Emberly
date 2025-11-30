@@ -64,13 +64,18 @@ export async function GET(
       // Signing or endpoint issues shouldn't completely break sharing —
       // fall back to returning the proxied raw URL so clients can still
       // stream the file through the app's proxy endpoint.
-      console.error(
-        'Error generating direct S3 URL, falling back to proxied raw URL',
-        {
-          path: file.path,
-          error: err,
-        }
-      )
+      try {
+        console.error(
+          'Error generating direct S3 URL, falling back to proxied raw URL',
+          {
+            path: file.path,
+            error: err,
+            awsMetadata: (err as any)?.$metadata,
+          }
+        )
+      } catch (logErr) {
+        console.error('Error generating direct S3 URL', err)
+      }
       return NextResponse.json({ url: rawUrl })
     }
   } catch (error) {

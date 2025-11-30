@@ -15,6 +15,7 @@
     "dev": "next dev --turbopack",
     "postinstall": "npx prisma generate",
     "build": "next build",
+    "standalone": "node .next/standalone/server.js",
     "start": "next start",
     "lint": "next lint",
     "format": "npx prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
