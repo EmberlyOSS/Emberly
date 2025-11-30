@@ -25,6 +25,7 @@ export class S3StorageProvider implements StorageProvider {
   private client: S3Client
   private bucket: string
   private endpoint?: string
+  private forcePathStyle?: boolean
 
   constructor(config: S3Config) {
     if (!config.bucket) throw new Error('S3 bucket name is required')
@@ -48,15 +49,26 @@ export class S3StorageProvider implements StorageProvider {
     if (config.endpoint) {
       clientConfig.endpoint = config.endpoint
       clientConfig.forcePathStyle = config.forcePathStyle ?? false
+      this.forcePathStyle = config.forcePathStyle ?? false
     }
 
     this.client = new S3Client(clientConfig)
     logger.info('S3 client initialized', {
       bucket: this.bucket,
       endpoint: this.endpoint,
-      forcePathStyle: config.forcePathStyle ?? false,
+      forcePathStyle: this.forcePathStyle ?? false,
       region: config.region,
     })
+  }
+
+  // Normalize a filesystem-style path to an S3 key. This fixes Windows
+  // backslash paths (e.g. `uploads\\ibNxG\\file.png`) by converting them to
+  // forward slashes and removing any leading `uploads/` prefix.
+  private normalizeKey(path: string): string {
+    return path
+      .replace(/^\/+/, '')
+      .replace(/^uploads[\\/]/, '')
+      .replace(/\\/g, '/')
   }
 
   async uploadFile(
@@ -65,7 +77,7 @@ export class S3StorageProvider implements StorageProvider {
     mimeType: string,
     metadata?: Record<string, string>
   ): Promise<void> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     try {
       await this.client.send(
@@ -90,7 +102,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async deleteFile(path: string): Promise<void> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     await this.client.send(
       new DeleteObjectCommand({
@@ -101,7 +113,15 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getFileStream(path: string, range?: RangeOptions): Promise<Readable> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
+
+    // Diagnostic info: log the effective key and endpoint (no credentials).
+    logger.info('S3 GetObject request', {
+      key,
+      bucket: this.bucket,
+      endpoint: this.endpoint,
+      forcePathStyle: this.forcePathStyle ?? false,
+    })
 
     const options: { Range?: string } = {}
     if (range) {
@@ -163,7 +183,7 @@ export class S3StorageProvider implements StorageProvider {
     expiresIn: number = 3600,
     hostOverride?: string
   ): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     if (key.startsWith('avatars/')) {
       if (hostOverride) {
@@ -219,7 +239,7 @@ export class S3StorageProvider implements StorageProvider {
     filename?: string,
     hostOverride?: string
   ): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     const command = new GetObjectCommand({
       Bucket: this.bucket,
@@ -238,7 +258,15 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getFileSize(path: string): Promise<number> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
+
+    // Diagnostic info: log the effective key and endpoint used for HEAD.
+    logger.info('S3 HeadObject request', {
+      key,
+      bucket: this.bucket,
+      endpoint: this.endpoint,
+      forcePathStyle: this.forcePathStyle ?? false,
+    })
 
     const command = new HeadObjectCommand({
       Bucket: this.bucket,
@@ -254,7 +282,7 @@ export class S3StorageProvider implements StorageProvider {
     targetPath: string,
     mimeType: string
   ): Promise<void> {
-    const key = targetPath.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(targetPath)
     const createResponse = await this.client.send(
       new CreateMultipartUploadCommand({
         Bucket: this.bucket,
@@ -330,7 +358,7 @@ export class S3StorageProvider implements StorageProvider {
     path: string,
     mimeType: string
   ): Promise<NodeWritable> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
     const { PassThrough } = await import('stream')
     const passThrough = new PassThrough()
 
@@ -573,16 +601,8 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async renameFolder(oldPath: string, newPath: string): Promise<void> {
-    const oldPrefix =
-      oldPath
-        .replace(/^\/+/, '')
-        .replace(/^uploads\//, '')
-        .replace(/\/$/, '') + '/'
-    const newPrefix =
-      newPath
-        .replace(/^\/+/, '')
-        .replace(/^uploads\//, '')
-        .replace(/\/$/, '') + '/'
+    const oldPrefix = this.normalizeKey(oldPath).replace(/\/$/, '') + '/'
+    const newPrefix = this.normalizeKey(newPath).replace(/\/$/, '') + '/'
 
     let continuationToken: string | undefined
 
@@ -627,7 +647,7 @@ export class S3StorageProvider implements StorageProvider {
     mimeType: string,
     metadata?: Record<string, string>
   ): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     let response
     try {
@@ -661,7 +681,7 @@ export class S3StorageProvider implements StorageProvider {
     uploadId: string,
     partNumber: number
   ): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     const command = new UploadPartCommand({
       Bucket: this.bucket,
@@ -678,7 +698,7 @@ export class S3StorageProvider implements StorageProvider {
     uploadId: string,
     parts: { ETag: string; PartNumber: number }[]
   ): Promise<void> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     await this.client.send(
       new CompleteMultipartUploadCommand({
@@ -698,7 +718,7 @@ export class S3StorageProvider implements StorageProvider {
     partNumber: number,
     data: Buffer
   ): Promise<{ ETag: string }> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = this.normalizeKey(path)
 
     const response = await this.client.send(
       new UploadPartCommand({
