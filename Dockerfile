@@ -1,80 +1,76 @@
-# Stage 1: Dependencies  
-FROM node:lts AS deps
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+# Multi-stage Bun-based Dockerfile
+# Builder: use oven/bun to install deps & build
+# Runner: minimal bun image to run the Next standalone bundle
+
+FROM oven/bun:latest AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+# Install required native build tools for some deps (Prisma, native addons)
+RUN apt-get update && apt-get install -y python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Copy package manifests first for cached installs
+COPY package.json package-lock.json* bun.lockb* tsconfig.json ./
 COPY prisma ./prisma
 
-# Install dependencies
-RUN npm ci
+# Install deps with Bun (includes dev deps for build)
+RUN bun install --ignore-scripts
 
-RUN npx prisma generate
+# Prisma generate
+RUN bunx prisma generate
 
-# Stage 2: Builder
-FROM node:lts AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/prisma ./prisma
+# Copy rest and build
 COPY . .
-
-# Set up environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+RUN bun run build
 
-# Build the application
-RUN npm run build
-
-# Stage 3: Runner
-FROM node:lts AS runner
+# Runner stage
+FROM oven/bun:latest AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# Create non-root user
+RUN groupadd --system --gid 1001 nodejs || true \
+  && useradd --system --uid 1001 --gid nodejs nextjs || true
 
-RUN groupadd --system --gid 1001 nodejs
-RUN useradd --system --uid 1001 --gid nodejs nextjs
-
-# Install curl for healthcheck and OpenSSL for Prisma
+# Utilities for healthchecks / Prisma
 RUN apt-get update && apt-get install -y curl openssl && rm -rf /var/lib/apt/lists/*
 
-# Create uploads directory with proper permissions
-RUN mkdir -p /app/uploads && \
-    chown nextjs:nodejs /app/uploads && \
-    chmod 775 /app/uploads
+# Ensure uploads directory exists with correct perms
+RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads && chmod 775 /app/uploads
 
-# Copy necessary files
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/.next/standalone ./
+# Copy Next standalone (if produced) and static assets
+COPY --from=builder /app/.next/standalone ./.next/standalone
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib ./lib
+
+# Copy node_modules if the bundle expects it
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy optional start script
 COPY --from=builder /app/scripts/start.sh ./start.sh
+RUN chmod +x /app/start.sh || true
 
-# Set correct permissions
+# Set ownership
 RUN chown -R nextjs:nodejs /app
-RUN chmod +x /app/start.sh
 
-# Create the entrypoint script that will run as root
+# Entrypoint to fix permissions and switch user
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
-    echo 'mkdir -p /app/uploads' >> /entrypoint.sh && \
-    echo 'chown -R nextjs:nodejs /app/uploads' >> /entrypoint.sh && \
-    echo 'chmod 775 /app/uploads' >> /entrypoint.sh && \
-    echo 'exec su nextjs -s /bin/bash -c "$*"' >> /entrypoint.sh && \
-    chmod +x /entrypoint.sh
+  echo 'mkdir -p /app/uploads' >> /entrypoint.sh && \
+  echo 'chown -R nextjs:nodejs /app/uploads' >> /entrypoint.sh && \
+  echo 'chmod 775 /app/uploads' >> /entrypoint.sh && \
+  echo 'exec su nextjs -s /bin/bash -c "${@}"' >> /entrypoint.sh && \
+  chmod +x /entrypoint.sh
 
 EXPOSE 3000
-
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
-# Add healthcheck
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
-# The entrypoint script runs as root but switches to nextjs user
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/start.sh"]

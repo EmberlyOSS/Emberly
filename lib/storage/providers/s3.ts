@@ -15,6 +15,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { Writable as NodeWritable, Readable } from 'node:stream'
 
 import { loggers } from '@/lib/logger'
+import { urlForHost } from '@/lib/utils'
 
 import type { RangeOptions, S3Config, StorageProvider } from '../types'
 
@@ -34,42 +35,58 @@ export class S3StorageProvider implements StorageProvider {
 
     this.bucket = config.bucket
     this.endpoint = config.endpoint
-    this.client = new S3Client({
+    const clientConfig: any = {
       region: config.region,
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
       },
-      requestHandler: {
-        requestTimeout: 300000, // 5 minutes
-        connectionTimeout: 30000, // 30 seconds
-        socketTimeout: 300000, // 5 minutes
-      },
       maxAttempts: 3,
       retryMode: 'adaptive',
-      ...(config.endpoint && {
-        endpoint: config.endpoint,
-        forcePathStyle: config.forcePathStyle ?? false,
-      }),
+    }
+
+    if (config.endpoint) {
+      clientConfig.endpoint = config.endpoint
+      clientConfig.forcePathStyle = config.forcePathStyle ?? false
+    }
+
+    this.client = new S3Client(clientConfig)
+    logger.info('S3 client initialized', {
+      bucket: this.bucket,
+      endpoint: this.endpoint,
+      forcePathStyle: config.forcePathStyle ?? false,
+      region: config.region,
     })
   }
 
   async uploadFile(
     file: Buffer,
     path: string,
-    mimeType: string
+    mimeType: string,
+    metadata?: Record<string, string>
   ): Promise<void> {
     const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: file,
-        ContentType: mimeType,
-        ACL: key.startsWith('avatars/') ? 'public-read' : undefined,
+    try {
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: file,
+          ContentType: mimeType,
+          ACL: key.startsWith('avatars/') ? 'public-read' : undefined,
+          Metadata: metadata,
+        })
+      )
+    } catch (err) {
+      const errAny = err as any
+      logger.error('S3 put object failed', errAny, {
+        key,
+        message: errAny?.message,
+        awsMetadata: errAny?.$metadata,
       })
-    )
+      throw err
+    }
   }
 
   async deleteFile(path: string): Promise<void> {
@@ -130,19 +147,32 @@ export class S3StorageProvider implements StorageProvider {
 
       return stream
     } catch (error) {
-      logger.error(`Failed to get S3 stream for ${key}`, error as Error, {
+      const errAny = error as any
+      logger.error(`Failed to get S3 stream for ${key}`, errAny, {
         key,
+        code: errAny?.code || errAny?.name,
+        message: errAny?.message,
+        awsMetadata: errAny?.$metadata,
       })
       throw error
     }
   }
 
-  async getFileUrl(path: string, expiresIn: number = 3600): Promise<string> {
+  async getFileUrl(
+    path: string,
+    expiresIn: number = 3600,
+    hostOverride?: string
+  ): Promise<string> {
     const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     if (key.startsWith('avatars/')) {
+      if (hostOverride) {
+        const host = hostOverride.replace(/\/$/, '')
+        const base = host.startsWith('http') ? host : urlForHost(host)
+        return `${base}/${key}`
+      }
       if (this.endpoint) {
-        return `${this.endpoint}/${this.bucket}/${key}`
+        return `${this.endpoint.replace(/\/$/, '')}/${this.bucket}/${key}`
       }
       return `https://${this.bucket}.s3.amazonaws.com/${key}`
     }
@@ -153,13 +183,42 @@ export class S3StorageProvider implements StorageProvider {
     })
 
     const downloadExpiresIn = expiresIn > 3600 ? expiresIn : 21600
+    try {
+      if (hostOverride) {
+        // If caller requests a host override (custom domain), return a
+        // non-signed URL using that host. Use `urlForHost` so localhost and
+        // development hosts can be served over http when appropriate.
+        const host = hostOverride.replace(/\/$/, '')
+        const base = host.startsWith('http') ? host : urlForHost(host)
+        return `${base}/${key}`
+      }
 
-    return await getSignedUrl(this.client, command, {
-      expiresIn: downloadExpiresIn,
-    })
+      return await getSignedUrl(this.client, command, {
+        expiresIn: downloadExpiresIn,
+      })
+    } catch (error) {
+      const errAny = error as any
+      logger.error('Failed to generate signed URL', errAny, {
+        key,
+        message: errAny?.message,
+        awsMetadata: errAny?.$metadata,
+      })
+      // Last-resort fallback: if an endpoint is configured, return a
+      // path-style URL so the app can still return a usable URL instead
+      // of failing outright. The caller may still encounter 403s from the
+      // object server, but this avoids throwing here.
+      if (this.endpoint) {
+        return `${this.endpoint.replace(/\/$/, '')}/${this.bucket}/${key}`
+      }
+      throw error
+    }
   }
 
-  async getDownloadUrl(path: string, filename?: string): Promise<string> {
+  async getDownloadUrl(
+    path: string,
+    filename?: string,
+    hostOverride?: string
+  ): Promise<string> {
     const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     const command = new GetObjectCommand({
@@ -169,6 +228,11 @@ export class S3StorageProvider implements StorageProvider {
         ? `attachment; filename="${filename}"`
         : undefined,
     })
+    if (hostOverride) {
+      const host = hostOverride.replace(/\/$/, '')
+      const base = host.startsWith('http') ? host : urlForHost(host)
+      return `${base}/${key}`
+    }
 
     return await getSignedUrl(this.client, command, { expiresIn: 21600 })
   }
@@ -310,14 +374,59 @@ export class S3StorageProvider implements StorageProvider {
 
         const presignedUrl = await getPresignedUrl(partNum)
 
-        const response = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: data as BodyInit,
-        })
+        // Retry transient failures (network / 5xx / some 4xx) with exponential backoff
+        let attempt = 0
+        let response: Response | null = null
+        const maxAttempts = 3
+        while (attempt < maxAttempts) {
+          try {
+            response = await fetch(presignedUrl, {
+              method: 'PUT',
+              body: data as BodyInit,
+            })
 
-        if (!response.ok) {
+            if (response.ok) break
+
+            const bodyText = await response.text().catch(() => '')
+            logger.warn('Presigned upload part non-ok response', {
+              key,
+              part: partNum,
+              attempt,
+              status: response.status,
+              statusText: response.statusText,
+              body: bodyText.slice(0, 200),
+            })
+            // Retry on server errors and some client errors (502, 503, 504, 429)
+            if ([502, 503, 504, 429].includes(response.status)) {
+              attempt++
+              const backoff =
+                Math.pow(2, attempt) * 100 + Math.floor(Math.random() * 100)
+              await new Promise((r) => setTimeout(r, backoff))
+              continue
+            }
+
+            // otherwise, do not retry
+            break
+          } catch (err) {
+            logger.warn('Presigned upload part fetch error', {
+              key,
+              part: partNum,
+              attempt,
+              error: err,
+            })
+            attempt++
+            const backoff =
+              Math.pow(2, attempt) * 100 + Math.floor(Math.random() * 100)
+            await new Promise((r) => setTimeout(r, backoff))
+            continue
+          }
+        }
+
+        if (!response || !response.ok) {
+          const status = response ? response.status : 'NO_RESPONSE'
+          const statusText = response ? response.statusText : ''
           throw new Error(
-            `Failed to upload part ${partNum}: ${response.statusText}`
+            `Failed to upload part ${partNum}: ${status} ${statusText}`
           )
         }
 
@@ -515,17 +624,30 @@ export class S3StorageProvider implements StorageProvider {
 
   async initializeMultipartUpload(
     path: string,
-    mimeType: string
+    mimeType: string,
+    metadata?: Record<string, string>
   ): Promise<string> {
     const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
-    const response = await this.client.send(
-      new CreateMultipartUploadCommand({
-        Bucket: this.bucket,
-        Key: key,
-        ContentType: mimeType,
+    let response
+    try {
+      response = await this.client.send(
+        new CreateMultipartUploadCommand({
+          Bucket: this.bucket,
+          Key: key,
+          ContentType: mimeType,
+          Metadata: metadata,
+        })
+      )
+    } catch (err) {
+      const errAny = err as any
+      logger.error('S3 initialize multipart upload failed', errAny, {
+        key,
+        message: errAny?.message,
+        awsMetadata: errAny?.$metadata,
       })
-    )
+      throw err
+    }
 
     if (!response.UploadId) {
       throw new Error('Failed to initialize multipart upload')

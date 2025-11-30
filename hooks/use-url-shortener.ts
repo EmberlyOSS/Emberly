@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 
 import { useRouter } from 'next/navigation'
 
+import { writeToClipboard } from '@/lib/utils/clipboard'
+
 import { useToast } from './use-toast'
 
 export interface ShortenedUrl {
@@ -148,13 +150,20 @@ export function useUrlShortener(options: UseUrlShortenerOptions = {}) {
     (shortCode: string) => {
       const baseUrl = window.location.origin
       const shortUrl = `${baseUrl}/u/${shortCode}`
-
-      navigator.clipboard.writeText(shortUrl).then(() => {
-        toast({
-          title: 'URL copied',
-          description: 'The shortened URL has been copied to your clipboard',
+      writeToClipboard(shortUrl)
+        .then(() => {
+          toast({
+            title: 'URL copied',
+            description: 'The shortened URL has been copied to your clipboard',
+          })
         })
-      })
+        .catch(() => {
+          toast({
+            title: 'Failed to copy URL',
+            description: 'Please copy the URL manually',
+            variant: 'destructive',
+          })
+        })
     },
     [toast]
   )

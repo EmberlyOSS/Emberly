@@ -72,6 +72,13 @@ export async function POST(req: Request) {
     const storageProvider = await getStorageProvider()
     const avatarFilename = `${session.user.id}.jpg`
     const avatarPath = join('uploads', 'avatars', avatarFilename)
+    // capture host headers (if present) and store as metadata on the object
+    const incomingHeaders = req.headers
+    const meta: Record<string, string> = {}
+    const cordx = incomingHeaders.get('x-cordx-host')
+    const emberly = incomingHeaders.get('x-emberly-host')
+    if (cordx) meta['x-cordx-host'] = cordx
+    if (emberly) meta['x-emberly-host'] = emberly
     let publicPath = `/api/avatars/${avatarFilename}`
 
     if (user?.image?.startsWith('/api/avatars/')) {
@@ -89,20 +96,37 @@ export async function POST(req: Request) {
       }
     }
 
-    await storageProvider.uploadFile(processedImage, avatarPath, 'image/jpeg')
+    await storageProvider.uploadFile(
+      processedImage,
+      avatarPath,
+      'image/jpeg',
+      meta
+    )
 
     if (storageProvider instanceof S3StorageProvider) {
       publicPath = await storageProvider.getFileUrl(avatarPath)
     }
 
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: session.user.id },
       data: {
         image: publicPath,
       },
+      select: { id: true, image: true },
     })
 
-    return NextResponse.json({ success: true, url: publicPath })
+    logger.info('Avatar uploaded', {
+      userId: session.user.id,
+      avatar: publicPath,
+      dbImage: updated.image,
+    })
+
+    // Return both `url` and `image` for compatibility with different callers
+    return NextResponse.json({
+      success: true,
+      url: publicPath,
+      image: publicPath,
+    })
   } catch (error) {
     logger.error('Avatar upload error', error as Error)
     return NextResponse.json(

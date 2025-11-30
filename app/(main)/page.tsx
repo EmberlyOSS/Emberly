@@ -266,46 +266,50 @@ export default async function HomePage() {
             Quick answers to common questions about using Emberly.
           </p>
 
-          <div className="mt-6 grid md:grid-cols-2 gap-4">
-            <details className="group bg-background/40 border border-border/50 rounded-lg p-4">
-              <summary className="font-medium cursor-pointer">
-                How do I upload files?
+          <div className="mt-6 grid md:grid-cols-2 gap-4 items-start">
+            <details className="group bg-background/40 border border-border/50 rounded-lg p-3 transition-all duration-200 overflow-hidden">
+              <summary className="font-medium cursor-pointer list-none flex items-center justify-between hover:text-primary transition-colors">
+                <span>How do I upload files?</span>
+                <MessageSquare className="h-4 w-4 text-muted-foreground group-open:rotate-180 transition-transform" />
               </summary>
-              <div className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-3 text-sm text-muted-foreground animate-in fade-in-50 slide-in-from-top-2 duration-300">
                 Use the "Get started" button to create an account, then drag &
                 drop files or choose files in the dashboard upload form.
-              </div>
+              </p>
             </details>
 
-            <details className="group bg-background/40 border border-border/50 rounded-lg p-4">
-              <summary className="font-medium cursor-pointer">
-                Are my files private?
+            <details className="group bg-background/40 border border-border/50 rounded-lg p-3 transition-all duration-200 overflow-hidden">
+              <summary className="font-medium cursor-pointer list-none flex items-center justify-between hover:text-primary transition-colors">
+                <span>Are my files private?</span>
+                <MessageSquare className="h-4 w-4 text-muted-foreground group-open:rotate-180 transition-transform" />
               </summary>
-              <div className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-3 text-sm text-muted-foreground animate-in fade-in-50 slide-in-from-top-2 duration-300">
                 Files are private by default. You can optionally set
                 expirations, password protection, or share short links for
                 public access.
-              </div>
+              </p>
             </details>
 
-            <details className="group bg-background/40 border border-border/50 rounded-lg p-4">
-              <summary className="font-medium cursor-pointer">
-                Can I use a custom domain?
+            <details className="group bg-background/40 border border-border/50 rounded-lg p-3 transition-all duration-200 overflow-hidden">
+              <summary className="font-medium cursor-pointer list-none flex items-center justify-between hover:text-primary transition-colors">
+                <span>Can I use a custom domain?</span>
+                <MessageSquare className="h-4 w-4 text-muted-foreground group-open:rotate-180 transition-transform" />
               </summary>
-              <div className="mt-2 text-sm text-muted-foreground">
-                Yes, point your DNS to Emberly and add the domain in the
-                settings to serve files from your own domain.
-              </div>
+              <p className="mt-3 text-sm text-muted-foreground animate-in fade-in-50 slide-in-from-top-2 duration-300">
+                Yes, point your DNS to Emberly and add the domain in settings to
+                serve files from your own domain.
+              </p>
             </details>
 
-            <details className="group bg-background/40 border border-border/50 rounded-lg p-4">
-              <summary className="font-medium cursor-pointer">
-                What file sizes are supported?
+            <details className="group bg-background/40 border border-border/50 rounded-lg p-3 transition-all duration-200 overflow-hidden">
+              <summary className="font-medium cursor-pointer list-none flex items-center justify-between hover:text-primary transition-colors">
+                <span>What file sizes are supported?</span>
+                <MessageSquare className="h-4 w-4 text-muted-foreground group-open:rotate-180 transition-transform" />
               </summary>
-              <div className="mt-2 text-sm text-muted-foreground">
-                Upload limits are configurable by server. See your instance
-                settings or host documentation for default limits.
-              </div>
+              <p className="mt-3 text-sm text-muted-foreground animate-in fade-in-50 slide-in-from-top-2 duration-300">
+                Upload limits depend on your server configuration. Check your
+                instance settings or host docs for limits.
+              </p>
             </details>
           </div>
         </div>

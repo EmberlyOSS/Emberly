@@ -271,6 +271,7 @@ export const loggers = {
   events: createLogger('events'),
   ocr: createLogger('ocr'),
   files: createLogger('files'),
+  domains: createLogger('domains'),
   users: createLogger('users'),
   config: createLogger('config'),
   startup: createLogger('startup'),

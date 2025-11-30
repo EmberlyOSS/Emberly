@@ -6,7 +6,12 @@ export interface RangeOptions {
 }
 
 export interface StorageProvider {
-  uploadFile(file: Buffer, path: string, mimeType: string): Promise<void>
+  uploadFile(
+    file: Buffer,
+    path: string,
+    mimeType: string,
+    metadata?: Record<string, string>
+  ): Promise<void>
   uploadChunkedFile(
     chunksDir: string,
     targetPath: string,
@@ -15,10 +20,18 @@ export interface StorageProvider {
   createWriteStream(path: string, mimeType: string): Promise<NodeWritable>
   deleteFile(path: string): Promise<void>
   getFileStream(path: string, range?: RangeOptions): Promise<Readable>
-  getFileUrl(path: string): Promise<string>
+  getFileUrl(
+    path: string,
+    expiresIn?: number,
+    hostOverride?: string
+  ): Promise<string>
   getFileSize(path: string): Promise<number>
   renameFolder(oldPath: string, newPath: string): Promise<void>
-  initializeMultipartUpload(path: string, mimeType: string): Promise<string>
+  initializeMultipartUpload(
+    path: string,
+    mimeType: string,
+    metadata?: Record<string, string>
+  ): Promise<string>
   getPresignedPartUploadUrl(
     path: string,
     uploadId: string,
@@ -35,7 +48,11 @@ export interface StorageProvider {
     uploadId: string,
     parts: { ETag: string; PartNumber: number }[]
   ): Promise<void>
-  getDownloadUrl?(path: string, filename?: string): Promise<string>
+  getDownloadUrl?(
+    path: string,
+    filename?: string,
+    hostOverride?: string
+  ): Promise<string>
 }
 
 export interface S3Config {

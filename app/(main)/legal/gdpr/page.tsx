@@ -33,17 +33,14 @@ export default function GdprPage() {
             <CardHeader>
               <CardTitle>GDPR & Data Protection</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Last updated: Nov 25, 2025
+                Last updated: Nov 30, 2025
               </p>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <nav className="flex gap-3 text-sm mb-2">
-                <a
-                  className="underline text-muted-foreground"
-                  href="#controller"
-                >
-                  Controller & Processor
+                <a className="underline text-muted-foreground" href="#scope">
+                  Scope
                 </a>
                 <a className="underline text-muted-foreground" href="#rights">
                   Your rights
@@ -52,57 +49,61 @@ export default function GdprPage() {
                   className="underline text-muted-foreground"
                   href="#retention"
                 >
-                  Data retention
+                  Retention & exports
                 </a>
               </nav>
 
-              <h3 id="controller" className="text-base font-semibold">
-                Controller & Processor
+              <h3 id="scope" className="text-base font-semibold">
+                Scope & responsibilities
               </h3>
               <p className="text-sm text-muted-foreground">
-                Depending on the deployment, the operator of an Emberly instance
-                is the data controller. We provide guidance to instance
-                operators about lawful processing and minimizing personal data
-                collection.
+                This page describes how Emberly (the project and the official
+                website at emberly.site and emberly.ca) collects and processes
+                personal data. It explains what data we collect, why we collect
+                it, how long we retain it, and how to contact the project about
+                data requests. This policy applies to data processed by the
+                Emberly project and the official Emberly websites and services
+                (emberly.site / emberly.ca).
               </p>
 
               <h3 id="rights" className="text-base font-semibold">
                 Data subject rights
               </h3>
               <p className="text-sm text-muted-foreground">
-                Users may have rights to access, rectify, erase, restrict
-                processing, object to processing, and request portability of
-                personal data. To exercise your rights, contact the instance
-                operator or use account tools where available.
+                Where applicable, individuals have statutory rights such as
+                access, rectification, erasure, restriction, objection, and
+                portability. To exercise these rights for data held by the
+                Emberly project (for example, data associated with an account on
+                the official site at emberly.site or emberly.ca), contact the
+                project via the channels listed in the Privacy Policy or open an
+                issue on the project's GitHub repository. We will respond to
+                legitimate requests in accordance with applicable law.
               </p>
 
               <h3 id="retention" className="text-base font-semibold">
-                Data retention
+                Retention, exports & deletion
               </h3>
               <p className="text-sm text-muted-foreground">
-                Retention periods are set by the instance operator. We recommend
-                operators publish their retention schedules and provide export
-                and deletion options for users.
-              </p>
-
-              <h3 className="text-base font-semibold">
-                Lawful basis & transfers
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Processing is typically performed to provide the service
-                (contractual necessity) and to comply with legal obligations.
-                Data may be transferred across borders; instance operators
-                should ensure adequate safeguards for international transfers.
+                The Emberly project retains personal data only as long as
+                necessary for the purposes described (account maintenance,
+                security, support, and legal compliance). Users can request an
+                account export or deletion for data held by Emberly. See the
+                Privacy Policy for the procedures and approximate retention
+                timeframes.
               </p>
 
               <h3 className="text-base font-semibold">Contact</h3>
               <p className="text-sm text-muted-foreground">
-                For GDPR-related requests, consult the{' '}
+                For data questions about Emberly project-managed services or the
+                Emberly website, consult the Privacy Policy and contact the
+                project via GitHub or the listed contact methods. If you are
+                unsure where your data is stored or who to contact, open an
+                issue on the repository and the maintainers will advise on the
+                appropriate next steps.{' '}
                 <Link href="/legal/privacy" className="underline">
                   Privacy Policy
-                </Link>{' '}
-                and contact the instance operator. Operators may provide a
-                dedicated email for data requests.
+                </Link>
+                .
               </p>
 
               <div className="mt-6">

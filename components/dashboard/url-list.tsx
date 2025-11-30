@@ -15,6 +15,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+import { writeToClipboard } from '@/lib/utils/clipboard'
+
 import { useToast } from '@/hooks/use-toast'
 
 interface ShortenedUrl {
@@ -97,7 +99,7 @@ export function URLList({ refreshTrigger = 0 }: URLListProps) {
   const copyUrl = async (shortCode: string) => {
     const url = `${window.location.origin}/u/${shortCode}`
     try {
-      await navigator.clipboard.writeText(url)
+      await writeToClipboard(url)
       toast({
         title: 'URL copied',
         description: 'Shortened URL has been copied to clipboard',

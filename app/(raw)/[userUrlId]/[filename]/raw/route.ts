@@ -145,7 +145,25 @@ export async function GET(
     const storageProvider = await getStorageProvider()
     const range = req.headers.get('range')
 
-    const size = await storageProvider.getFileSize(file.path)
+    const mapAwsErrorToStatus = (errAny: any): number | null => {
+      try {
+        const status = errAny?.$metadata?.httpStatusCode
+        if (status === 403) return 403
+        if (status === 404) return 404
+        if (status && status >= 500 && status < 600) return 502
+      } catch {}
+      return null
+    }
+
+    let size: number
+    try {
+      size = await storageProvider.getFileSize(file.path)
+    } catch (err) {
+      const status = mapAwsErrorToStatus(err as any)
+      if (status) return new Response(null, { status })
+      console.error('Error fetching file size for', file.path, err)
+      return new Response(null, { status: 502 })
+    }
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
@@ -153,15 +171,41 @@ export async function GET(
       const end = parts[1] ? parseInt(parts[1], 10) : size - 1
       const chunkSize = end - start + 1
 
-      const stream = await storageProvider.getFileStream(file.path, {
-        start,
-        end,
-      })
+      try {
+        const stream = await storageProvider.getFileStream(file.path, {
+          start,
+          end,
+        })
 
+        const headers = {
+          'Content-Range': `bytes ${start}-${end}/${size}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize.toString(),
+          'Content-Type': file.mimeType,
+          'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          Connection: 'keep-alive',
+          'Keep-Alive': 'timeout=300, max=1000',
+          'Transfer-Encoding': 'identity',
+        }
+
+        return new NextResponse(createRobustStream(stream), {
+          status: 206,
+          headers,
+        })
+      } catch (err) {
+        const status = mapAwsErrorToStatus(err as any)
+        if (status) return new Response(null, { status })
+        console.error('Error creating ranged stream for', file.path, err)
+        return new Response(null, { status: 502 })
+      }
+    }
+
+    try {
+      const stream = await storageProvider.getFileStream(file.path)
       const headers = {
-        'Content-Range': `bytes ${start}-${end}/${size}`,
         'Accept-Ranges': 'bytes',
-        'Content-Length': chunkSize.toString(),
+        'Content-Length': size.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
         'Cache-Control': 'public, max-age=31536000, immutable',
@@ -170,41 +214,15 @@ export async function GET(
         'Transfer-Encoding': 'identity',
       }
 
-      return new NextResponse(createRobustStream(stream), {
-        status: 206,
-        headers,
-      })
+      return new NextResponse(createRobustStream(stream), { headers })
+    } catch (err) {
+      const status = mapAwsErrorToStatus(err as any)
+      if (status) return new Response(null, { status })
+      console.error('Error creating stream for', file.path, err)
+      return new Response(null, { status: 502 })
     }
-
-    const stream = await storageProvider.getFileStream(file.path)
-    const headers = {
-      'Accept-Ranges': 'bytes',
-      'Content-Length': size.toString(),
-      'Content-Type': file.mimeType,
-      'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      Connection: 'keep-alive',
-      'Keep-Alive': 'timeout=300, max=1000',
-      'Transfer-Encoding': 'identity',
-    }
-
-    return new NextResponse(createRobustStream(stream), { headers })
   } catch (error) {
-    // Log richer error details for debugging (AWS SDK errors include $metadata)
-    const errAny = error as any
-    console.error('File serve error:', errAny)
-    try {
-      console.error('File serve error details:', {
-        name: errAny?.name,
-        code: errAny?.code || errAny?.name,
-        fault: errAny?.$fault,
-        awsMetadata: errAny?.$metadata,
-        message: errAny?.message,
-      })
-    } catch {
-      // ignore logging errors
-    }
-
+    console.error('File serve error:', error)
     if (error instanceof Error && error.message.includes('NoSuchKey')) {
       return new Response(null, { status: 404 })
     }

@@ -5,7 +5,7 @@ import { checkAuthentication } from './lib/middleware/auth-checker'
 import { handleBotRequest } from './lib/middleware/bot-handler'
 import { PUBLIC_PATHS } from './lib/middleware/constants'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (
     request.nextUrl.pathname.endsWith('/raw') ||
     request.nextUrl.pathname.endsWith('/direct')
@@ -19,7 +19,9 @@ export async function middleware(request: NextRequest) {
 
   if (
     PUBLIC_PATHS.some((path: string) =>
-      request.nextUrl.pathname.startsWith(path)
+      path === '/'
+        ? request.nextUrl.pathname === '/' // only allow exact root match
+        : request.nextUrl.pathname.startsWith(path)
     )
   ) {
     return NextResponse.next()

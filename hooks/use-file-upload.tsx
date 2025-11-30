@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { ToastAction } from '@/components/ui/toast'
 
+import { writeToClipboard } from '@/lib/utils/clipboard'
+
 import { useToast } from './use-toast'
 
 export type FileWithPreview = File & {
@@ -549,11 +551,20 @@ export function useFileUpload(options: FileUploadOptions = {}) {
               <ToastAction
                 altText="Copy link"
                 onClick={() => {
-                  navigator.clipboard.writeText(file.url)
-                  toast({
-                    title: 'Link copied',
-                    description: 'File link copied to clipboard',
-                  })
+                  writeToClipboard(file.url)
+                    .then(() => {
+                      toast({
+                        title: 'Link copied',
+                        description: 'File link copied to clipboard',
+                      })
+                    })
+                    .catch(() => {
+                      toast({
+                        title: 'Failed to copy link',
+                        description: 'Please copy the link manually',
+                        variant: 'destructive',
+                      })
+                    })
                 }}
               >
                 Copy Link
@@ -570,11 +581,20 @@ export function useFileUpload(options: FileUploadOptions = {}) {
               altText="Copy all links"
               onClick={() => {
                 const links = responses.map((r) => r.url).join('\n')
-                navigator.clipboard.writeText(links)
-                toast({
-                  title: 'Links copied',
-                  description: 'All file links copied to clipboard',
-                })
+                writeToClipboard(links)
+                  .then(() => {
+                    toast({
+                      title: 'Links copied',
+                      description: 'All file links copied to clipboard',
+                    })
+                  })
+                  .catch(() => {
+                    toast({
+                      title: 'Failed to copy links',
+                      description: 'Please copy the links manually',
+                      variant: 'destructive',
+                    })
+                  })
               }}
             >
               Copy All Links
