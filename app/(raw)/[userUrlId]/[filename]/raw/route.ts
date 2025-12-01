@@ -158,6 +158,10 @@ export async function GET(
     const range = req.headers.get('range')
 
     const size = await storageProvider.getFileSize(file.path)
+    logger.info('raw route head success', {
+      filePath: file.path,
+      size,
+    })
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
@@ -166,6 +170,11 @@ export async function GET(
       const chunkSize = end - start + 1
 
       const stream = await storageProvider.getFileStream(file.path, {
+        start,
+        end,
+      })
+      logger.info('raw route range stream ready', {
+        filePath: file.path,
         start,
         end,
       })
@@ -189,6 +198,10 @@ export async function GET(
     }
 
     const stream = await storageProvider.getFileStream(file.path)
+    logger.info('raw route full stream ready', {
+      filePath: file.path,
+      size,
+    })
     const headers = {
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),

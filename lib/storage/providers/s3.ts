@@ -21,6 +21,20 @@ import type { RangeOptions, S3Config, StorageProvider } from '../types'
 
 const logger = loggers.storage.getChildLogger('s3')
 
+function logS3Error(
+  message: string,
+  error: unknown,
+  context: Record<string, unknown>
+): void {
+  const err = error as { message?: string; name?: string; $metadata?: unknown }
+  logger.error(message, err as Error, {
+    name: err?.name,
+    message: err?.message,
+    metadata: err?.$metadata,
+    ...context,
+  })
+}
+
 export class S3StorageProvider implements StorageProvider {
   private client: S3Client
   private bucket: string
@@ -177,9 +191,7 @@ export class S3StorageProvider implements StorageProvider {
 
       return stream
     } catch (error) {
-      logger.error(`Failed to get S3 stream for ${key}`, error as Error, {
-        key,
-      })
+      logS3Error(`Failed to get S3 stream for ${key}`, error, { key })
       throw error
     }
   }
@@ -228,8 +240,13 @@ export class S3StorageProvider implements StorageProvider {
       Key: key,
     })
 
-    const response = await this.client.send(command)
-    return response.ContentLength || 0
+    try {
+      const response = await this.client.send(command)
+      return response.ContentLength || 0
+    } catch (error) {
+      logS3Error(`Failed to get S3 head for ${key}`, error, { key })
+      throw error
+    }
   }
 
   async uploadChunkedFile(
