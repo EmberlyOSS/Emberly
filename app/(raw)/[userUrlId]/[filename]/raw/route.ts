@@ -23,6 +23,15 @@ function createRobustStream(nodeStream: Readable): ReadableStream {
       start(ctrl) {
         controller = ctrl
 
+        // Start paused — we'll resume on pull so upstream doesn't flood us.
+        try {
+          if (typeof (nodeStream as any).pause === 'function') {
+            ; (nodeStream as any).pause()
+          }
+        } catch (err) {
+          // non-fatal
+        }
+
         nodeStream.on('data', (chunk) => {
           if (streamClosed) return
 
@@ -52,6 +61,12 @@ function createRobustStream(nodeStream: Readable): ReadableStream {
             } catch {
               // Client disconnected
             }
+            streamClosed = true
+          }
+        })
+
+        nodeStream.on('close', () => {
+          if (!streamClosed) {
             streamClosed = true
           }
         })
@@ -175,18 +190,53 @@ export async function GET(
     let size: number
     try {
       size = await storageProvider.getFileSize(file.path)
+      try {
+        console.info('File size fetched', { path: file.path, size })
+      } catch { }
     } catch (err) {
       const status = mapAwsErrorToStatus(err as any)
-      if (status) return new Response(null, { status })
+
+      // If storage says 404, try a fallback path that includes the user folder.
+      // This handles cases where DB.path is missing the user subfolder but
+      // objects in S3 are stored under `uploads/<userUrlId>/<filename>`.
       try {
-        // Log SDK $metadata when present to help correlate with MinIO logs
-        console.error('Error fetching file size for', file.path, err, {
-          awsMetadata: (err as any)?.$metadata,
-        })
-      } catch (logErr) {
-        console.error('Error fetching file size for', file.path, err)
+        if (status === 404) {
+          const altPath = `uploads/${userUrlId}/${filename}`
+          try {
+            const altSize = await storageProvider.getFileSize(altPath)
+            console.info('Fallback storage path exists; updating file.path', { oldPath: file.path, altPath, size: altSize })
+            // Update DB so future requests use the correct path
+            try {
+              await prisma.file.update({ where: { id: file.id }, data: { path: altPath } })
+              file.path = altPath
+            } catch (updateErr) {
+              console.error('Failed to update DB file.path to fallback path', updateErr)
+            }
+            size = altSize
+          } catch (altErr) {
+            // Fallback didn't exist; continue to map original error
+            const mapped = mapAwsErrorToStatus(altErr as any)
+            if (mapped) return new Response(null, { status: mapped })
+            console.error('Error fetching file size for fallback path', altPath, altErr)
+            return new Response(null, { status: 502 })
+          }
+        } else if (status) {
+          return new Response(null, { status })
+        } else {
+          // Non-AWS mapped error: log and return 502
+          try {
+            console.error('Error fetching file size for', file.path, err, {
+              awsMetadata: (err as any)?.$metadata,
+            })
+          } catch (logErr) {
+            console.error('Error fetching file size for', file.path, err)
+          }
+          return new Response(null, { status: 502 })
+        }
+      } catch (outerErr) {
+        console.error('Error during fallback storage check', outerErr)
+        return new Response(null, { status: 502 })
       }
-      return new Response(null, { status: 502 })
     }
 
     if (range) {
@@ -196,10 +246,18 @@ export async function GET(
       const chunkSize = end - start + 1
 
       try {
+        console.info('Requesting ranged stream', { path: file.path, start, end })
         const stream = await storageProvider.getFileStream(file.path, {
           start,
           end,
         })
+        try {
+          console.info('Obtained ranged stream', {
+            path: file.path,
+            hasPipe: typeof (stream as any).pipe === 'function',
+            destroyed: (stream as any).destroyed,
+          })
+        } catch { }
 
         const headers = {
           'Content-Range': `bytes ${start}-${end}/${size}`,
@@ -213,10 +271,22 @@ export async function GET(
           'Transfer-Encoding': 'identity',
         }
 
-        return new NextResponse(createRobustStream(stream), {
-          status: 206,
-          headers,
-        })
+        try {
+          return new NextResponse(createRobustStream(stream), {
+            status: 206,
+            headers,
+          })
+        } catch (err) {
+          console.error('Error constructing ranged NextResponse', err)
+          try {
+            if (stream && typeof (stream as any).destroy === 'function' && !(stream as any).destroyed) {
+              ; (stream as any).destroy()
+            }
+          } catch (destroyErr) {
+            console.error('Error destroying ranged stream after response construction failure', destroyErr)
+          }
+          return new Response(null, { status: 502 })
+        }
       } catch (err) {
         const status = mapAwsErrorToStatus(err as any)
         if (status) return new Response(null, { status })
@@ -232,7 +302,15 @@ export async function GET(
     }
 
     try {
+      console.info('Requesting full stream', { path: file.path })
       const stream = await storageProvider.getFileStream(file.path)
+      try {
+        console.info('Obtained full stream', {
+          path: file.path,
+          hasPipe: typeof (stream as any).pipe === 'function',
+          destroyed: (stream as any).destroyed,
+        })
+      } catch { }
       const headers = {
         'Accept-Ranges': 'bytes',
         'Content-Length': size.toString(),
@@ -244,7 +322,19 @@ export async function GET(
         'Transfer-Encoding': 'identity',
       }
 
-      return new NextResponse(createRobustStream(stream), { headers })
+      try {
+        return new NextResponse(createRobustStream(stream), { headers })
+      } catch (err) {
+        console.error('Error constructing NextResponse with stream', err)
+        try {
+          if (stream && typeof (stream as any).destroy === 'function' && !(stream as any).destroyed) {
+            ; (stream as any).destroy()
+          }
+        } catch (destroyErr) {
+          console.error('Error destroying stream after response construction failure', destroyErr)
+        }
+        return new Response(null, { status: 502 })
+      }
     } catch (err) {
       const status = mapAwsErrorToStatus(err as any)
       if (status) return new Response(null, { status })

@@ -104,29 +104,66 @@ export class S3StorageProvider implements StorageProvider {
         throw new Error('No file body returned from S3')
       }
 
-      const stream = response.Body as Readable
+      const rawBody: any = response.Body
 
-      // Set high water mark to prevent buffering issues
-      if (stream.setMaxListeners) {
-        stream.setMaxListeners(0)
+      // Normalize different runtime body types into a Node.js Readable stream.
+      // AWS SDK v3 may return a Node Readable in Node.js, a web ReadableStream
+      // in certain runtimes, or even a Buffer/Uint8Array depending on usage.
+      let stream: Readable
+
+      try {
+        if (rawBody && typeof rawBody.getReader === 'function') {
+          // It's a Web ReadableStream - convert to Node Readable
+          const { Readable: NodeReadable } = await import('stream')
+          stream = NodeReadable.fromWeb(rawBody as ReadableStream)
+          logger.debug('S3 getFileStream: converted Web ReadableStream to Node Readable', { key })
+        } else if (rawBody && typeof rawBody.pipe === 'function') {
+          // Node.js Readable stream already
+          stream = rawBody as Readable
+          logger.debug('S3 getFileStream: received Node Readable stream', { key })
+        } else if (rawBody instanceof Uint8Array || Buffer.isBuffer(rawBody) || typeof rawBody === 'string') {
+          // Buffer/Uint8Array/string -> create a stream from it
+          const { Readable: NodeReadable } = await import('stream')
+          stream = NodeReadable.from(rawBody as any)
+          logger.debug('S3 getFileStream: created Node Readable from Buffer/string body', { key })
+        } else {
+          logger.error('S3 getFileStream: unsupported response.Body type', { key, bodyType: typeof rawBody })
+          throw new Error('Unsupported S3 response body type')
+        }
+      } catch (convErr) {
+        logger.error('Error normalizing S3 response.Body to Node Readable', convErr as Error, { key })
+        throw convErr
       }
 
-      // Don't pause/resume - let the stream flow naturally
-      stream.on('error', (error) => {
-        const err = error as Error & { code?: string }
+      // Set high water mark / remove listener limits safely
+      try {
+        if (typeof (stream as any).setMaxListeners === 'function') {
+          ; (stream as any).setMaxListeners(0)
+        }
+      } catch (e) {
+        // non-fatal
+      }
 
-        // Only log if it's not a client disconnect during active streaming
-        if (
-          err.code !== 'ECONNRESET' &&
-          err.code !== 'ERR_STREAM_PREMATURE_CLOSE' &&
-          !err.message?.includes('aborted')
-        ) {
-          logger.error(`S3 stream error for ${key}`, err, {
-            key,
-            code: err.code,
+      // Attach robust error logging; ignore client disconnect codes
+      try {
+        if (typeof (stream as any).on === 'function') {
+          ; (stream as any).on('error', (error: any) => {
+            const err = error as Error & { code?: string }
+            if (
+              err.code !== 'ECONNRESET' &&
+              err.code !== 'ERR_STREAM_PREMATURE_CLOSE' &&
+              !err.message?.includes('aborted')
+            ) {
+              logger.error(`S3 stream error for ${key}`, err, {
+                key,
+                code: err.code,
+              })
+            }
           })
         }
-      })
+      } catch (attachErr) {
+        logger.error('Failed to attach error handler to S3 stream', attachErr as Error, { key })
+      }
 
       return stream
     } catch (error) {
