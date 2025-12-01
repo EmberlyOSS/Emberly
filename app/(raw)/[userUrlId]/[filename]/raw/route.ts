@@ -23,15 +23,6 @@ function createRobustStream(nodeStream: Readable): ReadableStream {
       start(ctrl) {
         controller = ctrl
 
-        // Start paused — we'll resume on pull so upstream doesn't flood us.
-        try {
-          if (typeof (nodeStream as any).pause === 'function') {
-            ; (nodeStream as any).pause()
-          }
-        } catch (err) {
-          // non-fatal
-        }
-
         nodeStream.on('data', (chunk) => {
           if (streamClosed) return
 
@@ -61,12 +52,6 @@ function createRobustStream(nodeStream: Readable): ReadableStream {
             } catch {
               // Client disconnected
             }
-            streamClosed = true
-          }
-        })
-
-        nodeStream.on('close', () => {
-          if (!streamClosed) {
             streamClosed = true
           }
         })
@@ -160,84 +145,7 @@ export async function GET(
     const storageProvider = await getStorageProvider()
     const range = req.headers.get('range')
 
-    // Diagnostic logging: capture request context to aid debugging when
-    // origin requests fail (Cloudflare shows 500s). These logs include the
-    // DB file path, mime type, which storage provider is in use, and the
-    // incoming Range header so we can correlate with object storage logs.
-    try {
-      console.info('Raw file request', {
-        urlPath,
-        path: file.path,
-        mimeType: file.mimeType,
-        provider: storageProvider?.constructor?.name,
-        range,
-        host: req.headers.get('host'),
-      })
-    } catch (logErr) {
-      // non-fatal
-    }
-
-    const mapAwsErrorToStatus = (errAny: any): number | null => {
-      try {
-        const status = errAny?.$metadata?.httpStatusCode
-        if (status === 403) return 403
-        if (status === 404) return 404
-        if (status && status >= 500 && status < 600) return 502
-      } catch { }
-      return null
-    }
-
-    let size: number
-    try {
-      size = await storageProvider.getFileSize(file.path)
-      try {
-        console.info('File size fetched', { path: file.path, size })
-      } catch { }
-    } catch (err) {
-      const status = mapAwsErrorToStatus(err as any)
-
-      // If storage says 404, try a fallback path that includes the user folder.
-      // This handles cases where DB.path is missing the user subfolder but
-      // objects in S3 are stored under `uploads/<userUrlId>/<filename>`.
-      try {
-        if (status === 404) {
-          const altPath = `uploads/${userUrlId}/${filename}`
-          try {
-            const altSize = await storageProvider.getFileSize(altPath)
-            console.info('Fallback storage path exists; updating file.path', { oldPath: file.path, altPath, size: altSize })
-            // Update DB so future requests use the correct path
-            try {
-              await prisma.file.update({ where: { id: file.id }, data: { path: altPath } })
-              file.path = altPath
-            } catch (updateErr) {
-              console.error('Failed to update DB file.path to fallback path', updateErr)
-            }
-            size = altSize
-          } catch (altErr) {
-            // Fallback didn't exist; continue to map original error
-            const mapped = mapAwsErrorToStatus(altErr as any)
-            if (mapped) return new Response(null, { status: mapped })
-            console.error('Error fetching file size for fallback path', altPath, altErr)
-            return new Response(null, { status: 502 })
-          }
-        } else if (status) {
-          return new Response(null, { status })
-        } else {
-          // Non-AWS mapped error: log and return 502
-          try {
-            console.error('Error fetching file size for', file.path, err, {
-              awsMetadata: (err as any)?.$metadata,
-            })
-          } catch (logErr) {
-            console.error('Error fetching file size for', file.path, err)
-          }
-          return new Response(null, { status: 502 })
-        }
-      } catch (outerErr) {
-        console.error('Error during fallback storage check', outerErr)
-        return new Response(null, { status: 502 })
-      }
-    }
+    const size = await storageProvider.getFileSize(file.path)
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
@@ -245,75 +153,15 @@ export async function GET(
       const end = parts[1] ? parseInt(parts[1], 10) : size - 1
       const chunkSize = end - start + 1
 
-      try {
-        console.info('Requesting ranged stream', { path: file.path, start, end })
-        const stream = await storageProvider.getFileStream(file.path, {
-          start,
-          end,
-        })
-        try {
-          console.info('Obtained ranged stream', {
-            path: file.path,
-            hasPipe: typeof (stream as any).pipe === 'function',
-            destroyed: (stream as any).destroyed,
-          })
-        } catch { }
+      const stream = await storageProvider.getFileStream(file.path, {
+        start,
+        end,
+      })
 
-        const headers = {
-          'Content-Range': `bytes ${start}-${end}/${size}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': chunkSize.toString(),
-          'Content-Type': file.mimeType,
-          'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-          'Cache-Control': 'public, max-age=31536000, immutable',
-          Connection: 'keep-alive',
-          'Keep-Alive': 'timeout=300, max=1000',
-          'Transfer-Encoding': 'identity',
-        }
-
-        try {
-          return new NextResponse(createRobustStream(stream), {
-            status: 206,
-            headers,
-          })
-        } catch (err) {
-          console.error('Error constructing ranged NextResponse', err)
-          try {
-            if (stream && typeof (stream as any).destroy === 'function' && !(stream as any).destroyed) {
-              ; (stream as any).destroy()
-            }
-          } catch (destroyErr) {
-            console.error('Error destroying ranged stream after response construction failure', destroyErr)
-          }
-          return new Response(null, { status: 502 })
-        }
-      } catch (err) {
-        const status = mapAwsErrorToStatus(err as any)
-        if (status) return new Response(null, { status })
-        try {
-          console.error('Error creating ranged stream for', file.path, err, {
-            awsMetadata: (err as any)?.$metadata,
-          })
-        } catch (logErr) {
-          console.error('Error creating ranged stream for', file.path, err)
-        }
-        return new Response(null, { status: 502 })
-      }
-    }
-
-    try {
-      console.info('Requesting full stream', { path: file.path })
-      const stream = await storageProvider.getFileStream(file.path)
-      try {
-        console.info('Obtained full stream', {
-          path: file.path,
-          hasPipe: typeof (stream as any).pipe === 'function',
-          destroyed: (stream as any).destroyed,
-        })
-      } catch { }
       const headers = {
+        'Content-Range': `bytes ${start}-${end}/${size}`,
         'Accept-Ranges': 'bytes',
-        'Content-Length': size.toString(),
+        'Content-Length': chunkSize.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
         'Cache-Control': 'public, max-age=31536000, immutable',
@@ -322,31 +170,25 @@ export async function GET(
         'Transfer-Encoding': 'identity',
       }
 
-      try {
-        return new NextResponse(createRobustStream(stream), { headers })
-      } catch (err) {
-        console.error('Error constructing NextResponse with stream', err)
-        try {
-          if (stream && typeof (stream as any).destroy === 'function' && !(stream as any).destroyed) {
-            ; (stream as any).destroy()
-          }
-        } catch (destroyErr) {
-          console.error('Error destroying stream after response construction failure', destroyErr)
-        }
-        return new Response(null, { status: 502 })
-      }
-    } catch (err) {
-      const status = mapAwsErrorToStatus(err as any)
-      if (status) return new Response(null, { status })
-      try {
-        console.error('Error creating stream for', file.path, err, {
-          awsMetadata: (err as any)?.$metadata,
-        })
-      } catch (logErr) {
-        console.error('Error creating stream for', file.path, err)
-      }
-      return new Response(null, { status: 502 })
+      return new NextResponse(createRobustStream(stream), {
+        status: 206,
+        headers,
+      })
     }
+
+    const stream = await storageProvider.getFileStream(file.path)
+    const headers = {
+      'Accept-Ranges': 'bytes',
+      'Content-Length': size.toString(),
+      'Content-Type': file.mimeType,
+      'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      Connection: 'keep-alive',
+      'Keep-Alive': 'timeout=300, max=1000',
+      'Transfer-Encoding': 'identity',
+    }
+
+    return new NextResponse(createRobustStream(stream), { headers })
   } catch (error) {
     console.error('File serve error:', error)
     if (error instanceof Error && error.message.includes('NoSuchKey')) {

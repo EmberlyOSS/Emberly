@@ -51,33 +51,14 @@ export async function GET(
 
     const storageProvider = await getStorageProvider()
 
-    const rawUrl = `${urlPath}/raw${providedPassword ? `?password=${providedPassword}` : ''}`
-
     if (!(storageProvider instanceof S3StorageProvider)) {
+      const rawUrl = `${urlPath}/raw${providedPassword ? `?password=${providedPassword}` : ''}`
       return NextResponse.json({ url: rawUrl })
     }
 
-    try {
-      const directUrl = await storageProvider.getFileUrl(file.path)
-      return NextResponse.json({ url: directUrl })
-    } catch (err) {
-      // Signing or endpoint issues shouldn't completely break sharing —
-      // fall back to returning the proxied raw URL so clients can still
-      // stream the file through the app's proxy endpoint.
-      try {
-        console.error(
-          'Error generating direct S3 URL, falling back to proxied raw URL',
-          {
-            path: file.path,
-            error: err,
-            awsMetadata: (err as any)?.$metadata,
-          }
-        )
-      } catch (logErr) {
-        console.error('Error generating direct S3 URL', err)
-      }
-      return NextResponse.json({ url: rawUrl })
-    }
+    const directUrl = await storageProvider.getFileUrl(file.path)
+
+    return NextResponse.json({ url: directUrl })
   } catch (error) {
     console.error('Direct URL error:', error)
     return new Response(null, { status: 500 })
