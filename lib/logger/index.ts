@@ -23,14 +23,18 @@ interface ErrorLogContext {
   context?: Record<string, unknown>
 }
 
-// Guard access to `process` so this module can be imported in Edge
-// runtime (where `process` is undefined). Evaluate environment values
-// only when `process` is available.
-const hasProcess = typeof process !== 'undefined' && typeof process.env !== 'undefined'
-const isDevelopment = hasProcess && process.env.NODE_ENV === 'development'
-const isProduction = hasProcess && process.env.NODE_ENV === 'production'
+// Guard access to Node globals so this module can load in Edge runtime.
+const runtimeProcess =
+  typeof globalThis !== 'undefined' &&
+    typeof (globalThis as { process?: NodeJS.Process }).process !== 'undefined'
+    ? (globalThis as { process?: NodeJS.Process }).process
+    : undefined
 
-const envLogLevel = hasProcess ? (process.env.LOG_LEVEL as LogLevel | undefined) : undefined
+const hasProcess = Boolean(runtimeProcess)
+const isDevelopment = runtimeProcess?.env?.NODE_ENV === 'development'
+const isProduction = runtimeProcess?.env?.NODE_ENV === 'production'
+
+const envLogLevel = runtimeProcess?.env?.LOG_LEVEL as LogLevel | undefined
 const defaultLevel: LogLevel = envLogLevel || (isDevelopment ? 'debug' : 'info')
 
 const formatters = {
@@ -42,12 +46,7 @@ const formatters = {
     // is imported into Edge runtime (e.g. Next.js middleware). Use
     // a typeof check so bundlers / runtimes without `process` don't
     // throw a ReferenceError.
-    const nodeVersion =
-      typeof process !== 'undefined' &&
-        typeof (process as any).versions !== 'undefined' &&
-        (process as any).versions.node
-        ? (process as any).versions.node
-        : undefined
+    const nodeVersion = runtimeProcess?.versions?.node
 
     return {
       pid: bindings.pid,
