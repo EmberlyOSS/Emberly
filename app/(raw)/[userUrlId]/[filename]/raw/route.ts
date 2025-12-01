@@ -6,7 +6,11 @@ import { Readable } from 'stream'
 
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/database/prisma'
+import { getConfig } from '@/lib/config'
+import { loggers } from '@/lib/logger'
 import { getStorageProvider } from '@/lib/storage'
+
+const logger = loggers.files.getChildLogger('raw')
 
 function encodeFilename(filename: string): string {
   const encoded = encodeURIComponent(filename)
@@ -142,7 +146,15 @@ export async function GET(
       }
     }
 
+    const config = await getConfig()
     const storageProvider = await getStorageProvider()
+    logger.info('raw route storage debug', {
+      filePath: file.path,
+      provider: config.settings.general.storage.provider,
+      bucket: config.settings.general.storage.s3.bucket,
+      endpoint: config.settings.general.storage.s3.endpoint,
+      forcePathStyle: config.settings.general.storage.s3.forcePathStyle,
+    })
     const range = req.headers.get('range')
 
     const size = await storageProvider.getFileSize(file.path)
