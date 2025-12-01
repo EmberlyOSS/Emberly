@@ -52,6 +52,49 @@ export class S3StorageProvider implements StorageProvider {
         forcePathStyle: config.forcePathStyle ?? false,
       }),
     })
+
+    this.client.middlewareStack.add(
+      (next, context) => async (args) => {
+        const input = args.input as Record<string, unknown> | undefined
+        const key =
+          (typeof input?.Key === 'string' && input.Key) ||
+          (typeof input?.CopySource === 'string' && input.CopySource) ||
+          undefined
+        const bucket = typeof input?.Bucket === 'string' ? input.Bucket : undefined
+        const start = Date.now()
+
+        try {
+          const result = await next(args)
+          const meta = (result as { $metadata?: Record<string, unknown> })?.$metadata
+          logger.debug('S3 request succeeded', {
+            action: context.commandName,
+            bucket,
+            key,
+            requestId: meta?.requestId,
+            httpStatusCode: meta?.httpStatusCode,
+            attempts: meta?.attempts,
+            totalRetryDelay: meta?.totalRetryDelay,
+            durationMs: Date.now() - start,
+          })
+          return result
+        } catch (error) {
+          const err = error as { message?: string; $metadata?: Record<string, unknown> }
+          logger.error('S3 request failed', err as Error, {
+            action: context.commandName,
+            bucket,
+            key,
+            message: err?.message,
+            metadata: err?.$metadata,
+            durationMs: Date.now() - start,
+          })
+          throw error
+        }
+      },
+      {
+        name: 's3DebugLogger',
+        step: 'initialize',
+      }
+    )
   }
 
   private normalizeKey(path: string): string {
