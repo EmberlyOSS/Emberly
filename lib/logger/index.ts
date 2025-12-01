@@ -23,11 +23,15 @@ interface ErrorLogContext {
   context?: Record<string, unknown>
 }
 
-const isDevelopment = process.env.NODE_ENV === 'development'
-const isProduction = process.env.NODE_ENV === 'production'
+// Guard access to `process` so this module can be imported in Edge
+// runtime (where `process` is undefined). Evaluate environment values
+// only when `process` is available.
+const hasProcess = typeof process !== 'undefined' && typeof process.env !== 'undefined'
+const isDevelopment = hasProcess && process.env.NODE_ENV === 'development'
+const isProduction = hasProcess && process.env.NODE_ENV === 'production'
 
-const defaultLevel: LogLevel =
-  (process.env.LOG_LEVEL as LogLevel) || (isDevelopment ? 'debug' : 'info')
+const envLogLevel = hasProcess ? (process.env.LOG_LEVEL as LogLevel | undefined) : undefined
+const defaultLevel: LogLevel = envLogLevel || (isDevelopment ? 'debug' : 'info')
 
 const formatters = {
   level: (label: string) => {
@@ -40,8 +44,8 @@ const formatters = {
     // throw a ReferenceError.
     const nodeVersion =
       typeof process !== 'undefined' &&
-      typeof (process as any).versions !== 'undefined' &&
-      (process as any).versions.node
+        typeof (process as any).versions !== 'undefined' &&
+        (process as any).versions.node
         ? (process as any).versions.node
         : undefined
 
@@ -56,32 +60,32 @@ const formatters = {
 // Fallback to console transport due to worker thread issues
 const transport = isDevelopment
   ? {
-      write: (msg: string) => {
-        try {
-          const obj = JSON.parse(msg)
-          const timestamp = new Date(obj.time)
-            .toISOString()
-            .replace('T', ' ')
-            .slice(0, -5)
-          const level = (
-            obj.level === 30
-              ? 'INFO'
-              : obj.level === 40
-                ? 'WARN'
-                : obj.level === 50
-                  ? 'ERROR'
-                  : obj.level === 20
-                    ? 'DEBUG'
-                    : 'TRACE'
-          ).padEnd(5)
-          const name = obj.name ? `[${obj.name}]`.padEnd(12) : ''
-          const message = obj.msg || ''
-          console.log(`${timestamp} ${level} ${name} ${message}`)
-        } catch {
-          console.log(msg)
-        }
-      },
-    }
+    write: (msg: string) => {
+      try {
+        const obj = JSON.parse(msg)
+        const timestamp = new Date(obj.time)
+          .toISOString()
+          .replace('T', ' ')
+          .slice(0, -5)
+        const level = (
+          obj.level === 30
+            ? 'INFO'
+            : obj.level === 40
+              ? 'WARN'
+              : obj.level === 50
+                ? 'ERROR'
+                : obj.level === 20
+                  ? 'DEBUG'
+                  : 'TRACE'
+        ).padEnd(5)
+        const name = obj.name ? `[${obj.name}]`.padEnd(12) : ''
+        const message = obj.msg || ''
+        console.log(`${timestamp} ${level} ${name} ${message}`)
+      } catch {
+        console.log(msg)
+      }
+    },
+  }
   : undefined
 
 const baseLogger = pino(
@@ -131,7 +135,7 @@ const baseLogger = pino(
     },
     ...(isProduction && {
       browser: {
-        write: () => {},
+        write: () => { },
       },
     }),
   },
