@@ -172,14 +172,30 @@ export async function POST(
       }
     }
 
-    const baseUrl =
+    let finalFullUrl =
       process.env.NODE_ENV === 'development'
         ? 'http://localhost:3000'
         : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
-    const fullUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
+    finalFullUrl = finalFullUrl.startsWith('http')
+      ? finalFullUrl
+      : `https://${finalFullUrl}`
+
+    if (metadata.domain) {
+      try {
+        const domainRecord = await prisma.customDomain.findFirst({
+          where: { domain: metadata.domain, userId: user.id, verified: true },
+        })
+        if (domainRecord) {
+          const host = domainRecord.domain.replace(/\/$/, '')
+          finalFullUrl = host.startsWith('http') ? host : `https://${host}`
+        }
+      } catch (err) {
+        // ignore and fall back to server URL
+      }
+    }
 
     const responseData: FileUploadResponse = {
-      url: `${fullUrl}${metadata.urlPath}`,
+      url: `${finalFullUrl}${metadata.urlPath}`,
       name: metadata.filename,
       size: metadata.totalSize,
       type: metadata.mimeType,

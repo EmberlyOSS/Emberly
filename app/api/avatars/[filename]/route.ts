@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { readFile } from 'fs/promises'
 import { join } from 'path'
 
 import { loggers } from '@/lib/logger'
@@ -24,12 +25,26 @@ export async function GET(
 
     const localFilepath = join('uploads', filepath)
     const stream = await storageProvider.getFileStream(localFilepath)
+    // If a local provider is used, try to read a sidecar .meta.json and surface
+    // x-cordx-host / x-emberly-host as response headers so downstream proxies
+    // or CDN layers can be aware of host hints. Non-fatal if metadata missing.
+    const headers: Record<string, string> = {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    }
+    try {
+      const metaPath = join(process.cwd(), 'uploads', filepath) + '.meta.json'
+      const data = await readFile(metaPath, 'utf8')
+      const meta = JSON.parse(data)
+      if (meta['x-cordx-host']) headers['x-cordx-host'] = meta['x-cordx-host']
+      if (meta['x-emberly-host'])
+        headers['x-emberly-host'] = meta['x-emberly-host']
+    } catch (err) {
+      // ignore missing metadata
+    }
 
     return new NextResponse(stream as unknown as ReadableStream, {
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
+      headers,
     })
   } catch (error) {
     logger.error('Avatar serve error', error as Error, {

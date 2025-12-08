@@ -13,6 +13,7 @@ const userSelect = {
   password: true,
   role: true,
   image: true,
+  preferredUploadDomain: true,
   sessionVersion: true,
 } as const
 

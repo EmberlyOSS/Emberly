@@ -23,11 +23,19 @@ interface ErrorLogContext {
   context?: Record<string, unknown>
 }
 
-const isDevelopment = process.env.NODE_ENV === 'development'
-const isProduction = process.env.NODE_ENV === 'production'
+// Guard access to Node globals so this module can load in Edge runtime.
+const runtimeProcess =
+  typeof globalThis !== 'undefined' &&
+    typeof (globalThis as { process?: NodeJS.Process }).process !== 'undefined'
+    ? (globalThis as { process?: NodeJS.Process }).process
+    : undefined
 
-const defaultLevel: LogLevel =
-  (process.env.LOG_LEVEL as LogLevel) || (isDevelopment ? 'debug' : 'info')
+const hasProcess = Boolean(runtimeProcess)
+const isDevelopment = runtimeProcess?.env?.NODE_ENV === 'development'
+const isProduction = runtimeProcess?.env?.NODE_ENV === 'production'
+
+const envLogLevel = runtimeProcess?.env?.LOG_LEVEL as LogLevel | undefined
+const defaultLevel: LogLevel = envLogLevel || (isDevelopment ? 'debug' : 'info')
 
 const formatters = {
   level: (label: string) => {
@@ -38,12 +46,7 @@ const formatters = {
     // is imported into Edge runtime (e.g. Next.js middleware). Use
     // a typeof check so bundlers / runtimes without `process` don't
     // throw a ReferenceError.
-    const nodeVersion =
-      typeof process !== 'undefined' &&
-      typeof (process as any).versions !== 'undefined' &&
-      (process as any).versions.node
-        ? (process as any).versions.node
-        : undefined
+    const nodeVersion = runtimeProcess?.versions?.node
 
     return {
       pid: bindings.pid,
@@ -56,32 +59,32 @@ const formatters = {
 // Fallback to console transport due to worker thread issues
 const transport = isDevelopment
   ? {
-      write: (msg: string) => {
-        try {
-          const obj = JSON.parse(msg)
-          const timestamp = new Date(obj.time)
-            .toISOString()
-            .replace('T', ' ')
-            .slice(0, -5)
-          const level = (
-            obj.level === 30
-              ? 'INFO'
-              : obj.level === 40
-                ? 'WARN'
-                : obj.level === 50
-                  ? 'ERROR'
-                  : obj.level === 20
-                    ? 'DEBUG'
-                    : 'TRACE'
-          ).padEnd(5)
-          const name = obj.name ? `[${obj.name}]`.padEnd(12) : ''
-          const message = obj.msg || ''
-          console.log(`${timestamp} ${level} ${name} ${message}`)
-        } catch {
-          console.log(msg)
-        }
-      },
-    }
+    write: (msg: string) => {
+      try {
+        const obj = JSON.parse(msg)
+        const timestamp = new Date(obj.time)
+          .toISOString()
+          .replace('T', ' ')
+          .slice(0, -5)
+        const level = (
+          obj.level === 30
+            ? 'INFO'
+            : obj.level === 40
+              ? 'WARN'
+              : obj.level === 50
+                ? 'ERROR'
+                : obj.level === 20
+                  ? 'DEBUG'
+                  : 'TRACE'
+        ).padEnd(5)
+        const name = obj.name ? `[${obj.name}]`.padEnd(12) : ''
+        const message = obj.msg || ''
+        console.log(`${timestamp} ${level} ${name} ${message}`)
+      } catch {
+        console.log(msg)
+      }
+    },
+  }
   : undefined
 
 const baseLogger = pino(
@@ -131,7 +134,7 @@ const baseLogger = pino(
     },
     ...(isProduction && {
       browser: {
-        write: () => {},
+        write: () => { },
       },
     }),
   },
@@ -271,6 +274,7 @@ export const loggers = {
   events: createLogger('events'),
   ocr: createLogger('ocr'),
   files: createLogger('files'),
+  domains: createLogger('domains'),
   users: createLogger('users'),
   config: createLogger('config'),
   startup: createLogger('startup'),

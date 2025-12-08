@@ -2,6 +2,14 @@ export const FILE_URL_PATTERN =
   /^\/[A-Za-z0-9]{5}\/[^\/]+\.[^\/]+(?:\/raw|\/direct)?$/
 
 export const PUBLIC_PATHS = [
+  '/',
+  '/about',
+  '/blog',
+  '/discord',
+  '/docs',
+  '/legal',
+  '/press',
+  '/partners',
   '/api/auth',
   '/_next',
   '/favicon.ico',

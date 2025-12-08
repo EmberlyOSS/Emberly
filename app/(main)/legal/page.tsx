@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LegalHubPage() {
   return (
-    <main className="container mx-auto py-12">
-      <section className="max-w-5xl mx-auto">
+    <main className="container mx-auto px-4 py-12">
+      <section className="mx-auto w-full max-w-5xl">
         <header className="mb-8">
           <h1 className="text-2xl font-semibold">Legal</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -16,8 +16,8 @@ export default function LegalHubPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <Card className="rounded-2xl border-white/10 bg-card/70 shadow-lg backdrop-blur">
             <CardHeader>
               <CardTitle>Terms of Service</CardTitle>
             </CardHeader>
@@ -32,7 +32,7 @@ export default function LegalHubPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-2xl border-white/10 bg-card/70 shadow-lg backdrop-blur">
             <CardHeader>
               <CardTitle>Privacy Policy</CardTitle>
             </CardHeader>
@@ -47,7 +47,7 @@ export default function LegalHubPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-2xl border-white/10 bg-card/70 shadow-lg backdrop-blur">
             <CardHeader>
               <CardTitle>Cookie Policy</CardTitle>
             </CardHeader>
@@ -62,7 +62,7 @@ export default function LegalHubPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-2xl border-white/10 bg-card/70 shadow-lg backdrop-blur">
             <CardHeader>
               <CardTitle>Security Policy</CardTitle>
             </CardHeader>
@@ -77,7 +77,7 @@ export default function LegalHubPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-2xl border-white/10 bg-card/70 shadow-lg backdrop-blur">
             <CardHeader>
               <CardTitle>GDPR & Data Protection</CardTitle>
             </CardHeader>

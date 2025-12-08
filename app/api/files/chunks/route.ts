@@ -61,6 +61,7 @@ interface UploadMetadata {
   lastActivity: number
   urlPath: string
   s3UploadId: string
+  domain?: string | null
 }
 
 function generateLocalId(): string {
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
     if (response) return response
 
     const body = await req.json()
-    const { filename, mimeType, size } = body
+    const { filename, mimeType, size, domain } = body
 
     if (!filename || !mimeType || !size) {
       return NextResponse.json(
@@ -172,9 +173,24 @@ export async function POST(req: Request) {
     }
 
     const storageProvider = await getStorageProvider()
+    // capture host headers from the incoming request and attach as metadata
+    const meta: Record<string, string> = {}
+    try {
+      const reqHeaders = (req as any).headers as Headers | undefined
+      if (reqHeaders) {
+        const cordx = reqHeaders.get?.('x-cordx-host')
+        const emberly = reqHeaders.get?.('x-emberly-host')
+        if (cordx) meta['x-cordx-host'] = cordx
+        if (emberly) meta['x-emberly-host'] = emberly
+      }
+    } catch (e) {
+      // ignore
+    }
+
     const s3UploadId = await storageProvider.initializeMultipartUpload(
       filePath,
-      mimeType
+      mimeType,
+      meta
     )
 
     const localId = generateLocalId()
@@ -190,6 +206,7 @@ export async function POST(req: Request) {
       lastActivity: Date.now(),
       urlPath,
       s3UploadId,
+      domain: typeof domain === 'string' && domain.length > 0 ? domain : null,
     }
 
     await saveUploadMetadata(localId, metadata)

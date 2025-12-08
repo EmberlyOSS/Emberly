@@ -24,7 +24,7 @@ import { getUniqueFilename } from '@/lib/files/filename'
 import { loggers } from '@/lib/logger'
 import { processImageOCR } from '@/lib/ocr'
 import { getStorageProvider } from '@/lib/storage'
-import { bytesToMB } from '@/lib/utils'
+import { bytesToMB, urlForHost } from '@/lib/utils'
 
 const logger = loggers.files
 
@@ -40,6 +40,10 @@ export async function POST(req: Request) {
     const formData = await req.formData()
 
     const uploadedFile = formData.get('file') as File
+    const requestedDomainRaw = (formData.get('domain') as string) || null
+    const requestedDomain = requestedDomainRaw
+      ? requestedDomainRaw.replace(/^https?:\/\//, '').replace(/\/+$/, '')
+      : null
     const visibility =
       (formData.get('visibility') as 'PUBLIC' | 'PRIVATE') || 'PUBLIC'
     const password = formData.get('password') as string | null
@@ -104,10 +108,25 @@ export async function POST(req: Request) {
 
     const storageProvider = await getStorageProvider()
     const bytes = await uploadedFile.arrayBuffer()
+    // carry through host headers as metadata so storage/proxy can use them
+    const meta: Record<string, string> = {}
+    try {
+      const reqHeaders = (req as any).headers as Headers | undefined
+      if (reqHeaders) {
+        const cordx = reqHeaders.get?.('x-cordx-host')
+        const emberly = reqHeaders.get?.('x-emberly-host')
+        if (cordx) meta['x-cordx-host'] = cordx
+        if (emberly) meta['x-emberly-host'] = emberly
+      }
+    } catch (e) {
+      // ignore
+    }
+
     await storageProvider.uploadFile(
       Buffer.from(bytes),
       filePath,
-      uploadedFile.type
+      uploadedFile.type,
+      meta
     )
 
     const fileRecord = await prisma.$transaction(async (tx) => {
@@ -169,10 +188,32 @@ export async function POST(req: Request) {
       process.env.NODE_ENV === 'development'
         ? 'http://localhost:3000'
         : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
-    const fullUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
+    const fullUrl = (baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`).replace(/\/+$/, '')
+
+    const sanitizeHost = (host: string) => urlForHost(host).replace(/\/+$/, '')
+    const preferredHost = user.preferredUploadDomain
+      ? sanitizeHost(user.preferredUploadDomain)
+      : null
+
+    // If a custom domain was provided and is verified for this user, use it
+    let finalFullUrl = preferredHost ?? fullUrl
+    if (requestedDomain) {
+      try {
+        const domainRecord = await prisma.customDomain.findFirst({
+          where: { domain: requestedDomain, userId: user.id, verified: true },
+        })
+        if (domainRecord) {
+          finalFullUrl = sanitizeHost(domainRecord.domain)
+        }
+      } catch (err) {
+        // ignore DB errors here and fall back to default fullUrl
+      }
+    } else if (preferredHost) {
+      finalFullUrl = preferredHost
+    }
 
     const responseData: FileUploadResponse = {
-      url: `${fullUrl}${urlPath}`,
+      url: `${finalFullUrl}${urlPath}`,
       name: displayName,
       size: uploadedFile.size,
       type: uploadedFile.type,

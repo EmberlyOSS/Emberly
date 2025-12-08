@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+import { writeToClipboard } from '@/lib/utils/clipboard'
+
 import { useToast } from '@/hooks/use-toast'
 
 interface OcrDialogProps {
@@ -36,11 +38,19 @@ export function OcrDialog({
 
   const handleCopy = async () => {
     if (!text) return
-    await navigator.clipboard.writeText(text)
-    toast({
-      title: 'Copied to clipboard',
-      description: 'The extracted text has been copied to your clipboard',
-    })
+    try {
+      await writeToClipboard(text)
+      toast({
+        title: 'Copied to clipboard',
+        description: 'The extracted text has been copied to your clipboard',
+      })
+    } catch {
+      toast({
+        title: 'Failed to copy',
+        description: 'Unable to copy to clipboard',
+        variant: 'destructive',
+      })
+    }
   }
 
   const dialogTitle = filename

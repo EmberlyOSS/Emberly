@@ -1,5 +1,7 @@
 import { useRouter } from 'next/navigation'
 
+import { writeToClipboard } from '@/lib/utils/clipboard'
+
 import { useToast } from './use-toast'
 
 export interface FileActionsOptions {
@@ -18,13 +20,20 @@ export function useFileActions(options: FileActionsOptions = {}) {
 
     const baseUrl = window.location.origin
     const url = `${baseUrl}${options.urlPath}`
-
-    navigator.clipboard.writeText(url).then(() => {
-      toast({
-        title: 'URL copied',
-        description: 'The file URL has been copied to your clipboard',
+    writeToClipboard(url)
+      .then(() => {
+        toast({
+          title: 'URL copied',
+          description: 'The file URL has been copied to your clipboard',
+        })
       })
-    })
+      .catch(() => {
+        toast({
+          title: 'Failed to copy URL',
+          description: 'Please copy the URL manually',
+          variant: 'destructive',
+        })
+      })
   }
 
   const copyRawUrl = () => {
@@ -37,12 +46,20 @@ export function useFileActions(options: FileActionsOptions = {}) {
       url += `?password=${encodeURIComponent(options.verifiedPassword)}`
     }
 
-    navigator.clipboard.writeText(url).then(() => {
-      toast({
-        title: 'Raw URL copied',
-        description: 'The raw file URL has been copied to your clipboard',
+    writeToClipboard(url)
+      .then(() => {
+        toast({
+          title: 'Raw URL copied',
+          description: 'The raw file URL has been copied to your clipboard',
+        })
       })
-    })
+      .catch(() => {
+        toast({
+          title: 'Failed to copy URL',
+          description: 'Please copy the URL manually',
+          variant: 'destructive',
+        })
+      })
   }
 
   const download = () => {
