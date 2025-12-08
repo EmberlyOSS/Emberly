@@ -6,7 +6,7 @@ import { loggers } from '@/lib/logger'
 
 const logger = loggers.users
 
-const DEFAULT_HOSTS = ['emberly.site', 'emberly.ca']
+const DEFAULT_HOSTS = ['emberly.site', 'embrly.ca']
 
 export async function GET(req: Request) {
   try {

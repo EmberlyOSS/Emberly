@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/database/prisma'
 import { loggers } from '@/lib/logger'
+import { urlForHost } from '@/lib/utils'
 
 const logger = loggers.users
 
@@ -17,7 +18,11 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { uploadToken: true, name: true },
+      select: {
+        uploadToken: true,
+        name: true,
+        preferredUploadDomain: true,
+      },
     })
 
     if (!user) {
@@ -47,12 +52,17 @@ export async function GET() {
       )
     }
 
+    const preferredHost = user.preferredUploadDomain
+      ? urlForHost(user.preferredUploadDomain).replace(/\/+$/, '')
+      : null
+    const requestBaseUrl = preferredHost || normalizedBaseUrl
+
     const config = {
       Version: '15.0.0',
       Name: 'Emberly',
       DestinationType: 'ImageUploader, TextUploader, FileUploader',
       RequestMethod: 'POST',
-      RequestURL: `${normalizedBaseUrl}/api/files`,
+      RequestURL: `${requestBaseUrl}/api/files`,
       Headers: {
         Authorization: `Bearer ${user.uploadToken}`,
       },

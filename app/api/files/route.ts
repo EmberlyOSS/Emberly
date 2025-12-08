@@ -24,7 +24,7 @@ import { getUniqueFilename } from '@/lib/files/filename'
 import { loggers } from '@/lib/logger'
 import { processImageOCR } from '@/lib/ocr'
 import { getStorageProvider } from '@/lib/storage'
-import { bytesToMB } from '@/lib/utils'
+import { bytesToMB, urlForHost } from '@/lib/utils'
 
 const logger = loggers.files
 
@@ -40,7 +40,10 @@ export async function POST(req: Request) {
     const formData = await req.formData()
 
     const uploadedFile = formData.get('file') as File
-    const requestedDomain = (formData.get('domain') as string) || null
+    const requestedDomainRaw = (formData.get('domain') as string) || null
+    const requestedDomain = requestedDomainRaw
+      ? requestedDomainRaw.replace(/^https?:\/\//, '').replace(/\/+$/, '')
+      : null
     const visibility =
       (formData.get('visibility') as 'PUBLIC' | 'PRIVATE') || 'PUBLIC'
     const password = formData.get('password') as string | null
@@ -185,22 +188,28 @@ export async function POST(req: Request) {
       process.env.NODE_ENV === 'development'
         ? 'http://localhost:3000'
         : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
-    const fullUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
+    const fullUrl = (baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`).replace(/\/+$/, '')
+
+    const sanitizeHost = (host: string) => urlForHost(host).replace(/\/+$/, '')
+    const preferredHost = user.preferredUploadDomain
+      ? sanitizeHost(user.preferredUploadDomain)
+      : null
 
     // If a custom domain was provided and is verified for this user, use it
-    let finalFullUrl = fullUrl
+    let finalFullUrl = preferredHost ?? fullUrl
     if (requestedDomain) {
       try {
         const domainRecord = await prisma.customDomain.findFirst({
           where: { domain: requestedDomain, userId: user.id, verified: true },
         })
         if (domainRecord) {
-          const host = domainRecord.domain.replace(/\/$/, '')
-          finalFullUrl = host.startsWith('http') ? host : `https://${host}`
+          finalFullUrl = sanitizeHost(domainRecord.domain)
         }
       } catch (err) {
         // ignore DB errors here and fall back to default fullUrl
       }
+    } else if (preferredHost) {
+      finalFullUrl = preferredHost
     }
 
     const responseData: FileUploadResponse = {

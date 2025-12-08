@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/database/prisma'
 import { loggers } from '@/lib/logger'
+import { urlForHost } from '@/lib/utils'
 
 const logger = loggers.users
 
@@ -26,7 +27,12 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { uploadToken: true, urlId: true, name: true },
+      select: {
+        uploadToken: true,
+        urlId: true,
+        name: true,
+        preferredUploadDomain: true,
+      },
     })
 
     if (!user?.uploadToken) {
@@ -36,10 +42,27 @@ export async function POST(req: Request) {
       )
     }
 
+    const baseUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3000'
+        : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
+    const normalizedBaseUrl = baseUrl.replace(/\/+$/, '')
+    const preferredHost = user.preferredUploadDomain
+      ? urlForHost(user.preferredUploadDomain).replace(/\/+$/, '')
+      : null
+    const resolvedBaseUrl = preferredHost || normalizedBaseUrl
+    if (!resolvedBaseUrl) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
     const script = generateFlameshotScript({
       uploadToken: user.uploadToken,
       useWayland: body.useWayland,
       useCompositor: body.useCompositor,
+      baseUrl: resolvedBaseUrl,
     })
 
     const sanitizedName = (user.name || 'user')
@@ -72,17 +95,15 @@ interface ScriptOptions {
   uploadToken: string
   useWayland: boolean
   useCompositor: boolean
+  baseUrl: string
 }
 
 function generateFlameshotScript({
   uploadToken,
   useWayland,
   useCompositor,
+  baseUrl,
 }: ScriptOptions): string {
-  const baseUrl =
-    process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3000'
-      : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
 
   return `#!/bin/bash
 

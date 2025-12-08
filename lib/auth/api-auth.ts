@@ -11,6 +11,7 @@ export type AuthenticatedUser = {
   urlId: string
   role: string
   randomizeFileUrls: boolean
+  preferredUploadDomain: string | null
 }
 
 export async function getAuthenticatedUser(
@@ -26,6 +27,7 @@ export async function getAuthenticatedUser(
         urlId: true,
         role: true,
         randomizeFileUrls: true,
+        preferredUploadDomain: true,
       },
     })
     return user
@@ -42,6 +44,7 @@ export async function getAuthenticatedUser(
         urlId: true,
         role: true,
         randomizeFileUrls: true,
+        preferredUploadDomain: true,
       },
     })
     return user
