@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function CookiesPage() {
   return (
-    <main className="container mx-auto py-8">
-      <div className="grid md:grid-cols-4 gap-6">
-        <aside className="hidden md:block sticky top-24">
+    <main className="container mx-auto px-4 py-8">
+      <div className="mx-auto grid w-full max-w-6xl gap-6 md:grid-cols-[260px,minmax(0,1fr)]">
+        <aside className="hidden md:block sticky top-28">
           <div className="space-y-3 p-4 rounded-lg bg-secondary/6">
             <Link href="/legal" className="text-sm underline">
               Back to Legal Hub
@@ -28,8 +28,8 @@ export default function CookiesPage() {
           </div>
         </aside>
 
-        <section className="md:col-span-3">
-          <Card>
+        <section>
+          <Card className="rounded-2xl border-white/10 bg-card/80 backdrop-blur">
             <CardHeader>
               <CardTitle>Cookie Policy</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">

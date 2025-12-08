@@ -57,7 +57,7 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-3 max-w-sm">
+            <div className="mt-8 grid grid-cols-2 gap-3 max-w-2xl">
               <div className="flex items-center gap-3 justify-center">
                 <div className="rounded-md bg-primary/10 p-2 flex items-center justify-center h-10 w-10">
                   <Sparkles className="h-5 w-5 text-primary" />

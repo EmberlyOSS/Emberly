@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react'
 
 import { Eye, EyeOff } from 'lucide-react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 import { useUploadToken } from '@/hooks/use-upload-token'
+
+const ALLOWED_HOSTS = ['emberly.site', 'embrly.ca']
 
 export function UploadToken() {
   const {
@@ -56,24 +59,46 @@ export function UploadToken() {
     }
   }
 
+  const combinedDomains = Array.from(
+    new Set([...(domains || []), ...ALLOWED_HOSTS])
+  )
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Upload Host</Label>
+        <Alert variant="destructive" className="text-xs">
+          <AlertTitle>Custom domains temporarily disabled</AlertTitle>
+          <AlertDescription>
+            You can currently select only the default Emberly domains
+            (emberly.site or embrly.ca). Custom domains will return soon in the
+            next release.
+          </AlertDescription>
+        </Alert>
         <div className="flex items-center gap-2">
           <select
             value={selected || ''}
             onChange={(e) => setDomain(e.target.value)}
             className="rounded-md border bg-background px-3 py-1 text-sm"
+            disabled={loadingDomains}
           >
             <option value="">(default)</option>
-            {domains.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
+            {combinedDomains.map((d) => {
+              const isAllowed = ALLOWED_HOSTS.includes(d)
+              return (
+                <option key={d} value={d} disabled={!isAllowed}>
+                  {d}
+                  {!isAllowed ? ' (disabled)' : ''}
+                </option>
+              )
+            })}
           </select>
-          <Button size="sm" variant="ghost" onClick={() => setDomain('')}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDomain('')}
+            disabled={loadingDomains}
+          >
             Reset
           </Button>
         </div>
