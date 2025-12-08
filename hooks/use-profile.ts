@@ -74,7 +74,8 @@ export function useProfile(options: UseProfileOptions = {}) {
 
       setIsLoading(true)
       const formData = new FormData()
-      formData.append('avatar', file)
+      // server expects `file` field name for avatar uploads
+      formData.append('file', file)
 
       try {
         const response = await fetch('/api/profile/avatar', {
@@ -88,8 +89,10 @@ export function useProfile(options: UseProfileOptions = {}) {
 
         const data = await response.json()
 
-        if (options.onAvatarUpdated) {
-          options.onAvatarUpdated(data.image)
+        // API may return `image` or `url`; accept either
+        const imageUrl = (data && (data.image || data.url)) || null
+        if (options.onAvatarUpdated && imageUrl) {
+          options.onAvatarUpdated(imageUrl)
         }
 
         toast({

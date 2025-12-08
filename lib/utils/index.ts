@@ -24,3 +24,23 @@ export function getRelativeTime(date: Date): string {
   const diffInYears = Math.floor(diffInDays / 365)
   return `${diffInYears}y ago`
 }
+
+export function urlForHost(host: string): string {
+  if (!host) return ''
+  const cleaned = host.replace(/\/+$/, '')
+  if (cleaned.startsWith('http://') || cleaned.startsWith('https://'))
+    return cleaned
+
+  // Allow http for localhost or when running in development
+  const allowHttp =
+    process.env.NODE_ENV === 'development' || process.env.ALLOW_HTTP === '1'
+  if (
+    cleaned.includes('localhost') ||
+    cleaned.startsWith('127.') ||
+    allowHttp
+  ) {
+    return `http://${cleaned}`
+  }
+
+  return `https://${cleaned}`
+}

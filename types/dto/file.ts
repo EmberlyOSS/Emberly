@@ -12,8 +12,28 @@ export const FileUploadSchema = z.object({
 
 export type FileUploadRequest = z.infer<typeof FileUploadSchema>
 
+const FileLikeSchema = (() => {
+  const globalFile =
+    typeof globalThis !== 'undefined' &&
+      typeof (globalThis as { File?: typeof File }).File !== 'undefined'
+      ? (globalThis as { File: typeof File }).File
+      : null
+
+  if (globalFile) {
+    return z.instanceof(globalFile, { message: 'No file provided' })
+  }
+
+  return z.custom<File>(
+    (val): val is File =>
+      typeof val === 'object' &&
+      val !== null &&
+      typeof (val as { arrayBuffer?: unknown }).arrayBuffer === 'function',
+    { message: 'No file provided' }
+  )
+})()
+
 export const FileUploadFormDataSchema = z.object({
-  file: z.instanceof(File, { message: 'No file provided' }),
+  file: FileLikeSchema,
   visibility: z.enum(['PUBLIC', 'PRIVATE']).default('PUBLIC'),
   password: z.string().optional().nullable(),
 })

@@ -19,7 +19,9 @@ export async function middleware(request: NextRequest) {
 
   if (
     PUBLIC_PATHS.some((path: string) =>
-      request.nextUrl.pathname.startsWith(path)
+      path === '/'
+        ? request.nextUrl.pathname === '/' // only allow exact root match
+        : request.nextUrl.pathname.startsWith(path)
     )
   ) {
     return NextResponse.next()

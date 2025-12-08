@@ -8,6 +8,8 @@ import { Copy, Download, ExternalLink, Link, ScanText } from 'lucide-react'
 import { OcrDialog } from '@/components/shared/ocr-dialog'
 import { Button } from '@/components/ui/button'
 
+import { writeToClipboard } from '@/lib/utils/clipboard'
+
 import { useFileActions } from '@/hooks/use-file-actions'
 import { useToast } from '@/hooks/use-toast'
 
@@ -63,7 +65,7 @@ export function FileActions({
     if (!urls) return
     try {
       if (content) {
-        await navigator.clipboard.writeText(content)
+        await writeToClipboard(content)
         toast({
           title: 'Text copied',
           description: 'File content has been copied to clipboard',
@@ -71,7 +73,7 @@ export function FileActions({
       } else {
         const response = await fetch(sanitizeUrl(urls.fileUrl))
         const text = await response.text()
-        await navigator.clipboard.writeText(text)
+        await writeToClipboard(text)
         toast({
           title: 'Text copied',
           description: 'File content has been copied to clipboard',

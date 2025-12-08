@@ -6,7 +6,11 @@ import { Readable } from 'stream'
 
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/database/prisma'
+import { getConfig } from '@/lib/config'
+import { loggers } from '@/lib/logger'
 import { getStorageProvider } from '@/lib/storage'
+
+const logger = loggers.files.getChildLogger('raw')
 
 function encodeFilename(filename: string): string {
   const encoded = encodeURIComponent(filename)
@@ -142,10 +146,22 @@ export async function GET(
       }
     }
 
+    const config = await getConfig()
     const storageProvider = await getStorageProvider()
+    logger.info('raw route storage debug', {
+      filePath: file.path,
+      provider: config.settings.general.storage.provider,
+      bucket: config.settings.general.storage.s3.bucket,
+      endpoint: config.settings.general.storage.s3.endpoint,
+      forcePathStyle: config.settings.general.storage.s3.forcePathStyle,
+    })
     const range = req.headers.get('range')
 
     const size = await storageProvider.getFileSize(file.path)
+    logger.info('raw route head success', {
+      filePath: file.path,
+      size,
+    })
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
@@ -154,6 +170,11 @@ export async function GET(
       const chunkSize = end - start + 1
 
       const stream = await storageProvider.getFileStream(file.path, {
+        start,
+        end,
+      })
+      logger.info('raw route range stream ready', {
+        filePath: file.path,
         start,
         end,
       })
@@ -167,7 +188,6 @@ export async function GET(
         'Cache-Control': 'public, max-age=31536000, immutable',
         Connection: 'keep-alive',
         'Keep-Alive': 'timeout=300, max=1000',
-        'Transfer-Encoding': 'identity',
       }
 
       return new NextResponse(createRobustStream(stream), {
@@ -177,6 +197,10 @@ export async function GET(
     }
 
     const stream = await storageProvider.getFileStream(file.path)
+    logger.info('raw route full stream ready', {
+      filePath: file.path,
+      size,
+    })
     const headers = {
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
@@ -185,26 +209,11 @@ export async function GET(
       'Cache-Control': 'public, max-age=31536000, immutable',
       Connection: 'keep-alive',
       'Keep-Alive': 'timeout=300, max=1000',
-      'Transfer-Encoding': 'identity',
     }
 
     return new NextResponse(createRobustStream(stream), { headers })
   } catch (error) {
-    // Log richer error details for debugging (AWS SDK errors include $metadata)
-    const errAny = error as any
-    console.error('File serve error:', errAny)
-    try {
-      console.error('File serve error details:', {
-        name: errAny?.name,
-        code: errAny?.code || errAny?.name,
-        fault: errAny?.$fault,
-        awsMetadata: errAny?.$metadata,
-        message: errAny?.message,
-      })
-    } catch {
-      // ignore logging errors
-    }
-
+    console.error('File serve error:', error)
     if (error instanceof Error && error.message.includes('NoSuchKey')) {
       return new Response(null, { status: 404 })
     }

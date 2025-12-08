@@ -6,7 +6,12 @@ export interface RangeOptions {
 }
 
 export interface StorageProvider {
-  uploadFile(file: Buffer, path: string, mimeType: string): Promise<void>
+  uploadFile(
+    file: Buffer,
+    path: string,
+    mimeType: string,
+    metadata?: Record<string, string>
+  ): Promise<void>
   uploadChunkedFile(
     chunksDir: string,
     targetPath: string,
@@ -18,7 +23,11 @@ export interface StorageProvider {
   getFileUrl(path: string): Promise<string>
   getFileSize(path: string): Promise<number>
   renameFolder(oldPath: string, newPath: string): Promise<void>
-  initializeMultipartUpload(path: string, mimeType: string): Promise<string>
+  initializeMultipartUpload(
+    path: string,
+    mimeType: string,
+    metadata?: Record<string, string>
+  ): Promise<string>
   getPresignedPartUploadUrl(
     path: string,
     uploadId: string,

@@ -48,7 +48,7 @@ export default function SecurityPolicyPage() {
             <CardHeader>
               <CardTitle>Security Policy</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Last updated: Nov 25, 2025
+                Last updated: Nov 30, 2025
               </p>
             </CardHeader>
 
@@ -87,75 +87,80 @@ export default function SecurityPolicyPage() {
                 Responsible disclosure
               </h3>
               <p className="text-sm text-muted-foreground">
-                We welcome responsible disclosure of security vulnerabilities.
-                If you discover an issue, please do not publish details publicly
-                until it has been addressed. Preferred reporting options are
-                opening a private GitHub issue, or contacting the maintainers
-                via the contact methods listed below.
+                If you discover a vulnerability affecting Emberly's codebase,
+                the official websites (emberly.site, emberly.ca), or
+                project-managed infrastructure, please do not disclose details
+                publicly until maintainers have had a reasonable opportunity to
+                triage and fix the issue. Preferred reporting channels are a
+                private GitHub Security Advisory or a secure issue on the
+                repository. See the project's README or CONTRIBUTING for current
+                disclosure instructions.
               </p>
 
               <h3 id="incident-response" className="text-base font-semibold">
                 Incident response
               </h3>
               <p className="text-sm text-muted-foreground">
-                We aim to acknowledge reports within 72 hours and to provide
-                regular updates as we investigate. For confirmed vulnerabilities
-                we will publish remediation timelines and mitigation guidance to
-                affected users where appropriate.
+                The Emberly team will triage reports affecting project
+                infrastructure and publish advisories or patches as needed. For
+                project-managed services and the official sites (emberly.site /
+                emberly.ca), maintainers will coordinate remediation and
+                communicate status to users. The project does not provide
+                managed hosting support for third-party installations.
               </p>
 
               <h3 id="security-practices" className="text-base font-semibold">
                 Security practices
               </h3>
               <p className="text-sm text-muted-foreground">
-                Key practices recommended and followed by Emberly include:
+                This section describes key security measures the Emberly project
+                applies to project-managed services and the official websites,
+                and recommends actions users can take to protect their accounts
+                and data.
               </p>
               <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                <li>Project: apply security updates and patches promptly.</li>
                 <li>
-                  Transport security: use HTTPS/TLS for all web and API traffic.
+                  Project: limit access to project infrastructure and keys.
                 </li>
                 <li>
-                  Least privilege: restrict access to storage buckets,
-                  databases, and API keys.
+                  Users: use strong, unique passwords and enable MFA where
+                  available.
                 </li>
                 <li>
-                  Dependency management: regularly update dependencies and apply
-                  security patches.
+                  Users: protect API keys and do not share private upload links.
                 </li>
-                <li>
-                  Backups and retention: configure backups with appropriate
-                  retention and access controls.
-                </li>
-                <li>
-                  Sanitization & validation: validate inputs and sanitize file
-                  metadata where applicable.
-                </li>
+                <li>Project: maintain backups and test recovery procedures.</li>
               </ul>
 
               <h3 id="data-breach" className="text-base font-semibold">
                 Data breach notification
               </h3>
               <p className="text-sm text-muted-foreground">
-                In the event of a data breach affecting personal data, Emberly
-                (or the instance operator) will notify affected users and
-                relevant authorities in accordance with applicable law.
-                Notifications will include the nature of the incident, the data
-                types involved, and recommended user actions.
+                For incidents affecting Emberly project-managed services or the
+                official websites (emberly.site / emberly.ca), the project will
+                coordinate disclosure and remediation and notify affected users
+                where appropriate. The project will follow applicable legal
+                requirements for breach notification.
               </p>
 
               <h3 id="contact" className="text-base font-semibold">
                 Contact & reporting
               </h3>
               <p className="text-sm text-muted-foreground">
-                To report a security issue, please open a GitHub issue at{' '}
+                To report a security issue affecting Emberly project
+                infrastructure or the official websites (emberly.site,
+                emberly.ca), follow the repository's disclosure instructions or
+                open a private Security Advisory on GitHub. For user-facing
+                concerns about accounts or data on the Emberly websites, contact
+                the project using the channels listed in the Privacy Policy.{' '}
                 <Link
                   href="https://github.com/EmberlyOSS/Website/issues"
                   className="underline"
                 >
-                  Emberly GitHub Issues
-                </Link>{' '}
-                or contact the instance operator. Instance operators may provide
-                a dedicated security contact or email for faster handling.
+                  Project issues
+                </Link>
+                .
               </p>
 
               <div className="mt-6">

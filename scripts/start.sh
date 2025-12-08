@@ -60,4 +60,4 @@ fi
 
 # Start the application
 echo "Starting the application..."
-exec npm run start
+exec npm run standalone

@@ -11,6 +11,8 @@ import {
 import type { Writable as NodeWritable, Readable } from 'node:stream'
 import { isAbsolute, join, normalize } from 'path'
 
+import { urlForHost } from '@/lib/utils'
+
 import type { RangeOptions, StorageProvider } from '../types'
 
 function validateStoragePath(path: string): string {
@@ -53,7 +55,8 @@ export class LocalStorageProvider implements StorageProvider {
 
   async initializeMultipartUpload(
     path: string,
-    mimeType: string
+    mimeType: string,
+    _metadata?: Record<string, string>
   ): Promise<string> {
     const validPath = validateStoragePath(path)
     const fullPath = join(process.cwd(), validPath)
@@ -157,13 +160,21 @@ export class LocalStorageProvider implements StorageProvider {
   async uploadFile(
     file: Buffer,
     path: string,
-    _mimeType: string
+    _mimeType: string,
+    metadata?: Record<string, string>
   ): Promise<void> {
     const validPath = validateStoragePath(path)
     const fullPath = join(process.cwd(), validPath)
     const dir = fullPath.substring(0, fullPath.lastIndexOf('/'))
     await mkdir(dir, { recursive: true })
     await writeFile(fullPath, file)
+    if (metadata && Object.keys(metadata).length > 0) {
+      try {
+        await writeFile(`${fullPath}.meta.json`, JSON.stringify(metadata))
+      } catch (err) {
+        // non-fatal
+      }
+    }
   }
 
   async deleteFile(path: string): Promise<void> {
@@ -185,11 +196,24 @@ export class LocalStorageProvider implements StorageProvider {
     return createReadStream(fullPath, options)
   }
 
-  async getFileUrl(path: string): Promise<string> {
+  async getFileUrl(
+    path: string,
+    _expiresIn?: number,
+    hostOverride?: string
+  ): Promise<string> {
     const baseUrl = (
       process.env.NEXTAUTH_URL || 'http://localhost:3000'
     ).replace(/\/+$/, '')
     const cleanPath = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+
+    if (hostOverride) {
+      const host = hostOverride.replace(/\/$/, '')
+      const hostBase = host.startsWith('http') ? host : urlForHost(host)
+      if (cleanPath.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
+        return `${hostBase}/api/files/${cleanPath}`
+      }
+      return `${hostBase}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}/raw`
+    }
 
     if (cleanPath.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
       return `${baseUrl}/api/files/${cleanPath}`

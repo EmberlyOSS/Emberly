@@ -45,7 +45,26 @@ export async function POST(req: Request) {
       }
     }
 
-    await storageProvider.uploadFile(processedBuffer, faviconPath, 'image/png')
+    // preserve host headers if provided
+    const meta: Record<string, string> = {}
+    try {
+      const headers = (req as any).headers as Headers | undefined
+      if (headers) {
+        const cordx = headers.get?.('x-cordx-host')
+        const emberly = headers.get?.('x-emberly-host')
+        if (cordx) meta['x-cordx-host'] = cordx
+        if (emberly) meta['x-emberly-host'] = emberly
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    await storageProvider.uploadFile(
+      processedBuffer,
+      faviconPath,
+      'image/png',
+      meta
+    )
 
     if (storageProvider instanceof S3StorageProvider) {
       publicPath = await storageProvider.getFileUrl(faviconPath)

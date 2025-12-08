@@ -40,6 +40,7 @@ export async function POST(req: Request) {
     const formData = await req.formData()
 
     const uploadedFile = formData.get('file') as File
+    const requestedDomain = (formData.get('domain') as string) || null
     const visibility =
       (formData.get('visibility') as 'PUBLIC' | 'PRIVATE') || 'PUBLIC'
     const password = formData.get('password') as string | null
@@ -104,10 +105,25 @@ export async function POST(req: Request) {
 
     const storageProvider = await getStorageProvider()
     const bytes = await uploadedFile.arrayBuffer()
+    // carry through host headers as metadata so storage/proxy can use them
+    const meta: Record<string, string> = {}
+    try {
+      const reqHeaders = (req as any).headers as Headers | undefined
+      if (reqHeaders) {
+        const cordx = reqHeaders.get?.('x-cordx-host')
+        const emberly = reqHeaders.get?.('x-emberly-host')
+        if (cordx) meta['x-cordx-host'] = cordx
+        if (emberly) meta['x-emberly-host'] = emberly
+      }
+    } catch (e) {
+      // ignore
+    }
+
     await storageProvider.uploadFile(
       Buffer.from(bytes),
       filePath,
-      uploadedFile.type
+      uploadedFile.type,
+      meta
     )
 
     const fileRecord = await prisma.$transaction(async (tx) => {
@@ -171,8 +187,24 @@ export async function POST(req: Request) {
         : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
     const fullUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
 
+    // If a custom domain was provided and is verified for this user, use it
+    let finalFullUrl = fullUrl
+    if (requestedDomain) {
+      try {
+        const domainRecord = await prisma.customDomain.findFirst({
+          where: { domain: requestedDomain, userId: user.id, verified: true },
+        })
+        if (domainRecord) {
+          const host = domainRecord.domain.replace(/\/$/, '')
+          finalFullUrl = host.startsWith('http') ? host : `https://${host}`
+        }
+      } catch (err) {
+        // ignore DB errors here and fall back to default fullUrl
+      }
+    }
+
     const responseData: FileUploadResponse = {
-      url: `${fullUrl}${urlPath}`,
+      url: `${finalFullUrl}${urlPath}`,
       name: displayName,
       size: uploadedFile.size,
       type: uploadedFile.type,

@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/tooltip'
 
 import { formatFileSize, getRelativeTime } from '@/lib/utils'
+import { writeToClipboard } from '@/lib/utils/clipboard'
 import { sanitizeUrl } from '@/lib/utils/url'
 
 import { useToast } from '@/hooks/use-toast'
@@ -74,11 +75,20 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
 
   const handleCopyLink = () => {
     const safeUrl = sanitizeUrl(file.urlPath)
-    navigator.clipboard.writeText(`${window.location.origin}${safeUrl}`)
-    toast({
-      title: 'Link copied',
-      description: 'File link has been copied to clipboard',
-    })
+    writeToClipboard(`${window.location.origin}${safeUrl}`)
+      .then(() => {
+        toast({
+          title: 'Link copied',
+          description: 'File link has been copied to clipboard',
+        })
+      })
+      .catch(() => {
+        toast({
+          title: 'Failed to copy link',
+          description: 'Please copy the link manually',
+          variant: 'destructive',
+        })
+      })
   }
 
   const handleDelete = async () => {
