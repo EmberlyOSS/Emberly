@@ -188,7 +188,6 @@ export async function GET(
         'Cache-Control': 'public, max-age=31536000, immutable',
         Connection: 'keep-alive',
         'Keep-Alive': 'timeout=300, max=1000',
-        'Transfer-Encoding': 'identity',
       }
 
       return new NextResponse(createRobustStream(stream), {
@@ -210,7 +209,6 @@ export async function GET(
       'Cache-Control': 'public, max-age=31536000, immutable',
       Connection: 'keep-alive',
       'Keep-Alive': 'timeout=300, max=1000',
-      'Transfer-Encoding': 'identity',
     }
 
     return new NextResponse(createRobustStream(stream), { headers })
