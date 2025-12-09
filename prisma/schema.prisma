@@ -123,14 +123,18 @@ model BlogPost {
 }
 
 model CustomDomain {
-  id                String   @id @default(cuid())
-  domain            String   @unique
-  userId            String
-  verified          Boolean  @default(false)
-  verificationToken String?
-  isPrimary         Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id             String    @id @default(cuid())
+  domain         String    @unique
+  userId         String
+  verified       Boolean   @default(false)
+  cfHostnameId   String?
+  cfStatus       String?
+  cfMeta         Json?
+  cfBackoffCount Int       @default(0)
+  cfPauseUntil   DateTime?
+  isPrimary      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

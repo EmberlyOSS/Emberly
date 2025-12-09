@@ -32,7 +32,6 @@ export function ProfileClient({
         <TabsTrigger value="profile">Profile</TabsTrigger>
         <TabsTrigger value="security">Security</TabsTrigger>
         <TabsTrigger value="data">Data</TabsTrigger>
-        <TabsTrigger value="domains">Domains</TabsTrigger>
       </TabsList>
 
       <TabsContent value="profile" className="space-y-6">
@@ -95,10 +94,6 @@ export function ProfileClient({
             <ProfileSecurity onUpdate={handleRefresh} />
           </CardContent>
         </Card>
-      </TabsContent>
-
-      <TabsContent value="domains" className="space-y-6">
-        <ProfileDomains />
       </TabsContent>
     </Tabs>
   )

@@ -195,8 +195,11 @@ export async function POST(req: Request) {
       ? sanitizeHost(user.preferredUploadDomain)
       : null
 
-    // If a custom domain was provided and is verified for this user, use it
+    // Start with preferred host or default fullUrl
     let finalFullUrl = preferredHost ?? fullUrl
+
+    // If the request explicitly provided a domain form field and it's a verified
+    // custom domain for the user, prefer that.
     if (requestedDomain) {
       try {
         const domainRecord = await prisma.customDomain.findFirst({
@@ -204,12 +207,47 @@ export async function POST(req: Request) {
         })
         if (domainRecord) {
           finalFullUrl = sanitizeHost(domainRecord.domain)
+          logger.info('Using requested domain for upload URL', {
+            userId: user.id,
+            requestedDomain: domainRecord.domain,
+          })
         }
       } catch (err) {
-        // ignore DB errors here and fall back to default fullUrl
+        // ignore DB errors here and fall back to preferred/default
       }
-    } else if (preferredHost) {
-      finalFullUrl = preferredHost
+    } else {
+      // No explicit domain provided — check if the incoming request host
+      // matches a verified custom domain for this user. If so, return URLs
+      // that use the request host so clients posting directly to their
+      // custom upload domain receive shareable links on that same domain.
+      try {
+        let requestHost: string | null = null
+        try {
+          const hdrs = (req as any).headers as Headers | undefined
+          requestHost = hdrs?.get?.('host') || (hdrs as any)?.host || null
+        } catch (e) {
+          requestHost = null
+        }
+
+        if (requestHost) {
+          // strip port if present
+          requestHost = requestHost.replace(/:\\d+$/, '')
+          if (requestHost !== '') {
+            const hostRecord = await prisma.customDomain.findFirst({
+              where: { domain: requestHost, userId: user.id, verified: true },
+            })
+            if (hostRecord) {
+              finalFullUrl = sanitizeHost(requestHost)
+              logger.info('Using request host for upload URL', {
+                userId: user.id,
+                requestHost,
+              })
+            }
+          }
+        }
+      } catch (err) {
+        // ignore DB errors and fall back to preferred/default
+      }
     }
 
     const responseData: FileUploadResponse = {

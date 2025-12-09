@@ -14,6 +14,7 @@ import {
   Settings,
   Upload,
   Users,
+  Globe,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
@@ -51,6 +52,11 @@ const baseRoutes = [
     href: '/dashboard/urls',
     label: 'Links',
     icon: LinkIcon,
+  },
+  {
+    href: '/dashboard/domains',
+    label: 'Domains',
+    icon: Globe,
   },
 ]
 

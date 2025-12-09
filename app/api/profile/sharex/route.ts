@@ -9,7 +9,7 @@ import { urlForHost } from '@/lib/utils'
 
 const logger = loggers.users
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -72,6 +72,30 @@ export async function GET() {
       ThumbnailURL: '{json:data.url}',
       DeletionURL: '',
       ErrorMessage: '{json:error}',
+    }
+
+    // If the request came from a verified custom domain owned by the user,
+    // override the generated RequestURL so ShareX uses that domain.
+    try {
+      const reqHost = (request.headers && (request.headers as Headers).get('host')) || null
+      if (reqHost) {
+        const hostNoPort = reqHost.replace(/:\d+$/, '')
+        if (hostNoPort) {
+          const hostRecord = await prisma.customDomain.findFirst({
+            where: { domain: hostNoPort, userId: user.id, verified: true },
+          })
+          if (hostRecord) {
+            const hostBase = urlForHost(hostNoPort).replace(/\/+$|\/$/g, '')
+            config.RequestURL = `${hostBase}/api/files`
+            logger.info('Overriding ShareX RequestURL to request host', {
+              userId: user.id,
+              requestHost: hostNoPort,
+            })
+          }
+        }
+      }
+    } catch (err) {
+      // ignore and keep default
     }
 
     const sanitizedName = (user.name || 'user')

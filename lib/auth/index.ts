@@ -17,6 +17,12 @@ const userSelect = {
   sessionVersion: true,
 } as const
 
+// Optional: allow configuring a shared cookie domain for NextAuth via
+// the environment. This is only safe when your custom upload domains are
+// subdomains of a single registrable domain (for example, *.example.com).
+// Do NOT set this to a different registrable domain.
+const NEXTAUTH_COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN || undefined
+
 type UserWithSession = Prisma.UserGetPayload<{ select: typeof userSelect }>
 
 declare module 'next-auth' {
@@ -133,6 +139,25 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
+  // Configure cookie domain only when NEXTAUTH_COOKIE_DOMAIN is provided.
+  // This makes the session cookie valid across subdomains (e.g. uploads.example.com)
+  // but cannot be used to share cookies across unrelated registrable domains.
+  ...(NEXTAUTH_COOKIE_DOMAIN
+    ? {
+      cookies: {
+        sessionToken: {
+          name: process.env.NEXTAUTH_COOKIE_NAME || 'next-auth.session-token',
+          options: {
+            domain: NEXTAUTH_COOKIE_DOMAIN,
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+          },
+        },
+      },
+    }
+    : {}),
   pages: {
     signIn: '/auth/login',
     newUser: '/auth/register',
