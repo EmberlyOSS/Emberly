@@ -10,14 +10,25 @@ export default async function AnalyticsPage() {
     }
 
     return (
-        <main className="container mx-auto py-8">
-            <section className="max-w-5xl mx-auto px-4">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-semibold">Analytics</h1>
+        <div className="container space-y-6">
+            <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
+                <div className="relative p-8">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold">Analytics</h1>
+                            <p className="text-muted-foreground mt-2">Overview of your account activity and traffic.</p>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <AnalyticsOverview />
-            </section>
-        </main>
+            <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
+                <div className="relative p-8">
+                    <AnalyticsOverview />
+                </div>
+            </div>
+        </div>
     )
 }

@@ -9,6 +9,21 @@ import { loggers } from '@/lib/logger'
 const logger = loggers.domains || loggers.app
 import { createCustomHostname } from '@/lib/cloudflare/client'
 
+function determineAllowedFromSubs(subs: Array<any>) {
+  const baseLimits: Record<string, number> = { free: 3, starter: 5, pro: 10 }
+  let allowed = baseLimits.free
+  const proProductId = process.env.NEXT_PUBLIC_STRIPE_PRODUCT_PRO
+  const starterProductId = process.env.NEXT_PUBLIC_STRIPE_PRODUCT_STARTER
+  for (const s of subs) {
+    const stripeId = String(s.product?.stripeProductId || '').trim()
+    const slug = String(s.product?.slug || '').toLowerCase()
+    if (stripeId && proProductId && stripeId === proProductId) allowed = Math.max(allowed, baseLimits.pro)
+    if (stripeId && starterProductId && stripeId === starterProductId) allowed = Math.max(allowed, baseLimits.starter)
+    if (slug && baseLimits[slug] && baseLimits[slug] > allowed) allowed = baseLimits[slug]
+  }
+  return allowed
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
@@ -57,7 +72,19 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({ domains })
+    try {
+      const subs = await prisma.subscription.findMany({ where: { userId: session.user.id, status: 'active' }, include: { product: true } })
+      const allowed = determineAllowedFromSubs(subs)
+      const purchases = await prisma.oneOffPurchase.findMany({ where: { userId: session.user.id, type: 'custom_domain' } })
+      const purchased = purchases.reduce((sum, p) => sum + (p.quantity || 0), 0)
+      const totalAllowed = allowed + purchased
+      const used = domains.length
+      const remaining = Math.max(0, totalAllowed - used)
+      return NextResponse.json({ domains, domainLimit: { allowed: totalAllowed, base: allowed, purchased, used, remaining } })
+    } catch (err) {
+      logger.error('Error computing domain limits', err as Error)
+      return NextResponse.json({ domains })
+    }
   } catch (error) {
     logger.error('Error fetching domains', error as Error)
     return new NextResponse('Internal Server Error', { status: 500 })
@@ -78,8 +105,18 @@ export async function POST(req: Request) {
 
     // Ensure not already claimed
     const existing = await prisma.customDomain.findUnique({ where: { domain } })
-    if (existing)
-      return new NextResponse('Domain already exists', { status: 409 })
+    if (existing) return new NextResponse('Domain already exists', { status: 409 })
+
+    // enforce per-user domain limits based on subscription and one-off purchases
+    const subs = await prisma.subscription.findMany({ where: { userId: session.user.id, status: 'active' }, include: { product: true } })
+    const allowed = determineAllowedFromSubs(subs)
+    const purchases = await prisma.oneOffPurchase.findMany({ where: { userId: session.user.id, type: 'custom_domain' } })
+    const purchased = purchases.reduce((sum, p) => sum + (p.quantity || 0), 0)
+    const totalAllowed = allowed + purchased
+    const usedCount = await prisma.customDomain.count({ where: { userId: session.user.id } })
+    if (usedCount >= totalAllowed) {
+      return new NextResponse('Domain limit reached', { status: 403 })
+    }
 
     const created = await prisma.customDomain.create({
       data: {

@@ -6,6 +6,7 @@ import EndpointTable from '@/components/docs/EndpointTable'
 
 
 import { Metadata } from 'next'
+import PageShell from '@/components/layout/PageShell'
 
 export const metadata: Metadata = {
   title: 'API Reference | Emberly',
@@ -14,15 +15,8 @@ export const metadata: Metadata = {
 
 export default function ApiReference() {
   return (
-    <main className="container mx-auto py-16">
+    <PageShell title="API Reference" subtitle="Comprehensive API documentation for Emberly, including file uploads, short URLs, user management, and more.">
       <section className="max-w-5xl mx-auto px-4">
-        <h1 className="text-3xl font-semibold">API Reference</h1>
-        <p className="mt-3 text-muted-foreground">
-          Programmatic API documentation generated from server route handlers.
-          Confirm request/response shapes with the code in <code>app/api/</code>{' '}
-          if you need exact types.
-        </p>
-
         <div className="mt-6 space-y-6">
           <DocsAlert title="Authentication">
             Browser-based authentication uses NextAuth session cookies. API
@@ -353,6 +347,6 @@ curl -X POST -H "Content-Type: application/json" -b "next-auth.session-token=...
           </div>
         </div>
       </section>
-    </main>
+    </PageShell>
   )
 }

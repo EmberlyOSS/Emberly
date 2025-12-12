@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { ProfileAccount } from './account'
-import { ProfileDomains } from './domains'
+import { ProfileDomains } from '../dashboard/domains'
 import { ProfileExport } from './export'
 import { ProfileSecurity } from './security'
 import { ProfileStorage } from './storage'

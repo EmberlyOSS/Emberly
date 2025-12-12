@@ -1,9 +1,17 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import UploadsSection from './UploadsSection'
+import StorageMetrics from './StorageMetrics'
+import TopItems from './TopItems'
+import TopUsers from './TopUsers'
+import SummaryCards from './SummaryCards'
+import RecentUploads from './RecentUploads'
+import TopFilesCard from './TopFilesCard'
+import TopUrlsCard from './TopUrlsCard'
+import LargestFilesCard from './LargestFilesCard'
 
 function GatedOverlay({ required }: { required: string }) {
     return (
@@ -47,7 +55,7 @@ export default function AnalyticsOverview() {
         let mounted = true
         async function load() {
             try {
-                const res = await fetch('/api/analytics/summary')
+                const res = await fetch('/api/analytics/overview')
                 if (!res.ok) throw new Error('Failed')
                 const j = await res.json()
                 if (mounted) setData(j)
@@ -95,133 +103,30 @@ export default function AnalyticsOverview() {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Files</CardTitle>
-                        <CardDescription>Overview of your uploaded files</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-semibold">{basic.totalFiles ?? 0}</div>
-                        <div className="text-xs text-muted-foreground">Storage: {(basic.storageUsed / 1024 / 1024).toFixed(2)} MB</div>
-                        <div className="text-xs text-muted-foreground">Views: {basic.totalViews ?? 0} • Downloads: {basic.totalDownloads ?? 0}</div>
-                        <div className="mt-2"><Sparkline points={uploadsSeries} /></div>
-                    </CardContent>
-                </Card>
+            <SummaryCards basic={basic} />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Short URLs</CardTitle>
-                        <CardDescription>Track your link clicks</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-semibold">{basic.totalUrls ?? 0}</div>
-                        <div className="text-xs text-muted-foreground">Clicks: {basic.totalUrlClicks ?? 0}</div>
-                    </CardContent>
-                </Card>
+            <UploadsSection />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Domains</CardTitle>
-                        <CardDescription>Custom domains attached to your account</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-semibold">{basic.domainsCount ?? 0}</div>
-                        <div className="text-xs text-muted-foreground">Verified: {basic.verifiedDomains ?? 0}</div>
-                    </CardContent>
-                </Card>
+            <div>
+                <TopItems allowed={data.allowed} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent uploads</CardTitle>
-                        <CardDescription>Latest files uploaded to your account</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mt-3 space-y-2">
-                            {(data.recentUploads || []).map((f: any) => (
-                                <div key={f.id} className="flex items-center justify-between text-sm">
-                                    <div className="truncate max-w-[60%]">{f.name}</div>
-                                    <div className="text-xs text-muted-foreground">{Math.round(f.size)} bytes • {new Date(f.uploadedAt).toLocaleDateString()}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                    <CardFooter className="justify-end">
-                        <div className="flex items-center gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => { setLoading(true); fetch('/api/analytics/summary').then(r => r.json()).then(j => { setData(j); setLoading(false) }).catch(() => setLoading(false)) }}>Refresh</Button>
-                            {data.plan === 'pro' ? (
-                                <Button size="sm" onClick={handleExport}>Export CSV</Button>
-                            ) : (
-                                <Button variant="outline" size="sm" asChild>
-                                    <a href="/pricing">Upgrade</a>
-                                </Button>
-                            )}
-                        </div>
-                    </CardFooter>
-                </Card>
+                <RecentUploads recentUploads={data.recentUploads} onRefresh={() => { setLoading(true); fetch('/api/analytics/overview').then(r => r.json()).then(j => { setData(j); setLoading(false) }).catch(() => setLoading(false)) }} plan={data.plan} onExport={handleExport} />
 
-                <Card className="relative">
-                    <CardHeader>
-                        <CardTitle>Top files</CardTitle>
-                        <CardDescription>Your most viewed files</CardDescription>
-                    </CardHeader>
-                    {!data.allowed?.topFiles && (
-                        <GatedOverlay required="STARTER" />
-                    )}
-                    <CardContent>
-                        <div className="mt-3 space-y-2">
-                            {(data.topFiles || []).map((f: any) => (
-                                <div key={f.id} className="flex items-center justify-between text-sm">
-                                    <div className="truncate max-w-[60%]">{f.name}</div>
-                                    <div className="text-xs text-muted-foreground">{f.views} views</div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                <TopFilesCard topFiles={data.topFiles} allowed={data.allowed?.topFiles} />
+            </div>
+
+            <div className="mt-4">
+                <TopUsers />
             </div>
 
             {data.topUrls && (
-                <Card className="relative">
-                    <CardHeader>
-                        <CardTitle>Top short links</CardTitle>
-                        <CardDescription>Most clicked short links</CardDescription>
-                    </CardHeader>
-                    {!data.allowed?.topUrls && (
-                        <GatedOverlay required="STARTER" />
-                    )}
-                    <CardContent>
-                        <div className="mt-3 space-y-2">
-                            {(data.topUrls || []).map((u: any) => (
-                                <div key={u.id} className="flex items-center justify-between text-sm">
-                                    <div className="truncate max-w-[70%]">{u.shortCode} → {u.targetUrl}</div>
-                                    <div className="text-xs text-muted-foreground">{u.clicks} clicks</div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                <TopUrlsCard topUrls={data.topUrls} allowed={data.allowed?.topUrls} />
             )}
 
             {data.topStorageFiles && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Largest files</CardTitle>
-                        <CardDescription>Top files by storage used</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mt-3 space-y-2">
-                            {(data.topStorageFiles || []).map((f: any) => (
-                                <div key={f.id} className="flex items-center justify-between text-sm">
-                                    <div className="truncate max-w-[60%]">{f.name}</div>
-                                    <div className="text-xs text-muted-foreground">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                <LargestFilesCard files={data.topStorageFiles} />
             )}
 
         </div>

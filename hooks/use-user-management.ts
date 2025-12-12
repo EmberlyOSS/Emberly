@@ -36,6 +36,12 @@ export interface UserFormData {
   password?: string
   role: 'ADMIN' | 'USER'
   urlId?: string
+  // admin-only fields
+  storageQuotaMB?: number | null
+  grantCustomDomains?: number
+  grantStorageGB?: number
+  planProductId?: string
+  planSlug?: string
 }
 
 export interface UseUserManagementOptions {

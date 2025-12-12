@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 
 
 import { Metadata } from 'next'
+import PageShell from '@/components/layout/PageShell'
 
 export const metadata: Metadata = {
     title: 'User Guide | Emberly',
@@ -12,14 +13,8 @@ export const metadata: Metadata = {
 
 export default function UserGuide() {
     return (
-        <main className="container mx-auto py-16">
+        <PageShell title="User Guide" subtitle="User facing documentation covering uploads, profiles, short links, privacy controls, and domain management.">
             <section className="max-w-5xl mx-auto px-4">
-                <h1 className="text-3xl font-semibold">User Guide</h1>
-                <p className="mt-3 text-muted-foreground">
-                    User-facing documentation covering uploads, profiles, short links,
-                    privacy controls, and domain management.
-                </p>
-
                 <div className="mt-6 space-y-6">
                     <Card>
                         <CardContent className="p-6">
@@ -73,6 +68,6 @@ export default function UserGuide() {
                     </div>
                 </div>
             </section>
-        </main>
+        </PageShell>
     )
 }

@@ -25,6 +25,7 @@ export function ProfileDomains() {
   const cfPollingRef = useRef<Record<string, { count: number; last: number }>>({})
   const [newDomain, setNewDomain] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [domainLimit, setDomainLimit] = useState<{ allowed: number; base: number; purchased: number; used: number; remaining: number } | null>(null)
   const { toast } = useToast()
   const [openIds, setOpenIds] = useState<string[]>([])
   const [openAdd, setOpenAdd] = useState(false)
@@ -40,6 +41,7 @@ export function ProfileDomains() {
       if (!res.ok) throw new Error('Failed to load')
       const data = await res.json()
       setDomains(data.domains || [])
+      setDomainLimit(data.domainLimit || null)
     } catch (err) {
       setError('Could not load domains')
     } finally {
@@ -55,6 +57,11 @@ export function ProfileDomains() {
     e?.preventDefault()
     setAdding(true)
     setError(null)
+    if (domainLimit && domainLimit.remaining <= 0) {
+      setError('Domain limit reached for your plan. Purchase extra slots to add more.')
+      setAdding(false)
+      return
+    }
     try {
       const res = await fetch('/api/domains', {
         method: 'POST',
@@ -218,10 +225,13 @@ export function ProfileDomains() {
               </div>
               <div className="flex items-center gap-2 ml-3 mt-4">
                 <Button variant="outline" onClick={() => { /* filter placeholder */ }}>Filter</Button>
-                <Button onClick={() => setOpenAdd(true)}>Add Domain</Button>
+                <Button onClick={() => setOpenAdd(true)} disabled={Boolean(domainLimit && domainLimit.remaining <= 0)}>Add Domain</Button>
               </div>
             </div>
             <div className="mt-2 text-sm text-muted-foreground">Your domains</div>
+            {domainLimit && (
+              <div className="text-xs text-muted-foreground">{domainLimit.used} of {domainLimit.allowed} domains used ({domainLimit.purchased} purchased extra) — {domainLimit.remaining} remaining</div>
+            )}
           </div>
 
           {/* compute filtered + sorted list: verified domains first, then others */}
