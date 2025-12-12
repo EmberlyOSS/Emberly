@@ -1,48 +1,33 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-
-import { ChevronDown } from 'lucide-react'
-import { Check, Edit, Trash2 } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import { Icons } from '@/components/shared/icons'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Search } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-
-import { writeToClipboard } from '@/lib/utils/clipboard'
 
 import { useToast } from '@/hooks/use-toast'
 
-interface Domain {
-  id: string
-  domain: string
-  verified: boolean
-  verificationToken?: string | null
-  isPrimary: boolean
-}
+import DomainForm from './DomainForm'
+import DomainList from './DomainList'
+import type { Domain } from './types'
 
 export function ProfileDomains() {
   const [domains, setDomains] = useState<Domain[]>([])
   const [loading, setLoading] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [verifyingIds, setVerifyingIds] = useState<string[]>([])
+  const [search, setSearch] = useState('')
+
+  const [cfCheckingIds, setCfCheckingIds] = useState<string[]>([])
+  const cfPollingRef = useRef<Record<string, { count: number; last: number }>>({})
   const [newDomain, setNewDomain] = useState('')
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
   const [openIds, setOpenIds] = useState<string[]>([])
+  const [openAdd, setOpenAdd] = useState(false)
 
   const toggleOpen = (id: string) => {
     setOpenIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -79,6 +64,7 @@ export function ProfileDomains() {
       if (res.status === 409) return setError('Domain already exists')
       if (!res.ok) throw new Error('Failed')
       setNewDomain('')
+      setOpenAdd(false)
       await fetchDomains()
     } catch (err) {
       setError('Failed to add domain')
@@ -111,346 +97,175 @@ export function ProfileDomains() {
     }
   }
 
-  const verifyDomain = async (id: string) => {
+  const recheckCloudflare = async (id: string) => {
     try {
-      setVerifyingIds((s) => (s.includes(id) ? s : [...s, id]))
-      const res = await fetch(`/api/domains/${id}/verify`, { method: 'POST' })
-      if (res.status === 404) {
-        toast({
-          title: 'Verification not found',
-          description: 'TXT record not found',
-        })
+      setCfCheckingIds((s) => (s.includes(id) ? s : [...s, id]))
+      const res = await fetch(`/api/domains/${id}/cf-check`, { method: 'POST' })
+      if (res.status === 202) {
+        toast({ title: 'Cloudflare request submitted', description: 'Cloudflare is processing the hostname' })
+        await fetchDomains()
         return
       }
-      if (!res.ok) throw new Error('Failed')
-      toast({
-        title: 'Domain verified',
-        description: 'Domain verification succeeded',
-      })
-      await fetchDomains()
+
+      const data = await res.json().catch(() => null)
+      if (res.ok) {
+        if (data?.status && String(data.status).toLowerCase().includes('active')) {
+          toast({ title: 'Domain verified', description: 'Cloudflare hostname is active' })
+        } else {
+          toast({ title: 'Checked', description: 'Cloudflare status updated' })
+        }
+        await fetchDomains()
+        return
+      }
+
+      const msg = data?.suggestion || data?.error || (data?.body ? JSON.stringify(data.body) : 'Cloudflare check failed')
+      toast({ title: 'Cloudflare error', description: String(msg) })
+      console.debug('CF check error payload', data)
     } catch (err) {
-      toast({
-        title: 'Verification failed',
-        description: 'Failed to verify domain',
-      })
+      toast({ title: 'Check failed', description: 'Failed to check Cloudflare status' })
     } finally {
-      setVerifyingIds((s) => s.filter((x) => x !== id))
+      setCfCheckingIds((s) => s.filter((x) => x !== id))
     }
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await writeToClipboard(text)
-      toast({ title: 'Copied', description: 'Copied to clipboard' })
-    } catch (e) {
-      toast({
-        title: 'Copy failed',
-        description: 'Could not copy to clipboard',
-      })
-    }
-  }
-
-  // Poll for verification automatically for unverified domains that have a token
+  // polling/backoff loop
   useEffect(() => {
     const interval = setInterval(async () => {
+      const now = Date.now()
       for (const d of domains) {
-        if (
-          !d.verified &&
-          d.verificationToken &&
-          !verifyingIds.includes(d.id)
-        ) {
-          // run a quiet check
-          try {
-            setVerifyingIds((s) => (s.includes(d.id) ? s : [...s, d.id]))
-            const res = await fetch(`/api/domains/${d.id}/verify`, {
-              method: 'POST',
-            })
-            if (res.ok) {
-              toast({
-                title: 'Domain verified',
-                description: `${d.domain} verified`,
-              })
-              await fetchDomains()
-            }
-            // if 404, keep waiting silently
-          } catch (err) {
-            // ignore network errors during polling
-          } finally {
-            setVerifyingIds((s) => s.filter((x) => x !== d.id))
+        if (d.verified || d.cfStatus === 'active' || d.cfStatus === 'unsupported') continue
+        const state = cfPollingRef.current[d.id] ?? { count: 0, last: 0 }
+        const attemptCount = state.count || 0
+        const delay = 5000 * Math.pow(2, Math.min(attemptCount, 5))
+        if (now - (state.last || 0) < delay) continue
+        if (attemptCount >= 6) continue
+
+        try {
+          setCfCheckingIds((s) => (s.includes(d.id) ? s : [...s, d.id]))
+          const res = await fetch(`/api/domains/${d.id}/cf-check`, { method: 'POST' })
+          if (res.ok) {
+            cfPollingRef.current[d.id] = { count: 0, last: Date.now() }
+            await fetchDomains()
+          } else {
+            cfPollingRef.current[d.id] = { count: attemptCount + 1, last: Date.now() }
+            await fetchDomains()
           }
+        } catch (err) {
+          cfPollingRef.current[d.id] = { count: attemptCount + 1, last: Date.now() }
+        } finally {
+          setCfCheckingIds((s) => s.filter((x) => x !== d.id))
         }
       }
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [domains, verifyingIds])
+  }, [domains])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Custom Domains</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Alert>
-          <AlertTitle>Serve files from your domain</AlertTitle>
-          <AlertDescription>
-            <p className="text-sm text-muted-foreground">
-              For root domains, use CNAME flattening/ANAME/ALIAS if your
-              provider supports it.
-            </p>
-            <div className="mt-3">
-              <strong>Notes:</strong>
-              <ul className="mt-2 ml-4 list-disc text-sm">
-                <li>Proxied (CDN) mode is recommended for TLS and caching.</li>
-                <li>
-                  Allow up to 24–48 hours for DNS propagation and cert issuance.
-                </li>
-                <li>If you need help, contact the Emberly team.</li>
-              </ul>
-            </div>
-          </AlertDescription>
-        </Alert>
-
-        <Separator className="my-2" />
-
-        <form onSubmit={addDomain} className="flex gap-2">
-          <Input
-            placeholder="example.com"
-            value={newDomain}
-            onChange={(e) => setNewDomain(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={adding}>
-            {adding ? 'Adding…' : 'Add Domain'}
-          </Button>
-        </form>
-
-        {error && <div className="text-sm text-destructive">{error}</div>}
-
-        <div>
-          <h3 className="font-medium mb-2">Your domains</h3>
-          {loading && (
-            <div className="text-sm text-muted-foreground">Loading…</div>
-          )}
-          {!loading && domains.length === 0 && (
-            <div className="text-sm text-muted-foreground">No domains yet.</div>
-          )}
-          <ul className="space-y-4">
-            {domains.map((d) => (
-              <li key={d.id} className="flex flex-col gap-3">
-                <div className="relative rounded-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 backdrop-blur-sm overflow-hidden p-4">
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10 pointer-events-none" />
-                  <div className="flex items-start sm:items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <div className="font-medium truncate">{d.domain}</div>
-                        {d.isPrimary && (
-                          <span className="text-xs text-muted-foreground">
-                            • Primary
-                          </span>
-                        )}
-                        {verifyingIds.includes(d.id) ? (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-yellow-500/10 text-yellow-400">
-                            <Icons.spinner className="h-3 w-3 animate-spin" />
-                            Checking
-                          </span>
-                        ) : d.verified ? (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-green-500/10 text-green-400">
-                            <Check className="h-3 w-3" />
-                            Verified
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-red-500/10 text-red-400">
-                            <Icons.alertCircle className="h-3 w-3" />
-                            Unverified
-                          </span>
-                        )}
-                      </div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Custom Domains</h2>
+        <p className="text-sm text-muted-foreground">Manage your custom domains, DNS requirements, and verification status.</p>
+      </div>
+      <div className="space-y-4">
+        <div className="">
+          {/* Left column: info + add domain */}
+          <div className="md:col-span-1">
+            <Alert className="mb-4" variant="info">
+              <div className="flex items-start gap-3">
+                <div className="text-violet-400 mt-0.5">
+                  <Icons.infinity className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <AlertTitle className="font-extrabold">Why we recommend Cloudflare</AlertTitle>
+                      <AlertDescription>
+                        Cloudflare provides automated TLS for custom hostnames and the zone-level APIs we use to verify and provision certificates.
+                      </AlertDescription>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        aria-expanded={openIds.includes(d.id)}
-                        onClick={() => toggleOpen(d.id)}
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        <span>
-                          {openIds.includes(d.id) ? 'Hide DNS' : 'Show DNS'}
-                        </span>
-                        <ChevronDown
-                          className={`h-4 w-4 transition-transform ${openIds.includes(d.id) ? 'rotate-180' : 'rotate-0'}`}
-                        />
-                      </button>
-                      {d.verified && !d.isPrimary && (
-                        <Button size="sm" onClick={() => setPrimary(d.id)}>
-                          Set primary
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        aria-label="Edit domain"
-                        onClick={() =>
-                          toast({
-                            title: 'Edit',
-                            description: 'Edit domain not implemented yet',
-                          })
-                        }
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        aria-label="Delete domain"
-                        onClick={() => setDeletingId(d.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="shrink-0">
+                      <a href="https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/" target="_blank" rel="noopener noreferrer" className="text-sm underline">Learn how</a>
                     </div>
                   </div>
-                  <Collapsible open={openIds.includes(d.id)}>
-                    <CollapsibleContent>
-                      {!d.verified && (
-                        <>
-                          <div className="relative mt-2 rounded-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 backdrop-blur-sm p-3 overflow-hidden">
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10 pointer-events-none" />
-                            <div className="text-sm font-medium mb-2">
-                              CNAME (recommended)
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 items-center text-xs">
-                              <div className="text-muted-foreground">Type</div>
-                              <div className="text-muted-foreground">Name</div>
-                              <div className="text-muted-foreground">Value</div>
 
-                              <div className="font-medium">CNAME</div>
-                              <div className="truncate">
-                                www{' '}
-                                <span className="text-xs text-muted-foreground">
-                                  (or @)
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <code className="font-mono truncate">
-                                  cname.emberly.site
-                                </code>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  aria-label="Copy CNAME"
-                                  onClick={() =>
-                                    copyToClipboard('cname.emberly.site')
-                                  }
-                                >
-                                  <Icons.copy className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
+                  <ul className="mt-3 text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Automated TLS issuance no manual certificates required.</li>
+                    <li>Zone-level DNS APIs enable faster, more reliable verification.</li>
+                    <li>Works with CNAME hostnames (www), root (@) and wildcard (*) configurations when supported by your DNS provider.</li>
+                  </ul>
 
-                            <div className="mt-3 text-xs text-muted-foreground">
-                              Proxied (CDN) mode is recommended for TLS and
-                              caching.
-                            </div>
-                          </div>
-
-                          {d.verificationToken && (
-                            <div className="relative mt-2 rounded-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 backdrop-blur-sm p-3 overflow-hidden">
-                              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10 pointer-events-none" />
-                              <div className="text-sm font-medium mb-2">
-                                Verification (TXT)
-                              </div>
-                              <div className="grid grid-cols-3 gap-4 items-center text-xs">
-                                <div className="text-muted-foreground">
-                                  Type
-                                </div>
-                                <div className="text-muted-foreground">
-                                  Name
-                                </div>
-                                <div className="text-muted-foreground">
-                                  Value
-                                </div>
-
-                                <div className="font-medium">TXT</div>
-                                <div className="truncate">
-                                  <code className="font-mono">
-                                    _emberly-verify.{d.domain}
-                                  </code>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <code className="font-mono truncate mr-2">
-                                    {d.verificationToken}
-                                  </code>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    aria-label="Copy TXT token"
-                                    onClick={() =>
-                                      copyToClipboard(d.verificationToken)
-                                    }
-                                  >
-                                    <Icons.copy className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {d.verified && (
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          This domain is verified and ready to use.
-                        </div>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
-                  <Dialog
-                    open={deletingId === d.id}
-                    onOpenChange={(open) => !open && setDeletingId(null)}
-                  >
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Delete domain</DialogTitle>
-                      </DialogHeader>
-                      <div className="text-sm text-muted-foreground">
-                        Are you sure you want to delete{' '}
-                        <strong>{d.domain}</strong>? This action cannot be
-                        undone.
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setDeletingId(null)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={async () => {
-                            setDeleting(true)
-                            await removeDomain(d.id)
-                            setDeleting(false)
-                            setDeletingId(null)
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  {error && <div className="text-sm text-destructive mt-3">{error}</div>}
                 </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </Alert>
+          </div>
+
+          {/* Right column: search + list */}
+          <div className="md:col-span-2">
+            <div className="mb-4 items-center justify-between gap-3">
+              <label className="sr-only">Search domains</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </span>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search domains..."
+                  className="w-full pl-9 pr-3 py-2 rounded border bg-transparent text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2 ml-3 mt-4">
+                <Button variant="outline" onClick={() => { /* filter placeholder */ }}>Filter</Button>
+                <Button onClick={() => setOpenAdd(true)}>Add Domain</Button>
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">Your domains</div>
+          </div>
+
+          {/* compute filtered + sorted list: verified domains first, then others */}
+          {(() => {
+            const q = search.trim().toLowerCase()
+            const filtered = domains
+              .filter(d => d.domain.toLowerCase().includes(q))
+              .sort((a, b) => Number(b.verified ? 1 : 0) - Number(a.verified ? 1 : 0))
+            return (
+              <div className="rounded-md border border-white/6 bg-white/2 overflow-hidden">
+                <DomainList
+                  domains={filtered}
+                  openIds={openIds}
+                  cfCheckingIds={cfCheckingIds}
+                  onToggle={toggleOpen}
+                  onSetPrimary={setPrimary}
+                  onRecheck={recheckCloudflare}
+                  onDelete={removeDomain}
+                />
+              </div>
+            )
+          })()}
         </div>
+
+        {/* Add Domain modal */}
+        <Dialog open={openAdd} onOpenChange={(o) => setOpenAdd(o)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Domain</DialogTitle>
+            </DialogHeader>
+            <div className="text-sm text-muted-foreground mb-4">Add a custom domain you own. We'll verify ownership via DNS and provision TLS using Cloudflare.</div>
+            <div className="rounded-md border border-white/6 bg-white/3 dark:bg-black/3 p-3 mb-4">
+              <div className="text-sm font-medium">How verification works</div>
+              <div className="mt-2 text-xs text-muted-foreground">When you add a domain we ask you to create a CNAME record for the hostname (typically <code className="font-mono">www</code>) pointing to our target. Once the DNS record is present we create a Cloudflare custom hostname and provision TLS for your domain.</div>
+            </div>
+            <DomainForm value={newDomain} onChange={setNewDomain} onSubmit={addDomain} loading={adding} />
+          </DialogContent>
+        </Dialog>
 
         <Separator className="my-2" />
 
-        <div className="text-sm text-muted-foreground">
-          If you need help configuring your DNS provider, open a support request
-          with your domain registrar or contact the Emberly team.
-        </div>
-      </CardContent>
-    </Card>
+        <div className="text-sm text-muted-foreground">If you need help configuring your DNS provider, open a support request with your domain registrar or contact the Emberly team.</div>
+      </div>
+    </div>
   )
 }
 

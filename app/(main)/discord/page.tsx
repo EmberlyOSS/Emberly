@@ -3,6 +3,14 @@ import { Bell, Code, Star, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Discord | Emberly',
+  description: 'Join the Emberly community on Discord for support, announcements, and more.',
+}
+
 export default function DiscordPage() {
   return (
     <main className="container mx-auto py-12">

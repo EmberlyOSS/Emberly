@@ -3,6 +3,7 @@ export const FILE_URL_PATTERN =
 
 export const PUBLIC_PATHS = [
   '/',
+  '/st5',
   '/about',
   '/blog',
   '/discord',

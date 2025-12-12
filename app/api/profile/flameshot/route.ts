@@ -50,7 +50,29 @@ export async function POST(req: Request) {
     const preferredHost = user.preferredUploadDomain
       ? urlForHost(user.preferredUploadDomain).replace(/\/+$/, '')
       : null
-    const resolvedBaseUrl = preferredHost || normalizedBaseUrl
+    let resolvedBaseUrl = preferredHost || normalizedBaseUrl
+    // If the request came from a verified custom upload domain for this user,
+    // prefer that host so the generated script points at the user's domain.
+    try {
+      const reqHost = (req && (req as Request).headers.get('host')) || null
+      if (reqHost) {
+        const hostNoPort = reqHost.replace(/:\d+$/, '')
+        if (hostNoPort) {
+          const hostRecord = await prisma.customDomain.findFirst({
+            where: { domain: hostNoPort, userId: user.id, verified: true },
+          })
+          if (hostRecord) {
+            resolvedBaseUrl = urlForHost(hostNoPort).replace(/\/\/+$/, '')
+            logger.info('Using request host for Flameshot script', {
+              userId: user.id,
+              requestHost: hostNoPort,
+            })
+          }
+        }
+      }
+    } catch (err) {
+      // ignore DB errors and fall back to preferred/default
+    }
     if (!resolvedBaseUrl) {
       return NextResponse.json(
         { error: 'Server configuration error' },

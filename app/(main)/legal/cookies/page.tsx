@@ -2,6 +2,14 @@ import Link from 'next/link'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Cookie Policy | Emberly',
+  description: 'Emberly cookie policy: types of cookies used, purposes, and how to manage them.',
+}
+
 export default function CookiesPage() {
   return (
     <main className="container mx-auto px-4 py-8">

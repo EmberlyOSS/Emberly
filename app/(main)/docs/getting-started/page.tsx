@@ -2,6 +2,14 @@ import Link from 'next/link'
 
 import { Card, CardContent } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Getting Started | Emberly',
+  description: 'Quick guide to run Emberly locally, perform database migrations, and deploy with Docker Compose.',
+}
+
 export default function GettingStarted() {
   return (
     <main className="container mx-auto py-16">
@@ -20,7 +28,7 @@ export default function GettingStarted() {
                 Clone the repository and install dependencies.
               </p>
               <pre className="mt-3 rounded bg-background/30 p-3 text-xs">
-                git clone https://github.com/EmberlyOSS/Website.git cd Website
+                git clone https://github.com/EmberlyOSS/Emberly.git cd Website
                 bun install
               </pre>
               <p className="text-sm text-muted-foreground mt-2">

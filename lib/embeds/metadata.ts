@@ -52,7 +52,12 @@ export async function buildRichMetadata({
       siteName: 'Emberly',
       locale: 'en_US',
       type: getOpenGraphType(classification),
-      images: buildOpenGraphImages(classification.isImage, rawUrl, mimeType),
+      images: buildOpenGraphImages(
+        classification.isImage,
+        rawUrl,
+        mimeType,
+        baseUrl
+      ),
       videos: await buildOpenGraphVideos(
         classification.isVideo,
         rawUrl,
@@ -93,17 +98,33 @@ function getOpenGraphType(classification: ReturnType<typeof classifyMimeType>) {
 function buildOpenGraphImages(
   isImageFile: boolean,
   rawUrl: string,
-  mimeType: string
+  mimeType: string,
+  baseUrl: string
 ) {
-  if (!isImageFile) return undefined
+  if (isImageFile) {
+    return [
+      {
+        url: rawUrl,
+        alt: 'Preview image',
+        type: mimeType,
+      },
+    ]
+  }
 
-  return [
-    {
-      url: rawUrl,
-      alt: 'Preview image',
-      type: mimeType,
-    },
-  ]
+  // Fallback to a site banner image when no image file is available.
+  // Expect a public asset at `/og/large_card_summary.png` (adjust path if needed).
+  try {
+    const fallbackUrl = `${baseUrl.replace(/\/$/, '')}/banner.png`
+    return [
+      {
+        url: fallbackUrl,
+        alt: 'Emberly banner',
+        type: 'image/png',
+      },
+    ]
+  } catch (err) {
+    return undefined
+  }
 }
 
 async function buildOpenGraphVideos(

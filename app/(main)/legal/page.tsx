@@ -2,6 +2,14 @@ import Link from 'next/link'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Legal | Emberly',
+  description: 'Emberly legal hub: Terms of Service, Privacy Policy, Cookie Policy, Security Policy, and GDPR information.',
+}
+
 export default function LegalHubPage() {
   return (
     <main className="container mx-auto px-4 py-12">

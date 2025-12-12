@@ -2,6 +2,14 @@ import Link from 'next/link'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Emberly',
+  description: 'Emberly privacy policy: information collection, data retention, user rights, and data protection practices.',
+}
+
 export default function PrivacyPage() {
   return (
     <main className="container mx-auto px-4 py-8">

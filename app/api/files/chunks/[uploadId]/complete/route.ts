@@ -13,6 +13,7 @@ import { loggers } from '@/lib/logger'
 import { processImageOCR } from '@/lib/ocr'
 import { getStorageProvider } from '@/lib/storage'
 import { bytesToMB } from '@/lib/utils'
+import { getConfig } from '@/lib/config'
 
 const logger = loggers.files
 
@@ -25,7 +26,7 @@ async function getAuthenticatedUser(req: Request) {
   if (session?.user) {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, storageUsed: true, urlId: true, role: true },
+      select: { id: true, storageUsed: true, storageQuotaMB: true, urlId: true, role: true },
     })
     return user
   }
@@ -35,7 +36,7 @@ async function getAuthenticatedUser(req: Request) {
     const token = authHeader.substring(7)
     const user = await prisma.user.findUnique({
       where: { uploadToken: token },
-      select: { id: true, storageUsed: true, urlId: true, role: true },
+      select: { id: true, storageUsed: true, storageQuotaMB: true, urlId: true, role: true },
     })
     return user
   }
@@ -105,6 +106,27 @@ export async function POST(
       metadata.s3UploadId,
       parts
     )
+
+    // Re-check quotas before creating the file record in case the user's
+    // storage usage changed since initialization.
+    const config = await getConfig()
+    const quotasEnabled = config.settings.general.storage.quotas.enabled
+    const defaultQuota = config.settings.general.storage.quotas.default
+
+    if (quotasEnabled && user.role !== 'ADMIN') {
+      const quotaMB = user.storageQuotaMB ?? defaultQuota.value * (defaultQuota.unit === 'GB' ? 1024 : 1)
+      const fileSizeMB = bytesToMB(metadata.totalSize)
+      if (user.storageUsed + fileSizeMB > quotaMB) {
+        // Attempt to clean up the assembled object in storage
+        try {
+          await storageProvider.deleteFile(metadata.fileKey)
+        } catch (e) {
+          // ignore cleanup errors
+        }
+
+        return NextResponse.json({ error: 'Upload would exceed your storage quota' }, { status: 413 })
+      }
+    }
 
     const fileRecord = await prisma.$transaction(async (tx) => {
       const file = await tx.file.create({

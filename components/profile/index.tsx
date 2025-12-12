@@ -5,6 +5,8 @@ import { useCallback } from 'react'
 import { ProfileClientProps } from '@/types/components/profile'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { format } from 'date-fns'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -32,7 +34,6 @@ export function ProfileClient({
         <TabsTrigger value="profile">Profile</TabsTrigger>
         <TabsTrigger value="security">Security</TabsTrigger>
         <TabsTrigger value="data">Data</TabsTrigger>
-        <TabsTrigger value="domains">Domains</TabsTrigger>
       </TabsList>
 
       <TabsContent value="profile" className="space-y-6">
@@ -42,6 +43,52 @@ export function ProfileClient({
           </CardHeader>
           <CardContent>
             <ProfileAccount user={user} onUpdate={handleRefresh} />
+          </CardContent>
+        </Card>
+
+        {/* Billing card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {user.subscription ? (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Current plan</div>
+                      <div className="text-sm text-muted-foreground">
+                        {user.subscription.productId}
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {user.subscription.status}
+                    </div>
+                  </div>
+
+                  {user.subscription.currentPeriodEnd && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      Expires:{' '}
+                      {format(new Date(user.subscription.currentPeriodEnd), 'PPP')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">No active subscription</div>
+              )}
+
+              <div className="flex gap-2">
+                <Button asChild>
+                  <a href="/api/payments/portal" className="w-full">
+                    Manage billing
+                  </a>
+                </Button>
+                <Button variant="outline" onClick={() => window.location.href = '/pricing'}>
+                  View plans
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -95,10 +142,6 @@ export function ProfileClient({
             <ProfileSecurity onUpdate={handleRefresh} />
           </CardContent>
         </Card>
-      </TabsContent>
-
-      <TabsContent value="domains" className="space-y-6">
-        <ProfileDomains />
       </TabsContent>
     </Tabs>
   )

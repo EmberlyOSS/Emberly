@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/database/prisma'
 import { loggers } from '@/lib/logger'
+import { getCustomHostname } from '@/lib/cloudflare/client'
 
 const logger = loggers.domains || loggers.app
 const resolveTxt = dns.promises.resolveTxt
@@ -71,46 +72,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
-
-  try {
-    const { id } = await params
-    const domain = await prisma.customDomain.findUnique({ where: { id } })
-    if (!domain || domain.userId !== session.user.id)
-      return new NextResponse('Not found', { status: 404 })
-
-    if (!domain.verificationToken) {
-      return new NextResponse('No verification token', { status: 400 })
-    }
-
-    // Expect a DNS TXT record at _emberly-verify.<domain> with the token
-    const txtName = `_emberly-verify.${domain.domain}`
-    const token = domain.verificationToken || ''
-    if (!token)
-      return new NextResponse('No verification token', { status: 400 })
-
-    const records = await getTxtRecords(txtName)
-    if (!records || records.length === 0) {
-      return new NextResponse('Verification record not found', { status: 404 })
-    }
-
-    const found = records.some((r) => r.includes(token))
-    if (!found) {
-      return new NextResponse(
-        'Verification token not found in DNS TXT records',
-        { status: 400 }
-      )
-    }
-
-    await prisma.customDomain.update({
-      where: { id },
-      data: { verified: true, verificationToken: null },
-    })
-
-    return new NextResponse(null, { status: 204 })
-  } catch (error) {
-    logger.error('Error verifying domain', error as Error)
-    return new NextResponse('Internal Server Error', { status: 500 })
-  }
+  // Manual TXT verification endpoint removed — verification now relies on Cloudflare
+  // hosted TXT records surfaced by the `/api/domains/:id/cf-check` flow.
+  return new NextResponse('Manual TXT verification removed; use cf-check', { status: 410 })
 }

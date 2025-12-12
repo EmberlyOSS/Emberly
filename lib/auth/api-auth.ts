@@ -8,6 +8,7 @@ import { prisma } from '@/lib/database/prisma'
 export type AuthenticatedUser = {
   id: string
   storageUsed: number
+  storageQuotaMB?: number | null
   urlId: string
   role: string
   randomizeFileUrls: boolean
@@ -24,6 +25,7 @@ export async function getAuthenticatedUser(
       select: {
         id: true,
         storageUsed: true,
+        storageQuotaMB: true,
         urlId: true,
         role: true,
         randomizeFileUrls: true,
@@ -41,6 +43,7 @@ export async function getAuthenticatedUser(
       select: {
         id: true,
         storageUsed: true,
+        storageQuotaMB: true,
         urlId: true,
         role: true,
         randomizeFileUrls: true,

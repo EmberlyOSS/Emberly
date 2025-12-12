@@ -78,16 +78,22 @@ export function BaseNav() {
                 Blog
               </Link>
               <Link
+                href="/contact"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Contact
+              </Link>
+              <Link
                 href="/docs"
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                Docs
+                Documentation
               </Link>
               <Link
-                href="/discord"
+                href="/pricing"
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                Discord
+                Pricing
               </Link>
             </div>
 
@@ -193,16 +199,22 @@ export function BaseNav() {
                     Blog
                   </Link>
                   <Link
+                    href="/contact"
+                    className="py-2 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Contact
+                  </Link>
+                  <Link
                     href="/docs"
                     className="py-2 text-sm text-muted-foreground hover:text-foreground"
                   >
-                    Docs
+                    Documentation
                   </Link>
                   <Link
-                    href="/discord"
+                    href="/pricing"
                     className="py-2 text-sm text-muted-foreground hover:text-foreground"
                   >
-                    Discord
+                    Pricing
                   </Link>
                 </div>
 

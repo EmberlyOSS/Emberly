@@ -2,6 +2,14 @@ import Link from 'next/link'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | Emberly',
+  description: 'Terms of Service for Emberly, including account eligibility, acceptable use, and governing law.',
+}
+
 export default function TermsPage() {
   return (
     <main className="container mx-auto px-4 py-8">
