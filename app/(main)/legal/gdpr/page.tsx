@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 
 import { Metadata } from 'next'
+import PageShell from '@/components/layout/PageShell'
 
 export const metadata: Metadata = {
   title: 'GDPR & Data Protection | Emberly',
