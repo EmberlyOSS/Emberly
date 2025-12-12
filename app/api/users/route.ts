@@ -77,6 +77,7 @@ export async function POST(req: Request) {
     }
 
     const body = result.data
+    const raw = json as any
 
     const exists = await prisma.user.findUnique({
       where: { email: body.email },
@@ -174,13 +175,80 @@ export async function PUT(req: Request) {
       }
     }
 
-    const updateData = {
+    const updateData: any = {
       updatedAt: new Date(),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.email !== undefined && { email: body.email }),
       ...(body.role !== undefined && { role: body.role }),
       ...(body.password && { password: await hash(body.password, 10) }),
       ...(body.urlId && { urlId: body.urlId }),
+    }
+
+    // allow admins to set explicit storage quota (MB)
+    if (raw.storageQuotaMB !== undefined) {
+      updateData.storageQuotaMB = raw.storageQuotaMB === null ? null : Number(raw.storageQuotaMB)
+    }
+
+    // If admin requests to grant storage (in GB), create a one-off purchase record
+    if (raw.grantStorageGB && Number(raw.grantStorageGB) > 0) {
+      try {
+        await prisma.oneOffPurchase.create({
+          data: {
+            userId: body.id,
+            type: 'extra_storage',
+            quantity: Math.max(1, Math.floor(Number(raw.grantStorageGB))),
+            amountCents: 0,
+            metadata: { adminGranted: true },
+          },
+        })
+      } catch (err) {
+        logger.error('Failed creating one-off extra storage', err as Error)
+      }
+    }
+
+    // If admin grants custom domain slots, create a one-off purchase record
+    if (raw.grantCustomDomains && Number(raw.grantCustomDomains) > 0) {
+      try {
+        await prisma.oneOffPurchase.create({
+          data: {
+            userId: body.id,
+            type: 'custom_domain',
+            quantity: Math.max(1, Math.floor(Number(raw.grantCustomDomains))),
+            amountCents: 0,
+            metadata: { adminGranted: true },
+          },
+        })
+      } catch (err) {
+        logger.error('Failed creating one-off custom domain grant', err as Error)
+      }
+    }
+
+    // Allow admins to change the user's plan by providing a product id or slug
+    if (raw.planProductId || raw.planSlug) {
+      try {
+        const product = await prisma.product.findFirst({
+          where: {
+            OR: [
+              raw.planProductId ? { stripeProductId: String(raw.planProductId) } : undefined,
+              raw.planSlug ? { slug: String(raw.planSlug) } : undefined,
+            ].filter(Boolean) as any,
+          },
+        })
+        if (!product) {
+          return apiError('Plan product not found', HTTP_STATUS.BAD_REQUEST)
+        }
+
+        // try to update an existing subscription or create a new one
+        const existingSub = await prisma.subscription.findFirst({ where: { userId: body.id } })
+        if (existingSub) {
+          await prisma.subscription.update({ where: { id: existingSub.id }, data: { productId: product.id, status: 'active', stripeSubscriptionId: null } })
+        } else {
+          await prisma.subscription.create({ data: { userId: body.id, productId: product.id, status: 'active' } })
+        }
+      } catch (err) {
+        logger.error('Failed to change user plan', err as Error)
+        return apiError('Failed to change plan', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      }
     }
 
     if (body.urlId && body.urlId !== existingUser.urlId) {

@@ -1,28 +1,47 @@
 import { NextResponse } from 'next/server'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth, requireAdmin } from '@/lib/auth/api-auth'
+import { requireAuth, requireAdmin, getAuthenticatedUser } from '@/lib/auth/api-auth'
 import { prisma } from '@/lib/database/prisma'
 
 const MAX_LEN = 800
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const viewer = await getAuthenticatedUser(req)
+
         const comments = await prisma.st5Comment.findMany({
             where: { isHidden: false },
             orderBy: { createdAt: 'desc' },
             take: 50,
-            select: {
-                id: true,
-                content: true,
-                isSpoiler: true,
-                createdAt: true,
-                user: { select: { id: true, name: true, urlId: true } },
+            include: {
+                user: { select: { id: true, name: true, urlId: true, image: true } },
                 attachments: { select: { id: true, file: { select: { id: true, urlPath: true, mimeType: true, size: true } } } },
+                replies: { include: { user: { select: { id: true, name: true, urlId: true, image: true } } }, orderBy: { createdAt: 'asc' } },
+                reactions: { select: { userId: true, type: true } },
             },
         })
 
-        return apiResponse(comments)
+        const shaped = comments.map((c) => {
+            const likeCount = c.reactions.filter((r) => r.type === 'like').length
+            const dislikeCount = c.reactions.filter((r) => r.type === 'dislike').length
+            const viewerReaction = viewer ? c.reactions.find((r) => r.userId === viewer.id)?.type : null
+
+            return {
+                id: c.id,
+                content: c.content,
+                isSpoiler: c.isSpoiler,
+                createdAt: c.createdAt,
+                user: c.user,
+                attachments: c.attachments,
+                replies: c.replies.map((r) => ({ id: r.id, content: r.content, createdAt: r.createdAt, user: r.user })),
+                likeCount,
+                dislikeCount,
+                viewerReaction,
+            }
+        })
+
+        return apiResponse(shaped)
     } catch (error) {
         return apiError(
             error instanceof Error ? error.message : 'Failed to load comments',

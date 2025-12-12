@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 
 
 import { Metadata } from 'next'
+import PageShell from '@/components/layout/PageShell'
 
 export const metadata: Metadata = {
   title: 'Getting Started | Emberly',
@@ -12,14 +13,9 @@ export const metadata: Metadata = {
 
 export default function GettingStarted() {
   return (
-    <main className="container mx-auto py-16">
+    <PageShell title="Getting Started" subtitle="Quick guide to run Emberly locally, perform database migrations, and
+          deploy with Docker Compose.">
       <section className="max-w-4xl mx-auto px-4">
-        <h1 className="text-3xl font-semibold">Getting Started</h1>
-        <p className="mt-3 text-muted-foreground">
-          Quick guide to run Emberly locally, perform database migrations, and
-          deploy with Docker Compose.
-        </p>
-
         <div className="mt-6 space-y-6">
           <Card>
             <CardContent className="p-6">
@@ -27,7 +23,7 @@ export default function GettingStarted() {
               <p className="text-sm text-muted-foreground mt-2">
                 Clone the repository and install dependencies.
               </p>
-              <pre className="mt-3 rounded bg-background/30 p-3 text-xs">
+              <pre className="mt-3 rounded bg-background/30 p-3 text-xs truncate">
                 git clone https://github.com/EmberlyOSS/Emberly.git cd Website
                 bun install
               </pre>
@@ -88,6 +84,6 @@ export default function GettingStarted() {
           </div>
         </div>
       </section>
-    </main>
+    </PageShell>
   )
 }

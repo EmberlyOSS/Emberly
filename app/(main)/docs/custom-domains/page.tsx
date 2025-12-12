@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 
 
 import { Metadata } from 'next'
+import PageShell from '@/components/layout/PageShell'
 
 export const metadata: Metadata = {
     title: 'Custom Domains | Emberly',
@@ -12,14 +13,8 @@ export const metadata: Metadata = {
 
 export default function CustomDomainsGuide() {
     return (
-        <main className="container mx-auto py-16">
+        <PageShell title="Custom Domains" subtitle="Guide to adding and verifying custom domains, DNS requirements, and Cloudflare provisioning flow used by Emberly.">
             <section className="max-w-5xl mx-auto px-4">
-                <h1 className="text-3xl font-semibold">Custom Domains</h1>
-                <p className="mt-3 text-muted-foreground">
-                    Guide to adding and verifying custom domains, DNS requirements, and
-                    Cloudflare provisioning flow used by Emberly.
-                </p>
-
                 <div className="mt-6 space-y-6">
                     <Card>
                         <CardContent className="p-6">
@@ -103,6 +98,6 @@ export default function CustomDomainsGuide() {
                     </div>
                 </div>
             </section>
-        </main>
+        </PageShell>
     )
 }

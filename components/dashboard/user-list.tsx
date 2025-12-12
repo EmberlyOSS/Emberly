@@ -949,6 +949,69 @@ export function UserList() {
                   />
                 </div>
               )}
+
+              {editingUser && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="storageQuotaMB">Storage Quota (MB)</Label>
+                    <Input
+                      id="storageQuotaMB"
+                      type="number"
+                      value={formData.storageQuotaMB ?? ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, storageQuotaMB: e.target.value === '' ? null : Number(e.target.value) })
+                      }
+                      placeholder="e.g. 10240"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="grantStorageGB">Grant Storage (GB)</Label>
+                    <Input
+                      id="grantStorageGB"
+                      type="number"
+                      value={formData.grantStorageGB ?? ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, grantStorageGB: e.target.value === '' ? undefined : Number(e.target.value) })
+                      }
+                      placeholder="e.g. 10"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="grantCustomDomains">Grant Custom Domain Slots</Label>
+                    <Input
+                      id="grantCustomDomains"
+                      type="number"
+                      value={formData.grantCustomDomains ?? ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, grantCustomDomains: e.target.value === '' ? undefined : Number(e.target.value) })
+                      }
+                      placeholder="e.g. 2"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="plan">Plan</Label>
+                    <Select
+                      value={(formData.planSlug as string) || 'keep'}
+                      onValueChange={(value: string) =>
+                        setFormData({ ...formData, planSlug: value === 'keep' ? undefined : value })
+                      }
+                    >
+                      <SelectTrigger id="plan">
+                        <SelectValue placeholder="Keep current" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="keep">Keep current</SelectItem>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="starter">Starter</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit">

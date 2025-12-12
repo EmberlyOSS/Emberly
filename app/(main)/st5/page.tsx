@@ -71,7 +71,7 @@ export default function ST5Page() {
                     </aside>
                 </section>
 
-                <section className="rounded-2xl border border-border bg-background/70 p-5 shadow-sm space-y-3">
+                <section className="rounded-2xl bg-background/70 bg-gradient-to-br from-[#0f1724] to-[#071029] border border-border p-4 shadow-lg space-y-3">
                     <div>
                         <h2 className="text-xl font-semibold">Join the conversation</h2>
                         <p className="text-sm text-muted-foreground">Share non spoiler theories, screenshots, or fan art. Mark posts with spoiler warnings if needed.</p>

@@ -23,10 +23,8 @@ export default async function BlogDashboardPage() {
     value * (unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
 
   return (
-    <div>
-      <div className="max-w-7xl mx-auto py-6 px-4">
-        <BlogManager />
-      </div>
-    </div>
+    <DashboardWrapper showFooter={false} maxUploadSize={maxSizeBytes}>
+      <BlogManager />
+    </DashboardWrapper>
   )
 }

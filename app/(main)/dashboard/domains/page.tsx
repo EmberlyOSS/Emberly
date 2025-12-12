@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth/next'
 
 import { authOptions } from '@/lib/auth'
-import { ProfileDomains } from '@/components/profile/domains'
+import { ProfileDomains } from '@/components/dashboard/domains'
 
 export default async function DomainsPage() {
   const session = await getServerSession(authOptions)
