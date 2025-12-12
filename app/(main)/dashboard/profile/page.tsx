@@ -26,12 +26,19 @@ export default async function ProfilePage() {
       email: true,
       image: true,
       storageUsed: true,
+      storageQuotaMB: true,
       role: true,
       randomizeFileUrls: true,
       enableRichEmbeds: true,
       defaultFileExpiration: true,
       defaultFileExpirationAction: true,
       urlId: true,
+      stripeCustomerId: true,
+      subscriptions: {
+        select: { id: true, productId: true, status: true, currentPeriodEnd: true },
+        take: 1,
+        orderBy: { createdAt: 'desc' },
+      },
       _count: {
         select: { files: true, shortenedUrls: true },
       },
@@ -45,8 +52,10 @@ export default async function ProfilePage() {
   const config = await getConfig()
   const quotasEnabled = config.settings.general.storage.quotas.enabled
   const defaultQuota = config.settings.general.storage.quotas.default
-  const quotaMB =
-    defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+  // defaultQuota.value is in MB unless unit is 'GB'
+  const systemDefaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+  // Use per-user override when set, otherwise system default
+  const quotaMB = typeof user.storageQuotaMB === 'number' && user.storageQuotaMB >= 0 ? user.storageQuotaMB : systemDefaultQuotaMB
   const formattedQuota = formatFileSize(quotaMB)
   const formattedUsed = formatFileSize(user.storageUsed)
   const usagePercentage = quotasEnabled ? (user.storageUsed / quotaMB) * 100 : 0
@@ -82,6 +91,17 @@ export default async function ProfilePage() {
               randomizeFileUrls: user.randomizeFileUrls,
               enableRichEmbeds: user.enableRichEmbeds ?? true,
               urlId: user.urlId,
+              stripeCustomerId: user.stripeCustomerId ?? null,
+              subscription: user.subscriptions?.[0]
+                ? {
+                  id: user.subscriptions[0].id,
+                  productId: user.subscriptions[0].productId,
+                  status: user.subscriptions[0].status,
+                  currentPeriodEnd: user.subscriptions[0].currentPeriodEnd
+                    ? user.subscriptions[0].currentPeriodEnd.toISOString()
+                    : null,
+                }
+                : null,
               fileCount: user._count.files,
               shortUrlCount: user._count.shortenedUrls,
               defaultFileExpiration: user.defaultFileExpiration,

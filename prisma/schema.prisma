@@ -8,49 +8,56 @@ datasource db {
 }
 
 model User {
-  id                          String         @id @default(cuid())
+  id                          String           @id @default(cuid())
   name                        String?
-  email                       String?        @unique
+  email                       String?          @unique
   emailVerified               DateTime?
   image                       String?
   preferredUploadDomain       String?
   password                    String?
-  role                        UserRole       @default(USER)
-  createdAt                   DateTime       @default(now())
-  updatedAt                   DateTime       @updatedAt
-  storageUsed                 Float          @default(0)
-  sessionVersion              Int            @default(1)
-  vanityId                    String?        @unique
-  urlId                       String         @unique
-  uploadToken                 String         @unique
-  randomizeFileUrls           Boolean        @default(false)
-  enableRichEmbeds            Boolean        @default(true)
+  role                        UserRole         @default(USER)
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
+  storageUsed                 Float            @default(0)
+  sessionVersion              Int              @default(1)
+  vanityId                    String?          @unique
+  urlId                       String           @unique
+  uploadToken                 String           @unique
+  randomizeFileUrls           Boolean          @default(false)
+  enableRichEmbeds            Boolean          @default(true)
+  // per-user storage quota in MB (optional). If null, use system default from config.
+  storageQuotaMB              Int?
   files                       File[]
   shortenedUrls               ShortenedUrl[]
-  defaultFileExpiration       FileExpiration @default(DISABLED)
-  defaultFileExpirationAction ExpiryAction   @default(DELETE)
+  stripeCustomerId            String?          @unique
+  defaultFileExpiration       FileExpiration   @default(DISABLED)
+  defaultFileExpirationAction ExpiryAction     @default(DELETE)
   blogPosts                   BlogPost[]
   customDomains               CustomDomain[]
+  subscriptions               Subscription[]
+  oneOffPurchases             OneOffPurchase[]
+  st5Comments                 St5Comment[]
 }
 
 model File {
-  id             String         @id @default(cuid())
-  name           String
-  urlPath        String         @unique
-  mimeType       String
-  size           Float
-  visibility     FileVisibility @default(PUBLIC)
-  uploadedAt     DateTime       @default(now())
-  userId         String
-  path           String
-  isOcrProcessed Boolean        @default(false)
-  ocrText        String?
-  password       String?
-  isPaste        Boolean        @default(false)
-  ocrConfidence  Float?
-  views          Int            @default(0)
-  downloads      Int            @default(0)
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                 @id @default(cuid())
+  name                  String
+  urlPath               String                 @unique
+  mimeType              String
+  size                  Float
+  visibility            FileVisibility         @default(PUBLIC)
+  uploadedAt            DateTime               @default(now())
+  userId                String
+  path                  String
+  isOcrProcessed        Boolean                @default(false)
+  ocrText               String?
+  password              String?
+  isPaste               Boolean                @default(false)
+  ocrConfidence         Float?
+  views                 Int                    @default(0)
+  downloads             Int                    @default(0)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  st5CommentAttachments St5CommentAttachment[]
 }
 
 model ShortenedUrl {
@@ -139,6 +146,87 @@ model CustomDomain {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Billing / Stripe models
+model Product {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  description       String?
+  stripeProductId   String?  @unique
+  defaultPriceCents Int?
+  billingInterval   String? // e.g. "month", "year"
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  plans Subscription[]
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  productId            String
+  stripeSubscriptionId String?   @unique
+  status               String    @default("active")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  metadata             Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([productId])
+}
+
+// One-off purchases for extra-storage, custom-domain purchases, etc.
+model OneOffPurchase {
+  id                    String   @id @default(cuid())
+  userId                String
+  type                  String // e.g. "extra_storage", "custom_domain"
+  quantity              Int      @default(1)
+  amountCents           Int
+  stripePaymentIntentId String?  @unique
+  metadata              Json?
+  createdAt             DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Fan comments for the ST5 hub
+model St5Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  isHidden  Boolean  @default(false)
+  isSpoiler Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  attachments St5CommentAttachment[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model St5CommentAttachment {
+  id        String   @id @default(cuid())
+  commentId String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  file    File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
+  @@index([fileId])
 }
 
 enum UserRole {

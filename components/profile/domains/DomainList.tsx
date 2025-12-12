@@ -17,7 +17,7 @@ export default function DomainList({ domains, openIds, cfCheckingIds, onToggle, 
         <div className="w-full">
             <div className="flex flex-col divide-y">
                 {domains.map((d) => (
-                    <div key={d.id} className="py-2">
+                    <div key={d.id} className="py-0">
                         <DomainRow
                             d={d}
                             rechecking={cfCheckingIds.includes(d.id)}

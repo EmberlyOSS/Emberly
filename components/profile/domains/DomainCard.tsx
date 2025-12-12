@@ -21,7 +21,7 @@ interface Props {
 export default function DomainCard({ d, isOpen, onToggle, onSetPrimary, onRecheck, onDelete, rechecking }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
-  
+
 
   const copy = async (text: string) => {
     try {
@@ -65,8 +65,6 @@ export default function DomainCard({ d, isOpen, onToggle, onSetPrimary, onRechec
         <div className="flex items-center gap-2">
 
           <div className="flex items-center gap-2">
-            {/* Settings removed */}
-            {/* Edit removed: settings (config) button kept instead */}
             <Button variant="destructive" size="sm" aria-label="Delete domain" onClick={() => setOpenDialog(true)} className="flex-shrink-0">
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -99,10 +97,10 @@ export default function DomainCard({ d, isOpen, onToggle, onSetPrimary, onRechec
                 {d.cfMeta && (
                   <div className="mt-3 rounded-lg bg-white/5 dark:bg-black/5 border border-white/8 dark:border-white/6 p-3">
                     <div className="text-sm font-medium mb-2">Verification records</div>
-                      <div className="space-y-3 text-sm">
+                    <div className="space-y-3 text-sm">
                       {(() => {
                         const renderRow = (label: string, name?: string, value?: string) => (
-                          <div key={`${label}-${(name||'').slice(0,40)}-${(value||'').slice(0,40)}`} className="grid grid-cols-8gap-2 items-center">
+                          <div key={`${label}-${(name || '').slice(0, 40)}-${(value || '').slice(0, 40)}`} className="grid grid-cols-8gap-2 items-center">
                             <div className="col-span-12 sm:col-span-2 text-xs text-muted-foreground">{label}</div>
                             <div className="col-span-8 sm:col-span-5 flex items-center gap-2 min-w-0">
                               <div className="mr-2 text-xs text-muted-foreground hidden sm:block">Name</div>

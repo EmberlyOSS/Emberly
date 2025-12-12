@@ -7,8 +7,7 @@ import { getConfig } from '@/lib/config'
 
 export const metadata: Metadata = {
   title: 'Emberly',
-  description:
-    'File Sharing, Forged in Fire. Fast, private file sharing and short links designed for developers and teams. Upload files, set expirations, and point custom domains to Emberly to serve your content with confidence.',
+  description: 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.',
 }
 
 export default async function MainLayout({

@@ -1,6 +1,16 @@
 import Link from 'next/link'
 
 import { Card, CardContent } from '@/components/ui/card'
+import DocsAlert from '@/components/docs/DocsAlert'
+import EndpointTable from '@/components/docs/EndpointTable'
+
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'API Reference | Emberly',
+  description: 'Comprehensive API documentation for Emberly, including file uploads, short URLs, user management, and more.',
+}
 
 export default function ApiReference() {
   return (
@@ -14,6 +24,11 @@ export default function ApiReference() {
         </p>
 
         <div className="mt-6 space-y-6">
+          <DocsAlert title="Authentication">
+            Browser-based authentication uses NextAuth session cookies. API
+            clients may use <code>Authorization: Bearer &lt;uploadToken&gt;</code>
+            for some upload flows (chunked upload finalize).
+          </DocsAlert>
           <Card>
             <CardContent className="p-6">
               <h2 className="font-medium">Authentication</h2>
@@ -42,10 +57,22 @@ export default function ApiReference() {
                   optional <code>visibility</code>, <code>password</code>, and{' '}
                   <code>expiresAt</code>.
                 </div>
-                <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre-wrap break-words">
+                <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre overflow-x-auto max-w-full">
                   curl -X POST -F "file=@/path/to/file" -b
                   "next-auth.session-token=..." https://your.instance/api/files
                 </pre>
+              </div>
+
+              <div className="mt-4">
+                <div className="font-medium mb-2">Quick reference</div>
+                <EndpointTable
+                  rows={[
+                    { method: 'POST', path: '/api/files', auth: 'session', description: 'Single-file multipart upload (form-data).' },
+                    { method: 'POST', path: '/api/files/chunks', auth: 'session', description: 'Initialize chunked upload.' },
+                    { method: 'POST', path: '/api/files/chunks/[id]/complete', auth: 'session or uploadToken', description: 'Finalize multipart upload.' },
+                    { method: 'GET', path: '/api/files/[...path]', auth: 'public/private', description: 'Stream or download file (range support).' },
+                  ]}
+                />
               </div>
 
               <div className="mt-3">
@@ -78,7 +105,7 @@ export default function ApiReference() {
 
                 <div className="mt-2 text-sm text-muted-foreground">
                   <div className="font-medium">Example: initialize request</div>
-                  <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre-wrap break-words">{`{
+                  <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre overflow-x-auto max-w-full">{`{
     "filename": "big.bin",
     "mimeType": "application/octet-stream",
     "size": 10485760
@@ -87,7 +114,7 @@ export default function ApiReference() {
                   <div className="font-medium mt-2">
                     Example: complete request
                   </div>
-                  <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre-wrap break-words">{`{
+                  <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre overflow-x-auto max-w-full">{`{
     "parts": [
         { "partNumber": 1, "ETag": "etag-value" },
         { "partNumber": 2, "ETag": "etag-value-2" }
@@ -95,16 +122,16 @@ export default function ApiReference() {
     "expiresAt": "2025-12-01T00:00:00.000Z"
 }`}</pre>
                 </div>
-                <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre-wrap break-all">{`# initialize upload
+                <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre overflow-x-auto max-w-full">{`# initialize upload
 curl -X POST -H "Content-Type: application/json" -b "next-auth.session-token=..." -d '{"filename":"big.bin","mimeType":"application/octet-stream","size":10485760}' https://your.instance/api/files/chunks`}</pre>
                 <div className="mt-3">
                   <div className="font-medium">Example: finalize response</div>
-                  <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre-wrap break-words">{`{
-            "url": "https://your.instance/uploads/abc123/big.bin",
-            "name": "big.bin",
-            "size": 10485760,
-            "type": "application/octet-stream"
-        }`}</pre>
+                  <pre className="mt-2 rounded bg-background/30 p-3 text-xs whitespace-pre overflow-x-auto max-w-full">{`{
+                "url": "https://your.instance/uploads/abc123/big.bin",
+                "name": "big.bin",
+                "size": 10485760,
+                "type": "application/octet-stream"
+              }`}</pre>
                 </div>
               </div>
 
@@ -209,6 +236,26 @@ curl -X POST -H "Content-Type: application/json" -b "next-auth.session-token=...
                 <li>
                   GET/PUT/DELETE <code>/api/posts/:id</code> — operate on a post
                   (PUT/DELETE require admin).
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="font-medium">Custom Domains</h2>
+              <ul className="list-disc pl-5 text-sm text-muted-foreground mt-2">
+                <li>
+                  POST <code>/api/domains</code> — add domain. Auth: session.
+                  Domain will be created and may require DNS verification before
+                  Cloudflare provisioning.
+                </li>
+                <li>
+                  POST <code>/api/domains/[id]/cf-check</code> — server-side DNS
+                  verification and Cloudflare hostname creation (auth: session).
+                </li>
+                <li>
+                  GET <code>/api/domains</code> — list domains for the current user.
                 </li>
               </ul>
             </CardContent>

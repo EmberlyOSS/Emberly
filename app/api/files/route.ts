@@ -86,12 +86,14 @@ export async function POST(req: Request) {
 
     if (quotasEnabled && user.role !== 'ADMIN') {
       const quotaMB =
+        user.storageQuotaMB ??
         defaultQuota.value * (defaultQuota.unit === 'GB' ? 1024 : 1)
       const fileSizeMB = bytesToMB(uploadedFile.size)
 
       if (user.storageUsed + fileSizeMB > quotaMB) {
         return apiError(
-          `You have reached your storage quota of ${defaultQuota.value}${defaultQuota.unit}`,
+          `You have reached your storage quota of ${user.storageQuotaMB ? `${user.storageQuotaMB}MB` : `${defaultQuota.value}${defaultQuota.unit}`
+          }`,
           HTTP_STATUS.PAYLOAD_TOO_LARGE
         )
       }

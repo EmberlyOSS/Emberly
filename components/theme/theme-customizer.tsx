@@ -130,6 +130,45 @@ const DEFAULT_COLORS: ColorConfig = {
   ring: '212.7 26.8% 83.9%',
 }
 
+const STRANGER_THINGS_THEME: ColorConfig = {
+  background: '232 36% 6%',
+  foreground: '210 40% 96%',
+  card: '230 32% 8%',
+  cardForeground: '210 40% 96%',
+  popover: '230 32% 8%',
+  popoverForeground: '210 40% 96%',
+  primary: '354 82% 52%',
+  primaryForeground: '210 40% 98%',
+  secondary: '230 28% 16%',
+  secondaryForeground: '210 40% 96%',
+  muted: '232 20% 24%',
+  mutedForeground: '215 16% 72%',
+  accent: '197 92% 54%',
+  accentForeground: '222 47% 12%',
+  destructive: '0 65% 46%',
+  destructiveForeground: '210 40% 98%',
+  border: '230 22% 18%',
+  input: '230 22% 18%',
+  ring: '354 82% 56%',
+}
+
+const THEME_PRESETS: Array<{
+  name: string
+  colors: ColorConfig
+  description: string
+}> = [
+    {
+      name: 'Default Dark',
+      colors: DEFAULT_COLORS,
+      description: 'Baseline Emberly palette with balanced contrast.',
+    },
+    {
+      name: 'Hawkins Neon',
+      colors: STRANGER_THINGS_THEME,
+      description: 'Stranger Things-inspired deep midnight with neon red + blue.',
+    },
+  ]
+
 const PRESET_HUES = [
   { hue: 222.2, name: 'Midnight Blue', saturation: 84, lightness: 45 },
   { hue: 260, name: 'Royal', saturation: 80, lightness: 45 },
@@ -237,6 +276,21 @@ function SimpleThemeCustomizer({
     onColorChange({ [key]: value })
   }
 
+  const applyPresetTheme = (preset: ColorConfig) => {
+    Object.entries(preset).forEach(([key, value]) => {
+      const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
+      document.documentElement.style.setProperty(`--${cssKey}`, value)
+    })
+
+    const hue = parseFloat(preset.background.split(' ')[0] || `${baseHue}`)
+    if (!Number.isNaN(hue)) {
+      setBaseHue(hue)
+    }
+
+    setColors(preset)
+    onColorChange(preset)
+  }
+
   const handleColorChange = (key: keyof ColorConfig, value: string) => {
     updatePreview(key, value)
   }
@@ -263,16 +317,43 @@ function SimpleThemeCustomizer({
 
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="text-sm font-semibold">Curated themes</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {THEME_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => applyPresetTheme(preset.colors)}
+              className="relative overflow-hidden rounded-md border bg-card/60 p-4 text-left transition hover:border-primary/70 hover:shadow-md"
+            >
+              <div
+                className="absolute inset-0 opacity-60"
+                style={{
+                  background: `linear-gradient(120deg, hsl(${preset.colors.primary}), hsl(${preset.colors.accent}))`,
+                }}
+              />
+              <div className="relative space-y-1">
+                <div className="text-sm font-semibold leading-tight">
+                  {preset.name}
+                </div>
+                <p className="text-xs text-muted-foreground leading-snug">
+                  {preset.description}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-4">
         {PRESET_HUES.map(({ hue, name, saturation, lightness }) => (
           <button
             key={hue}
             onClick={() => handleHueChange(hue)}
-            className={`relative h-14 w-full overflow-hidden rounded-md border transition-[border,opacity] ${
-              baseHue === hue
+            className={`relative h-14 w-full overflow-hidden rounded-md border transition-[border,opacity] ${baseHue === hue
                 ? 'border-2 border-primary opacity-100'
                 : 'border-transparent opacity-80 hover:opacity-100'
-            }`}
+              }`}
             style={{
               background: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
             }}

@@ -1,50 +1,14 @@
 # Emberly
 
-Emberly is an open-source self hosted file sharing and shortlinking platform built with Next.js and TypeScript.
+This repository contains the public, hosted Emberly website and its accompanying
+admin/dashboard UI used on our live instance. It is not the minimal self-hostable
+distribution — see the Open Source project for the self-hostable server and
+deployment instructions.
 
-This repository contains both the frontend and backend (Next.js app router), Prisma schema and server-side API routes.
+If you are looking for the upstream open-source codebase (self-hostable):
 
-## Quickstart (developer)
+- GitHub: https://github.com/EmberlyOSS/Emberly
 
-Requirements: Node.js (18+), Docker (optional), and npm.
-
-1. Install dependencies:
-
-```powershell
-npm install
-```
-
-2. (Optional) Start a local Postgres DB:
-
-```powershell
-docker run --name emberly-db -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:16
-```
-
-3. Copy environment file:
-
-```powershell
-cp .env.example .env
-# Edit .env and set DATABASE_URL, NEXTAUTH_SECRET, etc.
-```
-
-4. Run migrations:
-
-```powershell
-npx prisma migrate dev
-```
-
-5. Start dev server:
-
-```powershell
-npm run dev
-```
-
-## Contributing
-
-See `CONTRIBUTING.md` for guidelines on contributing, coding standards, and the PR process.
-
-## License & Code of Conduct
-
-Refer to the repository license and `CONTRIBUTING.md` for the code of conduct.
-
-If you have questions, open an issue or reach out to the maintainer `@CodeMeAPixel` on GitHub.
+This repo includes the full frontend, site pages (docs, pricing, marketing), and
+additional pages we run on our hosted service. The open-source repo provides the
+core Next.js app, API routes, and instructions for self-hosting.

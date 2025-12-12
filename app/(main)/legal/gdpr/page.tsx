@@ -2,6 +2,14 @@ import Link from 'next/link'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'GDPR & Data Protection | Emberly',
+  description: 'Emberly GDPR and data protection information: scope, data subject rights, retention, and contact details.',
+}
+
 export default function GdprPage() {
   return (
     <main className="container mx-auto px-4 py-8">

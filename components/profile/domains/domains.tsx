@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Search } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
 import { useToast } from '@/hooks/use-toast'
@@ -163,33 +162,48 @@ export function ProfileDomains() {
   }, [domains])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Custom Domains</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Custom Domains</h2>
+        <p className="text-sm text-muted-foreground">Manage your custom domains, DNS requirements, and verification status.</p>
+      </div>
+      <div className="space-y-4">
+        <div className="">
           {/* Left column: info + add domain */}
           <div className="md:col-span-1">
-            <div className="flex items-start gap-3">
-              <div className="text-violet-400 mt-0.5">
-                <Icons.infinity className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Recommended DNS provider</div>
-                <div className="mt-1 text-sm text-muted-foreground">Cloudflare is recommended for easy TLS issuance and fast DNS propagation. Use Cloudflare for best results.</div>
-                <div className="mt-2 text-xs text-muted-foreground">See Cloudflare docs for adding custom hostnames and required DNS records.</div>
-                <div className="mt-4">
-                  <Button onClick={() => setOpenAdd(true)}>Add Domain</Button>
+            <Alert className="mb-4" variant="info">
+              <div className="flex items-start gap-3">
+                <div className="text-violet-400 mt-0.5">
+                  <Icons.infinity className="h-6 w-6" />
                 </div>
-                {error && <div className="text-sm text-destructive mt-3">{error}</div>}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <AlertTitle className="font-extrabold">Why we recommend Cloudflare</AlertTitle>
+                      <AlertDescription>
+                        Cloudflare provides automated TLS for custom hostnames and the zone-level APIs we use to verify and provision certificates.
+                      </AlertDescription>
+                    </div>
+                    <div className="shrink-0">
+                      <a href="https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/" target="_blank" rel="noopener noreferrer" className="text-sm underline">Learn how</a>
+                    </div>
+                  </div>
+
+                  <ul className="mt-3 text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Automated TLS issuance no manual certificates required.</li>
+                    <li>Zone-level DNS APIs enable faster, more reliable verification.</li>
+                    <li>Works with CNAME hostnames (www), root (@) and wildcard (*) configurations when supported by your DNS provider.</li>
+                  </ul>
+
+                  {error && <div className="text-sm text-destructive mt-3">{error}</div>}
+                </div>
               </div>
-            </div>
+            </Alert>
           </div>
 
           {/* Right column: search + list */}
           <div className="md:col-span-2">
-            <div className="mb-4">
+            <div className="mb-4 items-center justify-between gap-3">
               <label className="sr-only">Search domains</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
@@ -202,22 +216,22 @@ export function ProfileDomains() {
                   className="w-full pl-9 pr-3 py-2 rounded border bg-transparent text-sm"
                 />
               </div>
-              <div className="mt-2 text-sm text-muted-foreground">Your domains</div>
+              <div className="flex items-center gap-2 ml-3 mt-4">
+                <Button variant="outline" onClick={() => { /* filter placeholder */ }}>Filter</Button>
+                <Button onClick={() => setOpenAdd(true)}>Add Domain</Button>
+              </div>
             </div>
+            <div className="mt-2 text-sm text-muted-foreground">Your domains</div>
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center px-3 py-2 text-xs text-muted-foreground border-b border-white/6 bg-white/2 dark:bg-black/3 rounded-t-md gap-2">
-              <div className="flex-1 font-medium">Domain</div>
-              <div className="w-full sm:w-48 text-left sm:text-right font-medium">Status</div>
-              <div className="w-full sm:w-36 text-left sm:text-right font-medium">Actions</div>
-            </div>
-
-            {/* compute filtered + sorted list: verified domains first, then others */}
-            {(() => {
-              const q = search.trim().toLowerCase()
-              const filtered = domains
-                .filter(d => d.domain.toLowerCase().includes(q))
-                .sort((a, b) => Number(b.verified ? 1 : 0) - Number(a.verified ? 1 : 0))
-              return (
+          {/* compute filtered + sorted list: verified domains first, then others */}
+          {(() => {
+            const q = search.trim().toLowerCase()
+            const filtered = domains
+              .filter(d => d.domain.toLowerCase().includes(q))
+              .sort((a, b) => Number(b.verified ? 1 : 0) - Number(a.verified ? 1 : 0))
+            return (
+              <div className="rounded-md border border-white/6 bg-white/2 overflow-hidden">
                 <DomainList
                   domains={filtered}
                   openIds={openIds}
@@ -227,9 +241,9 @@ export function ProfileDomains() {
                   onRecheck={recheckCloudflare}
                   onDelete={removeDomain}
                 />
-              )
-            })()}
-          </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Add Domain modal */}
@@ -238,28 +252,20 @@ export function ProfileDomains() {
             <DialogHeader>
               <DialogTitle>Add Domain</DialogTitle>
             </DialogHeader>
-              <div className="text-sm text-muted-foreground mb-4">Add a custom domain you own. We'll verify ownership via DNS and provision TLS using Cloudflare.</div>
-              <div className="rounded-md border border-white/6 bg-white/3 dark:bg-black/3 p-3 mb-4">
-                <div className="text-sm font-medium">How verification works</div>
-                <div className="mt-2 text-xs text-muted-foreground">When you add a domain we ask you to create a CNAME record for the hostname (typically <code className="font-mono">www</code>) pointing to our target. Once the DNS record is present we create a Cloudflare custom hostname and provision TLS for your domain.</div>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="font-mono text-xs">Host: <span className="ml-2">www</span></div>
-                  <div className="font-mono text-xs">Target: <span className="ml-2">cname.emberly.site</span></div>
-                  <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard?.writeText('cname.emberly.site') }} title="Copy target"><Icons.copy className="h-4 w-4" /></Button>
-                </div>
-              </div>
-              <DomainForm value={newDomain} onChange={setNewDomain} onSubmit={addDomain} loading={adding} />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
-            </DialogFooter>
+            <div className="text-sm text-muted-foreground mb-4">Add a custom domain you own. We'll verify ownership via DNS and provision TLS using Cloudflare.</div>
+            <div className="rounded-md border border-white/6 bg-white/3 dark:bg-black/3 p-3 mb-4">
+              <div className="text-sm font-medium">How verification works</div>
+              <div className="mt-2 text-xs text-muted-foreground">When you add a domain we ask you to create a CNAME record for the hostname (typically <code className="font-mono">www</code>) pointing to our target. Once the DNS record is present we create a Cloudflare custom hostname and provision TLS for your domain.</div>
+            </div>
+            <DomainForm value={newDomain} onChange={setNewDomain} onSubmit={addDomain} loading={adding} />
           </DialogContent>
         </Dialog>
 
         <Separator className="my-2" />
 
         <div className="text-sm text-muted-foreground">If you need help configuring your DNS provider, open a support request with your domain registrar or contact the Emberly team.</div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 

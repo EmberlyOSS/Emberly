@@ -14,6 +14,16 @@ export interface User {
   shortUrlCount: number
   defaultFileExpiration: 'DISABLED' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | null
   defaultFileExpirationAction: 'DELETE' | 'SET_PRIVATE' | null
+  // Optional billing info
+  stripeCustomerId?: string | null
+  subscription?: {
+    id: string
+    productId: string
+    status: string
+    currentPeriodEnd?: string | null
+  } | null
+  // Optional per-user quota (MB). When null, system default applies.
+  storageQuotaMB?: number | null
 }
 
 export interface ProfileClientProps {

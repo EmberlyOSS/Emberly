@@ -27,7 +27,7 @@ export function Footer() {
                   asChild
                 >
                   <Link
-                    href="https://github.com/EmberlyOSS/Website"
+                    href="https://github.com/EmberlyOSS"
                     target="_blank"
                   >
                     <Github className="mr-2 h-4 w-4" />
