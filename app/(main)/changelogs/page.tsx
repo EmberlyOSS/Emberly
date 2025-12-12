@@ -17,7 +17,7 @@ export default async function Page() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <h1 className="text-3xl font-bold">Changelogs</h1>
-                                <p className="text-muted-foreground mt-2">Recent releases across the org — powered by GitHub releases.</p>
+                                <p className="text-muted-foreground mt-2">View releases across all of the Emberly services. Powered by GitHub Releases!</p>
                             </div>
                         </div>
                     </div>
