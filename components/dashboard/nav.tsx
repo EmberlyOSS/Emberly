@@ -226,7 +226,7 @@ export function DashboardNav() {
       {/* Desktop */}
       <div className="hidden md:flex flex-1 justify-center">
         <div className="flex items-center space-x-1 bg-muted/20 backdrop-blur-sm rounded-xl p-1 border border-border/30">
-          {sections.map((sec) => (
+          {visibleSections.map((sec) => (
             <div
               key={sec.id}
               className="relative group"

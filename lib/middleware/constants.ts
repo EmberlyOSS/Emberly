@@ -12,6 +12,7 @@ export const PUBLIC_PATHS = [
   '/legal',
   '/press',
   '/partners',
+  '/pricing',
   '/api/auth',
   '/_next',
   '/favicon.ico',
