@@ -23,9 +23,18 @@ export async function POST(req: Request) {
         const Stripe = (await import('stripe')).default
         const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' })
 
-        // ensure stripe customer
+        // ensure stripe customer (defensive: stored ID may be from test mode)
         let customerId = user.stripeCustomerId
-        if (!customerId) {
+        if (customerId) {
+            try {
+                await stripe.customers.retrieve(customerId)
+            } catch (e: any) {
+                console.warn('Stored Stripe customer could not be retrieved, creating new customer:', e?.message)
+                const cust = await stripe.customers.create({ email: user.email || undefined, metadata: { userId: user.id } })
+                customerId = cust.id
+                await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } })
+            }
+        } else {
             const cust = await stripe.customers.create({ email: user.email || undefined, metadata: { userId: user.id } })
             customerId = cust.id
             await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } })

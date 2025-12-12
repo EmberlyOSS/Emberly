@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 
 type Props = {
     priceId: string
@@ -13,6 +14,7 @@ type Props = {
 
 export default function CheckoutButton({ priceId, mode = 'subscription', label, type, quantity }: Props) {
     const [loading, setLoading] = useState(false)
+    const { toast } = useToast()
 
     const handle = async () => {
         try {
@@ -29,12 +31,12 @@ export default function CheckoutButton({ priceId, mode = 'subscription', label, 
             } else {
                 console.error('No Checkout URL', data)
                 setLoading(false)
-                alert('Failed to create checkout session')
+                toast({ title: 'Checkout failed', description: 'Could not create a checkout session.', variant: 'destructive' })
             }
         } catch (err) {
             console.error(err)
             setLoading(false)
-            alert('Error creating checkout session')
+            toast({ title: 'Error', description: 'Error creating checkout session.', variant: 'destructive' })
         }
     }
 

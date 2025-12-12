@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState } from 'react'
 import { Check, Trash2, RefreshCw, Copy, Cloud } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -5,6 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Icons } from '@/components/shared/icons'
 import { writeToClipboard } from '@/lib/utils/clipboard'
 import { Domain } from './types'
+import { useToast } from '@/hooks/use-toast'
 
 interface Props {
   d: Domain
@@ -17,12 +20,14 @@ interface Props {
 export default function DomainRow({ d, rechecking, onSetPrimary, onRecheck, onDelete }: Props) {
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const { toast } = useToast()
 
   const copy = async (text: string) => {
     try {
       await writeToClipboard(text)
+      toast({ title: 'Copied', description: 'Value copied to clipboard' })
     } catch (e) {
-      // ignore
+      toast({ title: 'Copy failed', description: 'Could not copy to clipboard', variant: 'destructive' })
     }
   }
 
