@@ -169,7 +169,7 @@ export default async function PricingPage() {
                 </li>
               </ul>
 
-              <div className="mt-6 mt-auto">
+              <div className="mt-6">
                 {activePlanKey === 'pro' ? (
                   <Button disabled className="w-full">Current plan</Button>
                 ) : (
@@ -203,11 +203,15 @@ export default async function PricingPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-4 w-4 text-green-500 mt-1" />
-                  <span>Standard support</span>
+                  <span>Basic usage analytics</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="h-4 w-4 text-green-500 mt-1" />
+                  <span>Basic support</span>
                 </li>
               </ul>
 
-              <div className="mt-6 mt-auto">
+              <div className="mt-6">
                 {activePlanKey === 'starter' ? (
                   <Button disabled className="w-full">Current plan</Button>
                 ) : (
@@ -231,7 +235,7 @@ export default async function PricingPage() {
               <ul className="mt-6 space-y-3 text-sm">
                 <li className="flex items-start gap-3">
                   <Check className="h-4 w-4 text-green-500 mt-1" />
-                  <span>Full source code — self-host</span>
+                  <span>Full source code access</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-4 w-4 text-green-500 mt-1" />
@@ -239,13 +243,17 @@ export default async function PricingPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-4 w-4 text-green-500 mt-1" />
+                  <span>Create your own limits and plans</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="h-4 w-4 text-green-500 mt-1" />
                   <span>Deploy anywhere with Docker / Fly / Vercel</span>
                 </li>
               </ul>
 
-              <div className="mt-6 mt-auto">
-                <Button asChild variant="ghost" className="w-full">
-                  <Link href="https://github.com/EmberlyOSS">View source</Link>
+              <div className="mt-auto">
+                <Button disabled variant="ghost" className="w-full" title="Open-source coming soon">
+                  Coming soon
                 </Button>
               </div>
             </CardContent>
@@ -272,7 +280,7 @@ export default async function PricingPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 mt-auto">
+                <div className="mt-auto">
                   <AddOnCheckout
                     priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_EXTRA_GB || 'price_extra_gb_placeholder'}
                     mode="payment"
@@ -298,7 +306,7 @@ export default async function PricingPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 mt-auto">
+                <div className="mt-auto">
                   <AddOnCheckout
                     priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_CUSTOM_DOMAIN || 'price_custom_domain_placeholder'}
                     mode="payment"

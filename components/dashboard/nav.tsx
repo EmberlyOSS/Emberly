@@ -11,10 +11,18 @@ import {
   House,
   LinkIcon,
   Menu,
+  ChevronDown,
+  Mail,
+  Rss,
+  Clipboard,
+  BookOpen,
+  CreditCard,
   Settings,
   Upload,
   Users,
   Globe,
+  GitGraph,
+  ChartBar,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
@@ -36,28 +44,33 @@ const baseRoutes = [
   {
     href: '/about',
     label: 'About',
-    icon: FileText,
+    icon: BookOpen,
   },
   {
     href: '/blog',
     label: 'Blog',
-    icon: Upload,
+    icon: Rss,
   },
   {
     href: '/contact',
     label: 'Contact',
-    icon: FileText,
+    icon: Mail,
   },
   {
     href: '/docs',
     label: 'Docs',
-    icon: LinkIcon,
+    icon: FileText,
   },
   {
     href: '/pricing',
     label: 'Pricing',
-    icon: Globe,
+    icon: CreditCard,
   },
+  {
+    href: 'https://status.emberly.site',
+    label: 'Status',
+    icon: ChartBar,
+  }
 ]
 
 const dashboardRoutes = [
@@ -74,7 +87,7 @@ const dashboardRoutes = [
   {
     href: '/dashboard/paste',
     label: 'Paste',
-    icon: FileText,
+    icon: Clipboard,
   },
   {
     href: '/dashboard/urls',
@@ -86,6 +99,11 @@ const dashboardRoutes = [
     label: 'Domains',
     icon: Globe,
   },
+  {
+    href: '/dashboard/analytics',
+    label: 'Analytics',
+    icon: ChartBar
+  }
 ]
 
 const adminRoutes = [
@@ -111,6 +129,19 @@ const sections = [
   { id: 'dashboard', title: 'Dashboard', items: dashboardRoutes },
   { id: 'admin', title: 'Administration', items: adminRoutes },
 ]
+
+function sectionIcon(id: string) {
+  switch (id) {
+    case 'main':
+      return House
+    case 'dashboard':
+      return FolderOpen
+    case 'admin':
+      return Settings
+    default:
+      return FileText
+  }
+}
 
 export function DashboardNav() {
   const pathname = usePathname()
@@ -153,14 +184,22 @@ export function DashboardNav() {
           </SheetTrigger>
           <SheetContent side="right">
             <SheetTitle>Navigation</SheetTitle>
-            <div className="mt-4">
+            <div className="mt-4 h-[calc(100vh-6rem)] overflow-auto">
               {visibleSections.map((sec) => (
                 <div key={sec.id} className="mb-4">
                   <button
-                    className="w-full text-left font-medium mb-2"
+                    className="w-full text-left font-medium mb-2 flex items-center justify-between"
                     onClick={() => toggleSection(sec.id)}
+                    aria-expanded={openSections[sec.id]}
                   >
-                    {sec.title}
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const Icon = sectionIcon(sec.id)
+                        return <Icon className="h-4 w-4" />
+                      })()}
+                      <span>{sec.title}</span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 transform transition-transform ${openSections[sec.id] ? 'rotate-180' : 'rotate-0'}`} />
                   </button>
                   {openSections[sec.id] && (
                     <div className="flex flex-col space-y-2">
@@ -201,7 +240,16 @@ export function DashboardNav() {
                   onFocus={() => setHoverSection(sec.id)}
                   onBlur={() => setHoverSection(null)}
                 >
-                  {sec.title}
+                  {(() => {
+                    const Icon = sectionIcon(sec.id)
+                    return (
+                      <div className="flex items-center gap-2">
+                        <Icon className={`h-4 w-4 ${hoverSection === sec.id ? 'text-foreground' : ''}`} />
+                        <span>{sec.title}</span>
+                        <ChevronDown className={`h-3 w-3 ml-2 transition-transform ${hoverSection === sec.id ? 'rotate-180' : 'rotate-0'}`} />
+                      </div>
+                    )
+                  })()}
                 </Button>
               </div>
               <div className={`absolute top-full left-0 mt-0 z-50 min-w-[160px] ${hoverSection === sec.id ? 'block' : 'hidden'} group-hover:block`}>

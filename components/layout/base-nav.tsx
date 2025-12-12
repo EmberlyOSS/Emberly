@@ -95,6 +95,12 @@ export function BaseNav() {
               >
                 Pricing
               </Link>
+              <Link
+                href="https://status.emberly.site"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Status
+              </Link>
             </div>
 
             {/* Mobile hamburger */}
@@ -215,6 +221,12 @@ export function BaseNav() {
                     className="py-2 text-sm text-muted-foreground hover:text-foreground"
                   >
                     Pricing
+                  </Link>
+                  <Link
+                    href="https://status.emberly.site"
+                    className="py-2 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Status
                   </Link>
                 </div>
 

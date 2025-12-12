@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Github, Twitter } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import StatusIndicator from '@/components/layout/StatusIndicator'
 
 export function Footer() {
   return (
@@ -17,6 +18,9 @@ export function Footer() {
                   &copy; {new Date().getFullYear()} Emberly. All rights
                   reserved.
                 </p>
+                <div className="hidden sm:block">
+                  <StatusIndicator />
+                </div>
               </div>
 
               <div className="flex items-center gap-3">

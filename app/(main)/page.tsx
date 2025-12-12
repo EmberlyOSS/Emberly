@@ -45,9 +45,15 @@ export default async function HomePage() {
             </p>
 
             <div className="mt-8 flex items-center gap-4">
-              <Button asChild size="lg">
-                <a href="/auth/register">Get started</a>
-              </Button>
+              {session ? (
+                <Button asChild size="lg">
+                  <Link href="/dashboard">Open dashboard</Link>
+                </Button>
+              ) : (
+                <Button asChild size="lg">
+                  <Link href="/auth/register">Get started</Link>
+                </Button>
+              )}
 
               <Link
                 href="/docs"

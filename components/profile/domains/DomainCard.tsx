@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Check, Trash2 } from 'lucide-react'
@@ -7,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Icons } from '@/components/shared/icons'
 import { writeToClipboard } from '@/lib/utils/clipboard'
 import { Domain } from './types'
+import { useToast } from '@/hooks/use-toast'
 
 interface Props {
   d: Domain
@@ -21,13 +24,15 @@ interface Props {
 export default function DomainCard({ d, isOpen, onToggle, onSetPrimary, onRecheck, onDelete, rechecking }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
+  const { toast } = useToast()
 
 
   const copy = async (text: string) => {
     try {
       await writeToClipboard(text)
+      toast({ title: 'Copied', description: 'Value copied to clipboard' })
     } catch (e) {
-      // ignore
+      toast({ title: 'Copy failed', description: 'Could not copy to clipboard', variant: 'destructive' })
     }
   }
 
