@@ -20,6 +20,12 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
  - New legal pages: Refund Policy and Service Level Agreement (SLA) with detailed policy text.
  - `DashboardWrapper` now supports a `nav` prop to choose between base and dashboard navigation contexts.
 
+ - Analytics server routes: `overview`, `storage`, `top-items`, `top-users`, and `metrics/activity` providing timeseries, top-10 lists, and storage summaries.
+ - Top users scoring & privacy model: primary + composite scoring (downloads + clicks, avg-per-file) and privacy-aware responses (anonymized distribution for non-admins, full list for admins).
+ - Changelogs feature: server route `/api/changelogs` (GitHub releases fetch), `components/changelogs/ChangelogList.tsx`, and `/changelogs` page to list organizational releases (uses `react-markdown` for release bodies).
+ - Recharts added for dashboard charts and visualizations.
+ - Client UI components: `PageShell`, `DocsCard` (table-style), changelogs list with expandable rows and search, and analytics overview components.
+
 ### Changed
 - Blog management layout now restricts post creation/management to admin users only.
 - Refined analytics event structure and improved data consistency.
@@ -28,6 +34,15 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
  - Public layout now uses a `ConditionalBaseNav` so the base navigation is only shown where appropriate; `DashboardWrapper` renders the dashboard header only when required.
  - Blog and docs index views refactored from card grids into the shared `Table` UI component.
  - Legal subpages refactored to use `PageShell` with compact left navigation and prose-based content; legal hub uses table rows and includes Refund and SLA links.
+
+ - Docs layout: left TOC converted to a compact card for desktop and the mobile TOC toggle simplified to a small disclosure. `DocsToc` updated to hide on large screens in favor of the left card nav.
+ - `PageShell` updated to integrate with `DashboardWrapper` so public pages show the same dynamic background and header as dashboard pages.
+ - Changelogs page: moved to `DashboardWrapper`-backed layout for consistent background, and `ChangelogList` styling refactored to a compact table with expanders.
+ - Added `react-markdown` and adjusted `package.json` to include the dependency (client-side markdown rendering in changelogs).
+
+ - Navigation UX: `BaseNav` is now a fixed header so it scrolls consistently with the page; `ConditionalBaseNav` renders a spacer to prevent content overlap with the fixed header.
+ - `DashboardNav` mobile sheet now includes a profile / auth footer area (sign in / register / profile / sign out) so account actions remain accessible on small screens.
+ - Improved responsive nav behavior to prevent link overflow on smaller screens and to centralize nav rendering responsibilities.
 
 ### Fixed
 - Navigation menu dropdowns.
@@ -38,6 +53,15 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
  - Resolved duplicate/overlapping navigation rendering on public pages by centralizing base nav rendering and gating the dashboard header.
  - Desktop dropdowns now reliably auto-close on outside click and behave consistently across pages.
  - Fixed several small layout regressions introduced during nav and hero refactors.
+
+  - Fixed base navigation overlap by making the base header fixed and adding a spacer via `ConditionalBaseNav`.
+  - Added mobile sheet footer to `DashboardNav` to surface auth/profile actions and prevent layout overflow.
+  - Resolved additional responsive overflow issues for dashboard nav links on narrow viewports.
+
+ - Fixed duplicate variable declarations and hook-order issues introduced during iterative changes (`TopUsers.tsx`, `top-users` route, and `ChangelogList.tsx`).
+ - Corrected top-users scoring inconsistency by introducing `compositeScore` weighting to account for `filesCount` so users with many files do not score lower unfairly.
+ - Fixed a Hook ordering bug in `ChangelogList.tsx` so expand state is declared before early returns.
+ - Various build fixes and runtime stability improvements encountered while wiring the new pages and APIs.
 
 
 ## [1.0.0-alpha.3] - 2025-12-11

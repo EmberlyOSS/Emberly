@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signIn, signOut, useSession } from 'next-auth/react'
 
 import {
   FileText,
@@ -24,7 +25,6 @@ import {
   GitGraph,
   ChartBar,
 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
 
 import { Icons } from '@/components/shared/icons'
 import { Button } from '@/components/ui/button'
@@ -185,6 +185,34 @@ export function DashboardNav() {
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="pt-4 border-t border-border/30 px-3 bg-background/80 backdrop-blur-sm">
+              {session ? (
+                <div className="space-y-2">
+                  <Link href="/dashboard/profile" className="block text-sm">
+                    Profile
+                  </Link>
+                  <Link href="/dashboard" className="block text-sm">
+                    Dashboard
+                  </Link>
+                  <button
+                    className="w-full text-left text-sm text-red-600"
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => signIn()}>
+                    Sign In
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/auth/register">Register</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </SheetContent>
         </Sheet>

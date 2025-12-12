@@ -29,5 +29,10 @@ export default function ConditionalBaseNav() {
 
   if (patternExcluded || looksLikeFileView) return null
 
-  return <BaseNav />
+  return (
+    <>
+      <BaseNav />
+      <div aria-hidden className="h-24" />
+    </>
+  )
 }
