@@ -23,10 +23,12 @@ export const PUBLIC_PATHS = [
   '/api/status',
   '/api/st5',
   '/api/setup/check',
+  '/api/testimonials',
   '/api/health',
   '/api/files',
   '/api/urls',
   '/api/storage/type',
+  '/api/partners',
   '/auth/login',
   '/auth/register',
 ]

@@ -1,7 +1,8 @@
-'use client'
+"use client"
 
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { BlogEditor } from './blog-editor'
 import BlogHelp from './blog-help'
 import { BlogList } from './blog-list'
@@ -9,68 +10,45 @@ import { BlogList } from './blog-list'
 export function BlogManager() {
   const [editingPostId, setEditingPostId] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Blog Management</h1>
-            <p className="text-sm text-muted-foreground">
-              Create and manage posts for the public blog.
-            </p>
-          </div>
-          <div>
-            <button
-              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-md shadow-md hover:opacity-95"
-              onClick={() => setEditingPostId('')}
-            >
-              + New Post
-            </button>
-          </div>
-        </div>
-
-        {editingPostId !== null && (
-          <div className="rounded-2xl bg-background/40 border border-border/40 p-4 shadow-sm">
-            <BlogEditor
-              key={editingPostId ?? 'editor'}
-              postId={editingPostId ?? undefined}
-              onSaved={() => {
-                setEditingPostId(null)
-                setRefreshKey((k) => k + 1)
-              }}
-              onCancel={() => setEditingPostId(null)}
-            />
-          </div>
-        )}
-
-        <div className="rounded-2xl bg-background/30 border border-border/30 p-4">
-          <h3 className="text-lg font-semibold mb-4">Posts</h3>
-          <BlogList key={refreshKey} onEdit={(id) => setEditingPostId(id)} />
+    <div className="container space-y-6">
+      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
+        <div className="relative p-8">
+          <h1 className="text-3xl font-bold">Blog Management</h1>
+          <p className="text-muted-foreground mt-2">Create and manage posts for the public blog.</p>
         </div>
       </div>
 
-      <aside>
-        <div className="sticky top-24 space-y-4">
-          <div className="rounded-2xl bg-background/20 border border-border/30 p-4">
-            <h4 className="text-lg font-semibold">Quick Actions</h4>
-            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <div>
-                • Create a new post with the <strong>+ New Post</strong> button.
-              </div>
-              <div>
-                • Use the editor to write markdown and preview on the right.
-              </div>
-              <div>
-                • Set status to <em>Published</em> to make it public
-                immediately.
-              </div>
-            </div>
+      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
+        <div className="relative p-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Posts</h3>
+            <Button onClick={() => setEditingPostId('')}>+ New Post</Button>
           </div>
 
-          <BlogHelp />
+          {editingPostId !== null && (
+            <div className="mt-6 rounded-2xl bg-background/40 border border-border/40 p-4 shadow-sm">
+              <BlogEditor
+                key={editingPostId ?? 'editor'}
+                postId={editingPostId ?? undefined}
+                onSaved={() => {
+                  setEditingPostId(null)
+                  setRefreshKey((k) => k + 1)
+                }}
+                onCancel={() => setEditingPostId(null)}
+              />
+            </div>
+          )}
+
+          <div className="mt-6">
+            <BlogList key={refreshKey} onEdit={(id) => setEditingPostId(id)} />
+          </div>
         </div>
-      </aside>
+      </div>
+
+      <BlogHelp />
     </div>
   )
 }

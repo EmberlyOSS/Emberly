@@ -14,8 +14,10 @@ import { ProfileAccount } from './account'
 import { ProfileDomains } from '../dashboard/domains'
 import { ProfileExport } from './export'
 import { ProfileSecurity } from './security'
+import ProfileDataExplorer from './data-explorer'
 import { ProfileStorage } from './storage'
 import { ProfileTools } from './tools'
+import { ProfileTestimonials } from './testimonials'
 
 export function ProfileClient({
   user,
@@ -32,8 +34,10 @@ export function ProfileClient({
     <Tabs defaultValue="profile" className="space-y-6">
       <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
         <TabsTrigger value="profile">Profile</TabsTrigger>
+        <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
         <TabsTrigger value="security">Security</TabsTrigger>
         <TabsTrigger value="data">Data</TabsTrigger>
+
       </TabsList>
 
       <TabsContent value="profile" className="space-y-6">
@@ -118,6 +122,10 @@ export function ProfileClient({
         </Card>
       </TabsContent>
 
+      <TabsContent value="testimonials" className="space-y-6">
+        <ProfileTestimonials />
+      </TabsContent>
+
       <TabsContent value="security" className="space-y-6">
         <Card>
           <CardHeader>
@@ -132,14 +140,14 @@ export function ProfileClient({
       <TabsContent value="data" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Data Management</CardTitle>
+            <CardTitle>Data</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <ProfileExport />
 
             <Separator className="my-6" />
 
-            <ProfileSecurity onUpdate={handleRefresh} />
+            <ProfileDataExplorer />
           </CardContent>
         </Card>
       </TabsContent>

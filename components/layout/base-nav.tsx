@@ -73,6 +73,7 @@ const dashboardRoutes = [
 const adminRoutes = [
   { href: '/dashboard/blog', label: 'Blog', icon: BookOpen },
   { href: '/dashboard/users', label: 'Users', icon: Users },
+  { href: '/dashboard/partners', label: 'Partners', icon: GitGraph },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 

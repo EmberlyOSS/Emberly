@@ -11,34 +11,99 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import HomeShell from '@/components/layout/home-shell'
 
 async function getContributors() {
-  try {
-    const headers: Record<string, string> = {
-      Accept: 'application/vnd.github.v3+json',
-    }
-    if (process.env.GITHUB_TOKEN) {
-      headers.Authorization = `token ${process.env.GITHUB_TOKEN}`
-    }
+  const ORG = 'EmberlyOSS'
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github.v3+json',
+  }
+  if (process.env.GITHUB_PAT) {
+    headers.Authorization = `token ${process.env.GITHUB_PAT}`
+  }
 
-    const res = await fetch(
-      'https://api.github.com/repos/EmberlyOSS/Website/contributors?per_page=12',
-      {
+  try {
+    // Fetch org members and repo list in parallel
+    const [membersRes, reposRes] = await Promise.all([
+      fetch(`https://api.github.com/orgs/${ORG}/members?per_page=100`, {
         headers,
-        // allow server-side caching for a short period
-        next: { revalidate: 60 * 10 },
-      }
+        next: { revalidate: 60 * 60 },
+      }),
+      fetch(`https://api.github.com/orgs/${ORG}/repos?per_page=100`, {
+        headers,
+        next: { revalidate: 60 * 60 },
+      }),
+    ])
+
+    const membersJson = membersRes.ok ? await membersRes.json() : []
+    const reposJson = reposRes.ok ? await reposRes.json() : []
+
+    const repoNames = Array.isArray(reposJson)
+      ? reposJson.map((r: any) => r.name).filter(Boolean)
+      : []
+
+    // Fetch contributors for each repo (best-effort, ignore failures)
+    const contribPromises = repoNames.map((name: string) =>
+      fetch(`https://api.github.com/repos/${ORG}/${name}/contributors?per_page=100`, {
+        headers,
+        next: { revalidate: 60 * 60 },
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => [])
     )
 
-    if (!res.ok) return []
-    const json = await res.json()
-    return Array.isArray(json)
-      ? json.map((c: any) => ({
-          login: c.login,
-          avatar: c.avatar_url,
-          url: c.html_url,
-        }))
-      : []
+    const contribSettled = await Promise.allSettled(contribPromises)
+
+    const map = new Map<string, any>()
+
+    // Add org members first (mark as orgMember)
+    if (Array.isArray(membersJson)) {
+      for (const m of membersJson) {
+        if (!m || !m.login) continue
+        map.set(m.login.toLowerCase(), {
+          login: m.login,
+          avatar: m.avatar_url,
+          url: m.html_url || `https://github.com/${m.login}`,
+          contributions: 0,
+          orgMember: true,
+        })
+      }
+    }
+
+    // Aggregate contributors across repos
+    for (const s of contribSettled) {
+      if (s.status !== 'fulfilled') continue
+      const arr = s.value
+      if (!Array.isArray(arr)) continue
+      for (const c of arr) {
+        if (!c || !c.login) continue
+        const key = c.login.toLowerCase()
+        const contributions = typeof c.contributions === 'number' ? c.contributions : 0
+        const existing = map.get(key)
+        if (existing) {
+          existing.contributions = (existing.contributions || 0) + contributions
+          existing.avatar = existing.avatar || c.avatar_url
+          existing.url = existing.url || c.html_url
+          map.set(key, existing)
+        } else {
+          map.set(key, {
+            login: c.login,
+            avatar: c.avatar_url,
+            url: c.html_url,
+            contributions,
+            orgMember: false,
+          })
+        }
+      }
+    }
+
+    // Convert map to array and sort: org members first, then by contributions desc
+    const result = Array.from(map.values()).sort((a: any, b: any) => {
+      if (a.orgMember === b.orgMember) return (b.contributions || 0) - (a.contributions || 0)
+      return a.orgMember ? -1 : 1
+    })
+
+    return result
   } catch (e) {
     console.error('Failed to load contributors', e)
     return []
@@ -49,7 +114,7 @@ export default async function AboutPage() {
   const contributors = await getContributors()
 
   return (
-    <main className="container mx-auto py-16">
+    <HomeShell className="container mx-auto py-16">
       <section className="max-w-7xl mx-auto px-4">
         <div className="relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 p-8 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
@@ -65,7 +130,7 @@ export default async function AboutPage() {
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button asChild>
                   <Link
-                    href="https://github.com/EmberlyOSS/Website"
+                    href="https://github.com/EmberlyOSS"
                     target="_blank"
                   >
                     <span className="flex items-center gap-2">
@@ -144,7 +209,7 @@ export default async function AboutPage() {
               </p>
               <div className="mt-4">
                 <Link
-                  href="https://github.com/EmberlyOSS/Website"
+                  href="https://github.com/EmberlyOSS"
                   className="text-sm underline"
                 >
                   Contribute on GitHub
@@ -187,6 +252,6 @@ export default async function AboutPage() {
           </div>
         )}
       </section>
-    </main>
+    </HomeShell>
   )
 }

@@ -1,6 +1,18 @@
-'use client'
+"use client"
 
 import { useEffect, useState } from 'react'
+import { Edit2, Trash2 } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 type Post = {
   id: string
@@ -8,6 +20,49 @@ type Post = {
   slug: string
   status: string
   publishedAt?: string | null
+  excerpt?: string | null
+}
+
+function PostTableSkeleton() {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Title</TableHead>
+            <TableHead>Slug</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Published</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(3)].map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-[220px]" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-[120px]" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="h-4 w-24 ml-auto" />
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
 }
 
 export function BlogList({ onEdit }: { onEdit?: (id: string) => void }) {
@@ -47,48 +102,54 @@ export function BlogList({ onEdit }: { onEdit?: (id: string) => void }) {
     }
   }
 
+  if (loading) return <PostTableSkeleton />
+
+  if (!loading && posts.length === 0) {
+    return <div className="text-center text-muted-foreground">No posts yet.</div>
+  }
+
   return (
-    <div>
-      {loading && <div>Loading posts...</div>}
-      {!loading && posts.length === 0 && (
-        <div className="text-muted-foreground">No posts yet.</div>
-      )}
-
-      <div className="grid gap-3">
-        {posts.map((p) => (
-          <div
-            key={p.id}
-            className="p-4 bg-background/5 border border-border/20 rounded-xl flex items-start justify-between"
-          >
-            <div>
-              <div className="font-medium text-lg">{p.title}</div>
-              <div className="text-sm text-muted-foreground mt-1">
-                {p.slug} • {p.status}{' '}
-                {p.publishedAt
-                  ? `• ${new Date(p.publishedAt).toLocaleString()}`
-                  : ''}
-              </div>
-              {p.excerpt && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  {p.excerpt}
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Title</TableHead>
+            <TableHead>Slug</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Published</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {posts.map((p) => (
+            <TableRow key={p.id}>
+              <TableCell className="font-medium max-w-[350px] truncate">
+                {p.title}
+                {p.excerpt && (
+                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {p.excerpt}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell className="max-w-[220px] truncate">{p.slug}</TableCell>
+              <TableCell>{p.status}</TableCell>
+              <TableCell className="text-right">
+                {p.publishedAt ? new Date(p.publishedAt).toLocaleString() : '-'}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit?.(p.id)}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
-              )}
-            </div>
-
-            <div className="flex flex-col space-y-2 ml-4">
-              <button className="btn" onClick={() => onEdit?.(p.id)}>
-                Edit
-              </button>
-              <button
-                className="btn btn-danger"
-                onClick={() => handleDelete(p.id)}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   )
 }

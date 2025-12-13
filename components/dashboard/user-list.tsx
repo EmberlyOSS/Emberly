@@ -1023,7 +1023,7 @@ export function UserList() {
       </Dialog>
 
       <Dialog open={isViewingFiles} onOpenChange={setIsViewingFiles}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>{viewingUser?.name}&apos;s Content</DialogTitle>
             <DialogDescription>
