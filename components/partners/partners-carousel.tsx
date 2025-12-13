@@ -9,58 +9,11 @@ type Partner = {
   imageUrl?: string
 }
 
-const PARTNERS: Partner[] = [
-  {
-    id: 'p1',
-    name: 'NodeByte',
-    tagline: 'Web Hosting Solutions',
-    imageUrl: '/partners/NodeByte.png',
-  },
-  {
-    id: 'p2',
-    name: 'Purrquinox',
-    tagline: 'Technology Company',
-    imageUrl: '/partners/Purrquinox.png',
-  },
-  {
-    id: 'p3',
-    name: 'VeloxVPN',
-    tagline: 'Internet Privacy',
-    imageUrl: '/partners/VeloxVPN.png',
-  },
-  {
-    id: 'p4',
-    name: 'Octoflow',
-    tagline: 'Git Tools',
-    imageUrl: '/partners/Octoflow.png',
-  },
-  {
-    id: 'p5',
-    name: 'Lexicon',
-    tagline: 'Grammar Assistance',
-    imageUrl: '/partners/Lexicon.png',
-  },
-  {
-    id: 'p6',
-    name: 'Lynkr',
-    tagline: 'Link-In-Bio Solutions',
-    imageUrl: '/partners/Lynkr.png',
-  },
-  {
-    id: 'p7',
-    name: 'Planova',
-    tagline: 'Project Management',
-    imageUrl: '/partners/Planova.png',
-  },
-  {
-    id: 'p8',
-    name: 'Cryptica',
-    tagline: 'Password Management',
-    imageUrl: '/partners/Cryptica.png',
-  },
-]
+type Props = {
+  partners?: Partner[]
+}
 
-export default function PartnersCarousel() {
+export default function PartnersCarousel({ partners }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const rafRef = useRef<number | null>(null)
   const pausedRef = useRef(false)
@@ -151,6 +104,10 @@ export default function PartnersCarousel() {
     }
   }
 
+  const list = partners || []
+  const doubled = [...list, ...list]
+  const count = list.length
+
   return (
     <div className="overflow-hidden">
       <div className="flex items-center justify-between mb-4">
@@ -166,8 +123,8 @@ export default function PartnersCarousel() {
         onMouseLeave={() => resume()}
         onPointerLeave={() => resume()}
       >
-        {[...PARTNERS, ...PARTNERS].map((p, idx) => {
-          const baseIdx = idx % PARTNERS.length
+        {doubled.map((p, idx) => {
+          const baseIdx = count > 0 ? idx % count : 0
           const isActive = activeIndex === baseIdx
           const isExpanded = expandedIndex === baseIdx
 

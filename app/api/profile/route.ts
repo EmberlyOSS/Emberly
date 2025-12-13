@@ -11,6 +11,58 @@ import { loggers } from '@/lib/logger'
 
 const logger = loggers.users
 
+export async function GET(req: Request) {
+  try {
+    const { user, response } = await requireAuth(req)
+    if (response) return response
+
+    const userData = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        randomizeFileUrls: true,
+        enableRichEmbeds: true,
+        createdAt: true,
+        updatedAt: true,
+        files: {
+          select: {
+            id: true,
+            name: true,
+            mimeType: true,
+            size: true,
+            visibility: true,
+            uploadedAt: true,
+            isOcrProcessed: true,
+            ocrText: true,
+            isPaste: true,
+            path: true,
+          },
+        },
+        shortenedUrls: {
+          select: {
+            shortCode: true,
+            targetUrl: true,
+            clicks: true,
+            createdAt: true,
+          },
+        },
+      },
+    })
+
+    if (!userData) {
+      return apiError('User not found', HTTP_STATUS.NOT_FOUND)
+    }
+
+    return apiResponse(userData)
+  } catch (error) {
+    logger.error('Profile fetch error:', error as Error)
+    return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+  }
+}
+
 export async function PUT(req: Request) {
   try {
     const { user, response } = await requireAuth(req)

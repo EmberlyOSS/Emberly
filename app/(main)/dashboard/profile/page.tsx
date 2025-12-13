@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 
 import { getServerSession } from 'next-auth/next'
 
-import { ProfileClient } from '@/components/profile'
+import dynamic from 'next/dynamic'
+const ProfileClient = dynamic(() => import('@/components/profile').then((m) => m.ProfileClient))
 
 import { authOptions } from '@/lib/auth'
 import { getConfig } from '@/lib/config'
