@@ -20,14 +20,36 @@ export default function CheckoutButton({ priceId, mode = 'subscription', label, 
         try {
             setLoading(true)
             const route = mode === 'subscription' ? '/api/payments/checkout' : '/api/payments/purchase'
+            if (!priceId) {
+                setLoading(false)
+                toast({ title: 'Checkout failed', description: 'Missing price information.', variant: 'destructive' })
+                return
+            }
+
             const res = await fetch(route, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ priceId, type, quantity }),
             })
+
+            if (!res.ok) {
+                let msg = 'Could not create a checkout session.'
+                try {
+                    const json = await res.json()
+                    if (json?.error) msg = json.error
+                } catch (e) {
+                    // ignore
+                }
+                console.error('Checkout error', res.status)
+                setLoading(false)
+                toast({ title: 'Checkout failed', description: msg, variant: 'destructive' })
+                return
+            }
+
             const data = await res.json()
             if (data?.url) {
-                window.location.href = data.url
+                // use assign so it's slightly clearer for navigation intent
+                window.location.assign(data.url)
             } else {
                 console.error('No Checkout URL', data)
                 setLoading(false)
@@ -41,7 +63,7 @@ export default function CheckoutButton({ priceId, mode = 'subscription', label, 
     }
 
     return (
-        <Button onClick={handle} disabled={loading} className="w-full">
+        <Button onClick={handle} disabled={loading} className="w-full" aria-label={label || (mode === 'subscription' ? 'Start subscription' : 'Buy') }>
             {loading ? 'Redirecting...' : label || (mode === 'subscription' ? 'Start' : 'Buy')}
         </Button>
     )
