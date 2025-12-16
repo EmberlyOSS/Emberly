@@ -32,7 +32,7 @@ export default function DomainRow({ d, rechecking, onSetPrimary, onRecheck, onDe
   }
 
   return (
-    <div className="group py-3 px-3 hover:bg-white/3 dark:hover:bg-black/3 rounded-md">
+    <div className="group py-3 px-3 bg-muted/60 hover:bg-accent/20 dark:hover:bg-accent/10 rounded-md">
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">

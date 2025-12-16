@@ -12,6 +12,7 @@ export interface ProfileFormData {
   currentPassword?: string
   newPassword?: string
   randomizeFileUrls?: boolean
+  theme?: string
 }
 
 export interface UseProfileOptions {
@@ -279,6 +280,7 @@ export function useProfile(options: UseProfileOptions = {}) {
     isDownloading,
     triggerAvatarUpload,
     handleAvatarUpload,
+    updateProfile,
     handleProfileUpdate,
     handlePasswordChange,
     updateRandomizeUrls,

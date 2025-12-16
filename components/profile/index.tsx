@@ -18,6 +18,7 @@ import ProfileDataExplorer from './data-explorer'
 import { ProfileStorage } from './storage'
 import { ProfileTools } from './tools'
 import { ProfileTestimonials } from './testimonials'
+import ProfileAppearance from './appearance'
 
 export function ProfileClient({
   user,
@@ -32,13 +33,15 @@ export function ProfileClient({
 
   return (
     <Tabs defaultValue="profile" className="space-y-6">
-      <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
-        <TabsTrigger value="profile">Profile</TabsTrigger>
-        <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
-        <TabsTrigger value="security">Security</TabsTrigger>
-        <TabsTrigger value="data">Data</TabsTrigger>
-
-      </TabsList>
+      <div className="overflow-x-auto">
+        <TabsList className="min-w-max inline-flex h-9 items-center justify-start rounded-lg bg-muted p-1 text-muted-foreground px-2">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="profile" className="space-y-6">
         <Card>
@@ -148,6 +151,18 @@ export function ProfileClient({
             <Separator className="my-6" />
 
             <ProfileDataExplorer />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="appearance" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Lazy-load simple appearance selector (client-only) */}
+            <ProfileAppearance />
           </CardContent>
         </Card>
       </TabsContent>

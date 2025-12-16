@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 
 import Image from 'next/image'
 
@@ -96,7 +97,7 @@ interface User {
   name: string
   email: string
   image: string | null
-  role: 'ADMIN' | 'USER'
+  role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId: string
   storageUsed: number
   _count: {
@@ -332,6 +333,9 @@ export function UserList() {
     deleteUser,
     removeUserAvatar,
   } = useUserManagement()
+
+  const { data: session } = useSession()
+  const isSuperAdmin = (session as any)?.user?.role === 'SUPERADMIN'
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isViewingFiles, setIsViewingFiles] = useState(false)
@@ -749,7 +753,10 @@ export function UserList() {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Shield
-                      className={`h-4 w-4 ${user.role === 'ADMIN' ? 'text-primary' : 'text-muted-foreground'}`}
+                      className={`h-4 w-4 ${user.role === 'SUPERADMIN' ?
+                          'text-amber-500' : user.role === 'ADMIN' ?
+                            'text-primary' : 'text-muted-foreground'
+                        }`}
                     />
                     {user.role}
                   </div>
@@ -914,7 +921,7 @@ export function UserList() {
                 <Label htmlFor="role">Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value: 'ADMIN' | 'USER') =>
+                  onValueChange={(value: any) =>
                     setFormData({ ...formData, role: value })
                   }
                 >
@@ -923,9 +930,13 @@ export function UserList() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USER">User</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    {isSuperAdmin && <SelectItem value="ADMIN">Admin</SelectItem>}
+                    {isSuperAdmin && <SelectItem value="SUPERADMIN">Superadmin</SelectItem>}
                   </SelectContent>
                 </Select>
+                {!isSuperAdmin && (
+                  <p className="text-sm text-muted-foreground">Only Superadmins can assign elevated roles.</p>
+                )}
               </div>
               {editingUser && (
                 <div className="space-y-2">
@@ -952,64 +963,70 @@ export function UserList() {
 
               {editingUser && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="storageQuotaMB">Storage Quota (MB)</Label>
-                    <Input
-                      id="storageQuotaMB"
-                      type="number"
-                      value={formData.storageQuotaMB ?? ''}
-                      onChange={(e) =>
-                        setFormData({ ...formData, storageQuotaMB: e.target.value === '' ? null : Number(e.target.value) })
-                      }
-                      placeholder="e.g. 10240"
-                    />
-                  </div>
+                  {isSuperAdmin ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="storageQuotaMB">Storage Quota (MB)</Label>
+                        <Input
+                          id="storageQuotaMB"
+                          type="number"
+                          value={formData.storageQuotaMB ?? ''}
+                          onChange={(e) =>
+                            setFormData({ ...formData, storageQuotaMB: e.target.value === '' ? null : Number(e.target.value) })
+                          }
+                          placeholder="e.g. 10240"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="grantStorageGB">Grant Storage (GB)</Label>
-                    <Input
-                      id="grantStorageGB"
-                      type="number"
-                      value={formData.grantStorageGB ?? ''}
-                      onChange={(e) =>
-                        setFormData({ ...formData, grantStorageGB: e.target.value === '' ? undefined : Number(e.target.value) })
-                      }
-                      placeholder="e.g. 10"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="grantStorageGB">Grant Storage (GB)</Label>
+                        <Input
+                          id="grantStorageGB"
+                          type="number"
+                          value={formData.grantStorageGB ?? ''}
+                          onChange={(e) =>
+                            setFormData({ ...formData, grantStorageGB: e.target.value === '' ? undefined : Number(e.target.value) })
+                          }
+                          placeholder="e.g. 10"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="grantCustomDomains">Grant Custom Domain Slots</Label>
-                    <Input
-                      id="grantCustomDomains"
-                      type="number"
-                      value={formData.grantCustomDomains ?? ''}
-                      onChange={(e) =>
-                        setFormData({ ...formData, grantCustomDomains: e.target.value === '' ? undefined : Number(e.target.value) })
-                      }
-                      placeholder="e.g. 2"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="grantCustomDomains">Grant Custom Domain Slots</Label>
+                        <Input
+                          id="grantCustomDomains"
+                          type="number"
+                          value={formData.grantCustomDomains ?? ''}
+                          onChange={(e) =>
+                            setFormData({ ...formData, grantCustomDomains: e.target.value === '' ? undefined : Number(e.target.value) })
+                          }
+                          placeholder="e.g. 2"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="plan">Plan</Label>
-                    <Select
-                      value={(formData.planSlug as string) || 'keep'}
-                      onValueChange={(value: string) =>
-                        setFormData({ ...formData, planSlug: value === 'keep' ? undefined : value })
-                      }
-                    >
-                      <SelectTrigger id="plan">
-                        <SelectValue placeholder="Keep current" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="keep">Keep current</SelectItem>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="starter">Starter</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="plan">Plan</Label>
+                        <Select
+                          value={(formData.planSlug as string) || 'keep'}
+                          onValueChange={(value: string) =>
+                            setFormData({ ...formData, planSlug: value === 'keep' ? undefined : value })
+                          }
+                        >
+                          <SelectTrigger id="plan">
+                            <SelectValue placeholder="Keep current" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="keep">Keep current</SelectItem>
+                            <SelectItem value="free">Free</SelectItem>
+                            <SelectItem value="starter">Starter</SelectItem>
+                            <SelectItem value="pro">Pro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Only Superadmins can grant storage, custom domains, or change plans.</p>
+                  )}
                 </>
               )}
             </div>

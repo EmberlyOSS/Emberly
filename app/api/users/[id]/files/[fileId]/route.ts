@@ -17,7 +17,7 @@ export async function DELETE(
     const session = await getServerSession(authOptions)
     const { id: userId, fileId } = await params
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
@@ -72,7 +72,7 @@ export async function PATCH(
     const session = await getServerSession(authOptions)
     const { id: userId, fileId } = await params
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 

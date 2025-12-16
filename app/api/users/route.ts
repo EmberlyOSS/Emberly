@@ -8,7 +8,7 @@ import {
   apiResponse,
   paginatedResponse,
 } from '@/lib/api/response'
-import { requireAdmin } from '@/lib/auth/api-auth'
+import { requireAdmin, requireSuperAdmin } from '@/lib/auth/api-auth'
 import { prisma } from '@/lib/database/prisma'
 import { loggers } from '@/lib/logger'
 import { getStorageProvider } from '@/lib/storage'
@@ -107,6 +107,12 @@ export async function POST(req: Request) {
       }
     }
 
+    // If attempting to create an ADMIN/SUPERADMIN user, require SUPERADMIN
+    if (body.role && (body.role === 'ADMIN' || body.role === 'SUPERADMIN')) {
+      const { response: saResponse } = await requireSuperAdmin()
+      if (saResponse) return saResponse
+    }
+
     const user = await prisma.user.create({
       data: {
         email: body.email,
@@ -175,6 +181,7 @@ export async function PUT(req: Request) {
       }
     }
 
+    // If changing role, or modifying storage/grants/plans, only SUPERADMIN may do so
     const updateData: any = {
       updatedAt: new Date(),
       ...(body.name !== undefined && { name: body.name }),
@@ -183,8 +190,21 @@ export async function PUT(req: Request) {
       ...(body.password && { password: await hash(body.password, 10) }),
       ...(body.urlId && { urlId: body.urlId }),
     }
+    // If any of the following sensitive fields are present, require SUPERADMIN
+    const sensitiveRequested =
+      body.role !== undefined ||
+      raw.storageQuotaMB !== undefined ||
+      raw.grantStorageGB !== undefined ||
+      raw.grantCustomDomains !== undefined ||
+      raw.planProductId !== undefined ||
+      raw.planSlug !== undefined
 
-    // allow admins to set explicit storage quota (MB)
+    if (sensitiveRequested) {
+      const { response: saResp } = await requireSuperAdmin()
+      if (saResp) return saResp
+    }
+
+    // allow admins/superadmins to set explicit storage quota (MB)
     if (raw.storageQuotaMB !== undefined) {
       updateData.storageQuotaMB = raw.storageQuotaMB === null ? null : Number(raw.storageQuotaMB)
     }
@@ -223,7 +243,7 @@ export async function PUT(req: Request) {
       }
     }
 
-    // Allow admins to change the user's plan by providing a product id or slug
+    // Allow superadmins to change the user's plan by providing a product id or slug
     if (raw.planProductId || raw.planSlug) {
       try {
         const product = await prisma.product.findFirst({

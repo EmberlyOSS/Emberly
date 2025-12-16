@@ -152,7 +152,95 @@ const STRANGER_THINGS_THEME: ColorConfig = {
   ring: '354 82% 56%',
 }
 
-const THEME_PRESETS: Array<{
+const CHRISTMAS_THEME: ColorConfig = {
+  background: '140 40% 6%',
+  foreground: '210 40% 98%',
+  card: '140 36% 8%',
+  cardForeground: '210 40% 98%',
+  popover: '140 36% 8%',
+  popoverForeground: '210 40% 98%',
+  primary: '0 75% 48%',
+  primaryForeground: '210 40% 98%',
+  secondary: '45 90% 45%',
+  secondaryForeground: '210 40% 98%',
+  muted: '140 30% 18%',
+  mutedForeground: '215 20% 65.1%',
+  accent: '30 90% 48%',
+  accentForeground: '222 47% 12%',
+  destructive: '0 65% 46%',
+  destructiveForeground: '210 40% 98%',
+  border: '140 30% 14%',
+  input: '140 30% 14%',
+  ring: '45 90% 60%',
+}
+
+const PRIDE_THEME: ColorConfig = {
+  background: '220 18% 10%',
+  foreground: '210 40% 98%',
+  card: '220 18% 12%',
+  cardForeground: '210 40% 98%',
+  popover: '220 18% 12%',
+  popoverForeground: '210 40% 98%',
+  primary: '300 82% 55%',
+  primaryForeground: '210 40% 98%',
+  secondary: '50 95% 48%',
+  secondaryForeground: '210 40% 98%',
+  muted: '200 90% 16%',
+  mutedForeground: '215 20% 65.1%',
+  accent: '0 85% 48%',
+  accentForeground: '210 40% 98%',
+  destructive: '345 80% 45%',
+  destructiveForeground: '210 40% 98%',
+  border: '220 18% 14%',
+  input: '220 18% 14%',
+  ring: '300 82% 60%',
+}
+
+const EVERY_CHILD_THEME: ColorConfig = {
+  background: '18 40% 6%',
+  foreground: '210 40% 98%',
+  card: '18 36% 8%',
+  cardForeground: '210 40% 98%',
+  popover: '18 36% 8%',
+  popoverForeground: '210 40% 98%',
+  primary: '18 85% 48%',
+  primaryForeground: '210 40% 98%',
+  secondary: '45 90% 45%',
+  secondaryForeground: '210 40% 98%',
+  muted: '18 30% 18%',
+  mutedForeground: '215 20% 65.1%',
+  accent: '200 90% 48%',
+  accentForeground: '210 40% 98%',
+  destructive: '0 65% 46%',
+  destructiveForeground: '210 40% 98%',
+  border: '18 30% 14%',
+  input: '18 30% 14%',
+  ring: '18 85% 60%',
+}
+
+const REMEMBRANCE_THEME: ColorConfig = {
+  background: '220 20% 8%',
+  foreground: '210 40% 98%',
+  card: '220 18% 10%',
+  cardForeground: '210 40% 98%',
+  popover: '220 18% 10%',
+  popoverForeground: '210 40% 98%',
+  primary: '345 82% 45%',
+  primaryForeground: '210 40% 98%',
+  secondary: '210 32% 18%',
+  secondaryForeground: '210 40% 98%',
+  muted: '220 20% 16%',
+  mutedForeground: '215 20% 65.1%',
+  accent: '45 90% 45%',
+  accentForeground: '210 40% 98%',
+  destructive: '345 82% 45%',
+  destructiveForeground: '210 40% 98%',
+  border: '220 15% 12%',
+  input: '220 15% 12%',
+  ring: '345 82% 56%',
+}
+
+export const THEME_PRESETS: Array<{
   name: string
   colors: ColorConfig
   description: string
@@ -167,9 +255,29 @@ const THEME_PRESETS: Array<{
       colors: STRANGER_THINGS_THEME,
       description: 'Stranger Things-inspired deep midnight with neon red + blue.',
     },
+    {
+      name: 'Holly Jolly (Christmas)',
+      colors: CHRISTMAS_THEME,
+      description: 'Festive green + red with gold accents for the holidays.',
+    },
+    {
+      name: 'Pride Bright',
+      colors: PRIDE_THEME,
+      description: 'Vibrant accents inspired by the Pride rainbow.',
+    },
+    {
+      name: 'Every Child Matters',
+      colors: EVERY_CHILD_THEME,
+      description: 'A respectful orange-themed palette to mark awareness and remembrance.',
+    },
+    {
+      name: 'Remembrance',
+      colors: REMEMBRANCE_THEME,
+      description: 'A muted palette with remembrance red highlights.',
+    },
   ]
 
-const PRESET_HUES = [
+export const PRESET_HUES = [
   { hue: 222.2, name: 'Midnight Blue', saturation: 84, lightness: 45 },
   { hue: 260, name: 'Royal', saturation: 80, lightness: 45 },
   { hue: 280, name: 'Amethyst', saturation: 75, lightness: 45 },
@@ -253,6 +361,13 @@ function SimpleThemeCustomizer({
     setBaseHue(222.2)
     setColors(DEFAULT_COLORS)
 
+    // mark theme name on document so site-level features can react (e.g., snowfall)
+    try {
+      document.documentElement.setAttribute('data-theme', 'Default Dark')
+    } catch (e) {
+      // noop
+    }
+
     onColorChange(DEFAULT_COLORS)
   }
 
@@ -288,6 +403,13 @@ function SimpleThemeCustomizer({
     }
 
     setColors(preset)
+    // set a document attribute naming the preset so global UI can react
+    try {
+      // use a short name safe for attributes
+      document.documentElement.setAttribute('data-theme', preset.name)
+    } catch (e) {
+      // noop in environments that restrict DOM
+    }
     onColorChange(preset)
   }
 
@@ -351,8 +473,8 @@ function SimpleThemeCustomizer({
             key={hue}
             onClick={() => handleHueChange(hue)}
             className={`relative h-14 w-full overflow-hidden rounded-md border transition-[border,opacity] ${baseHue === hue
-                ? 'border-2 border-primary opacity-100'
-                : 'border-transparent opacity-80 hover:opacity-100'
+              ? 'border-2 border-primary opacity-100'
+              : 'border-transparent opacity-80 hover:opacity-100'
               }`}
             style={{
               background: `hsl(${hue}, ${saturation}%, ${lightness}%)`,

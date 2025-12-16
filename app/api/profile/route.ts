@@ -49,6 +49,8 @@ export async function GET(req: Request) {
             createdAt: true,
           },
         },
+        theme: true,
+        twoFactorEnabled: true,
       },
     })
 
@@ -125,6 +127,7 @@ export async function PUT(req: Request) {
       updateData.randomizeFileUrls = body.randomizeFileUrls
     if (typeof body.enableRichEmbeds === 'boolean')
       updateData.enableRichEmbeds = body.enableRichEmbeds
+    if (typeof body.theme === 'string') updateData.theme = body.theme
     if (body.defaultFileExpiration)
       updateData.defaultFileExpiration = body.defaultFileExpiration
     if (body.defaultFileExpirationAction)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -27,6 +27,12 @@ import { useToast } from '@/hooks/use-toast'
 export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
   const { update: updateSession } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean | null>(null)
+  const [showEnablePanel, setShowEnablePanel] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [setupSecret, setSetupSecret] = useState<string | null>(null)
+  const [setupToken, setSetupToken] = useState('')
+  const [disableToken, setDisableToken] = useState('')
   const { toast } = useToast()
   const router = useRouter()
 
@@ -117,6 +123,92 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
     }
   }
 
+  useEffect(() => {
+    let mounted = true
+      ; (async () => {
+        try {
+          const res = await fetch('/api/profile')
+          if (!res.ok) return
+          const data = await res.json()
+          if (mounted) setTwoFactorEnabled(!!data.twoFactorEnabled)
+        } catch (e) {
+          // noop
+        }
+      })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const startEnable2FA = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/profile/2fa')
+      if (!res.ok) throw new Error('Failed to get 2FA secret')
+      const data = await res.json()
+      setQrDataUrl(data.qrDataUrl)
+      setSetupSecret(data.secret)
+      setShowEnablePanel(true)
+    } catch (error) {
+      console.error('2FA start error', error)
+      toast({ title: 'Error', description: 'Failed to start 2FA setup', variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const confirmEnable2FA = async () => {
+    if (!setupSecret || !setupToken) return
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/profile/2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: setupSecret, token: setupToken }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to enable 2FA')
+      }
+      setTwoFactorEnabled(true)
+      setShowEnablePanel(false)
+      setSetupSecret(null)
+      setSetupToken('')
+      toast({ title: 'Success', description: 'Two-factor authentication enabled' })
+      onUpdate()
+    } catch (error) {
+      console.error('Enable 2FA error', error)
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to enable 2FA', variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const disable2FA = async () => {
+    if (!disableToken) return
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/profile/2fa', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: disableToken }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to disable 2FA')
+      }
+      setTwoFactorEnabled(false)
+      setDisableToken('')
+      toast({ title: 'Success', description: 'Two-factor authentication disabled' })
+      onUpdate()
+    } catch (error) {
+      console.error('Disable 2FA error', error)
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to disable 2FA', variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -167,7 +259,22 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
       </form>
 
       <div className="border-t pt-6 mt-6">
-        <div className="space-y-2">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
+          <p className="text-sm text-muted-foreground">
+            Add an extra layer of security to your account using an authenticator app.
+          </p>
+
+          <div className="relative mt-2">
+            <div className="rounded-md border bg-card/50 p-6 pointer-events-none select-none blur-sm opacity-60">
+              <div className="h-36 w-full" />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="rounded-md bg-background/80 px-4 py-2 text-sm font-medium">Coming soon!!!</div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2 mt-8">
           <h3 className="text-lg font-semibold text-destructive">
             Delete Account
           </h3>
