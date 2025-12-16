@@ -1,9 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { format } from 'date-fns'
-import ReactMarkdown from 'react-markdown'
-import rehypeSanitize from 'rehype-sanitize'
-import remarkGfm from 'remark-gfm'
+import MarkdownRenderer from '@/components/docs/MarkdownRenderer'
 
 import { getPostBySlug } from '@/lib/blog'
 import PageShell from '@/components/layout/PageShell'
@@ -46,12 +44,7 @@ export default async function PostPage({ params }: Props) {
           </header>
 
           <div className="mt-6">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeSanitize]}
-            >
-              {post.content}
-            </ReactMarkdown>
+            <MarkdownRenderer>{post.content}</MarkdownRenderer>
           </div>
         </article>
       </div>

@@ -108,7 +108,7 @@ export function LoginForm({
           />
         </div>
         {error && (
-          <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
+          <div role="alert" aria-live="assertive" aria-atomic="true" className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
             <Icons.alertCircle className="h-4 w-4 flex-shrink-0" />
             <span>{error}</span>
           </div>

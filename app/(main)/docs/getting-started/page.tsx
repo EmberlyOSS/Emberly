@@ -1,8 +1,5 @@
 import Link from 'next/link'
 
-// Cards removed for docs content — using simple sections
-
-
 import { Metadata } from 'next'
 import PageShell from '@/components/layout/PageShell'
 
@@ -22,15 +19,19 @@ export default function GettingStarted() {
             <p className="text-sm text-muted-foreground mt-2">
               Clone the repository and install dependencies.
             </p>
-            <pre className="mt-3 rounded bg-background/30 p-3 text-xs truncate">
-              git clone https://github.com/EmberlyOSS/Emberly.git cd Website
-              bun install
+            <pre className="mt-3 rounded bg-background/30 p-3 text-xs">
+              git clone https://github.com/EmberlyOSS/Website.git
+              cd Website
+              # If you use Yarn (recommended for this repo):
+              yarn install
+              # Alternatively with npm:
+              npm install
             </pre>
             <p className="text-sm text-muted-foreground mt-2">
               Start the dev server:
             </p>
             <pre className="mt-2 rounded bg-background/30 p-3 text-xs">
-              bun dev
+              yarn dev
             </pre>
           </section>
 
@@ -41,8 +42,8 @@ export default function GettingStarted() {
               (development only):
             </p>
             <pre className="mt-3 rounded bg-background/30 p-3 text-xs">
-              npx prisma migrate dev --name descriptive-name npx prisma
-              generate
+              npx prisma migrate dev --name descriptive-name
+              npx prisma generate
             </pre>
             <p className="text-sm text-muted-foreground mt-2">
               If you use Docker, apply migrations inside the container or
@@ -57,6 +58,14 @@ export default function GettingStarted() {
               environment variables are set (database URL, NEXTAUTH secret,
               storage config).
             </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Important environment variables (examples):
+            </p>
+            <pre className="mt-2 rounded bg-background/30 p-3 text-xs">
+              DATABASE_URL=postgresql://user:pass@db:5432/emberly
+              NEXTAUTH_SECRET=your-secure-secret
+              STORAGE_PROVIDER=s3
+            </pre>
             <p className="text-sm text-muted-foreground mt-2">Run:</p>
             <pre className="mt-2 rounded bg-background/30 p-3 text-xs">
               docker-compose up -d --build

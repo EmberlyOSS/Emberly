@@ -25,6 +25,7 @@ import {
   Users,
   Settings,
   GitGraph,
+  Handshake,
 } from 'lucide-react'
 
 import { Icons } from '@/components/shared/icons'
@@ -73,7 +74,7 @@ const dashboardRoutes = [
 const adminRoutes = [
   { href: '/dashboard/blog', label: 'Blog', icon: BookOpen },
   { href: '/dashboard/users', label: 'Users', icon: Users },
-  { href: '/dashboard/partners', label: 'Partners', icon: GitGraph },
+  { href: '/dashboard/partners', label: 'Partners', icon: Handshake },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 

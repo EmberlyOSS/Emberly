@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { markdown } from '@codemirror/lang-markdown'
 import CodeMirror from '@uiw/react-codemirror'
-import ReactMarkdown from 'react-markdown'
-import rehypeSanitize from 'rehype-sanitize'
-import remarkGfm from 'remark-gfm'
+import MarkdownRenderer from '@/components/docs/MarkdownRenderer'
 
 import { Input } from '@/components/ui/input'
 import {
@@ -159,12 +157,7 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
           <div className="border rounded-md overflow-hidden bg-background/60">
             <div className="px-3 py-2 bg-muted/10 border-b">Preview</div>
             <div className="p-4 prose max-w-none overflow-auto">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeSanitize]}
-              >
-                {content || '*Nothing to preview*'}
-              </ReactMarkdown>
+              <MarkdownRenderer>{content || '*Nothing to preview*'}</MarkdownRenderer>
             </div>
           </div>
         </div>

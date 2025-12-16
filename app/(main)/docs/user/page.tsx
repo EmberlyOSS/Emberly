@@ -1,7 +1,5 @@
 import Link from 'next/link'
 
-// Cards removed for docs content — using simple sections
-
 
 import { Metadata } from 'next'
 import PageShell from '@/components/layout/PageShell'
@@ -52,6 +50,15 @@ export default function UserGuide() {
                             <Link href="/docs/custom-domains" className="text-sm underline">
                                 Domain guide
                             </Link>
+                        </div>
+                    </section>
+
+                    <section className="p-6">
+                        <h2 className="font-medium">Screenshots & Quick Uploads</h2>
+                        <p className="text-sm text-muted-foreground mt-2">Guides for common screenshot tools and how to get images into Emberly:</p>
+                        <div className="mt-4 space-x-4">
+                            <Link href="/docs/user/flameshot" className="text-sm underline">Flameshot (Linux)</Link>
+                            <Link href="/docs/user/sharex" className="text-sm underline">ShareX (Windows)</Link>
                         </div>
                     </section>
 

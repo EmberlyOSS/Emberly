@@ -25,7 +25,7 @@ export default function DocsPage() {
                   <TableHead />
                 </tr>
               </TableHeader>
-              <TableBody>
+                <TableBody>
                 <TableRow>
                   <TableCell>
                     <div className="font-medium">
@@ -34,7 +34,7 @@ export default function DocsPage() {
                   </TableCell>
                   <TableCell>Step-by-step setup and deployment instructions for self-hosting Emberly.</TableCell>
                   <TableCell>
-                    <Link href="/docs/getting-started" className="text-primary font-medium">Open</Link>
+                    <Link href="/docs/getting-started" className="text-primary font-medium">Read</Link>
                   </TableCell>
                 </TableRow>
 
@@ -46,7 +46,7 @@ export default function DocsPage() {
                   </TableCell>
                   <TableCell>Examples for the REST API, authentication, and code samples.</TableCell>
                   <TableCell>
-                    <Link href="/docs/api" className="text-primary font-medium">View</Link>
+                    <Link href="/docs/api" className="text-primary font-medium">Read</Link>
                   </TableCell>
                 </TableRow>
 
@@ -58,7 +58,31 @@ export default function DocsPage() {
                   </TableCell>
                   <TableCell>User-facing documentation: profile, uploads, short links, and managing custom domains.</TableCell>
                   <TableCell>
-                    <Link href="/docs/user" className="text-primary font-medium">Open</Link>
+                    <Link href="/docs/user" className="text-primary font-medium">Read</Link>
+                  </TableCell>
+                </TableRow>
+
+                <TableRow>
+                  <TableCell>
+                    <div className="font-medium">
+                      <Link href="/docs/user/flameshot" className="hover:underline">Flameshot</Link>
+                    </div>
+                  </TableCell>
+                  <TableCell>Quick guide for capturing, annotating, and uploading screenshots using Flameshot (Linux).</TableCell>
+                  <TableCell>
+                    <Link href="/docs/user/flameshot" className="text-primary font-medium">Read</Link>
+                  </TableCell>
+                </TableRow>
+
+                <TableRow>
+                  <TableCell>
+                    <div className="font-medium">
+                      <Link href="/docs/user/sharex" className="hover:underline">ShareX</Link>
+                    </div>
+                  </TableCell>
+                  <TableCell>Quick setup for ShareX and how to use it with Emberly (Windows).</TableCell>
+                  <TableCell>
+                    <Link href="/docs/user/sharex" className="text-primary font-medium">Read</Link>
                   </TableCell>
                 </TableRow>
 

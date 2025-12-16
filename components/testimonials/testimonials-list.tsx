@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Star } from 'lucide-react'
 
@@ -13,7 +13,13 @@ function initialsFromName(name?: string | null, fallback?: string) {
 }
 
 export default function TestimonialsList({ testimonials }: { testimonials?: Array<any> }) {
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
     if (!testimonials || testimonials.length === 0) return null
+
+    function toggle(id: string) {
+        setExpanded((s) => ({ ...s, [id]: !s[id] }))
+    }
 
     return (
         <section className="mt-12">
@@ -22,9 +28,12 @@ export default function TestimonialsList({ testimonials }: { testimonials?: Arra
                 {testimonials.map((t) => {
                     const date = t?.createdAt ? new Date(t.createdAt) : null
                     const hasValidDate = date && !isNaN(date.getTime())
+                    const isExpanded = !!expanded[t.id]
+                    const content = String(t.content || '')
+                    const preview = content.length > 160 && !isExpanded ? content.slice(0, 160).trim() + '…' : content
 
                     return (
-                        <div key={t.id} className="rounded-lg border p-4 bg-background/50 shadow-sm">
+                        <article key={t.id} className="rounded-2xl border border-border/20 p-5 bg-background/60 shadow-sm hover:shadow-md transition-shadow" aria-labelledby={`testimonial-${t.id}`}>
                             <div className="flex items-center gap-3">
                                 <Avatar>
                                     {t.user?.image ? (
@@ -34,16 +43,40 @@ export default function TestimonialsList({ testimonials }: { testimonials?: Arra
                                     )}
                                 </Avatar>
                                 <div>
-                                    <div className="text-sm font-medium">{t.user?.name ?? t.user?.urlId}</div>
+                                    <div id={`testimonial-${t.id}`} className="text-sm font-medium">{t.user?.name ?? t.user?.urlId}</div>
                                     {hasValidDate && (
                                         <div className="text-xs text-muted-foreground">{date!.toLocaleDateString()}</div>
                                     )}
                                 </div>
                             </div>
 
-                            <blockquote className="mt-3 text-sm text-foreground/90">“{t.content}”</blockquote>
+                            <blockquote className="mt-3 text-sm text-foreground/90 italic border-l-2 pl-3">“{preview}”</blockquote>
 
-                            {typeof t.rating === 'number' && (
+                            {content.length > 160 && (
+                                <div className="mt-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2" aria-hidden>
+                                        {typeof t.rating === 'number' && (
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <Star key={i} size={14} className={i < (t.rating ?? 0) ? 'text-amber-400' : 'text-muted-foreground'} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="ml-2">
+                                        <button
+                                            onClick={() => toggle(t.id)}
+                                            className="text-sm text-primary font-medium hover:underline"
+                                            aria-expanded={isExpanded}
+                                        >
+                                            {isExpanded ? 'Hide' : 'Read'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {content.length <= 160 && typeof t.rating === 'number' && (
                                 <div className="mt-3 flex items-center gap-1" aria-hidden>
                                     {Array.from({ length: 5 }).map((_, i) => (
                                         <Star key={i} size={14} className={i < (t.rating ?? 0) ? 'text-amber-400' : 'text-muted-foreground'} />
@@ -51,7 +84,7 @@ export default function TestimonialsList({ testimonials }: { testimonials?: Arra
                                     <span className="sr-only">Rating: {t.rating}/5</span>
                                 </div>
                             )}
-                        </div>
+                        </article>
                     )
                 })}
             </div>

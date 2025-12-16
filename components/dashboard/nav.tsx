@@ -24,6 +24,7 @@ import {
   Users,
   Globe,
   GitGraph,
+  Handshake,
   ChartBar,
 } from 'lucide-react'
 
@@ -78,7 +79,7 @@ const dashboardRoutes = [
 const adminRoutes = [
   { href: '/dashboard/blog', label: 'Blog', icon: FileText },
   { href: '/dashboard/users', label: 'Users', icon: Users },
-  { href: '/dashboard/partners', label: 'Partners', icon: GitGraph },
+  { href: '/dashboard/partners', label: 'Partners', icon: Handshake },
   { href: '/dashboard/testimonials', label: 'Testimonials', icon: MessageSquare },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]

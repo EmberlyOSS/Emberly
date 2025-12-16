@@ -129,11 +129,14 @@ export default function PartnersCarousel({ partners }: Props) {
           const isExpanded = expandedIndex === baseIdx
 
           return (
-            <div
+            <button
               key={`${p.id}-${idx}`}
-              className={`inline-flex items-center gap-4 px-3 py-2 rounded-lg min-w-[120px] flex-shrink-0 transition-transform duration-300 ease-in-out cursor-pointer ${isExpanded ? 'bg-background/60 border border-border/60 shadow-lg scale-105 z-40' : 'bg-transparent'} relative overflow-visible`}
-              onMouseEnter={() => handleEnter(baseIdx)}
-              onMouseLeave={() => handleLeave()}
+              type="button"
+              aria-expanded={isExpanded}
+              aria-label={`Partner ${p.name}`}
+              className={`inline-flex items-center gap-4 px-3 py-2 rounded-lg min-w-[120px] flex-shrink-0 transition-transform duration-300 ease-in-out cursor-pointer ${isExpanded ? 'bg-background/60 border border-border/60 shadow-lg scale-105 z-40' : 'bg-transparent'} relative overflow-visible focus:outline-none`}
+              onPointerEnter={() => handleEnter(baseIdx)}
+              onPointerLeave={() => handleLeave()}
               onClick={() => handleToggleExpand(baseIdx)}
               onTouchStart={() => handleEnter(baseIdx)}
               onTouchEnd={() => handleToggleExpand(baseIdx)}
@@ -172,7 +175,7 @@ export default function PartnersCarousel({ partners }: Props) {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>

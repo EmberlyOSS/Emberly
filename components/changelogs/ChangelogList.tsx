@@ -104,7 +104,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                                     <TableCell className="font-medium max-w-[400px]">
                                         <div className="text-sm text-muted-foreground">{rel.repo}</div>
                                         <div className="flex items-center gap-3">
-                                            <a href={rel.htmlUrl} target="_blank" rel="noreferrer" className="font-semibold hover:underline">{rel.name}</a>
+                                            <a href={rel.htmlUrl} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">{rel.name}</a>
                                             <div className="text-sm text-muted-foreground">{rel.tagName}</div>
                                         </div>
                                     </TableCell>
@@ -112,7 +112,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
                                             <Button variant="ghost" size="icon" asChild>
-                                                <a href={rel.htmlUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                                                <a href={rel.htmlUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
                                             </Button>
                                             <Button variant="ghost" size="icon" onClick={() => toggle(rel.id)}>
                                                 <ChevronDown className={`h-4 w-4 transition-transform ${expanded[rel.id] ? 'rotate-180' : ''}`} />
