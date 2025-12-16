@@ -472,7 +472,15 @@ export default function SettingsPage() {
     !workingConfig ||
     !savedConfig ||
     !workingConfig.settings ||
-    !savedConfig.settings
+    !savedConfig.settings ||
+    !workingConfig.settings.general ||
+    !savedConfig.settings.general ||
+    !workingConfig.settings.general.storage ||
+    !savedConfig.settings.general.storage ||
+    !workingConfig.settings.appearance ||
+    !savedConfig.settings.appearance ||
+    !workingConfig.settings.advanced ||
+    !savedConfig.settings.advanced
   ) {
     return <SettingsSkeleton />
   }
@@ -493,7 +501,7 @@ export default function SettingsPage() {
 
   return (
     <div className="container space-y-6 pb-32">
-      {}
+      { }
       <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
         <div className="relative p-8">
@@ -504,46 +512,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {}
+      { }
       <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
         <div className="relative p-8">
           <Tabs defaultValue="general" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="general" className="relative">
-                General
-                {!deepEqual(
-                  savedConfig?.settings.general,
-                  workingConfig?.settings.general
-                ) && (
-                  <span className="absolute -top-1 -right-1">
-                    <Circle className="h-2 w-2 fill-primary text-primary" />
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="appearance" className="relative">
-                Appearance
-                {!deepEqual(
-                  savedConfig?.settings.appearance,
-                  workingConfig?.settings.appearance
-                ) && (
-                  <span className="absolute -top-1 -right-1">
-                    <Circle className="h-2 w-2 fill-primary text-primary" />
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="advanced" className="relative">
-                Advanced
-                {!deepEqual(
-                  savedConfig?.settings.advanced,
-                  workingConfig?.settings.advanced
-                ) && (
-                  <span className="absolute -top-1 -right-1">
-                    <Circle className="h-2 w-2 fill-primary text-primary" />
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="min-w-max px-2">
+                <TabsTrigger value="general" className="relative">
+                  General
+                  {!deepEqual(
+                    savedConfig?.settings.general,
+                    workingConfig?.settings.general
+                  ) && (
+                      <span className="absolute -top-1 -right-1">
+                        <Circle className="h-2 w-2 fill-primary text-primary" />
+                      </span>
+                    )}
+                </TabsTrigger>
+                <TabsTrigger value="appearance" className="relative">
+                  Appearance
+                  {!deepEqual(
+                    savedConfig?.settings.appearance,
+                    workingConfig?.settings.appearance
+                  ) && (
+                      <span className="absolute -top-1 -right-1">
+                        <Circle className="h-2 w-2 fill-primary text-primary" />
+                      </span>
+                    )}
+                </TabsTrigger>
+                <TabsTrigger value="advanced" className="relative">
+                  Advanced
+                  {!deepEqual(
+                    savedConfig?.settings.advanced,
+                    workingConfig?.settings.advanced
+                  ) && (
+                      <span className="absolute -top-1 -right-1">
+                        <Circle className="h-2 w-2 fill-primary text-primary" />
+                      </span>
+                    )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="general" className="space-y-4">
               <Card>
@@ -1253,25 +1263,25 @@ export default function SettingsPage() {
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted relative">
                         {(workingConfig?.settings.appearance.favicon ||
                           faviconPreviewUrl) && (
-                          <div className="absolute top-4 left-4">
-                            <div className="flex items-center gap-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg">
-                              <img
-                                src={
-                                  isSafeUrl(faviconPreviewUrl)
-                                    ? DOMPurify.sanitize(faviconPreviewUrl)
-                                    : '/api/favicon'
-                                }
-                                alt="Favicon"
-                                className="w-6 h-6"
-                              />
-                              <span className="text-sm text-muted-foreground">
-                                {faviconPreviewUrl
-                                  ? 'New favicon (unsaved)'
-                                  : 'Current favicon'}
-                              </span>
+                            <div className="absolute top-4 left-4">
+                              <div className="flex items-center gap-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg">
+                                <img
+                                  src={
+                                    isSafeUrl(faviconPreviewUrl)
+                                      ? DOMPurify.sanitize(faviconPreviewUrl)
+                                      : '/api/favicon'
+                                  }
+                                  alt="Favicon"
+                                  className="w-6 h-6"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                  {faviconPreviewUrl
+                                    ? 'New favicon (unsaved)'
+                                    : 'Current favicon'}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
                           <p className="text-sm text-muted-foreground">

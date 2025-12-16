@@ -100,7 +100,7 @@ export function BaseNav() {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sectionsAll.map((s) => [s.id, true]))
+    Object.fromEntries(sectionsAll.map((s) => [s.id, s.id === 'base']))
   )
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -128,7 +128,7 @@ export function BaseNav() {
   const toggleSection = (id: string) => setOpenSections((s) => ({ ...s, [id]: !s[id] }))
 
   const visibleSections = sectionsAll.filter((sec) => {
-    if (sec.id === 'admin') return session?.user?.role === 'ADMIN'
+    if (sec.id === 'admin') return session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
     if (sec.id === 'dashboard') return !!session
     return true
   })
@@ -199,12 +199,19 @@ export function BaseNav() {
               </div>
             </div>
 
-            {/* Mobile hamburger */}
-            <div className="ml-3 flex items-center md:hidden">
+            {/* Mobile sheet trigger (moved to right) */}
+            <div className="ml-auto flex items-center md:hidden">
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
+                    {session ? (
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={session.user?.image || undefined} alt={session.user?.name || ''} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Menu className="h-5 w-5" />
+                    )}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="flex flex-col">
@@ -212,7 +219,12 @@ export function BaseNav() {
                   <div className="mt-2 flex-1 overflow-auto pb-6">
                     {visibleSections.map((sec) => (
                       <div key={sec.id} className="mb-4 px-2">
-                        <div className="w-full text-left font-medium mb-2 flex items-center justify-between">
+                        <div
+                          className="w-full text-left font-medium mb-2 flex items-center justify-between cursor-pointer"
+                          onClick={() => toggleSection(sec.id)}
+                          role="button"
+                          tabIndex={0}
+                        >
                           <div className="flex items-center gap-2">
                             {(() => {
                               const Icon = sectionIcon(sec.id)
@@ -247,26 +259,29 @@ export function BaseNav() {
                   <div className="pt-4 border-t border-border/30 px-3 bg-background/80 backdrop-blur-sm">
                     {session ? (
                       <div className="space-y-2">
-                        <Link href="/dashboard/profile" className="block text-sm">
+                        <Link href="/dashboard/profile" className="block text-sm" onClick={() => setOpen(false)}>
                           Profile
                         </Link>
-                        <Link href="/dashboard" className="block text-sm">
+                        <Link href="/dashboard" className="block text-sm" onClick={() => setOpen(false)}>
                           Dashboard
                         </Link>
                         <button
                           className="w-full text-left text-sm text-red-600"
-                          onClick={() => signOut({ callbackUrl: '/' })}
+                          onClick={() => {
+                            setOpen(false)
+                            signOut({ callbackUrl: '/' })
+                          }}
                         >
                           Sign Out
                         </button>
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => signIn()}>
+                        <Button variant="ghost" size="sm" onClick={() => { signIn(); setOpen(false) }}>
                           Sign In
                         </Button>
                         <Button asChild size="sm">
-                          <Link href="/auth/register">Register</Link>
+                          <Link href="/auth/register" onClick={() => setOpen(false)}>Register</Link>
                         </Button>
                       </div>
                     )}
@@ -279,34 +294,14 @@ export function BaseNav() {
             <div className="ml-auto hidden md:flex items-center gap-3">
               {session ? (
                 <>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={session.user?.image || undefined} alt={session.user?.name || ''} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/profile">Profile</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard">Dashboard</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={(event) => {
-                          event.preventDefault()
-                          signOut({ callbackUrl: '/' })
-                        }}
-                      >
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full" asChild>
+                    <Link href="/dashboard/profile">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={session.user?.image || undefined} alt={session.user?.name || ''} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  </Button>
                 </>
               ) : (
                 <>

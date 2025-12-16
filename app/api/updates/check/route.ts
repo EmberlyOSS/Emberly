@@ -29,7 +29,7 @@ function compareVersions(v1: string, v2: string): number {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 

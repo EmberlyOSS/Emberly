@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const quotasEnabled = config.settings.general.storage.quotas.enabled
     const defaultQuota = config.settings.general.storage.quotas.default
 
-    if (quotasEnabled && session.user.role !== 'ADMIN') {
+    if (quotasEnabled && (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: { storageUsed: true },

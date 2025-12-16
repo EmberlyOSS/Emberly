@@ -114,13 +114,11 @@ export function DashboardNav() {
   const { data: session } = useSession()
 
   const visibleSections = sections.filter(
-    (sec) => sec.id !== 'admin' || session?.user?.role === 'ADMIN'
+    (sec) => sec.id !== 'admin' || session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
   )
 
-  const routes =
-    session?.user?.role === 'ADMIN'
-      ? [...baseRoutes, ...dashboardRoutes, ...adminRoutes]
-      : [...baseRoutes, ...dashboardRoutes]
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+  const routes = isAdmin ? [...baseRoutes, ...dashboardRoutes, ...adminRoutes] : [...baseRoutes, ...dashboardRoutes]
 
   const toggleSection = (id: string) => {
     setOpenSections((s) => ({ ...s, [id]: !s[id] }))

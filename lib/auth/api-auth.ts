@@ -70,7 +70,23 @@ export async function requireAuth(req: Request) {
 export async function requireAdmin() {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  if (
+    !session?.user ||
+    (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')
+  ) {
+    return {
+      response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+      user: null,
+    }
+  }
+
+  return { user: session.user, response: null }
+}
+
+export async function requireSuperAdmin() {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user || session.user.role !== 'SUPERADMIN') {
     return {
       response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
       user: null,

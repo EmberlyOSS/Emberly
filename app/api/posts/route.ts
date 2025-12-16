@@ -14,6 +14,9 @@ export async function GET(request: Request) {
       if (searchParams.get('admin') === 'true') {
         const { user, response } = await requireAuth(request)
         if (response) return response
+        if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
+          return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
+        }
         const post = await blog.getPostBySlug(slug, false)
         if (!post) return apiError('Post not found', HTTP_STATUS.NOT_FOUND)
         return apiResponse(post)
@@ -32,7 +35,7 @@ export async function GET(request: Request) {
     if (all) {
       const { user, response } = await requireAuth(request)
       if (response) return response
-      if (!user || user.role !== 'ADMIN') {
+      if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
         return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
       }
       const posts = await blog.listPosts({
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
     const { user, response } = await requireAuth(request)
     if (response) return response
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
     }
 

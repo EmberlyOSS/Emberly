@@ -9,7 +9,7 @@ import { authOptions } from '@/lib/auth'
 export default async function UsersPage() {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
     redirect('/dashboard')
   }
 

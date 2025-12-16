@@ -16,7 +16,7 @@ export async function GET(
     const session = await getServerSession(authOptions)
     const { id } = await params
 
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
@@ -31,11 +31,11 @@ export async function GET(
       userId: id,
       ...(search
         ? {
-            OR: [
-              { shortCode: { contains: search, mode: 'insensitive' as const } },
-              { targetUrl: { contains: search, mode: 'insensitive' as const } },
-            ],
-          }
+          OR: [
+            { shortCode: { contains: search, mode: 'insensitive' as const } },
+            { targetUrl: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
         : {}),
     }
 

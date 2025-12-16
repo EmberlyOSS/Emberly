@@ -212,7 +212,7 @@ export function ProfileDomains() {
           <div className="md:col-span-2">
             <div className="mb-4 items-center justify-between gap-3">
               <label className="sr-only">Search domains</label>
-              <div className="relative">
+              <div className="relative bg-muted/60 rounded-md w-full border hover:border-primary/20">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
                   <Search className="h-4 w-4" />
                 </span>

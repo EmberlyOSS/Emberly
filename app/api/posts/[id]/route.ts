@@ -15,8 +15,9 @@ export async function GET(
     if (adminView) {
       const { user, response } = await requireAuth(request)
       if (response) return response
-      if (!user || user.role !== 'ADMIN')
+      if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
         return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
+      }
       const post = await blog.getPostById(id)
       if (!post) return apiError('Post not found', HTTP_STATUS.NOT_FOUND)
       return apiResponse(post)
@@ -42,7 +43,7 @@ export async function PUT(
   try {
     const { user, response } = await requireAuth(request)
     if (response) return response
-    if (!user || user.role !== 'ADMIN')
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN'))
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
 
     const id = params.id
@@ -65,7 +66,7 @@ export async function DELETE(
   try {
     const { user, response } = await requireAuth(request)
     if (response) return response
-    if (!user || user.role !== 'ADMIN')
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN'))
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
 
     const id = params.id

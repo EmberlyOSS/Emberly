@@ -6,6 +6,38 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [1.0.0-alpha.6] - 2025-12-16
+
+### Added
+- Snowfall site-wide visual: falling snow canvas that activates when a Christmas/Holly theme is in use (client canvas component + theme-aware detection).
+- Per-user appearance settings: theme presets, hue overrides, live preview on the client, and persistence to the user's profile (`theme` stored on `User`).
+- New server APIs and components:
+  - Profile 2FA endpoints (`GET/POST/DELETE /api/profile/2fa`) to generate TOTP secrets and QR codes, verify tokens, enable and disable 2FA (server-side QR generation via `qrcode` + `otplib`).
+  - Partners and Testimonials server APIs and admin UIs (partners CRUD, testimonial submission/management), plus homepage partners carousel wired to server data.
+  - Profile Data Explorer: server `GET /api/profile` and a client JSON viewer for exporting/inspecting account data.
+- UI components and client flows added: `ProfileAppearance` (appearance tab), `ThemeInitializer` client script, `Snowfall` component, 2FA UI scaffolding in profile security (temporarily blurred as "Coming soon").
+- Prisma schema changes & migrations for new data models and fields: `Partner`, `Testimonial`, `twoFactorEnabled`, `twoFactorSecret`, and related migration files applied locally during development.
+- Package additions for server-side 2FA/QRCodes: `otplib` and `qrcode`.
+
+### Changed
+- Theme propagation and client hydration: `data-theme` is now set on the `<html>` element and a small client initializer ensures the system/site theme is applied before React hydration so client-only features (Snowfall, previews) reliably reflect system-level site appearance.
+- `hooks/use-profile.ts` now exposes `updateProfile()` and the profile API `PUT /api/profile` accepts `theme` and persists appearance changes.
+- Navigation and header updates:
+  - `BaseNav` aligned with `UserNav`: desktop avatar links directly to `/dashboard/profile`.
+  - Mobile sheet trigger moved to the right and renders the signed-in user's avatar (falls back to menu icon when not signed in).
+  - Mobile sections are toggleable and only the `base` section is open by default.
+  - Mobile sheet now closes automatically on footer actions (Sign In/Register/Profile/Dashboard/Sign Out).
+- Tabs, list UIs and dropdowns improved for better small-screen overflow and keyboard/outside-click behaviours (Radix primitives adopted for consistent focus management).
+- Changelogs, partners, testimonials and ST5 pages refactored to use shared layout primitives (`PageShell`, `DashboardWrapper`) and improved responsive layouts.
+
+### Fixed
+- Defensive checks and runtime guards added to Settings, profile and other pages to prevent TypeErrors (e.g. attempting to access `quotas` on undefined objects).
+- Admin role checks updated to treat `SUPERADMIN` equivalently to `ADMIN` where appropriate (settings/posts/admin routes and UIs).
+- Resolved `updateProfile is not a function` by returning `updateProfile` from the profile hook the client uses.
+- Snowfall visibility issues resolved by ensuring server-configured/system-level themes set `data-theme` on the document root and by improving Snowfall to observe both `data-theme` and document `className`.
+- Prisma schema changes for 2FA and other models were added and migrations applied during development (see migrations folder).
+- Misc layout and accessibility bug fixes across navs, modals, and small-screen components (modal scrolling, focus traps, dropdown outside-click behaviour, mobile overflow fixes).
+
 
 ## [1.0.0-alpha.5] - 2025-12-12
 

@@ -8,6 +8,7 @@ import { SetupChecker } from '@/components/setup-checker'
 import { ThemeInitializer } from '@/components/theme/theme-initializer'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
+import Snowfall from '@/components/theme/snowfall'
 
 import { getConfig } from '@/lib/config'
 
@@ -59,7 +60,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-theme={config.settings.appearance.theme}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -75,6 +76,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Snowfall />
           <QueryProvider>
             <AuthProvider>
               <SetupChecker>
