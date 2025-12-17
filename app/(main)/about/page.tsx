@@ -2,16 +2,16 @@ import Link from 'next/link'
 
 import { BookOpen, Check, Github, Grid, Lock } from 'lucide-react'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/packages/components/ui/avatar'
+import { Button } from '@/packages/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import HomeShell from '@/components/layout/home-shell'
+} from '@/packages/components/ui/card'
+import HomeShell from '@/packages/components/layout/home-shell'
 
 async function getContributors() {
   const ORG = 'EmberlyOSS'

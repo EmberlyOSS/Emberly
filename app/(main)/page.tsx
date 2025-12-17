@@ -13,15 +13,15 @@ import {
 } from 'lucide-react'
 import { getServerSession } from 'next-auth/next'
 
-import PartnersCarousel from '@/components/partners/partners-carousel'
-import { prisma } from '@/lib/database/prisma'
-import TestimonialsList from '@/components/testimonials/testimonials-list'
-import { Button } from '@/components/ui/button'
-import HomeShell from '@/components/layout/home-shell'
-import { Card, CardContent } from '@/components/ui/card'
+import PartnersCarousel from '@/packages/components/partners/partners-carousel'
+import { prisma } from '@/packages/lib/database/prisma'
+import TestimonialsList from '@/packages/components/testimonials/testimonials-list'
+import { Button } from '@/packages/components/ui/button'
+import HomeShell from '@/packages/components/layout/home-shell'
+import { Card, CardContent } from '@/packages/components/ui/card'
 
-import { authOptions } from '@/lib/auth'
-import { checkSetupCompletion } from '@/lib/database/setup'
+import { authOptions } from '@/packages/lib/auth'
+import { checkSetupCompletion } from '@/packages/lib/database/setup'
 
 export default async function HomePage() {
   const setupComplete = await checkSetupCompletion()

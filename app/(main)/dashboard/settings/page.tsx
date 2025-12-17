@@ -21,33 +21,33 @@ import {
   XCircle,
 } from 'lucide-react'
 
-import { Icons } from '@/components/shared/icons'
-import { ThemeCustomizer } from '@/components/theme/theme-customizer'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Icons } from '@/packages/components/shared/icons'
+import { ThemeCustomizer } from '@/packages/components/theme/theme-customizer'
+import { Alert, AlertDescription } from '@/packages/components/ui/alert'
+import { Button } from '@/packages/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from '@/packages/components/ui/card'
+import { Input } from '@/packages/components/ui/input'
+import { Label } from '@/packages/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+} from '@/packages/components/ui/select'
+import { Skeleton } from '@/packages/components/ui/skeleton'
+import { Switch } from '@/packages/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
 
-import type { EmberlyConfig } from '@/lib/config'
+import type { EmberlyConfig } from '@/packages/lib/config'
 
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/packages/hooks/use-toast'
 
 interface ColorConfig {
   background: string

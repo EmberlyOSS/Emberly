@@ -1,10 +1,10 @@
 import Link from 'next/link'
 
-import { Card, CardContent } from '@/components/ui/card'
-import DocsCard from '@/components/docs/DocsCard'
-import DocsAlert from '@/components/docs/DocsAlert'
-import PageShell from '@/components/layout/PageShell'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Card, CardContent } from '@/packages/components/ui/card'
+import DocsCard from '@/packages/components/docs/DocsCard'
+import DocsAlert from '@/packages/components/docs/DocsAlert'
+import PageShell from '@/packages/components/layout/PageShell'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/packages/components/ui/table'
 
 export const metadata = {
   title: 'Documentation | Emberly',
@@ -25,7 +25,7 @@ export default function DocsPage() {
                   <TableHead />
                 </tr>
               </TableHeader>
-                <TableBody>
+              <TableBody>
                 <TableRow>
                   <TableCell>
                     <div className="font-medium">

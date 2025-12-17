@@ -1,16 +1,16 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 
-import { CustomHead } from '@/components/layout/custom-head'
-import { AuthProvider } from '@/components/providers/auth-provider'
-import { QueryProvider } from '@/components/providers/query-provider'
-import { SetupChecker } from '@/components/setup-checker'
-import { ThemeInitializer } from '@/components/theme/theme-initializer'
-import { ThemeProvider } from '@/components/theme/theme-provider'
-import { Toaster } from '@/components/ui/toaster'
-import Snowfall from '@/components/theme/snowfall'
+import { CustomHead } from '@/packages/components/layout/custom-head'
+import { AuthProvider } from '@/packages/components/providers/auth-provider'
+import { QueryProvider } from '@/packages/components/providers/query-provider'
+import { SetupChecker } from '@/packages/components/setup-checker'
+import { ThemeInitializer } from '@/packages/components/theme/theme-initializer'
+import { ThemeProvider } from '@/packages/components/theme/theme-provider'
+import { Toaster } from '@/packages/components/ui/toaster'
+import Snowfall from '@/packages/components/theme/snowfall'
 
-import { getConfig } from '@/lib/config'
+import { getConfig } from '@/packages/lib/config'
 
 import './globals.css'
 

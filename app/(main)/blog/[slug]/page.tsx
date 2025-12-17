@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 
 import { format } from 'date-fns'
-import MarkdownRenderer from '@/components/docs/MarkdownRenderer'
+import MarkdownRenderer from '@/packages/components/docs/MarkdownRenderer'
 
-import { getPostBySlug } from '@/lib/blog'
-import PageShell from '@/components/layout/PageShell'
+import { getPostBySlug } from '@/packages/lib/blog'
+import PageShell from '@/packages/components/layout/PageShell'
 
 type Props = { params: { slug: string } }
 

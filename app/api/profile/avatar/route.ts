@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
-import { authOptions } from '@/lib/auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/lib/storage'
-import { bytesToMB } from '@/lib/utils'
+import { authOptions } from '@/packages/lib/auth'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
+import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB } from '@/packages/lib/utils'
 
 const logger = loggers.users
 

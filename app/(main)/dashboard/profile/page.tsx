@@ -3,12 +3,12 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth/next'
 
 import dynamic from 'next/dynamic'
-const ProfileClient = dynamic(() => import('@/components/profile').then((m) => m.ProfileClient))
+const ProfileClient = dynamic(() => import('@/packages/components/profile').then((m) => m.ProfileClient))
 
-import { authOptions } from '@/lib/auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
-import { formatFileSize } from '@/lib/utils'
+import { authOptions } from '@/packages/lib/auth'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { formatFileSize } from '@/packages/lib/utils'
 
 import { LogoutButton } from './logout-button'
 

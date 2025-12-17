@@ -1,17 +1,16 @@
 import Link from 'next/link'
 
-import MiniGame from '@/components/games/mini-game'
-import { Button } from '@/components/ui/button'
+import MiniGame from '@/packages/components/games/mini-game'
+import { Button } from '@/packages/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { DynamicBackground } from '@/components/layout/dynamic-background'
-import { DashboardNav } from '@/components/dashboard/nav'
-import { UserNav } from '@/components/dashboard/user-nav'
+} from '@/packages/components/ui/card'
+import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
+import { DashboardNav } from '@/packages/components/dashboard/nav'
 
 export default function NotFound() {
   return (

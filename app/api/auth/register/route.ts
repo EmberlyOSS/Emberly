@@ -5,8 +5,8 @@ import { nanoid } from 'nanoid'
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
 
 const registerSchema = z.object({
   email: z.string().email(),

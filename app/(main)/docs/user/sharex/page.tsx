@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
-import PageShell from '@/components/layout/PageShell'
+import PageShell from '@/packages/components/layout/PageShell'
+import MarkdownRenderer from '@/packages/components/docs/MarkdownRenderer'
 
 export const metadata: Metadata = {
     title: 'ShareX — Quick Setup | Emberly',
@@ -7,37 +8,28 @@ export const metadata: Metadata = {
 }
 
 export default function ShareXDoc() {
+    const markdown = `## Quick 3 steps (no extra manual steps)
+1. Go to <https://emberly.site/dashboard/profile> and download the ShareX file by clicking the button shown below:
+
+   ![Download ShareX config button](https://embrly.ca/RDKNJ/Eu-BIA.png)
+
+2. Download ShareX from its website: <https://getsharex.com/>
+
+3. Open the downloaded ShareX installer (double-click the file). When the prompt appears, click the **OK** button as shown here:
+
+   ![ShareX install prompt - click OK](https://embrly.ca/RDKNJ/7VlHqN.png)
+
+## Done
+After those three steps ShareX will be installed and the Emberly config file will be available. No additional manual steps are required here.
+`
+
     return (
         <PageShell title="ShareX" subtitle="Quick 3-step setup to use ShareX with Emberly">
             <section className="max-w-5xl mx-auto px-4">
-                <div className="mt-6 space-y-6">
-                    <section className="p-6">
-                        <h2 className="font-medium">Quick 3 steps (no extra manual steps)</h2>
-                        <ol className="list-decimal list-inside text-sm mt-2 space-y-4">
-                            <li>
-                                Go to <a href="https://emberly.site/dashboard/profile" target="_blank" rel="noreferrer" className="underline">https://emberly.site/dashboard/profile</a> and download the ShareX file by clicking the button shown below:
-                                <div className="mt-3">
-                                    <img src="https://embrly.ca/RDKNJ/Eu-BIA.png" alt="Download ShareX config button" className="rounded shadow-sm max-w-full" />
-                                </div>
-                            </li>
-
-                            <li>
-                                Download ShareX from its website: <a href="https://getsharex.com/" target="_blank" rel="noreferrer" className="underline">https://getsharex.com/</a>
-                            </li>
-
-                            <li>
-                                Open the downloaded ShareX installer (double-click the file). When the prompt appears, click the <strong>OK</strong> button as shown here:
-                                <div className="mt-3">
-                                    <img src="https://embrly.ca/RDKNJ/7VlHqN.png" alt="ShareX install prompt - click OK" className="rounded shadow-sm max-w-full" />
-                                </div>
-                            </li>
-                        </ol>
-                    </section>
-
-                    <section className="p-6">
-                        <h2 className="font-medium">Done</h2>
-                        <p className="text-sm text-muted-foreground mt-2">After those three steps ShareX will be installed and the Emberly config file will be available. No additional manual steps are required here.</p>
-                    </section>
+                <div className="mt-6">
+                    <div className="prose prose-invert max-w-none">
+                        <MarkdownRenderer>{markdown}</MarkdownRenderer>
+                    </div>
                 </div>
             </section>
         </PageShell>

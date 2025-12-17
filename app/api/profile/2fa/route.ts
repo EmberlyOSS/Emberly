@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import { authenticator } from 'otplib'
 import QRCode from 'qrcode'
 
-import { requireAuth } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
-import { apiError, apiResponse } from '@/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { compare } from 'bcryptjs'
+import { prisma } from '@/packages/lib/database/prisma'
+import { apiError, apiResponse } from '@/packages/lib/api/response'
 
 export async function GET(req: Request) {
     // generate a temporary secret and return otpauth and QR data URL
@@ -62,16 +63,24 @@ export async function DELETE(req: Request) {
     try {
         const { user, response } = await requireAuth(req)
         if (response) return response
-
         const body = await req.json()
         const token = body.token as string | undefined
+        const password = body.password as string | undefined
 
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { twoFactorSecret: true } })
+        // require password for disabling 2FA
+        if (!password) return apiError('Password is required to disable 2FA', 400)
+
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { twoFactorSecret: true, password: true } })
         if (!dbUser?.twoFactorSecret) {
             return apiError('2FA not enabled', 400)
         }
 
         if (!token) return apiError('Missing token', 400)
+
+        // verify password
+        if (!dbUser?.password) return apiError('Invalid credentials', 400)
+        const isPasswordValid = await compare(password, dbUser.password)
+        if (!isPasswordValid) return apiError('Invalid credentials', 400)
 
         const isValid = authenticator.check(token, dbUser.twoFactorSecret)
         if (!isValid) return apiError('Invalid token', 400)

@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
-import PartnerList from '@/components/dashboard/partners/partner-list'
-import { authOptions } from '@/lib/auth'
+import PartnerList from '@/packages/components/dashboard/partners/partner-list'
+import { authOptions } from '@/packages/lib/auth'
 
 export default async function PartnersPage() {
     const session = await getServerSession(authOptions)

@@ -7,22 +7,22 @@ import { useRouter } from 'next/navigation'
 import { InfoIcon } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 
-import { DynamicBackground } from '@/components/layout/dynamic-background'
-import { Icons } from '@/components/shared/icons'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
+import { Icons } from '@/packages/components/shared/icons'
+import { Alert, AlertDescription } from '@/packages/components/ui/alert'
+import { Button } from '@/packages/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader } from '@/packages/components/ui/card'
+import { Input } from '@/packages/components/ui/input'
+import { Label } from '@/packages/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/packages/components/ui/select'
 
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/packages/hooks/use-toast'
 
 interface SetupData {
   admin: {
@@ -129,7 +129,7 @@ export default function SetupPage() {
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-[450px] space-y-8">
-          {}
+          { }
           <div className="flex items-center justify-center">
             <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
@@ -142,7 +142,7 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {}
+          { }
           <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
             <div className="relative">

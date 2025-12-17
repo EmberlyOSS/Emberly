@@ -2,8 +2,8 @@ import Link from 'next/link'
 
 import { format } from 'date-fns'
 
-import { listPosts } from '@/lib/blog'
-import PageShell from '@/components/layout/PageShell'
+import { listPosts } from '@/packages/lib/blog'
+import PageShell from '@/packages/components/layout/PageShell'
 import {
   Table,
   TableHeader,
@@ -11,7 +11,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from '@/components/ui/table'
+} from '@/packages/components/ui/table'
 
 export default async function BlogListPage() {
   const posts = await listPosts({ publishedOnly: true, limit: 20, offset: 0 })

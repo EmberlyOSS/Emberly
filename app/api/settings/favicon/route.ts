@@ -4,10 +4,10 @@ import { PrismaClient } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
-import { authOptions } from '@/lib/auth'
-import { getConfig } from '@/lib/config'
-import { loggers } from '@/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/lib/storage'
+import { authOptions } from '@/packages/lib/auth'
+import { getConfig } from '@/packages/lib/config'
+import { loggers } from '@/packages/lib/logger'
+import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files
 

@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth/next'
 
-import TestimonialList from '@/components/dashboard/testimonials/testimonial-list'
-import { authOptions } from '@/lib/auth'
+import TestimonialList from '@/packages/components/dashboard/testimonials/testimonial-list'
+import { authOptions } from '@/packages/lib/auth'
 
 export default async function TestimonialsPage() {
     const session = await getServerSession(authOptions)

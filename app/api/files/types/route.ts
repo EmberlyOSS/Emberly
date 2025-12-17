@@ -1,9 +1,9 @@
-import { FileTypesResponse } from '@/types/dto/file'
+import { FileTypesResponse } from '@/packages/types/dto/file'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.files
 

@@ -1,4 +1,4 @@
-import { UserResponse, UserSchema } from '@/types/dto/user'
+import { UserResponse, UserSchema } from '@/packages/types/dto/user'
 import { hash } from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -7,11 +7,11 @@ import {
   apiError,
   apiResponse,
   paginatedResponse,
-} from '@/lib/api/response'
-import { requireAdmin, requireSuperAdmin } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
-import { getStorageProvider } from '@/lib/storage'
+} from '@/packages/lib/api/response'
+import { requireAdmin, requireSuperAdmin } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
+import { getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.users
 

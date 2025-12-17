@@ -1,7 +1,7 @@
 import React from 'react'
-import Countdown from '@/components/st5/Countdown'
-import Facts from '@/components/st5/Facts'
-import Comments from '@/components/st5/Comments'
+import Countdown from '@/packages/components/st5/Countdown'
+import Facts from '@/packages/components/st5/Facts'
+import Comments from '@/packages/components/st5/Comments'
 
 export const metadata = {
     title: 'ST5 | Fan hub',

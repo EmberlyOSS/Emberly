@@ -2,7 +2,7 @@ import {
   FileMetadata,
   FileUploadFormDataSchema,
   FileUploadResponse,
-} from '@/types/dto/file'
+} from '@/packages/types/dto/file'
 import { Prisma } from '@prisma/client'
 import { hash } from 'bcryptjs'
 import { join } from 'path'
@@ -12,19 +12,19 @@ import {
   apiError,
   apiResponse,
   paginatedResponse,
-} from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
+} from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
 import {
   getFileExpirationInfo,
   scheduleFileExpiration,
-} from '@/lib/events/handlers/file-expiry'
-import { getUniqueFilename } from '@/lib/files/filename'
-import { loggers } from '@/lib/logger'
-import { processImageOCR } from '@/lib/ocr'
-import { getStorageProvider } from '@/lib/storage'
-import { bytesToMB, urlForHost } from '@/lib/utils'
+} from '@/packages/lib/events/handlers/file-expiry'
+import { getUniqueFilename } from '@/packages/lib/files/filename'
+import { loggers } from '@/packages/lib/logger'
+import { processImageOCR } from '@/packages/lib/ocr'
+import { getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB, urlForHost } from '@/packages/lib/utils'
 
 const logger = loggers.files
 

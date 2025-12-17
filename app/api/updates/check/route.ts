@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import pkg from '@/package.json'
 import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/lib/auth'
-import { loggers } from '@/lib/logger'
+import { authOptions } from '@/packages/lib/auth'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.api
 

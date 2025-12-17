@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation'
 
 import { getServerSession } from 'next-auth'
 
-import { UserList } from '@/components/dashboard/user-list'
+import { UserList } from '@/packages/components/dashboard/user-list'
 
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/packages/lib/auth'
 
 export default async function UsersPage() {
   const session = await getServerSession(authOptions)

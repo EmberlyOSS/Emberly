@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation'
 
 import { getServerSession } from 'next-auth'
 
-import { PasteForm } from '@/components/dashboard/paste-form'
+import { PasteForm } from '@/packages/components/dashboard/paste-form'
 
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/packages/lib/auth'
 
 export default async function PastePage() {
   const session = await getServerSession(authOptions)

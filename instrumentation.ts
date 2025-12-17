@@ -1,7 +1,7 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { runStartupTasks } = await import('./lib/startup/index')
-    const { loggers } = await import('./lib/logger')
+    const { runStartupTasks } = await import('./packages/lib/startup/index')
+    const { loggers } = await import('./packages/lib/logger')
     const logger = loggers.startup
 
     // Run startup tasks asynchronously so they don't block server startup.

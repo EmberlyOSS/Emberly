@@ -4,9 +4,9 @@ import { hash } from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
-import { updateConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
+import { updateConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.startup
 

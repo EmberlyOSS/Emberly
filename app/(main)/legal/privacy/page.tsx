@@ -1,8 +1,8 @@
 import Link from 'next/link'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/packages/components/ui/card'
 
-import PageShell from '@/components/layout/PageShell'
+import PageShell from '@/packages/components/layout/PageShell'
 
 
 import { Metadata } from 'next'

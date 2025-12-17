@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server'
 
-import { FileUploadResponse } from '@/types/dto/file'
+import { FileUploadResponse } from '@/packages/types/dto/file'
 import { hash } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 import { readFile, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
-import { scheduleFileExpiration } from '@/lib/events/handlers/file-expiry'
-import { loggers } from '@/lib/logger'
-import { processImageOCR } from '@/lib/ocr'
-import { getStorageProvider } from '@/lib/storage'
-import { bytesToMB } from '@/lib/utils'
-import { getConfig } from '@/lib/config'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { scheduleFileExpiration } from '@/packages/lib/events/handlers/file-expiry'
+import { loggers } from '@/packages/lib/logger'
+import { processImageOCR } from '@/packages/lib/ocr'
+import { getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB } from '@/packages/lib/utils'
+import { getConfig } from '@/packages/lib/config'
 
 const logger = loggers.files
 

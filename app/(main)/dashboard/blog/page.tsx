@@ -1,12 +1,12 @@
 import dynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
-import { DashboardWrapper } from '@/components/dashboard/dashboard-wrapper'
+import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
 import { getServerSession } from 'next-auth'
-import { getConfig } from '@/lib/config'
-import { authOptions } from '@/lib/auth'
+import { getConfig } from '@/packages/lib/config'
+import { authOptions } from '@/packages/lib/auth'
 
 const BlogManager = dynamic(() =>
-  import('@/components/dashboard/blog/blog-manager').then((m) => m.BlogManager)
+  import('@/packages/components/dashboard/blog/blog-manager').then((m) => m.BlogManager)
 )
 
 export default async function BlogDashboardPage() {

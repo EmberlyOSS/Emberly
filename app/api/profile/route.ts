@@ -1,13 +1,13 @@
-import { ProfileResponse, UpdateProfileSchema } from '@/types/dto/profile'
+import { ProfileResponse, UpdateProfileSchema } from '@/packages/types/dto/profile'
 import { Prisma } from '@prisma/client'
 import { compare, hash } from 'bcryptjs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.users
 

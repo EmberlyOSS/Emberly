@@ -5,12 +5,12 @@ import { existsSync } from 'node:fs'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { requireAuth } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/lib/storage'
-import type { StorageProvider } from '@/lib/storage'
-import { clearProgress, updateProgress } from '@/lib/utils'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
+import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
+import type { StorageProvider } from '@/packages/lib/storage'
+import { clearProgress, updateProgress } from '@/packages/lib/utils'
 
 const logger = loggers.users
 
@@ -166,126 +166,126 @@ export async function GET(req: Request) {
     })
 
     archive.file(userDataPath, { name: 'user-data.json' })
-    ;(async () => {
-      try {
-        totalFiles = userData.files.length
-        updateProgress(userId, 0)
+      ; (async () => {
+        try {
+          totalFiles = userData.files.length
+          updateProgress(userId, 0)
 
-        if (totalFiles === 0) {
-          archive.finalize()
-          return
-        }
+          if (totalFiles === 0) {
+            archive.finalize()
+            return
+          }
 
-        for (const file of userData.files) {
-          try {
-            let fileData: Buffer | null = null
-            let filePath: string | null = null
+          for (const file of userData.files) {
+            try {
+              let fileData: Buffer | null = null
+              let filePath: string | null = null
 
-            if (isS3Storage) {
-              try {
-                fileData = await getFileContentFromStorage(
-                  storageProvider,
-                  file.path
-                )
-
-                filePath = join(exportDir, file.name)
-                await writeFile(filePath, fileData)
-              } catch (downloadErr) {
-                logger.error(
-                  `Error downloading file from S3: ${file.path}`,
-                  downloadErr as Error
-                )
-                logger.info(`Skipping file: ${file.name} (${file.path})`)
-                continue
-              }
-            } else {
-              const absolutePath = join('/', file.path)
-              const workspacePath = join(
-                process.cwd(),
-                'uploads',
-                file.path.split('uploads/')[1] || ''
-              )
-
-              if (existsSync(absolutePath)) {
-                filePath = absolutePath
-              } else if (existsSync(workspacePath)) {
-                filePath = workspacePath
-              } else {
-                logger.error(
-                  'File not found',
-                  new Error(`File not found: ${file.path}`)
-                )
-                continue
-              }
-            }
-
-            if (filePath) {
-              const zipPath = `files/${new Date(file.uploadedAt).toISOString().split('T')[0]}/${file.name}`
-              try {
-                archive.file(filePath, { name: zipPath })
-                successfulFiles++
-
-                const progress = Math.round(
-                  (successfulFiles / totalFiles) * 100
-                )
-                if (userId) {
-                  updateProgress(userId, progress)
-                }
-              } catch (archiveErr) {
-                logger.error(
-                  `Error adding file to archive: ${file.name}`,
-                  archiveErr as Error
-                )
-              }
-
-              if (isS3Storage && filePath.startsWith(exportDir)) {
+              if (isS3Storage) {
                 try {
-                  await rm(filePath)
-                } catch (cleanupErr) {
-                  logger.debug(`Error cleaning up temp file: ${filePath}`, {
-                    error: cleanupErr,
-                  })
+                  fileData = await getFileContentFromStorage(
+                    storageProvider,
+                    file.path
+                  )
+
+                  filePath = join(exportDir, file.name)
+                  await writeFile(filePath, fileData)
+                } catch (downloadErr) {
+                  logger.error(
+                    `Error downloading file from S3: ${file.path}`,
+                    downloadErr as Error
+                  )
+                  logger.info(`Skipping file: ${file.name} (${file.path})`)
+                  continue
+                }
+              } else {
+                const absolutePath = join('/', file.path)
+                const workspacePath = join(
+                  process.cwd(),
+                  'uploads',
+                  file.path.split('uploads/')[1] || ''
+                )
+
+                if (existsSync(absolutePath)) {
+                  filePath = absolutePath
+                } else if (existsSync(workspacePath)) {
+                  filePath = workspacePath
+                } else {
+                  logger.error(
+                    'File not found',
+                    new Error(`File not found: ${file.path}`)
+                  )
+                  continue
                 }
               }
-            }
-          } catch (error) {
-            logger.error(
-              `Error adding file ${file.name} to archive:`,
-              error as Error
-            )
-          }
-        }
 
-        try {
-          await archive.finalize()
-        } catch (error) {
-          logger.error('Error finalizing archive:', error as Error)
-        }
+              if (filePath) {
+                const zipPath = `files/${new Date(file.uploadedAt).toISOString().split('T')[0]}/${file.name}`
+                try {
+                  archive.file(filePath, { name: zipPath })
+                  successfulFiles++
 
-        setTimeout(async () => {
-          try {
-            if (exportDir) {
-              await rm(exportDir, { recursive: true })
-              logger.info(
-                `Export cleanup completed. ${successfulFiles}/${totalFiles} files were exported successfully.`
+                  const progress = Math.round(
+                    (successfulFiles / totalFiles) * 100
+                  )
+                  if (userId) {
+                    updateProgress(userId, progress)
+                  }
+                } catch (archiveErr) {
+                  logger.error(
+                    `Error adding file to archive: ${file.name}`,
+                    archiveErr as Error
+                  )
+                }
+
+                if (isS3Storage && filePath.startsWith(exportDir)) {
+                  try {
+                    await rm(filePath)
+                  } catch (cleanupErr) {
+                    logger.debug(`Error cleaning up temp file: ${filePath}`, {
+                      error: cleanupErr,
+                    })
+                  }
+                }
+              }
+            } catch (error) {
+              logger.error(
+                `Error adding file ${file.name} to archive:`,
+                error as Error
               )
             }
-          } catch (cleanupError) {
-            logger.error(
-              'Error cleaning up export directory:',
-              cleanupError as Error
-            )
           }
-        }, 5000)
-      } catch (error) {
-        logger.error('File processing error:', error as Error)
-        try {
-          await writer.close()
-        } catch (closeErr) {
-          logger.error('Error closing writer after error:', closeErr as Error)
+
+          try {
+            await archive.finalize()
+          } catch (error) {
+            logger.error('Error finalizing archive:', error as Error)
+          }
+
+          setTimeout(async () => {
+            try {
+              if (exportDir) {
+                await rm(exportDir, { recursive: true })
+                logger.info(
+                  `Export cleanup completed. ${successfulFiles}/${totalFiles} files were exported successfully.`
+                )
+              }
+            } catch (cleanupError) {
+              logger.error(
+                'Error cleaning up export directory:',
+                cleanupError as Error
+              )
+            }
+          }, 5000)
+        } catch (error) {
+          logger.error('File processing error:', error as Error)
+          try {
+            await writer.close()
+          } catch (closeErr) {
+            logger.error('Error closing writer after error:', closeErr as Error)
+          }
         }
-      }
-    })()
+      })()
 
     return new Response(readable, { headers })
   } catch (error) {

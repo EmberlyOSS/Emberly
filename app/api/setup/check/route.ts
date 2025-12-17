@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
-import { checkSetupCompletion } from '@/lib/database/setup'
-import { loggers } from '@/lib/logger'
+import { checkSetupCompletion } from '@/packages/lib/database/setup'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.startup
 

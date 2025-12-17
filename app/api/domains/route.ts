@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server'
 
 import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.domains || loggers.app
-import { createCustomHostname } from '@/lib/cloudflare/client'
+import { createCustomHostname } from '@/packages/lib/cloudflare/client'
 
 function determineAllowedFromSubs(subs: Array<any>) {
   const baseLimits: Record<string, number> = { free: 3, starter: 5, pro: 10 }

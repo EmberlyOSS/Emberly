@@ -1,7 +1,7 @@
 import React from 'react'
-import ChangelogList from '@/components/changelogs/ChangelogList'
-import { DashboardWrapper } from '@/components/dashboard/dashboard-wrapper'
-import { getConfig } from '@/lib/config'
+import ChangelogList from '@/packages/components/changelogs/ChangelogList'
+import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
+import { getConfig } from '@/packages/lib/config'
 
 export default async function Page() {
     const config = await getConfig()

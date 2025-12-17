@@ -1,6 +1,6 @@
-import { DashboardWrapper } from '@/components/dashboard/dashboard-wrapper'
+import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
 
-import { getConfig } from '@/lib/config'
+import { getConfig } from '@/packages/lib/config'
 
 import { Metadata } from 'next'
 

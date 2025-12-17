@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth, requireAdmin, getAuthenticatedUser } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAuth, requireAdmin, getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
 
 const MAX_LEN = 800
 

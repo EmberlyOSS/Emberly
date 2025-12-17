@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 
-import { getAuthenticatedUser } from '@/lib/auth/api-auth'
-import { loggers } from '@/lib/logger'
-import { getStorageProvider } from '@/lib/storage'
+import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
+import { loggers } from '@/packages/lib/logger'
+import { getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files
 

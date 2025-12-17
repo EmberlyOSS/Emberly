@@ -1,17 +1,17 @@
 import Link from 'next/link'
 
-import MiniGame from '@/components/games/mini-game'
-import { Icons } from '@/components/shared/icons'
-import { Button } from '@/components/ui/button'
+import MiniGame from '@/packages/components/games/mini-game'
+import { Icons } from '@/packages/components/shared/icons'
+import { Button } from '@/packages/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { DynamicBackground } from '@/components/layout/dynamic-background'
-import { BaseNav } from '@/components/layout/base-nav'
+} from '@/packages/components/ui/card'
+import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
+import { BaseNav } from '@/packages/components/layout/base-nav'
 
 export default function NotFound() {
   return (

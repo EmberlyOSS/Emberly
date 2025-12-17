@@ -1,14 +1,14 @@
 import Link from 'next/link'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
-import AddOnCheckout from '@/components/pricing/AddOnCheckout'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import AddOnCheckout from '@/packages/components/pricing/AddOnCheckout'
 
 import { Check, Cloud, ShieldCheck, Star, Users, Zap } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import CheckoutButton from '@/components/payments/CheckoutButton'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/packages/components/ui/button'
+import CheckoutButton from '@/packages/components/payments/CheckoutButton'
+import { Card, CardContent } from '@/packages/components/ui/card'
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions)

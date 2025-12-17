@@ -1,9 +1,9 @@
 import { Metadata } from 'next'
 
-import ConditionalBaseNav from '@/components/layout/conditional-base-nav'
-import FooterWrapper from '@/components/layout/footer-wrapper'
+import ConditionalBaseNav from '@/packages/components/layout/conditional-base-nav'
+import FooterWrapper from '@/packages/components/layout/footer-wrapper'
 
-import { getConfig } from '@/lib/config'
+import { getConfig } from '@/packages/lib/config'
 
 export const metadata: Metadata = {
   title: 'Emberly',

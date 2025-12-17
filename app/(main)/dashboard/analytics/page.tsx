@@ -1,7 +1,7 @@
 import React from 'react'
-import AnalyticsOverview from '@/components/dashboard/analytics/AnalyticsOverview'
+import AnalyticsOverview from '@/packages/components/dashboard/analytics/AnalyticsOverview'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/packages/lib/auth'
 
 export default async function AnalyticsPage() {
     const session = await getServerSession(authOptions)

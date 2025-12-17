@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
-import { S3StorageProvider, getStorageProvider } from '@/lib/storage'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
 
 export async function GET(
   req: Request,

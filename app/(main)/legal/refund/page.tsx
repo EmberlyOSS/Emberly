@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { Metadata } from 'next'
-import PageShell from '@/components/layout/PageShell'
+import PageShell from '@/packages/components/layout/PageShell'
 
 export const metadata: Metadata = {
     title: 'Refund Policy | Emberly',

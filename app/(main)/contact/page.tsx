@@ -1,6 +1,6 @@
-import ContactLinks from "@/components/contact/ContactLinks"
-import ContactInfo from "@/components/contact/ContactInfo"
-import HomeShell from "@/components/layout/home-shell"
+import ContactLinks from "@/packages/components/contact/ContactLinks"
+import ContactInfo from "@/packages/components/contact/ContactInfo"
+import HomeShell from "@/packages/components/layout/home-shell"
 
 export const metadata = {
     title: "Contact | Emberly",

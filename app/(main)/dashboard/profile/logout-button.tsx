@@ -3,9 +3,9 @@
 import { LogOut } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/packages/components/ui/button'
 
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/packages/hooks/use-toast'
 
 export function LogoutButton() {
   const { toast } = useToast()
