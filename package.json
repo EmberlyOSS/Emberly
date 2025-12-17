@@ -111,12 +111,15 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^20.19.9",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@types/uuid": "^10.0.0",
     "babel-plugin-react-compiler": "^19.0.0-beta-ebf51a3-20250411",
+    "commitlint": "^19.8.1",
     "eslint-config-next": "^15.4.4",
     "husky": "^8.0.3",
     "knip": "^5.62.0",
@@ -129,7 +132,16 @@
     "typescript": "^5.8.3"
   },
   "lint-staged": {
-    "**/*.{ts,tsx,js,jsx,json,md}": "prettier --write"
+    "*.{js,jsx,ts,tsx}": [
+      "next lint .",
+      "prettier -w ."
+    ],
+    "*.{css,scss}": [
+      "prettier -w ."
+    ],
+    "*.{json,md}": [
+      "prettier --w ."
+    ]
   },
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }

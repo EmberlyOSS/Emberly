@@ -16,12 +16,15 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Snowfall: site-wide falling-snow visual component added and wired to theme detection so it activates for Christmas/Holly themes.
 - Docs now render through `MarkdownRenderer` (Getting Started, API, Custom Domains, User Guide, ShareX, Flameshot) for consistent anchors, code fence styling, and link handling across docs/blog.
 - Dashboard file grid UX: filters wrap and size correctly on mobile (full-width stack, tighter gaps), and the desktop search now starts collapsed and toggles open/closed via a search button for better readability.
+- Commitlint for enforcing some sort of standard with commit messages.
 
 ### Changed (patch)
 - Server-side password verification when disabling 2FA: DELETE `/api/profile/2fa` now requires account password and verifies with `bcrypt.compare` before clearing 2FA.
 - Client robustness fixes: include credentials on profile/2fa fetches, unwrap API response envelope (`payload.data ?? payload`), visible fetch errors and debug logs to surface failures.
 - Navigation & UI tweaks: `BaseNav` avatar now links to `/dashboard/profile` to match `UserNav`, mobile sheet trigger/footers improved, and modal z-index/overflow fixes.
 - Navigation dropdown chevrons now animate/rotate on desktop for both base and dashboard navs.
+- Updated knip configuration (incorrect entrypoints).
+- Updated husky configs and lint-staged.
 
 ### Fixed (patch)
 - Fixed broken JSX/parse error in `components/profile/security/profile-security.tsx` and restored a working client component.
