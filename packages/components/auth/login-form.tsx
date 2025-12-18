@@ -114,7 +114,10 @@ export function LoginForm({
           </div>
         )}
       </div>
-      <div className="pt-6">
+      <div className="pt-2 flex items-center justify-between text-sm text-primary">
+        <Link href="/auth/forgot" className="hover:underline">Forgot password?</Link>
+      </div>
+      <div className="pt-4">
         <Button
           type="submit"
           className="w-full h-11 font-medium bg-primary hover:bg-primary/90 transition-colors"

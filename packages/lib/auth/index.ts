@@ -5,6 +5,7 @@ import { JWT } from 'next-auth/jwt'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
 import { prisma } from '@/packages/lib/database/prisma'
+import { sendTemplateEmail, NewLoginEmail } from '@/packages/lib/emails'
 
 const userSelect = {
   id: true,
@@ -93,6 +94,46 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, req }) {
+      // Fire-and-forget new login email + last login metadata
+      const email = user?.email
+      if (email) {
+        const forwarded = req?.headers?.get('x-forwarded-for') || ''
+        const ip = forwarded.split(',')[0]?.trim() || req?.headers?.get('x-real-ip') || undefined
+        const userAgent = req?.headers?.get('user-agent') || undefined
+        const time = new Date().toISOString()
+        const manageUrl = `${process.env.APP_BASE_URL ||
+          process.env.NEXTAUTH_URL ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+          }/dashboard/security`
+
+        void prisma.user
+          .update({
+            where: { id: user.id as string },
+            data: {
+              lastLoginAt: new Date(time),
+              lastLoginIp: ip,
+              lastLoginUserAgent: userAgent,
+            },
+          })
+          .catch((err) => console.error('Failed to update last login metadata', err))
+
+        void sendTemplateEmail({
+          to: email,
+          subject: 'New sign-in to your Emberly account',
+          template: NewLoginEmail,
+          props: {
+            userName: user.name || undefined,
+            time,
+            location: undefined,
+            ipAddress: ip,
+            device: userAgent,
+            manageUrl,
+          },
+        }).catch((err) => console.error('Failed to send new login email', err))
+      }
+      return true
+    },
     async jwt({ token, user }): Promise<JWT> {
       if (user) {
         const sessionUser = user as UserWithSession

@@ -18,6 +18,12 @@ model User {
   twoFactorSecret             String?
   preferredUploadDomain       String?
   password                    String?
+  passwordResetToken          String?
+  passwordResetExpires        DateTime?
+  lastLoginAt                 DateTime?
+  lastLoginIp                 String?
+  lastLoginUserAgent          String?
+  verificationCodes           String[]             @default([])
   role                        UserRole             @default(USER)
   createdAt                   DateTime             @default(now())
   updatedAt                   DateTime             @updatedAt
