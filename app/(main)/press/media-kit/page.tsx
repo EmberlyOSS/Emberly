@@ -61,7 +61,7 @@ const BRAND_GUIDELINES = [
 const CONTACT_POINTS = [
     {
         label: 'Press email',
-        href: 'mailto:press@emberly.site',
+        href: 'mailto:press@embrly.ca',
         icon: Mail,
     },
     {

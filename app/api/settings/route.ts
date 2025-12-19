@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
     const config = await getConfig()
 
-    if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+    if (user.role !== 'SUPERADMIN') {
       const publicSettings: PublicSettings = {
         version: config.version,
         settings: {

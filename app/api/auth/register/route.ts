@@ -75,6 +75,22 @@ export async function POST(req: Request) {
       },
     })
 
+    // Assign default Spark plan if it exists
+    try {
+      const spark = await prisma.product.findFirst({ where: { slug: 'spark', active: true } })
+      if (spark) {
+        await prisma.subscription.create({
+          data: {
+            userId: user.id,
+            productId: spark.id,
+            status: 'active',
+          },
+        })
+      }
+    } catch (err) {
+      console.error('Failed to assign spark plan on signup', err)
+    }
+
     return NextResponse.json({
       user: {
         id: user.id,

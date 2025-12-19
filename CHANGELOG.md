@@ -4,11 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.0-alpha.7] - 2025-12-16
 
-## [1.0.0-alpha.6-patch.1] - 2025-12-16
-
-### Added / Changed (patch)
+### Added
+- Commitlint for enforcing some sort of standard with commit messages.
 - Server-side 2FA endpoints: `GET/POST/DELETE /api/profile/2fa` generating TOTP secrets and QR data (uses `otplib` + `qrcode`), plus client-friendly payloads.
 - Client 2FA flows: full enable flow (QR + code confirmation) and a new multi-step disable flow (warning → code → password → confirm → disable).
 - DB migration: `User` fields `twoFactorEnabled` and `twoFactorSecret` added and migrated locally to persist per-user 2FA state.
@@ -16,17 +15,26 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Snowfall: site-wide falling-snow visual component added and wired to theme detection so it activates for Christmas/Holly themes.
 - Docs now render through `MarkdownRenderer` (Getting Started, API, Custom Domains, User Guide, ShareX, Flameshot) for consistent anchors, code fence styling, and link handling across docs/blog.
 - Dashboard file grid UX: filters wrap and size correctly on mobile (full-width stack, tighter gaps), and the desktop search now starts collapsed and toggles open/closed via a search button for better readability.
-- Commitlint for enforcing some sort of standard with commit messages.
+- Transactional email system wired for outbound product comms and notifications (Resend-backed) with templated delivery.
+- Database-backed documentation: new `DocPage` model + admin UI (create/edit/publish/sort), published/draft visibility, and an `INTEGRATIONS` doc category.
+- Docs browsing UX: `DocsShell`/`DocsBrowser` with category tabs, search, pagination, last-updated metadata, and a clear "Read" CTA on cards; markdown fallbacks remain for unpublished docs.
+- Admin CMS tools: blog manager with Markdown editor/preview, post table, and helper copy; docs manager with category/status controls; refreshed partners/testimonials admin lists.
+- Product/pricing system: product CRUD APIs (`/api/products` + catalog endpoints), pricing helpers for plans/add-ons, admin product manager, add-on selector, FAQ, donations tab, custom pricing CTA, and current-plan display.
+- Markdown source docs added for hosting/users/main (API, custom domains, getting started, architecture, user guides) to back the new docs system.
+- Legal hub refreshed with glassmorphic cards and alert callout; legal pages continue to render via the catch-all DB route.
 
-### Changed (patch)
+### Changed
 - Server-side password verification when disabling 2FA: DELETE `/api/profile/2fa` now requires account password and verifies with `bcrypt.compare` before clearing 2FA.
 - Client robustness fixes: include credentials on profile/2fa fetches, unwrap API response envelope (`payload.data ?? payload`), visible fetch errors and debug logs to surface failures.
 - Navigation & UI tweaks: `BaseNav` avatar now links to `/dashboard/profile` to match `UserNav`, mobile sheet trigger/footers improved, and modal z-index/overflow fixes.
 - Navigation dropdown chevrons now animate/rotate on desktop for both base and dashboard navs.
+- Pricing page restructured into tabs (plans, add-ons, donations, FAQ) with billing toggle and expandable plan details.
+- Documentation pages now resolve from the database first and fall back to markdown; category routing and slug inference updated for integrations.
 - Updated knip configuration (incorrect entrypoints).
 - Updated husky configs and lint-staged.
+- Legal routing now uses only `/legal/[...slug]` backed by the database (markdown fallback removed; legacy individual legal routes deleted); legal content expanded across all policies (Terms, Privacy, Cookies, Security, AUP, Accessibility, SLA, Refund, GDPR, DMCA) and contact points standardized to email.
 
-### Fixed (patch)
+### Fixed
 - Fixed broken JSX/parse error in `components/profile/security/profile-security.tsx` and restored a working client component.
 - Fixed disable-modal not opening (modal nesting and button `type` issues resolved) and added a visible click debug counter during troubleshooting.
 - Resolved "Loading QR…" / 2FA state mismatch by fetching secrets at the correct lifecycle point and adding an initial `Checking 2FA…` UI while profile loads.
@@ -34,6 +42,7 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Defensive guards and runtime checks added across profile/settings pages to prevent TypeErrors (e.g., safe access of `quotas`).
 - Metadata robustness: Next metadata generation now validates inputs/base URLs, falls back to minimal metadata when data is missing/invalid, and avoids serialization crashes for embeds/OG cards.
 - Video delivery: local storage provider routes video extensions (mp4/webm/mov/avi/mkv) through `/api/files` for range-friendly playback and honors host overrides for correct streaming URLs.
+- Legal catch-all route now awaits `params` to avoid Next.js "params is a Promise" runtime errors.
 
 
 ## [1.0.0-alpha.6] - 2025-12-16

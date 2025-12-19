@@ -41,6 +41,7 @@ model User {
   defaultFileExpiration       FileExpiration       @default(DISABLED)
   defaultFileExpirationAction ExpiryAction         @default(DELETE)
   blogPosts                   BlogPost[]
+  docPages                    DocPage[]
   customDomains               CustomDomain[]
   subscriptions               Subscription[]
   oneOffPurchases             OneOffPurchase[]
@@ -48,6 +49,7 @@ model User {
   st5CommentReplies           St5CommentReply[]
   st5CommentReactions         St5CommentReaction[]
   testimonials                Testimonial[]
+  legalPages                  LegalPage[]
 }
 
 model File {
@@ -140,6 +142,43 @@ model BlogPost {
   updatedAt   DateTime   @updatedAt
 }
 
+model DocPage {
+  id          String      @id @default(cuid())
+  category    DocCategory
+  slug        String
+  title       String
+  content     String
+  excerpt     String?
+  status      DocStatus   @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int?
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([category, slug])
+  @@index([category, status, publishedAt])
+}
+
+model LegalPage {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  content     String
+  excerpt     String?
+  status      LegalStatus @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int?
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([sortOrder, publishedAt])
+}
+
 model CustomDomain {
   id             String    @id @default(cuid())
   domain         String    @unique
@@ -191,16 +230,22 @@ model Testimonial {
 
 // Billing / Stripe models
 model Product {
-  id                String   @id @default(cuid())
-  name              String
-  slug              String   @unique
-  description       String?
-  stripeProductId   String?  @unique
-  defaultPriceCents Int?
-  billingInterval   String? // e.g. "month", "year"
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String?
+  type                 String   @default("plan") // plan, addon, one-time
+  stripeProductId      String?  @unique
+  stripePriceMonthlyId String?  @unique
+  stripePriceYearlyId  String?  @unique
+  stripePriceOneTimeId String?  @unique
+  defaultPriceCents    Int?
+  billingInterval      String? // e.g. "month", "year"
+  features             String[] @default([])
+  active               Boolean  @default(true)
+  popular              Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   plans Subscription[]
 }
@@ -331,6 +376,25 @@ enum FileExpiration {
 enum ExpiryAction {
   DELETE
   SET_PRIVATE
+}
+
+enum DocCategory {
+  MAIN
+  USERS
+  HOSTING
+  INTEGRATIONS
+}
+
+enum DocStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LegalStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum PostStatus {

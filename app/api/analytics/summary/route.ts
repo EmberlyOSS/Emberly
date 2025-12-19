@@ -3,13 +3,17 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
-function planKeyForProduct(product: { id?: string | null; slug?: string | null; stripeProductId?: string | null } | null) {
+type PlanKey = 'free' | 'glow' | 'flare' | 'blaze' | 'enterprise'
+
+function planKeyForProduct(product: { id?: string | null; slug?: string | null; stripeProductId?: string | null } | null): PlanKey {
     if (!product) return 'free'
     const p = (product.slug || product.stripeProductId || '').toLowerCase()
-    if (p.includes('pro')) return 'pro'
-    if (p.includes('starter')) return 'starter'
-    if (p.includes('free')) return 'free'
-    return 'starter'
+    if (p.includes('flare') || p.includes('pro')) return 'flare'
+    if (p.includes('blaze') || p.includes('team') || p.includes('scale')) return 'blaze'
+    if (p.includes('enterprise') || p.includes('inferno')) return 'enterprise'
+    if (p.includes('glow') || p.includes('starter')) return 'glow'
+    if (p.includes('free') || p.includes('spark')) return 'free'
+    return 'glow'
 }
 
 export async function GET(req: Request) {
@@ -71,10 +75,10 @@ export async function GET(req: Request) {
                 verifiedDomains,
             },
             allowed: {
-                topFiles: plan === 'starter' || plan === 'pro',
-                topUrls: plan === 'starter' || plan === 'pro',
+                topFiles: plan === 'glow' || plan === 'flare' || plan === 'blaze' || plan === 'enterprise',
+                topUrls: plan === 'glow' || plan === 'flare' || plan === 'blaze' || plan === 'enterprise',
                 recentUploads: true, // available to all
-                detailedList: plan === 'pro',
+                detailedList: plan === 'flare' || plan === 'blaze' || plan === 'enterprise',
             },
         }
 

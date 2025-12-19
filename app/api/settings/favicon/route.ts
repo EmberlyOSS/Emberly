@@ -16,7 +16,7 @@ const prisma = new PrismaClient()
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (session?.user?.role !== 'ADMIN') {
+    if (session?.user?.role !== 'SUPERADMIN') {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 

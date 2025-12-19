@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -26,6 +26,7 @@ import {
   GitGraph,
   Handshake,
   ChartBar,
+  Gavel,
 } from 'lucide-react'
 
 import { Icons } from '@/packages/components/shared/icons'
@@ -51,13 +52,7 @@ const baseRoutes = [
   { href: '/about', label: 'About', icon: BookOpen },
   { href: '/contact', label: 'Contact', icon: Mail },
   { href: '/blog', label: 'Blog', icon: Rss },
-]
-
-const docsRoutes = [
-  { href: '/docs/getting-started', label: 'Getting Started', icon: FileText },
-  { href: '/docs/custom-domains', label: 'Custom Domains', icon: Globe },
-  { href: '/docs/api', label: 'API Reference', icon: FileText },
-  { href: '/docs/user', label: 'User Guide', icon: FileText },
+  { href: '/docs', label: 'Docs', icon: BookOpen },
 ]
 
 const extrasRoutes = [
@@ -77,16 +72,18 @@ const dashboardRoutes = [
 ]
 
 const adminRoutes = [
-  { href: '/dashboard/blog', label: 'Blog', icon: FileText },
-  { href: '/dashboard/users', label: 'Users', icon: Users },
-  { href: '/dashboard/partners', label: 'Partners', icon: Handshake },
-  { href: '/dashboard/testimonials', label: 'Testimonials', icon: MessageSquare },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/blog', label: 'Blogs', icon: BookOpen },
+  { href: '/admin/docs', label: 'Docs', icon: FileText },
+  { href: '/admin/legal', label: 'Legal', icon: Gavel },
+  { href: '/admin/products', label: 'Products', icon: CreditCard },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/partners', label: 'Partners', icon: Handshake },
+  { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
 const sections = [
   { id: 'base', title: 'Base', items: baseRoutes },
-  { id: 'docs', title: 'Documentation', items: docsRoutes },
   { id: 'dashboard', title: 'Dashboard', items: dashboardRoutes },
   { id: 'admin', title: 'Administration', items: adminRoutes },
   { id: 'extras', title: 'Extras', items: extrasRoutes },
@@ -108,13 +105,21 @@ function sectionIcon(id: string) {
 export function DashboardNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const { data: session } = useSession()
+  const adminItems = useMemo(
+    () => adminRoutes.filter((route) => route.href !== '/admin/settings' || session?.user?.role === 'SUPERADMIN'),
+    [session?.user?.role]
+  )
+  const computedSections = useMemo(
+    () => sections.map((sec) => (sec.id === 'admin' ? { ...sec, items: adminItems } : sec)),
+    [adminItems]
+  )
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sections.map((s) => [s.id, s.id === 'base']))
+    Object.fromEntries(computedSections.map((s) => [s.id, s.id === 'base']))
   )
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sections.map((s) => [s.id, false]))
+    Object.fromEntries(computedSections.map((s) => [s.id, false]))
   )
-  const { data: session } = useSession()
 
   const initials = session?.user?.name
     ?.split(' ')
@@ -122,7 +127,7 @@ export function DashboardNav() {
     .join('')
     .toUpperCase()
 
-  const visibleSections = sections.filter(
+  const visibleSections = computedSections.filter(
     (sec) => sec.id !== 'admin' || session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
   )
 

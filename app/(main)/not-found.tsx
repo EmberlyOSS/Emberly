@@ -22,9 +22,6 @@ export default function NotFound() {
           <div className="relative bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg p-2">
             <div className="relative flex h-16 items-center px-6">
               <DashboardNav />
-              <div className="ml-auto flex items-center space-x-4">
-                <UserNav />
-              </div>
             </div>
           </div>
         </div>

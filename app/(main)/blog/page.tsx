@@ -17,11 +17,11 @@ export default async function BlogListPage() {
   const posts = await listPosts({ publishedOnly: true, limit: 20, offset: 0 })
 
   return (
-    <PageShell title="Emberly Blog" subtitle="News, tips and updates about Emberly and file sharing best practices.">
-      <div className="max-w-7xl mx-auto py-0 px-0">
+    <PageShell title="Emberly Blog" subtitle="News, tips and updates about Emberly and file sharing best practices." bodyVariant="plain">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <main className="lg:col-span-2">
-            <div className="rounded-2xl border border-border/30 bg-background/40 p-4">
+            <div className="bg-border/30 p-4">
               {posts.length === 0 ? (
                 <div className="text-muted-foreground">No posts yet.</div>
               ) : (
@@ -71,14 +71,14 @@ export default async function BlogListPage() {
 
           <aside className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              <div className="rounded-2xl bg-background/10 border border-border/20 p-4">
+              <div className="rounded-2xl bg-border/50 border border-border/20 p-4">
                 <h3 className="text-lg font-semibold">About this blog</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Announcements, how-to guides, and updates from the Emberly team.
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-background/10 border border-border/20 p-4">
+              <div className="rounded-2xl bg-border/40 border border-border/20 p-4">
                 <h4 className="text-sm font-semibold">Quick Links</h4>
                 <ul className="mt-3 space-y-2 text-sm">
                   <li>

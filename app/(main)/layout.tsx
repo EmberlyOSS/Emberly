@@ -8,6 +8,7 @@ import { getConfig } from '@/packages/lib/config'
 export const metadata: Metadata = {
   title: 'Emberly',
   description: 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.',
+  
 }
 
 export default async function MainLayout({

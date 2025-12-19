@@ -41,7 +41,7 @@ export default async function HomePage() {
 
   return (
     <HomeShell>
-      <main className="py-16">
+      <main>
         <section className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>

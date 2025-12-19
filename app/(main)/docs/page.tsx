@@ -1,114 +1,60 @@
-import Link from 'next/link'
-
-import { Card, CardContent } from '@/packages/components/ui/card'
-import DocsCard from '@/packages/components/docs/DocsCard'
 import DocsAlert from '@/packages/components/docs/DocsAlert'
-import PageShell from '@/packages/components/layout/PageShell'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/packages/components/ui/table'
+import DocsShell from '@/packages/components/docs/DocsShell'
+import { listDocs } from '@/packages/lib/docs/service'
 
 export const metadata = {
   title: 'Documentation | Emberly',
   description: 'Guides, API reference, and examples to help you get started with Emberly.',
 }
 
-export default function DocsPage() {
+function docHref(category: string, slug: string): string | null {
+  if (category === 'HOSTING') return `/docs/hosting/${slug}`
+  if (category === 'USERS') {
+    if (slug === 'index' || slug === 'user') return '/docs/user'
+    return `/docs/user/${slug}`
+  }
+  if (category === 'INTEGRATIONS') {
+    if (slug === 'index') return '/docs/integrations'
+    return `/docs/integrations/${slug}`
+  }
+  if (category === 'MAIN') {
+    if (slug === 'index') return '/docs'
+    return `/docs/${slug}`
+  }
+  return null
+}
+
+export default async function DocsPage() {
+  const docs = await listDocs({ publishedOnly: true, limit: 500 })
+
+  const docItems = docs
+    .map((doc) => {
+      const href = docHref(doc.category, doc.slug)
+      if (!href) return null
+      return {
+        id: doc.id,
+        title: doc.title,
+        description: doc.excerpt ?? '',
+        category: doc.category,
+        href,
+        updatedAt: doc.updatedAt?.toISOString() ?? null,
+        authorName: doc.author?.name ?? null,
+      }
+    })
+    .filter(Boolean) as Parameters<typeof DocsShell>[0]['docs']
+
   return (
-    <PageShell title="Documentation" subtitle="Guides, API reference, and user docs for Emberly.">
-      <section className="max-w-7xl mx-auto px-4">
-        <div className="mt-8">
-          <div className="rounded-2xl border border-border/30 bg-background/40 p-4">
-            <Table>
-              <TableHeader>
-                <tr>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead />
-                </tr>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">
-                      <Link href="/docs/getting-started" className="hover:underline">Getting Started</Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>Step-by-step setup and deployment instructions for self-hosting Emberly.</TableCell>
-                  <TableCell>
-                    <Link href="/docs/getting-started" className="text-primary font-medium">Read</Link>
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">
-                      <Link href="/docs/api" className="hover:underline">API Reference</Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>Examples for the REST API, authentication, and code samples.</TableCell>
-                  <TableCell>
-                    <Link href="/docs/api" className="text-primary font-medium">Read</Link>
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">
-                      <Link href="/docs/user" className="hover:underline">User Guide</Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>User-facing documentation: profile, uploads, short links, and managing custom domains.</TableCell>
-                  <TableCell>
-                    <Link href="/docs/user" className="text-primary font-medium">Read</Link>
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">
-                      <Link href="/docs/user/flameshot" className="hover:underline">Flameshot</Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>Quick guide for capturing, annotating, and uploading screenshots using Flameshot (Linux).</TableCell>
-                  <TableCell>
-                    <Link href="/docs/user/flameshot" className="text-primary font-medium">Read</Link>
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">
-                      <Link href="/docs/user/sharex" className="hover:underline">ShareX</Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>Quick setup for ShareX and how to use it with Emberly (Windows).</TableCell>
-                  <TableCell>
-                    <Link href="/docs/user/sharex" className="text-primary font-medium">Read</Link>
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">
-                      <Link href="/docs/custom-domains" className="hover:underline">Custom Domains</Link>
-                    </div>
-                  </TableCell>
-                  <TableCell>DNS requirements, verification flow, and Cloudflare provisioning notes.</TableCell>
-                  <TableCell>
-                    <Link href="/docs/custom-domains" className="text-primary font-medium">Read</Link>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="lg:col-span-3 mt-6">
-            <DocsAlert title="Open Source Note">
-              Emberly is open-source. This live site includes some proprietary
-              pages (pricing, hosted docs). The OSS repo may not include those pages.
-            </DocsAlert>
-          </div>
-        </div>
-      </section>
-    </PageShell>
+    <DocsShell
+      title="Documentation"
+      subtitle="Guides, API reference, and user docs for Emberly."
+      bodyVariant="card"
+      docs={docItems}
+      footer={(
+        <DocsAlert title="Open Source Note">
+          Emberly is open source. This live site includes some proprietary pages (pricing, hosted docs, blog etc), that
+          the OSS repo may not contain.
+        </DocsAlert>
+      )}
+    />
   )
 }

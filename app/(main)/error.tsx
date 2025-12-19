@@ -26,9 +26,6 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           <div className="relative rounded-2xl border border-border/50 bg-background/85 p-2 shadow-lg backdrop-blur-xl">
             <div className="relative flex h-16 items-center px-4 sm:px-6">
               <DashboardNav />
-              <div className="ml-auto flex items-center space-x-4">
-                <UserNav />
-              </div>
             </div>
           </div>
         </div>
