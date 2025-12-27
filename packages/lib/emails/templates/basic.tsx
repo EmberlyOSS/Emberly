@@ -4,7 +4,8 @@ export type BasicEmailProps = {
     title: string
     preheader?: string
     headline?: string
-    body: string[]
+    body?: string[]
+    children?: React.ReactNode
     cta?: {
         label: string
         href: string
@@ -43,6 +44,7 @@ export function BasicEmail({
     preheader,
     headline,
     body,
+    children,
     cta,
     footerNote,
 }: BasicEmailProps): ReactElement {
@@ -87,32 +89,40 @@ export function BasicEmail({
                                 overflow: 'hidden',
                             }}>
                                 <tbody>
-                                    {/* Header with gradient accent */}
+                                    {/* Header with improved layout */}
                                     <tr>
                                         <td style={{
-                                            padding: '32px 40px 24px',
+                                            padding: '40px 40px 32px',
                                             borderBottom: `1px solid ${COLORS.border}`,
+                                            background: `linear-gradient(to bottom, ${COLORS.bgCardAlt}, ${COLORS.bgCard})`
                                         }}>
-                                            {/* Logo */}
-                                            <table role="presentation" cellPadding="0" cellSpacing="0">
+                                            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0">
                                                 <tbody>
                                                     <tr>
-                                                        <td style={{ paddingBottom: '24px' }}>
-                                                            <table role="presentation" cellPadding="0" cellSpacing="0">
+                                                        <td>
+                                                             {/* Emberly Logo/Brand */}
+                                                             <table role="presentation" cellPadding="0" cellSpacing="0">
                                                                 <tbody>
                                                                     <tr>
                                                                         <td style={{
-                                                                            width: '10px',
-                                                                            height: '10px',
-                                                                            backgroundColor: COLORS.ember,
-                                                                            borderRadius: '3px',
-                                                                        }} />
+                                                                            width: '24px',
+                                                                            height: '24px',
+                                                                        }}>
+                                                                            <img
+                                                                                src={`${process.env.NEXT_PUBLIC_APP_URL || 'https://emberly.site'}/icon.svg`}
+                                                                                width="24"
+                                                                                height="24"
+                                                                                alt="Emberly"
+                                                                                style={{ display: 'block', borderRadius: '4px' }}
+                                                                            />
+                                                                        </td>
                                                                         <td style={{
-                                                                            paddingLeft: '10px',
-                                                                            fontSize: '20px',
+                                                                            paddingLeft: '12px',
+                                                                            fontSize: '22px',
                                                                             fontWeight: 700,
                                                                             color: COLORS.textPrimary,
                                                                             letterSpacing: '-0.5px',
+                                                                            fontFamily: '"Outfit", sans-serif',
                                                                         }}>
                                                                             Emberly
                                                                         </td>
@@ -121,31 +131,35 @@ export function BasicEmail({
                                                             </table>
                                                         </td>
                                                     </tr>
+                                                    <tr>
+                                                        <td style={{ height: '32px' }} />
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            <h1 style={{
+                                                                margin: 0,
+                                                                fontSize: '32px',
+                                                                fontWeight: 700,
+                                                                color: COLORS.textPrimary,
+                                                                lineHeight: '40px',
+                                                                letterSpacing: '-1px',
+                                                                fontFamily: '"Outfit", sans-serif',
+                                                            }}>
+                                                                {headline || title}
+                                                            </h1>
+                                                        </td>
+                                                    </tr>
                                                 </tbody>
                                             </table>
-                                            {/* Headline */}
-                                            <h1 style={{
-                                                margin: 0,
-                                                fontSize: '28px',
-                                                fontWeight: 700,
-                                                color: COLORS.textPrimary,
-                                                lineHeight: '36px',
-                                                letterSpacing: '-0.5px',
-                                            }}>
-                                                {headline || title}
-                                            </h1>
                                         </td>
                                     </tr>
 
                                     {/* Body content */}
                                     <tr>
-                                        <td style={{ padding: '32px 40px' }}>
-                                            {body.map((paragraph, idx) => (
+                                        <td style={{ padding: '32px 40px', fontSize: '15px', lineHeight: '26px', color: COLORS.textSecondary }}>
+                                            {children ? children : body?.map((paragraph, idx) => (
                                                 <p key={idx} style={{
                                                     margin: idx === body.length - 1 ? 0 : '0 0 16px',
-                                                    fontSize: '15px',
-                                                    lineHeight: '26px',
-                                                    color: COLORS.textSecondary,
                                                 }}>
                                                     {paragraph}
                                                 </p>

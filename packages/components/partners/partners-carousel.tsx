@@ -60,23 +60,7 @@ export default function PartnersCarousel({ partners }: Props) {
     }
   }, [])
 
-  // Close expanded/active state and resume when clicking/tapping outside
-  useEffect(() => {
-    function onPointerDown(e: PointerEvent) {
-      const target = e.target as Node | null
-      const el = scrollerRef.current
-      if (!el) return
-      if (target && !el.contains(target)) {
-        setExpandedIndex(null)
-        setActiveIndex(null)
-        pausedRef.current = false
-        setPaused(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [])
+  // No longer needed: click-outside listener removed as per user request
 
   function pause() {
     pausedRef.current = true
@@ -84,10 +68,8 @@ export default function PartnersCarousel({ partners }: Props) {
   }
 
   function resume() {
-    if (expandedIndex === null && activeIndex === null) {
-      pausedRef.current = false
-      setPaused(false)
-    }
+    pausedRef.current = false
+    setPaused(false)
   }
 
   function handleEnter(baseIdx: number) {
@@ -99,6 +81,12 @@ export default function PartnersCarousel({ partners }: Props) {
   function handleLeave() {
     setActiveIndex(null)
     if (expandedIndex === null) resume()
+  }
+
+  function handleGlobalLeave() {
+    setActiveIndex(null)
+    setExpandedIndex(null)
+    resume()
   }
 
   function handleToggleExpand(baseIdx: number, event: React.MouseEvent | React.TouchEvent) {
@@ -160,8 +148,8 @@ export default function PartnersCarousel({ partners }: Props) {
           <div
             ref={scrollerRef}
             className="flex gap-4 items-center whitespace-nowrap overflow-hidden py-6 px-2"
-            onMouseLeave={() => resume()}
-            onPointerLeave={() => resume()}
+            onMouseLeave={handleGlobalLeave}
+            onPointerLeave={handleGlobalLeave}
           >
             {doubled.map((p, idx) => {
               const baseIdx = count > 0 ? idx % count : 0
@@ -242,15 +230,6 @@ export default function PartnersCarousel({ partners }: Props) {
             </div>
             {/* Arrow */}
             <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-background/95 border-l border-t border-border/50 rotate-45" />
-          </div>
-        )}
-
-        {/* Paused indicator */}
-        {paused && (
-          <div className="flex justify-center mt-4">
-            <span className="text-xs text-muted-foreground bg-background/50 px-3 py-1 rounded-full">
-              Paused • Click outside to resume
-            </span>
           </div>
         )}
       </div>

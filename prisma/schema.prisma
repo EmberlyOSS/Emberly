@@ -63,32 +63,38 @@ model User {
   editSuggestions             FileEditSuggestion[] @relation("SuggestionAuthor")
   reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
   loginHistory                LoginHistory[]
+
+  @@index([role])
+  @@index([createdAt])
 }
 
 model File {
-  id                    String                 @id @default(cuid())
-  name                  String
-  urlPath               String                 @unique
-  mimeType              String
-  size                  Float
-  visibility            FileVisibility         @default(PUBLIC)
-  uploadedAt            DateTime               @default(now())
-  updatedAt             DateTime               @default(now()) @updatedAt
-  userId                String
-  path                  String
-  isOcrProcessed        Boolean                @default(false)
-  ocrText               String?
-  password              String?
-  isPaste               Boolean                @default(false)
-  ocrConfidence         Float?
-  views                 Int                    @default(0)
-  downloads             Int                    @default(0)
+  id               String                 @id @default(cuid())
+  name             String
+  urlPath          String                 @unique
+  mimeType         String
+  size             Float
+  visibility       FileVisibility         @default(PUBLIC)
+  uploadedAt       DateTime               @default(now())
+  updatedAt        DateTime               @default(now()) @updatedAt
+  userId           String
+  path             String
+  isOcrProcessed   Boolean                @default(false)
+  ocrText          String?
+  password         String?
+  isPaste          Boolean                @default(false)
+  ocrConfidence    Float?
+  views            Int                    @default(0)
+  downloads        Int                    @default(0)
   // Collaboration settings
-  allowSuggestions      Boolean                @default(false)
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  st5CommentAttachments St5CommentAttachment[]
-  collaborators         FileCollaborator[]
-  editSuggestions       FileEditSuggestion[]
+  allowSuggestions Boolean                @default(false)
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  editSuggestions  FileEditSuggestion[]
+  collaborators    FileCollaborator[]
+  st5Attachments   St5CommentAttachment[]
+
+  @@index([visibility, uploadedAt]) // Recent public files
+  @@index([isOcrProcessed]) // Worker queue filtering
 }
 
 // Collaborators who can edit a file
@@ -194,6 +200,7 @@ model Event {
   @@index([actorId])
   @@index([actorId, createdAt])
   @@index([isAuditable, createdAt])
+  @@index([status, priority, scheduledAt]) // Optimized valid job queue polling
 }
 
 model EventHandler {
@@ -348,6 +355,7 @@ model Subscription {
 
   @@index([userId])
   @@index([productId])
+  @@index([status, currentPeriodEnd]) // Expiration check speedup
 }
 
 // One-off purchases for extra-storage, custom-domain purchases, etc.

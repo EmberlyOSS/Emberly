@@ -109,7 +109,12 @@ export function DashboardNav() {
   const [open, setOpen] = useState(false)
   const { data: session } = useSession()
   const adminItems = useMemo(
-    () => adminRoutes.filter((route) => route.href !== '/admin/settings' || session?.user?.role === 'SUPERADMIN'),
+    () =>
+      adminRoutes.filter(
+        (route) =>
+          !['/admin/settings', '/admin/email'].includes(route.href) ||
+          session?.user?.role === 'SUPERADMIN'
+      ),
     [session?.user?.role]
   )
   const computedSections = useMemo(

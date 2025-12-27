@@ -202,6 +202,8 @@ export function LegalEditor({ legalId, onSaved, onCancel }: Props) {
                         <Input
                             id="sortOrder"
                             type="number"
+                            min="0"
+                            step="1"
                             value={sortOrder}
                             onChange={(e) => setSortOrder(e.target.value)}
                             placeholder="0"

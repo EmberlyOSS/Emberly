@@ -1009,6 +1009,7 @@ export function UserList() {
                           onChange={(e) =>
                             setFormData({ ...formData, storageQuotaMB: e.target.value === '' ? null : Number(e.target.value) })
                           }
+                          min="0"
                           placeholder="e.g. 10240"
                         />
                       </div>
@@ -1022,6 +1023,7 @@ export function UserList() {
                           onChange={(e) =>
                             setFormData({ ...formData, grantStorageGB: e.target.value === '' ? undefined : Number(e.target.value) })
                           }
+                          min="0"
                           placeholder="e.g. 10"
                         />
                       </div>
@@ -1035,6 +1037,7 @@ export function UserList() {
                           onChange={(e) =>
                             setFormData({ ...formData, grantCustomDomains: e.target.value === '' ? undefined : Number(e.target.value) })
                           }
+                          min="0"
                           placeholder="e.g. 2"
                         />
                       </div>

@@ -1,6 +1,6 @@
 import Image from 'next/image'
 
-import { Infinity, AlertCircle, Copy, FileIcon, Loader2, Users } from 'lucide-react'
+import { Infinity, AlertCircle, Copy, FileIcon, Loader2, Users, CheckCircle } from 'lucide-react'
 
 // Theme-aware Emberly logo as inline SVG
 const EmberlyIcon = ({
@@ -43,4 +43,5 @@ export const Icons = {
   copy: Copy,
   infinity: Infinity,
   users: Users,
+  check: CheckCircle,
 } as const

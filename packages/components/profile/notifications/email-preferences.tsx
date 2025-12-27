@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { useRouter } from 'next/navigation'
 
@@ -43,8 +43,10 @@ const PREFERENCE_CONFIG = [
         label: 'Security Alerts',
         description: 'Login notifications, password changes, two-factor authentication updates, and suspicious activity alerts',
         icon: Shield,
-        required: false, // Users can disable but we recommend keeping it on
+        required: false,
         recommended: true,
+        colorClass: 'text-blue-500 bg-blue-500/10 border-blue-500/20 shadow-blue-500/10',
+        glowClass: 'bg-blue-500/10',
     },
     {
         key: 'account' as const,
@@ -53,6 +55,8 @@ const PREFERENCE_CONFIG = [
         icon: User,
         required: false,
         recommended: true,
+        colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/10',
+        glowClass: 'bg-emerald-500/10',
     },
     {
         key: 'billing' as const,
@@ -61,6 +65,8 @@ const PREFERENCE_CONFIG = [
         icon: CreditCard,
         required: false,
         recommended: true,
+        colorClass: 'text-purple-500 bg-purple-500/10 border-purple-500/20 shadow-purple-500/10',
+        glowClass: 'bg-purple-500/10',
     },
     {
         key: 'productUpdates' as const,
@@ -69,6 +75,8 @@ const PREFERENCE_CONFIG = [
         icon: Sparkles,
         required: false,
         recommended: false,
+        colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-amber-500/10',
+        glowClass: 'bg-amber-500/10',
     },
     {
         key: 'marketing' as const,
@@ -77,6 +85,8 @@ const PREFERENCE_CONFIG = [
         icon: Megaphone,
         required: false,
         recommended: false,
+        colorClass: 'text-pink-500 bg-pink-500/10 border-pink-500/20 shadow-pink-500/10',
+        glowClass: 'bg-pink-500/10',
     },
 ]
 
@@ -126,7 +136,7 @@ export function EmailPreferences({
         }
     }
 
-    const handlePreferenceChange = async (key: keyof EmailPreferences, value: boolean) => {
+    const handlePreferenceChange = useCallback(async (key: keyof EmailPreferences, value: boolean) => {
         setIsLoading(true)
         try {
             const newPreferences = { ...preferences, [key]: value }
@@ -159,7 +169,7 @@ export function EmailPreferences({
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [preferences, router, onUpdate, toast])
 
     const enabledCount = Object.values(preferences).filter(Boolean).length
 
@@ -179,7 +189,7 @@ export function EmailPreferences({
                         <Label htmlFor="notifications-master" className="text-base font-medium">
                             Email Notifications
                         </Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground" id="notifications-master-desc">
                             {notificationsEnabled
                                 ? `Receiving ${enabledCount} of ${PREFERENCE_CONFIG.length} notification types`
                                 : 'All email notifications are currently disabled'}
@@ -191,6 +201,8 @@ export function EmailPreferences({
                     checked={notificationsEnabled}
                     onCheckedChange={handleMasterToggle}
                     disabled={isLoading}
+                    aria-label="Toggle all email notifications"
+                    aria-describedby="notifications-master-desc"
                 />
             </div>
 
@@ -231,7 +243,6 @@ export function EmailPreferences({
                         </Button>
                     )}
                 </div>
-
                 {PREFERENCE_CONFIG.map((config) => {
                     const Icon = config.icon
                     const isEnabled = preferences[config.key]
@@ -239,38 +250,52 @@ export function EmailPreferences({
                     return (
                         <div
                             key={config.key}
-                            className={`flex items-start justify-between rounded-lg border p-4 transition-colors ${!notificationsEnabled ? 'opacity-50' : ''
+                            className={`flex items-start justify-between rounded-2xl border p-5 transition-all duration-300 group ${!notificationsEnabled ? 'opacity-40 grayscale-[0.5]' : 'hover:bg-accent/5 hover:border-accent/20'
+                                } ${isEnabled
+                                    ? 'bg-accent/5 border-accent/20 shadow-lg shadow-accent/5'
+                                    : 'bg-muted/10 border-transparent hover:border-muted-foreground/20'
                                 }`}
                         >
-                            <div className="flex gap-4">
-                                <div className={`p-2 rounded-lg ${isEnabled ? 'bg-primary/10' : 'bg-muted'}`}>
-                                    <Icon className={`h-4 w-4 ${isEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+                            <div className="flex gap-5">
+                                <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border transition-all duration-500 ${isEnabled
+                                    ? `backdrop-blur-xl ${config.colorClass}`
+                                    : 'bg-muted/20 border-border/50 text-muted-foreground'
+                                    }`}>
+                                    {isEnabled && (
+                                        <div className={`absolute inset-0 rounded-2xl ${config.glowClass} blur-xl opacity-50 group-hover:opacity-100 transition-opacity`} />
+                                    )}
+                                    <Icon className={`relative h-6 w-6 transition-transform duration-500 ${isEnabled ? 'scale-110' : 'scale-100'}`} />
                                 </div>
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
+                                <div className="space-y-1.5 pt-0.5">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <Label
                                             htmlFor={`pref-${config.key}`}
-                                            className="text-sm font-medium cursor-pointer"
+                                            className="text-base font-semibold cursor-pointer group-hover:text-primary transition-colors"
                                         >
                                             {config.label}
                                         </Label>
                                         {config.recommended && (
-                                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shrink-0">
                                                 Recommended
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-sm text-muted-foreground max-w-md">
+                                    <p className="text-sm text-muted-foreground leading-relaxed max-w-sm" id={`pref-${config.key}-desc`}>
                                         {config.description}
                                     </p>
                                 </div>
                             </div>
-                            <Switch
-                                id={`pref-${config.key}`}
-                                checked={isEnabled}
-                                onCheckedChange={(value) => handlePreferenceChange(config.key, value)}
-                                disabled={isLoading || !notificationsEnabled}
-                            />
+                            <div className="flex items-center self-center pl-4">
+                                <Switch
+                                    id={`pref-${config.key}`}
+                                    checked={isEnabled}
+                                    onCheckedChange={(value) => handlePreferenceChange(config.key, value)}
+                                    disabled={isLoading || !notificationsEnabled}
+                                    className="data-[state=checked]:bg-primary"
+                                    aria-label={`Toggle ${config.label}`}
+                                    aria-describedby={`pref-${config.key}-desc`}
+                                />
+                            </div>
                         </div>
                     )
                 })}

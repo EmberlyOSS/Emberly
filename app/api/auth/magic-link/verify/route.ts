@@ -10,53 +10,8 @@ const schema = z.object({
     email: z.string().email(),
 })
 
-export async function POST(req: Request) {
-    try {
-        const body = await req.json().catch(() => null)
-        const parsed = schema.safeParse(body)
-
-        if (!parsed.success) {
-            return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
-        }
-
-        const { token, email } = parsed.data
-        const hashedToken = createHash('sha256').update(token).digest('hex')
-
-        const user = await prisma.user.findUnique({
-            where: { email },
-            select: {
-                id: true,
-                email: true,
-                magicLinkToken: true,
-                magicLinkExpires: true,
-            },
-        })
-
-        if (
-            !user ||
-            !user.magicLinkToken ||
-            !user.magicLinkExpires ||
-            user.magicLinkToken !== hashedToken ||
-            user.magicLinkExpires.getTime() < Date.now()
-        ) {
-            return NextResponse.json({ error: 'Invalid or expired magic link' }, { status: 401 })
-        }
-
-        // Clear the magic link token after successful use
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                magicLinkToken: null,
-                magicLinkExpires: null,
-                sessionVersion: (user.id ? 1 : 0) + 1, // Increment to invalidate old sessions
-            },
-        })
-
-        return NextResponse.json({ ok: true, userId: user.id })
-    } catch (error) {
-        console.error('Magic link verification error:', error)
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-    }
+export async function POST() {
+    return NextResponse.json({ error: 'Endpoint deprecated. Verification happens during sign-in.' }, { status: 410 })
 }
 
 export async function GET(req: Request) {

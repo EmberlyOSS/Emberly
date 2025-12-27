@@ -384,7 +384,7 @@ export function SettingsManager() {
 	const handleStorageQuotaChange = (value: string) => {
 		if (!workingConfig?.settings?.general?.storage) return
 		const numValue = Number.parseInt(value)
-		if (Number.isNaN(numValue)) return
+		if (Number.isNaN(numValue) || numValue < 0) return
 
 		handleSettingChange('general', {
 			storage: {
@@ -403,7 +403,7 @@ export function SettingsManager() {
 	const handleMaxUploadSizeChange = (value: string) => {
 		if (!workingConfig?.settings?.general?.storage) return
 		const numValue = Number.parseInt(value)
-		if (Number.isNaN(numValue)) return
+		if (Number.isNaN(numValue) || numValue < 1) return
 
 		handleSettingChange('general', {
 			storage: {
@@ -712,6 +712,8 @@ export function SettingsManager() {
 											<div className="flex items-center gap-2 flex-1">
 												<Input
 													type="number"
+													min="0"
+													step="1"
 													value={workingConfig.settings.general.storage.quotas.default.value}
 													onChange={(e) => handleStorageQuotaChange(e.target.value)}
 													placeholder="500"
@@ -970,6 +972,8 @@ export function SettingsManager() {
 											<div className="flex items-center gap-2 flex-1">
 												<Input
 													type="number"
+													min="1"
+													step="1"
 													value={workingConfig.settings.general.storage.maxUploadSize.value}
 													onChange={(e) => handleMaxUploadSizeChange(e.target.value)}
 													placeholder="10"

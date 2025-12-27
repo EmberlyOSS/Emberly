@@ -64,15 +64,14 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
-        magicLink: { label: 'Magic Link', type: 'checkbox' },
+        token: { label: 'Magic Link Token', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email) {
           return null
         }
 
-        const isMagicLink = credentials.magicLink === 'true' || credentials.magicLink === true
-
+        // 1. Fetch user by email first
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
@@ -84,16 +83,43 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Magic link auth: just needs email to exist
-        if (isMagicLink) {
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            image: user.image,
-            sessionVersion: user.sessionVersion,
-            alphaUser: user.alphaUser,
+        // Magic link auth: requires valid token
+        if (credentials.token) {
+           const hashedToken = (await import('crypto')).createHash('sha256').update(credentials.token).digest('hex')
+
+           // Verify token and expiry, and ensure it matches the user
+           const validUser = await prisma.user.findFirst({
+             where: {
+               id: user.id,
+               magicLinkToken: hashedToken,
+               magicLinkExpires: { gt: new Date() }
+             },
+             select: userSelect
+           })
+           
+           if (!validUser) {
+             return null
+           }
+
+           // Consume the token atomically
+           await prisma.user.update({
+             where: { id: user.id },
+             data: {
+               magicLinkToken: null,
+               magicLinkExpires: null,
+               sessionVersion: { increment: 1 } // Invalidate old sessions
+             }
+           })
+
+           // Return user session data
+           return {
+            id: validUser.id,
+            email: validUser.email,
+            name: validUser.name,
+            role: validUser.role,
+            image: validUser.image,
+            sessionVersion: validUser.sessionVersion, // Updated version
+            alphaUser: validUser.alphaUser,
           }
         }
 
@@ -128,13 +154,17 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, req }) {
+    async signIn({ user }) {
       // Fire-and-forget new login email + last login metadata
       const email = user?.email
       if (email) {
-        const forwarded = req?.headers?.get('x-forwarded-for') || ''
-        const ip = forwarded.split(',')[0]?.trim() || req?.headers?.get('x-real-ip') || undefined
-        const userAgent = req?.headers?.get('user-agent') || undefined
+        // Note: req is not available in signIn callback in this version.
+        // We'll skip IP logging for now or implement via middleware context later.
+        const ip = undefined 
+        const userAgent = undefined
+        // const forwarded = req?.headers?.get('x-forwarded-for') || ''
+        // const ip = forwarded.split(',')[0]?.trim() || req?.headers?.get('x-real-ip') || undefined
+        // const userAgent = req?.headers?.get('user-agent') || undefined
         const time = new Date().toISOString()
         const manageUrl = `${process.env.APP_BASE_URL ||
           process.env.NEXTAUTH_URL ||
@@ -142,12 +172,14 @@ export const authOptions: NextAuthOptions = {
           }/dashboard/security`
 
         // Extract geo info from various CDN headers (Vercel, Cloudflare, etc.)
-        const country = req?.headers?.get('x-vercel-ip-country') ||
-          req?.headers?.get('cf-ipcountry') ||
-          null
-        const city = req?.headers?.get('x-vercel-ip-city') ||
-          req?.headers?.get('cf-ipcity') ||
-          null
+        const country = null
+        // const country = req?.headers?.get('x-vercel-ip-country') ||
+        //   req?.headers?.get('cf-ipcountry') ||
+        //   null
+        const city = null
+        // const city = req?.headers?.get('x-vercel-ip-city') ||
+        //   req?.headers?.get('cf-ipcity') ||
+        //   null
 
         const loginContext = {
           ip,

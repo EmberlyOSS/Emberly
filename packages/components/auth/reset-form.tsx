@@ -72,8 +72,8 @@ export function ResetForm() {
                         name="password"
                         type="password"
                         placeholder="Enter a new password"
-                        required
                         minLength={8}
+                        required
                         disabled={isLoading || isMissingToken}
                         className="h-11 bg-background/50 focus:bg-background transition-colors"
                         value={password}
@@ -89,8 +89,8 @@ export function ResetForm() {
                         name="confirmPassword"
                         type="password"
                         placeholder="Re-enter your new password"
-                        required
                         minLength={8}
+                        required
                         disabled={isLoading || isMissingToken}
                         className="h-11 bg-background/50 focus:bg-background transition-colors"
                         value={confirmPassword}

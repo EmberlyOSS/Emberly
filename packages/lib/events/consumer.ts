@@ -23,7 +23,7 @@ export class EventConsumer {
   private processing: Set<string> = new Set()
 
   // Track handlers that need to be synced to DB
-  private pendingDbSync: Array<{ eventType: string; handlerName: string; enabled: boolean }> = []
+  private pendingDbSync: Array<{ eventType: string; handler: string; enabled: boolean }> = []
   private dbSyncScheduled = false
 
   private constructor() { }
@@ -59,7 +59,7 @@ export class EventConsumer {
     })
 
     // Queue for background DB sync
-    this.pendingDbSync.push({ eventType, handlerName, enabled })
+    this.pendingDbSync.push({ eventType, handler: handlerName, enabled })
 
     // Return a mock registration (actual DB record will be created in background)
     return {
@@ -86,6 +86,13 @@ export class EventConsumer {
 
     const startTime = Date.now()
 
+    // 0. Add small random jitter to prevent thundering herd when multiple workers start
+    if (process.env.NODE_ENV !== 'test') {
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.random() * 2000)
+      )
+    }
+
     // 1. Cache to Redis first (fast, in-memory)
     try {
       await eventCache.cacheHandlers(handlersToSync)
@@ -95,43 +102,36 @@ export class EventConsumer {
       // Continue - Redis is optional
     }
 
-    // 2. Sync to DB in small batches to avoid transaction timeout
-    // With 74 handlers, we'll do ~8 batches of 10
-    const BATCH_SIZE = 10
+    // 2. Sync to DB one by one to avoid connection exhaustion
+    // We avoid Promise.all and $transaction to be as gentle as possible to the DB during startup
     let dbSynced = 0
     let dbErrors = 0
 
-    for (let i = 0; i < handlersToSync.length; i += BATCH_SIZE) {
-      const batch = handlersToSync.slice(i, i + BATCH_SIZE)
-
+    for (const h of handlersToSync) {
       try {
-        await prisma.$transaction(
-          batch.map((h) =>
-            prisma.eventHandler.upsert({
-              where: {
-                eventType_handler: {
-                  eventType: h.eventType,
-                  handler: h.handlerName,
-                },
-              },
-              update: {
-                enabled: h.enabled,
-                updatedAt: new Date(),
-              },
-              create: {
-                eventType: h.eventType,
-                handler: h.handlerName,
-                enabled: h.enabled,
-              },
-            })
-          ),
-          { timeout: 10000 } // 10 second timeout per batch
-        )
-        dbSynced += batch.length
+        await prisma.eventHandler.upsert({
+          where: {
+            eventType_handler: {
+              eventType: h.eventType,
+              handler: h.handler,
+            },
+          },
+          update: {
+            enabled: h.enabled,
+            updatedAt: new Date(),
+          },
+          create: {
+            eventType: h.eventType,
+            handler: h.handler,
+            enabled: h.enabled,
+          },
+        })
+        dbSynced++
       } catch (error) {
-        dbErrors += batch.length
-        logger.warn(`Failed to sync batch ${Math.floor(i / BATCH_SIZE) + 1} to DB`, { error })
-        // Continue with other batches
+        dbErrors++
+        logger.warn(`Failed to sync handler ${h.eventType}:${h.handler} to DB`, {
+          error: (error as Error).message,
+        })
       }
     }
 

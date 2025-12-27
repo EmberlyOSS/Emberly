@@ -29,12 +29,14 @@ export async function GET(
 
     let file = await prisma.file.findUnique({
       where: { urlPath },
+      include: { user: { select: { enableRichEmbeds: true } } },
     })
 
     if (!file && urlPath.includes(' ')) {
       const urlSafePath = urlPath.replace(/ /g, '-')
       file = await prisma.file.findUnique({
         where: { urlPath: urlSafePath },
+        include: { user: { select: { enableRichEmbeds: true } } },
       })
     }
 
@@ -67,6 +69,10 @@ export async function GET(
       })
     }
 
+    // Check if user has rich embeds disabled - if so, force download
+    const enableRichEmbeds = file.user?.enableRichEmbeds ?? true
+    const shouldForceDownload = isDownloadRequest || !enableRichEmbeds
+
     const storageProvider = await getStorageProvider()
     const isVideo = file.mimeType.startsWith('video/')
     const range = request.headers.get('range')
@@ -88,7 +94,7 @@ export async function GET(
         'Accept-Ranges': 'bytes',
         'Content-Length': chunkSize.toString(),
         'Content-Type': file.mimeType,
-        'Content-Disposition': `${isDownloadRequest ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
+        'Content-Disposition': `${shouldForceDownload ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
         'Cache-Control': isVideo ? 'public, max-age=31536000' : 'no-cache',
       }
 
@@ -101,7 +107,7 @@ export async function GET(
     const stream = await storageProvider.getFileStream(file.path)
     const headers = {
       'Content-Type': file.mimeType,
-      'Content-Disposition': `${isDownloadRequest ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
+      'Content-Disposition': `${shouldForceDownload ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
       'Cache-Control': isVideo ? 'public, max-age=31536000' : 'no-cache',

@@ -187,13 +187,14 @@ export async function PUT(req: Request) {
       ...(body.role !== undefined && { role: body.role }),
       ...(body.password && { password: await hash(body.password, 10) }),
       ...(body.urlId && { urlId: body.urlId }),
+      ...(body.storageQuotaMB !== undefined && { storageQuotaMB: body.storageQuotaMB }),
     }
     // If any of the following sensitive fields are present, require SUPERADMIN
     const sensitiveRequested =
       body.role !== undefined ||
-      raw.storageQuotaMB !== undefined ||
-      raw.grantStorageGB !== undefined ||
-      raw.grantCustomDomains !== undefined ||
+      body.storageQuotaMB !== undefined ||
+      body.grantStorageGB !== undefined ||
+      body.grantCustomDomains !== undefined ||
       raw.planProductId !== undefined ||
       raw.planSlug !== undefined
 
@@ -202,19 +203,15 @@ export async function PUT(req: Request) {
       if (saResp) return saResp
     }
 
-    // allow admins/superadmins to set explicit storage quota (MB)
-    if (raw.storageQuotaMB !== undefined) {
-      updateData.storageQuotaMB = raw.storageQuotaMB === null ? null : Number(raw.storageQuotaMB)
-    }
 
     // If admin requests to grant storage (in GB), create a one-off purchase record
-    if (raw.grantStorageGB && Number(raw.grantStorageGB) > 0) {
+    if (body.grantStorageGB !== undefined && body.grantStorageGB > 0) {
       try {
         await prisma.oneOffPurchase.create({
           data: {
             userId: body.id,
             type: 'extra_storage',
-            quantity: Math.max(1, Math.floor(Number(raw.grantStorageGB))),
+            quantity: Math.max(1, Math.floor(body.grantStorageGB)),
             amountCents: 0,
             metadata: { adminGranted: true },
           },
@@ -225,13 +222,13 @@ export async function PUT(req: Request) {
     }
 
     // If admin grants custom domain slots, create a one-off purchase record
-    if (raw.grantCustomDomains && Number(raw.grantCustomDomains) > 0) {
+    if (body.grantCustomDomains !== undefined && body.grantCustomDomains > 0) {
       try {
         await prisma.oneOffPurchase.create({
           data: {
             userId: body.id,
             type: 'custom_domain',
-            quantity: Math.max(1, Math.floor(Number(raw.grantCustomDomains))),
+            quantity: Math.max(1, Math.floor(body.grantCustomDomains)),
             amountCents: 0,
             metadata: { adminGranted: true },
           },

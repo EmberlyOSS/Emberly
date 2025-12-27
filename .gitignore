@@ -70,6 +70,7 @@ AGENTS.md
 # Database
 prisma/*.db
 prisma/*.db-journal
+prisma/generated/
 
 # Tesseract files
 eng.traineddata
