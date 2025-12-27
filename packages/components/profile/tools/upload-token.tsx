@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from 'react'
 
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, RefreshCcw } from 'lucide-react'
 
 import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/packages/components/ui/select'
 
 import { useUploadToken } from '@/packages/hooks/use-upload-token'
 
@@ -60,28 +67,36 @@ export function UploadToken() {
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Upload Host</Label>
-        <div className="flex items-center gap-2">
-          <select
+        <div className="flex items-center gap-2 max-w-sm">
+          <Select
             value={selected || ''}
-            onChange={(e) => setDomain(e.target.value)}
-            className="rounded-md border bg-background px-3 py-1 text-sm"
+            onValueChange={setDomain}
             disabled={loadingDomains}
           >
-            <option value="">(default)</option>
-            {(domains || []).map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setDomain('')}
-            disabled={loadingDomains}
-          >
-            Reset
-          </Button>
+            <SelectTrigger className="w-full bg-background/50 backdrop-blur-sm border-muted-foreground/20 focus:ring-primary/20">
+               <SelectValue placeholder="Select a host" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="default">(default)</SelectItem>
+                {(domains || []).map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          {selected && selected !== 'default' && (
+             <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setDomain('')}
+                disabled={loadingDomains}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                title="Reset to default"
+              >
+                <RefreshCcw className="h-4 w-4" />
+             </Button>
+          )}
         </div>
         <Label>Upload Token</Label>
         <p className="text-sm text-muted-foreground">

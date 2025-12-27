@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/packages/components/ui/button'
 import { Textarea } from '@/packages/components/ui/textarea'
 import { Label } from '@/packages/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/packages/components/ui/select'
 
 // Glass card wrapper component for consistent styling
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -149,18 +156,22 @@ export function ProfileTestimonials() {
 
                     <div className="space-y-2">
                         <Label className="text-sm font-medium">Rating (optional)</Label>
-                        <select
-                            value={rating}
-                            onChange={(e) => setRating(e.target.value === '' ? '' : Number(e.target.value))}
-                            className="block w-48 rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-black/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-colors"
+                        <Select
+                            value={rating === '' ? 'no-rating' : String(rating)}
+                            onValueChange={(val) => setRating(val === 'no-rating' ? '' : Number(val))}
                         >
-                            <option value="">No rating</option>
-                            <option value="5">5 — Excellent</option>
-                            <option value="4">4 — Good</option>
-                            <option value="3">3 — Okay</option>
-                            <option value="2">2 — Poor</option>
-                            <option value="1">1 — Bad</option>
-                        </select>
+                            <SelectTrigger className="w-48 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:ring-primary/20">
+                                <SelectValue placeholder="Select a rating" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="no-rating">No rating</SelectItem>
+                                <SelectItem value="5">5 — Excellent</SelectItem>
+                                <SelectItem value="4">4 — Good</SelectItem>
+                                <SelectItem value="3">3 — Okay</SelectItem>
+                                <SelectItem value="2">2 — Poor</SelectItem>
+                                <SelectItem value="1">1 — Bad</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2 pt-2">

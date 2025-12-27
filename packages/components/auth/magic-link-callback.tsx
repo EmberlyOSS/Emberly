@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import { Check } from 'lucide-react'
 
 import { Icons } from '@/packages/components/shared/icons'
 import { Button } from '@/packages/components/ui/button'
@@ -25,36 +26,26 @@ export function MagicLinkCallback() {
 
         const verify = async () => {
             try {
-                // Verify the magic link token
-                const verifyRes = await fetch('/api/auth/magic-link/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, email }),
-                })
-
-                if (!verifyRes.ok) {
-                    const data = await verifyRes.json().catch(() => ({}))
-                    throw new Error(data.error || 'Invalid or expired magic link')
-                }
-
                 setStatus('signing-in')
 
-                // Sign in the user with the credentials provider
+                // Sign in the user with the credentials provider, passing the token
                 const signInResult = await signIn('credentials', {
                     email,
-                    magicLink: true,
+                    token, // Pass the token directly
                     redirect: false,
                     callbackUrl: '/dashboard',
                 })
 
                 if (signInResult?.error) {
-                    throw new Error(signInResult.error || 'Failed to sign in')
+                    throw new Error('Invalid or expired magic link')
                 }
 
                 setStatus('success')
                 setTimeout(() => {
+                    // Force a hard reload to ensure session cookies are picked up freshly if needed, 
+                    // though router.push is usually fine.
                     router.push(signInResult?.url || '/dashboard')
-                }, 1000)
+                }, 500)
             } catch (err) {
                 console.error('Magic link error:', err)
                 setStatus('error')
@@ -99,7 +90,7 @@ export function MagicLinkCallback() {
                 {status === 'success' && (
                     <>
                         <div className="flex justify-center">
-                            <Icons.check className="h-8 w-8 text-green-600" />
+                            <Check className="h-8 w-8 text-green-600" />
                         </div>
                         <div>
                             <h1 className="text-2xl font-semibold text-green-600">Success!</h1>

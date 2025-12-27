@@ -18,9 +18,9 @@ export async function GET(req: Request) {
         }
 
         const Stripe = (await import('stripe')).default
-        const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' })
+        const stripe = new Stripe(stripeSecret, { apiVersion: '2025-11-17.clover' as any })
 
-        const portal = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/account` })
+        const portal = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/dashboard` })
 
         return NextResponse.redirect(portal.url || '/')
     } catch (err) {

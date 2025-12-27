@@ -48,6 +48,10 @@ export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
 export const maxDuration = 300 // 5 minutes max
 
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[\\/]/g, '_').replace(/^\.+/, '_').replace(/\.\.+/g, '_')
+}
+
 export async function GET(req: Request) {
   let exportDir: string | null = null
   let userId: string | null = null
@@ -205,7 +209,8 @@ export async function GET(req: Request) {
 
               // Add file directly from path (more efficient than reading into memory)
               const datePrefix = new Date(file.uploadedAt).toISOString().split('T')[0]
-              archive.file(localPath, { name: `files/${datePrefix}/${file.name}` })
+              const safeName = sanitizeFilename(file.name)
+              archive.file(localPath, { name: `files/${datePrefix}/${safeName}` })
               processedFiles++
 
               const progress = 15 + Math.round((processedFiles / totalFiles) * 80)
@@ -221,7 +226,8 @@ export async function GET(req: Request) {
           // For S3 files, append buffer to archive
           if (fileBuffer) {
             const datePrefix = new Date(file.uploadedAt).toISOString().split('T')[0]
-            archive.append(fileBuffer, { name: `files/${datePrefix}/${file.name}` })
+            const safeName = sanitizeFilename(file.name)
+            archive.append(fileBuffer, { name: `files/${datePrefix}/${safeName}` })
           }
 
           processedFiles++

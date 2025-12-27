@@ -28,13 +28,21 @@ export async function withLogging<T>(
   let sessionId: string | undefined
 
   try {
-    const session = await getServerSession()
-    if (session?.user) {
-      userId = (session.user as { id?: string }).id
-      sessionId = (session as { sessionToken?: string }).sessionToken
+    // Optimization: Only try to get session if a session cookie exists in headers
+    // This avoids expensive DB/token calls on public non-auth routes
+    const cookieHeader = req.headers.get('cookie') || ''
+    const hasSessionCookie = cookieHeader.includes('next-auth.session-token') || cookieHeader.includes('__Secure-next-auth.session-token')
+
+    if (hasSessionCookie) {
+        const session = await getServerSession()
+        if (session?.user) {
+          userId = (session.user as { id?: string }).id
+          sessionId = (session as { sessionToken?: string }).sessionToken
+        }
     }
   } catch (error) {
-    logger.debug('Could not get session for logging', { error })
+    // Silently fail session fetching for simple logging to avoid blocking response
+    // logger.debug('Could not get session for logging', { error })
   }
 
   const context: LoggingContext = {

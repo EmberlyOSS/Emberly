@@ -319,6 +319,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={handleCopyLink}
+                    aria-label="Copy link"
                   >
                     <LinkIcon className="h-4 w-4" />
                   </Button>
@@ -332,6 +333,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     asChild
+                    aria-label={`Download ${file.name}`}
                   >
                     <a
                       href={`/api/files/${file.id}/download`}
@@ -350,6 +352,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsVisibilityDialogOpen(true)}
+                    aria-label="Change visibility"
                   >
                     <EyeOff className="h-4 w-4" />
                   </Button>
@@ -363,6 +366,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsPasswordDialogOpen(true)}
+                    aria-label="Password protect"
                   >
                     <KeyRound className="h-4 w-4" />
                   </Button>
@@ -378,6 +382,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                       className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                       onClick={handleFetchOcr}
                       disabled={isLoadingOcr}
+                      aria-label="Extract text (OCR)"
                     >
                       <ScanText className="h-4 w-4" />
                     </Button>
@@ -392,6 +397,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsExpiryModalOpen(true)}
+                    aria-label="Manage expiration"
                   >
                     <Timer className="h-4 w-4" />
                   </Button>
@@ -405,6 +411,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsEmbedPreviewOpen(true)}
+                    aria-label="Embed preview"
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
@@ -418,6 +425,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     size="icon"
                     className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsDeleteDialogOpen(true)}
+                    aria-label="Delete file"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

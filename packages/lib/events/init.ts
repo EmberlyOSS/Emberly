@@ -54,10 +54,13 @@ export async function initializeEventSystem() {
     logger.info('Event system initialized', { duration })
 
     // Fetch stats but don't let failures block initialization
-    events
-      .getStats()
-      .then((stats) => logger.debug('Event queue stats', { stats }))
-      .catch((err) => logger.trace('Failed to fetch event stats', { err }))
+    // Initial fetch might timeout during heavy startup, which is fine
+    setTimeout(() => {
+      events
+        .getStats()
+        .then((stats) => logger.debug('Event queue stats', { stats }))
+        .catch(() => { /* silent fail on startup */ })
+    }, 5000)
   } catch (error) {
     logger.error('Failed to initialize event system', error as Error)
     throw error

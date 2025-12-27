@@ -130,6 +130,7 @@ export function RegisterForm() {
             className="h-11 bg-background/50 focus:bg-background transition-colors"
             autoComplete="new-password"
             placeholder="Create a strong password"
+            minLength={8}
           />
         </div>
         <div className="space-y-2">
@@ -145,6 +146,7 @@ export function RegisterForm() {
             className="h-11 bg-background/50 focus:bg-background transition-colors"
             autoComplete="new-password"
             placeholder="Confirm your password"
+            minLength={8}
           />
         </div>
         {error && (

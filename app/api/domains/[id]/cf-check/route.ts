@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
+import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { getCustomHostname, createCustomHostname, listCustomHostnames, listDnsRecords } from '@/packages/lib/cloudflare/client'
 
 const logger = loggers.domains
@@ -15,6 +16,12 @@ export async function POST(
 ) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
+
+    // Rate limit: 10 requests per 10 minutes per user
+    const { allowed } = await rateLimiter.check(`domains:cf-check:${session.user.id}`, 10, 600)
+    if (!allowed) {
+        return NextResponse.json({ error: 'Too many verification attempts. Please try again in 10 minutes.' }, { status: 429 })
+    }
 
     try {
         const { id } = await params

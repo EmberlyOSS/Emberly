@@ -173,7 +173,7 @@ export default function AdminProductManager() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="bg-background/50 border-border/50" />
+              <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={100} className="bg-background/50 border-border/50" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug</Label>

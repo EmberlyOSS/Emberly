@@ -83,26 +83,22 @@ export async function sendEmail({
     const response = await resend.emails.send(payload)
 
     if (response.error) {
-        // Track failed email
+        // Track failed email (fire-and-forget)
         if (!skipTracking) {
-            try {
-                await prisma.event.create({
-                    data: {
-                        type: 'email.sent',
-                        status: 'FAILED',
-                        payload: {
-                            to: Array.isArray(to) ? to : [to],
-                            subject,
-                            template: templateName || 'unknown',
-                            error: response.error.message,
-                        },
-                        failedAt: new Date(),
+             prisma.event.create({
+                data: {
+                    type: 'email.sent',
+                    status: 'FAILED',
+                    payload: {
+                        to: Array.isArray(to) ? to : [to],
+                        subject,
+                        template: templateName || 'unknown',
                         error: response.error.message,
                     },
-                })
-            } catch {
-                // Don't fail the email send if tracking fails
-            }
+                    failedAt: new Date(),
+                    error: response.error.message,
+                },
+            }).catch(() => { /* mute tracking errors */ })
         }
         throw new Error(response.error.message)
     }
@@ -116,24 +112,21 @@ export async function sendEmail({
     }
 
     // Track successful email
+    // Track successful email (fire-and-forget)
     if (!skipTracking) {
-        try {
-            await prisma.event.create({
-                data: {
-                    type: 'email.sent',
-                    status: 'COMPLETED',
-                    payload: {
-                        to: Array.isArray(to) ? to : [to],
-                        subject,
-                        template: templateName || 'unknown',
-                        messageId: id || 'unknown',
-                    },
-                    processedAt: new Date(),
+         prisma.event.create({
+            data: {
+                type: 'email.sent',
+                status: 'COMPLETED',
+                payload: {
+                    to: Array.isArray(to) ? to : [to],
+                    subject,
+                    template: templateName || 'unknown',
+                    messageId: id || 'unknown',
                 },
-            })
-        } catch {
-            // Don't fail the email send if tracking fails
-        }
+                processedAt: new Date(),
+            },
+        }).catch(() => { /* mute tracking errors */ })
     }
 
     // eslint-disable-next-line no-console

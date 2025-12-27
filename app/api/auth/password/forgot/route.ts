@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { PasswordResetEmail, sendTemplateEmail } from '@/packages/lib/emails'
+import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 
 const requestSchema = z.object({
     email: z.string().email(),
@@ -18,6 +19,14 @@ function getBaseUrl() {
 }
 
 export async function POST(req: Request) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
+    
+    // Rate limit: 1 request per 10 minutes per IP
+    const { allowed } = await rateLimiter.check(`auth:password:forgot:${ip}`, 1, 600)
+    if (!allowed) {
+        return NextResponse.json({ error: 'Too many requests. Please try again in 10 minutes.' }, { status: 429 })
+    }
+
     const body = await req.json().catch(() => null)
     const parsed = requestSchema.safeParse(body)
 

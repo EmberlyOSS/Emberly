@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
         const Stripe = (await import('stripe')).default
-        const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' })
+        const stripe = new Stripe(stripeSecret, { apiVersion: '2025-11-17.clover' as any }) // Force cast to fix weird type mismatch
 
         // ensure stripe customer (defensive: handle stale/test-mode IDs)
         let customerId = user.stripeCustomerId
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
             line_items: [{ price: priceId, quantity: 1 }],
             client_reference_id: user.id,
             metadata: { userId: user.id },
-            success_url: successUrl || `${process.env.NEXT_PUBLIC_BASE_URL || ''}/account`,
+            success_url: successUrl || `${process.env.NEXT_PUBLIC_BASE_URL || ''}/dashboard`,
             cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL || ''}/pricing`,
         })
 

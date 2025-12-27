@@ -343,17 +343,17 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="current-password">Current Password</Label>
-            <Input id="current-password" type="password" ref={currentPasswordRef} placeholder="Enter your current password" />
+            <Input id="current-password" type="password" ref={currentPasswordRef} placeholder="Enter your current password" required />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="new-password">New Password</Label>
-            <Input id="new-password" type="password" ref={newPasswordRef} placeholder="Enter your new password" />
+            <Input id="new-password" type="password" ref={newPasswordRef} placeholder="Enter your new password" minLength={8} required />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="confirm-password">Confirm New Password</Label>
-            <Input id="confirm-password" type="password" ref={confirmPasswordRef} placeholder="Confirm your new password" />
+            <Input id="confirm-password" type="password" ref={confirmPasswordRef} placeholder="Confirm your new password" minLength={8} required />
           </div>
         </div>
 
@@ -474,7 +474,7 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
                 {enableStep === 4 && (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">Enter the verification code sent to your email to confirm enabling 2FA.</p>
-                    <Input placeholder="000000" value={enableVerificationCode} onChange={(e) => setEnableVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength="6" />
+                    <Input placeholder="000000" value={enableVerificationCode} onChange={(e) => setEnableVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" onClick={() => setEnableStep(3)}>Back</Button>
                       <Button onClick={verifyEnable2FA} disabled={isLoading || enableVerificationCode.length < 6}>{isLoading ? 'Verifying...' : 'Enable 2FA'}</Button>
@@ -521,11 +521,11 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
                     <p className="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app and the verification code sent to your email.</p>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Authenticator Code</label>
-                      <Input placeholder="123456" value={disableToken} onChange={(e) => setDisableToken(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength="6" />
+                      <Input placeholder="123456" value={disableToken} onChange={(e) => setDisableToken(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Email Verification Code</label>
-                      <Input placeholder="000000" value={disableVerificationCode} onChange={(e) => setDisableVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength="6" />
+                      <Input placeholder="000000" value={disableVerificationCode} onChange={(e) => setDisableVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" onClick={() => setDisableStep(2)}>Back</Button>
