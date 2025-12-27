@@ -15,7 +15,7 @@ export function Footer() {
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <p className="text-sm text-muted-foreground">
-                  &copy; {new Date().getFullYear()} Emberly. All rights
+                  &copy; {new Date().getFullYear()} ByteBrush Studios. All rights
                   reserved.
                 </p>
                 <div className="hidden sm:block">

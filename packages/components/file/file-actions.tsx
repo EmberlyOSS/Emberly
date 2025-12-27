@@ -1,10 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import DOMPurify from 'dompurify'
-import { Copy, Download, ExternalLink, Link, ScanText } from 'lucide-react'
+import { Copy, Download, ExternalLink, Link, Pencil, ScanText, Send } from 'lucide-react'
+import NextLink from 'next/link'
+import { useSession } from 'next-auth/react'
 
+import { CollaboratorManager } from '@/packages/components/file/collaborator-manager'
+import { SuggestionManager } from '@/packages/components/file/suggestion-manager'
 import { OcrDialog } from '@/packages/components/shared/ocr-dialog'
 import { Button } from '@/packages/components/ui/button'
 
@@ -16,29 +20,56 @@ import { useToast } from '@/packages/hooks/use-toast'
 interface FileActionsProps {
   urlPath: string
   name: string
+  mimeType?: string
   verifiedPassword?: string
   showOcr?: boolean
   isTextBased?: boolean
   content?: string
   fileId?: string
+  fileUserId?: string
+  allowSuggestions?: boolean
+}
+
+interface CollaboratorInfo {
+  role: 'EDITOR' | 'SUGGESTER' | null
+  allowSuggestions: boolean
 }
 
 export function FileActions({
   urlPath,
   name,
+  mimeType,
   verifiedPassword,
   showOcr = false,
   isTextBased = false,
   content,
   fileId,
+  fileUserId,
+  allowSuggestions: initialAllowSuggestions = false,
 }: FileActionsProps) {
   const { toast } = useToast()
+  const { data: session } = useSession()
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [ocrText, setOcrText] = useState<string | null>(null)
   const [ocrError, setOcrError] = useState<string | null>(null)
   const [isLoadingOcr, setIsLoadingOcr] = useState(false)
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
   const [urls, setUrls] = useState<{ fileUrl: string; rawUrl: string }>()
+  const [collaboratorInfo, setCollaboratorInfo] = useState<CollaboratorInfo>({
+    role: null,
+    allowSuggestions: initialAllowSuggestions,
+  })
+
+  const isOwner = session?.user?.id === fileUserId
+  const isEditor = collaboratorInfo.role === 'EDITOR'
+  const isSuggester = collaboratorInfo.role === 'SUGGESTER'
+  const canEditDirectly = (isOwner || isEditor) && isTextBased && fileId
+  const canSuggest = !isOwner && (isSuggester || collaboratorInfo.allowSuggestions) && isTextBased && fileId
+
+  const isMarkdown = mimeType === 'text/markdown' ||
+    mimeType === 'text/x-markdown' ||
+    name.endsWith('.md') ||
+    name.endsWith('.markdown')
 
   const { copyUrl, download, openRaw } = useFileActions({
     urlPath,
@@ -51,6 +82,7 @@ export function FileActions({
     return DOMPurify.sanitize(url)
   }
 
+  // Initialize URLs - this was missing and caused urls to always be undefined
   useEffect(() => {
     const passwordParam = verifiedPassword
       ? `?password=${encodeURIComponent(DOMPurify.sanitize(verifiedPassword))}`
@@ -60,6 +92,29 @@ export function FileActions({
     const rawUrl = `${sanitizedUrlPath}/raw${passwordParam}`
     setUrls({ fileUrl, rawUrl })
   }, [urlPath, verifiedPassword])
+
+  // Fetch collaborator info for current user
+  const fetchCollaboratorInfo = useCallback(async () => {
+    if (!fileId || !session?.user || isOwner) return
+
+    try {
+      // Check if user is a collaborator by trying to access the file's collaboration status
+      const res = await fetch(`/api/files/${fileId}/collaborators/me`)
+      if (res.ok) {
+        const data = await res.json()
+        setCollaboratorInfo({
+          role: data.role || null,
+          allowSuggestions: data.allowSuggestions || false,
+        })
+      }
+    } catch {
+      // Silent fail - user might not be a collaborator
+    }
+  }, [fileId, session?.user, isOwner])
+
+  useEffect(() => {
+    fetchCollaboratorInfo()
+  }, [fetchCollaboratorInfo])
 
   const handleCopyText = async () => {
     if (!urls) return
@@ -148,33 +203,33 @@ export function FileActions({
   if (!urls) return null
 
   return (
-    <div className="flex items-center justify-center flex-wrap gap-3">
+    <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-3">
       <Button
         variant="outline"
         size="sm"
         onClick={copyUrl}
-        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl"
+        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
       >
-        <Link className="h-4 w-4 mr-2" />
-        Copy URL
+        <Link className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">Copy URL</span>
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={download}
-        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl"
+        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
       >
-        <Download className="h-4 w-4 mr-2" />
-        Download
+        <Download className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">Download</span>
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={openRaw}
-        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl"
+        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
       >
-        <ExternalLink className="h-4 w-4 mr-2" />
-        Raw
+        <ExternalLink className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">Raw</span>
       </Button>
       {showOcr && (
         <Button
@@ -182,10 +237,10 @@ export function FileActions({
           size="sm"
           onClick={handleOcr}
           disabled={isLoadingOcr}
-          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl"
+          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
         >
-          <ScanText className="h-4 w-4 mr-2" />
-          Extract Text (OCR)
+          <ScanText className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">OCR</span>
         </Button>
       )}
       {isTextBased && (
@@ -193,11 +248,45 @@ export function FileActions({
           variant="outline"
           size="sm"
           onClick={handleCopyText}
-          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl"
+          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
         >
-          <Copy className="h-4 w-4 mr-2" />
-          Copy Text
+          <Copy className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Copy</span>
         </Button>
+      )}
+      {canEditDirectly && (
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+        >
+          <NextLink href={`/dashboard/paste/${fileId}/edit`}>
+            <Pencil className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Edit</span>
+          </NextLink>
+        </Button>
+      )}
+      {canSuggest && (
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+        >
+          <NextLink href={`/dashboard/paste/${fileId}/suggest`}>
+            <Send className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Suggest Edit</span>
+          </NextLink>
+        </Button>
+      )}
+
+      {/* Owner-only collaboration management */}
+      {isOwner && isTextBased && fileId && (
+        <>
+          <CollaboratorManager fileId={fileId} isOwner={isOwner} />
+          <SuggestionManager fileId={fileId} isOwner={isOwner} isMarkdown={isMarkdown} />
+        </>
       )}
 
       <OcrDialog

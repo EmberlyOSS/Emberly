@@ -1,6 +1,6 @@
 import { loggers } from '@/packages/lib/logger'
 
-import { registerFileExpiryHandlers } from './handlers/file-expiry'
+import { registerAllHandlers } from './handlers'
 import { events } from './index'
 
 const logger = loggers.events
@@ -13,10 +13,13 @@ export async function initializeEventSystem() {
     return
   }
 
-  try {
-    logger.info('Initializing event system...')
+  const startTime = Date.now()
 
-    await registerFileExpiryHandlers()
+  try {
+    logger.debug('Initializing event system...')
+
+    // Register all event handlers (auth, account, email, audit, file, billing, security, admin)
+    await registerAllHandlers()
 
     // Decide whether to start the in-process event worker.
     // Controlled by `EMBERLY_RUN_EVENT_WORKER` environment variable:
@@ -33,27 +36,28 @@ export async function initializeEventSystem() {
       // doesn't block server startup. Log any start errors.
       events
         .startWorker({
-          batchSize: 10,
+          batchSize: 3,
           pollInterval: 5000,
-          maxConcurrency: 3,
+          maxConcurrency: 1,
           enableScheduledEvents: true,
         })
-        .then(() => logger.info('Event worker started'))
+        .then(() => logger.debug('Event worker started'))
         .catch((err) =>
           logger.error('Failed to start event worker', err as Error)
         )
     } else {
-      logger.info('Event worker start skipped (env control)')
+      logger.debug('Event worker start skipped (env control)')
     }
 
     initialized = true
-    logger.info('Event system initialized successfully')
+    const duration = Date.now() - startTime
+    logger.info('Event system initialized', { duration })
 
     // Fetch stats but don't let failures block initialization
     events
       .getStats()
-      .then((stats) => logger.info('Event queue stats', { stats }))
-      .catch((err) => logger.debug('Failed to fetch event stats', { err }))
+      .then((stats) => logger.debug('Event queue stats', { stats }))
+      .catch((err) => logger.trace('Failed to fetch event stats', { err }))
   } catch (error) {
     logger.error('Failed to initialize event system', error as Error)
     throw error

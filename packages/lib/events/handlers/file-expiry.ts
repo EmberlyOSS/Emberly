@@ -9,8 +9,8 @@ import { events } from '../index'
 
 const logger = loggers.events.getChildLogger('file-expiry')
 
-export async function registerFileExpiryHandlers() {
-  await events.on(
+export function registerFileExpiryHandlers() {
+  events.on(
     'file.schedule-expiration',
     'queue-deletion',
     async (payload: EventPayload<'file.schedule-expiration'>) => {
@@ -36,7 +36,7 @@ export async function registerFileExpiryHandlers() {
     }
   )
 
-  await events.on(
+  events.on(
     'file.expired',
     'process-expired-file',
     async (payload: EventPayload<'file.expired'>) => {

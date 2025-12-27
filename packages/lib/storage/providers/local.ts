@@ -184,6 +184,13 @@ export class LocalStorageProvider implements StorageProvider {
     await unlink(fullPath)
   }
 
+  async getFile(path: string): Promise<Buffer> {
+    const fullPath = path.startsWith('public/')
+      ? path
+      : join(process.cwd(), path)
+    return readFile(fullPath)
+  }
+
   async getFileStream(path: string, range?: RangeOptions): Promise<Readable> {
     const fullPath = path.startsWith('public/')
       ? path

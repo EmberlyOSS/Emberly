@@ -114,9 +114,11 @@ export async function POST(
     const defaultQuota = config.settings.general.storage.quotas.default
 
     if (quotasEnabled && user.role !== 'ADMIN') {
-      const quotaMB = user.storageQuotaMB ?? defaultQuota.value * (defaultQuota.unit === 'GB' ? 1024 : 1)
+      const { canUploadSize } = await import('@/packages/lib/storage/quota')
+      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
       const fileSizeMB = bytesToMB(metadata.totalSize)
-      if (user.storageUsed + fileSizeMB > quotaMB) {
+      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
+      if (!canUpload) {
         // Attempt to clean up the assembled object in storage
         try {
           await storageProvider.deleteFile(metadata.fileKey)
@@ -124,7 +126,14 @@ export async function POST(
           // ignore cleanup errors
         }
 
-        return NextResponse.json({ error: 'Upload would exceed your storage quota' }, { status: 413 })
+        return NextResponse.json(
+          {
+            error: 'Storage quota exceeded',
+            message: 'Upload would exceed your storage quota. Purchase additional storage to continue.',
+            action: 'upgrade',
+          },
+          { status: 413 }
+        )
       }
     }
 

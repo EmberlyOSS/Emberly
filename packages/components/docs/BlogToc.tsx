@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { ChevronDown, List } from 'lucide-react'
+import { cn } from '@/packages/lib/utils'
 
 export type BlogHeading = {
     id: string
@@ -16,8 +18,6 @@ type Props = {
 export default function BlogToc({ headings }: Props) {
     const [open, setOpen] = useState(false)
     const [activeId, setActiveId] = useState<string | null>(null)
-
-    const cardClass = 'rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20'
 
     const hasHeadings = (headings?.length ?? 0) > 0
 
@@ -54,7 +54,13 @@ export default function BlogToc({ headings }: Props) {
                     key={h.id}
                     href={`#${h.id}`}
                     onClick={() => setOpen(false)}
-                    className={`block text-sm transition-colors ${h.level === 3 ? 'pl-4' : ''} ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-primary'}`}
+                    className={cn(
+                        "block text-sm py-1.5 transition-all duration-150 border-l-2 -ml-px",
+                        h.level === 3 ? 'pl-5' : 'pl-3',
+                        isActive
+                            ? 'text-primary font-medium border-primary bg-primary/5'
+                            : 'text-muted-foreground hover:text-foreground border-transparent hover:border-white/20'
+                    )}
                 >
                     {h.text}
                 </Link>
@@ -68,32 +74,49 @@ export default function BlogToc({ headings }: Props) {
         <div className="space-y-4">
             {/* Mobile toggle */}
             <div className="lg:hidden">
-                <div className={`${cardClass} p-4 space-y-3`}>
-                    <button
-                        type="button"
-                        onClick={() => setOpen((v) => !v)}
-                        aria-expanded={open}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-background/60 border border-white/10 text-sm font-medium"
-                    >
-                        <span>On this page</span>
-                        <span className="text-xs text-muted-foreground">{open ? 'Hide' : 'Show'}</span>
-                    </button>
-
-                    {open && (
-                        <nav className="space-y-3">
-                            <div className="pt-2 border-t border-white/10 space-y-1">
-                                {renderedHeadings}
+                <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                    <div className="relative p-4 space-y-3">
+                        <button
+                            type="button"
+                            onClick={() => setOpen((v) => !v)}
+                            aria-expanded={open}
+                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/5 dark:bg-white/[0.02] border border-white/10 dark:border-white/5 text-sm font-medium hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <List className="h-4 w-4 text-muted-foreground" />
+                                <span>On this page</span>
                             </div>
-                        </nav>
-                    )}
+                            <ChevronDown className={cn(
+                                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                                open && "rotate-180"
+                            )} />
+                        </button>
+
+                        {open && (
+                            <nav className="animate-in slide-in-from-top-2 fade-in-50 duration-200">
+                                <div className="pt-2 border-t border-l border-white/10 dark:border-white/5 space-y-0.5 ml-2">
+                                    {renderedHeadings}
+                                </div>
+                            </nav>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Desktop sidebar */}
             <aside className="hidden lg:block lg:sticky lg:top-24 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
-                <div className={`${cardClass} p-4 space-y-2 pr-3`}>
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">On this page</div>
-                    <nav className="space-y-1">{renderedHeadings}</nav>
+                <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                    <div className="relative p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium">
+                            <List className="h-3.5 w-3.5" />
+                            <span>On this page</span>
+                        </div>
+                        <nav className="space-y-0.5 border-l border-white/10 dark:border-white/5">
+                            {renderedHeadings}
+                        </nav>
+                    </div>
                 </div>
             </aside>
         </div>

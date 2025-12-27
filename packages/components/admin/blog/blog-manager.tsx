@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 
+import { FileText, Plus } from 'lucide-react'
+
 import { Button } from '@/packages/components/ui/button'
 import { BlogEditor } from './blog-editor'
 import BlogHelp from './blog-help'
@@ -12,24 +14,26 @@ export function BlogManager() {
   const [refreshKey, setRefreshKey] = useState(0)
   return (
     <div className="container space-y-6">
-      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-        <div className="relative p-8">
-          <h1 className="text-3xl font-bold">Blog Management</h1>
-          <p className="text-muted-foreground mt-2">Create and manage posts for the public blog.</p>
-        </div>
-      </div>
-
-      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-        <div className="relative p-8">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Posts</h3>
-            <Button onClick={() => setEditingPostId('')}>+ New Post</Button>
+      <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Blog Posts</h3>
+              <p className="text-sm text-muted-foreground">Create and manage blog content</p>
+            </div>
           </div>
+          <Button onClick={() => setEditingPostId('')} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Post
+          </Button>
+        </div>
 
+        <div className="p-4">
           {editingPostId !== null && (
-            <div className="mt-6 rounded-2xl bg-background/40 border border-border/40 p-4 shadow-sm">
+            <div className="mb-6">
               <BlogEditor
                 key={editingPostId ?? 'editor'}
                 postId={editingPostId ?? undefined}
@@ -42,9 +46,7 @@ export function BlogManager() {
             </div>
           )}
 
-          <div className="mt-6">
-            <BlogList key={refreshKey} onEdit={(id) => setEditingPostId(id)} />
-          </div>
+          <BlogList key={refreshKey} onEdit={(id) => setEditingPostId(id)} />
         </div>
       </div>
 

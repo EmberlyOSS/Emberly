@@ -56,7 +56,7 @@ export const SearchInput = memo(function SearchInput({
         type="button"
         variant="outline"
         size="icon"
-        className="h-10 w-10 bg-background/60 backdrop-blur-sm border-border/50 hover:bg-background/80"
+        className="h-10 w-10 bg-white/5 dark:bg-white/[0.02] backdrop-blur-md border-white/10 dark:border-white/5 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 transition-all duration-200"
         onClick={toggleSearch}
         aria-label="Open search"
         aria-expanded={isOpen}
@@ -72,7 +72,7 @@ export const SearchInput = memo(function SearchInput({
         <Input
           ref={inputRef}
           placeholder="Search files..."
-          className="pl-9 bg-background/60 backdrop-blur-sm border-border/50 focus:bg-background/80 transition-all duration-200"
+          className="pl-9 bg-white/5 dark:bg-white/[0.02] backdrop-blur-md border-white/10 dark:border-white/5 focus:bg-white/[0.07] dark:focus:bg-white/[0.04] focus:border-white/15 transition-all duration-200"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onFocus={() => setIsOpen(true)}

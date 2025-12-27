@@ -1,13 +1,12 @@
 import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
 
 import { getConfig } from '@/packages/lib/config'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
-import { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Dashboard | Emberly',
+export const metadata = buildPageMetadata({
+  title: 'Dashboard',
   description: 'Your personal dashboard to manage uploads, settings, and account information.',
-}
+})
 
 export default async function DashboardLayout({
   children,

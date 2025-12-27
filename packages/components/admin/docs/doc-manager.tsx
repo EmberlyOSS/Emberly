@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 
+import { BookOpen, Plus } from 'lucide-react'
+
 import { Button } from '@/packages/components/ui/button'
 import DocHelp from './doc-help'
 import { DocEditor } from './doc-editor'
@@ -13,24 +15,30 @@ export function DocManager() {
 
     return (
         <div className="container space-y-6">
-            <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-                <div className="relative p-8">
-                    <h1 className="text-3xl font-bold">Docs Management</h1>
-                    <p className="text-muted-foreground mt-2">Create and manage documentation content by category.</p>
+            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+                <div className="flex items-center gap-4 px-6 py-5 border-b border-border/50 bg-background/50">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                        <BookOpen className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold">Docs Management</h1>
+                        <p className="text-muted-foreground">Create and manage documentation content by category.</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-                <div className="relative p-8">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Docs</h3>
-                        <Button onClick={() => setEditingDocId('')}>+ New Doc</Button>
-                    </div>
+            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50">
+                    <h3 className="text-lg font-semibold">Documentation Pages</h3>
+                    <Button onClick={() => setEditingDocId('')} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        New Doc
+                    </Button>
+                </div>
 
+                <div className="p-4">
                     {editingDocId !== null && (
-                        <div className="mt-6 rounded-2xl bg-background/40 border border-border/40 p-4 shadow-sm">
+                        <div className="mb-6">
                             <DocEditor
                                 key={editingDocId ?? 'editor'}
                                 docId={editingDocId ?? undefined}
@@ -43,9 +51,7 @@ export function DocManager() {
                         </div>
                     )}
 
-                    <div className="mt-6">
-                        <DocList key={refreshKey} onEdit={(id) => setEditingDocId(id)} />
-                    </div>
+                    <DocList key={refreshKey} onEdit={(id) => setEditingDocId(id)} />
                 </div>
             </div>
 

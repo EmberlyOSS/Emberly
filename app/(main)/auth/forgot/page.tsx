@@ -1,6 +1,12 @@
 import { ForgotForm } from '@/packages/components/auth/forgot-form'
 import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
 import { Icons } from '@/packages/components/shared/icons'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+    title: 'Forgot Password',
+    description: 'Reset your Emberly account password.',
+})
 
 export const dynamic = 'force-dynamic'
 

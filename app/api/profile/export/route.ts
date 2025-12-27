@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 
 import archiver from 'archiver'
 import { existsSync } from 'node:fs'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { PassThrough } from 'node:stream'
 
 import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -45,11 +46,10 @@ type UserData = {
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
+export const maxDuration = 300 // 5 minutes max
 
 export async function GET(req: Request) {
   let exportDir: string | null = null
-  let totalFiles = 0
-  let successfulFiles = 0
   let userId: string | null = null
 
   try {
@@ -57,7 +57,6 @@ export async function GET(req: Request) {
     if (response) return response
 
     userId = user.id
-
     updateProgress(userId, 0)
 
     const timestamp = Date.now()
@@ -67,12 +66,9 @@ export async function GET(req: Request) {
     const storageProvider = await getStorageProvider()
     const isS3Storage = storageProvider instanceof S3StorageProvider
 
-    if (isS3Storage) {
-      logger.info('Using S3 storage provider for file exports')
-    } else {
-      logger.info('Using local storage provider for file exports')
-    }
+    logger.info(`Starting data export for user ${userId}, storage: ${isS3Storage ? 'S3' : 'local'}`)
 
+    // Fetch user data
     const userData = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -106,9 +102,13 @@ export async function GET(req: Request) {
     })
 
     if (!userData) {
+      clearProgress(userId)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    updateProgress(userId, 10)
+
+    // Prepare user data JSON
     const userDataForExport: UserData = {
       id: userData.id,
       name: userData.name,
@@ -122,190 +122,224 @@ export async function GET(req: Request) {
     const userDataPath = join(exportDir, 'user-data.json')
     await writeFile(userDataPath, JSON.stringify(userDataForExport, null, 2))
 
-    const headers = new Headers()
-    headers.set('Content-Type', 'application/zip')
-    headers.set(
-      'Content-Disposition',
-      `attachment; filename="emberly-data-export-${timestamp}.zip"`
-    )
-    headers.set(
-      'Cache-Control',
-      'no-store, no-cache, must-revalidate, proxy-revalidate'
-    )
+    updateProgress(userId, 15)
 
-    const { readable, writable } = new TransformStream()
+    // Create archive
+    const archive = archiver('zip', { zlib: { level: 6 } })
+    const passthrough = new PassThrough()
 
-    const archive = archiver('zip', {
-      zlib: { level: 9 },
-    })
+    // Track archive events
+    let archiveFinished = false
+    let archiveError: Error | null = null
 
     archive.on('warning', (err) => {
-      if (err.code === 'ENOENT') {
-        logger.warn('Archive warning', { error: err.message })
-      } else {
-        logger.error('Archive error', err as Error)
-      }
+      logger.warn('Archive warning', { error: err.message })
     })
 
     archive.on('error', (err) => {
-      logger.error('Archive error:', err as Error)
+      archiveError = err
+      logger.error('Archive error:', err)
     })
 
-    const writer = writable.getWriter()
-
-    archive.on('data', async (chunk) => {
-      await writer.write(chunk)
+    archive.on('end', () => {
+      archiveFinished = true
+      logger.info(`Archive finished for user ${userId}`)
     })
 
-    archive.on('end', async () => {
-      try {
-        await writer.close()
-      } catch (err) {
-        logger.error('Error closing writer:', err as Error)
-      }
-    })
+    // Pipe archive to passthrough stream
+    archive.pipe(passthrough)
 
+    // Add user data JSON
     archive.file(userDataPath, { name: 'user-data.json' })
-      ; (async () => {
+
+    // Process files
+    const totalFiles = userData.files.length
+    let processedFiles = 0
+
+    if (totalFiles > 0) {
+      for (const file of userData.files) {
         try {
-          totalFiles = userData.files.length
-          updateProgress(userId, 0)
+          let fileBuffer: Buffer | null = null
 
-          if (totalFiles === 0) {
-            archive.finalize()
-            return
-          }
-
-          for (const file of userData.files) {
+          if (isS3Storage) {
+            // Download from S3
             try {
-              let fileData: Buffer | null = null
-              let filePath: string | null = null
+              fileBuffer = await getFileContentFromStorage(storageProvider, file.path)
+            } catch (downloadErr) {
+              logger.warn(`Skipping S3 file ${file.name}: ${(downloadErr as Error).message}`)
+              processedFiles++
+              continue
+            }
+          } else {
+            // Local storage - try multiple possible paths
+            const possiblePaths = [
+              file.path,
+              join(process.cwd(), file.path),
+              join(process.cwd(), 'uploads', file.path.replace(/^.*uploads[/\\]/, '')),
+              join(process.cwd(), file.path.replace(/^\//, '')),
+            ]
 
-              if (isS3Storage) {
-                try {
-                  fileData = await getFileContentFromStorage(
-                    storageProvider,
-                    file.path
-                  )
+            let localPath: string | null = null
+            for (const p of possiblePaths) {
+              if (existsSync(p)) {
+                localPath = p
+                break
+              }
+            }
 
-                  filePath = join(exportDir, file.name)
-                  await writeFile(filePath, fileData)
-                } catch (downloadErr) {
-                  logger.error(
-                    `Error downloading file from S3: ${file.path}`,
-                    downloadErr as Error
-                  )
-                  logger.info(`Skipping file: ${file.name} (${file.path})`)
-                  continue
-                }
-              } else {
-                const absolutePath = join('/', file.path)
-                const workspacePath = join(
-                  process.cwd(),
-                  'uploads',
-                  file.path.split('uploads/')[1] || ''
-                )
+            if (!localPath) {
+              logger.warn(`Skipping local file ${file.name}: not found in any expected location`)
+              processedFiles++
+              continue
+            }
 
-                if (existsSync(absolutePath)) {
-                  filePath = absolutePath
-                } else if (existsSync(workspacePath)) {
-                  filePath = workspacePath
-                } else {
-                  logger.error(
-                    'File not found',
-                    new Error(`File not found: ${file.path}`)
-                  )
-                  continue
-                }
+            // Check file size before reading
+            try {
+              const fileStats = await stat(localPath)
+              // Skip files larger than 100MB to prevent memory issues
+              if (fileStats.size > 100 * 1024 * 1024) {
+                logger.warn(`Skipping large file ${file.name}: ${fileStats.size} bytes`)
+                processedFiles++
+                continue
               }
 
-              if (filePath) {
-                const zipPath = `files/${new Date(file.uploadedAt).toISOString().split('T')[0]}/${file.name}`
-                try {
-                  archive.file(filePath, { name: zipPath })
-                  successfulFiles++
+              // Add file directly from path (more efficient than reading into memory)
+              const datePrefix = new Date(file.uploadedAt).toISOString().split('T')[0]
+              archive.file(localPath, { name: `files/${datePrefix}/${file.name}` })
+              processedFiles++
 
-                  const progress = Math.round(
-                    (successfulFiles / totalFiles) * 100
-                  )
-                  if (userId) {
-                    updateProgress(userId, progress)
-                  }
-                } catch (archiveErr) {
-                  logger.error(
-                    `Error adding file to archive: ${file.name}`,
-                    archiveErr as Error
-                  )
-                }
-
-                if (isS3Storage && filePath.startsWith(exportDir)) {
-                  try {
-                    await rm(filePath)
-                  } catch (cleanupErr) {
-                    logger.debug(`Error cleaning up temp file: ${filePath}`, {
-                      error: cleanupErr,
-                    })
-                  }
-                }
-              }
-            } catch (error) {
-              logger.error(
-                `Error adding file ${file.name} to archive:`,
-                error as Error
-              )
+              const progress = 15 + Math.round((processedFiles / totalFiles) * 80)
+              updateProgress(userId, progress)
+              continue
+            } catch (readErr) {
+              logger.warn(`Error reading local file ${file.name}: ${(readErr as Error).message}`)
+              processedFiles++
+              continue
             }
           }
 
-          try {
-            await archive.finalize()
-          } catch (error) {
-            logger.error('Error finalizing archive:', error as Error)
+          // For S3 files, append buffer to archive
+          if (fileBuffer) {
+            const datePrefix = new Date(file.uploadedAt).toISOString().split('T')[0]
+            archive.append(fileBuffer, { name: `files/${datePrefix}/${file.name}` })
           }
 
-          setTimeout(async () => {
-            try {
-              if (exportDir) {
-                await rm(exportDir, { recursive: true })
-                logger.info(
-                  `Export cleanup completed. ${successfulFiles}/${totalFiles} files were exported successfully.`
-                )
-              }
-            } catch (cleanupError) {
-              logger.error(
-                'Error cleaning up export directory:',
-                cleanupError as Error
-              )
-            }
-          }, 5000)
-        } catch (error) {
-          logger.error('File processing error:', error as Error)
-          try {
-            await writer.close()
-          } catch (closeErr) {
-            logger.error('Error closing writer after error:', closeErr as Error)
-          }
+          processedFiles++
+          const progress = 15 + Math.round((processedFiles / totalFiles) * 80)
+          updateProgress(userId, progress)
+        } catch (fileErr) {
+          logger.warn(`Error processing file ${file.name}: ${(fileErr as Error).message}`)
+          processedFiles++
         }
-      })()
+      }
+    }
 
-    return new Response(readable, { headers })
+    updateProgress(userId, 95)
+
+    // Finalize archive
+    archive.finalize()
+
+    // Wait for archive to finish with proper error handling
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Archive finalization timeout'))
+      }, 120000) // 2 minute timeout
+
+      const checkFinished = () => {
+        if (archiveFinished) {
+          clearTimeout(timeout)
+          resolve()
+        } else if (archiveError) {
+          clearTimeout(timeout)
+          reject(archiveError)
+        }
+      }
+
+      // Check immediately
+      checkFinished()
+
+      // Also listen for events
+      archive.on('end', () => {
+        archiveFinished = true
+        clearTimeout(timeout)
+        resolve()
+      })
+
+      archive.on('error', (err) => {
+        clearTimeout(timeout)
+        reject(err)
+      })
+    })
+
+    updateProgress(userId, 100)
+
+    // Schedule cleanup
+    const currentExportDir = exportDir
+    const currentUserId = userId
+    setTimeout(async () => {
+      try {
+        if (currentExportDir) {
+          await rm(currentExportDir, { recursive: true, force: true })
+          logger.info(`Export cleanup completed for user ${currentUserId}`)
+        }
+      } catch (cleanupError) {
+        logger.warn('Error cleaning up export directory:', { error: (cleanupError as Error).message })
+      }
+      if (currentUserId) {
+        clearProgress(currentUserId)
+      }
+    }, 30000) // 30 second delay for cleanup
+
+    // Create response headers
+    const headers = new Headers()
+    headers.set('Content-Type', 'application/zip')
+    headers.set('Content-Disposition', `attachment; filename="emberly-data-export-${timestamp}.zip"`)
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+
+    // Convert Node stream to web stream
+    const webStream = new ReadableStream({
+      start(controller) {
+        passthrough.on('data', (chunk) => {
+          try {
+            controller.enqueue(new Uint8Array(chunk))
+          } catch {
+            // Controller may be closed
+          }
+        })
+        passthrough.on('end', () => {
+          try {
+            controller.close()
+          } catch {
+            // Controller may already be closed
+          }
+        })
+        passthrough.on('error', (err) => {
+          try {
+            controller.error(err)
+          } catch {
+            // Controller may already be closed
+          }
+        })
+      },
+    })
+
+    return new Response(webStream, { headers })
   } catch (error) {
+    logger.error('Data export error:', error as Error)
+
     if (userId) {
       clearProgress(userId)
     }
     if (exportDir) {
       try {
-        await rm(exportDir, { recursive: true })
-      } catch (cleanupError) {
-        logger.error(
-          'Error cleaning up export directory:',
-          cleanupError as Error
-        )
+        await rm(exportDir, { recursive: true, force: true })
+      } catch {
+        // Ignore cleanup errors
       }
     }
 
-    logger.error('Data export error:', error as Error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Export failed. Please try again.' },
       { status: 500 }
     )
   }
@@ -315,20 +349,18 @@ async function getFileContentFromStorage(
   storageProvider: StorageProvider,
   filePath: string
 ): Promise<Buffer> {
-  try {
-    const fileStream = await storageProvider.getFileStream(filePath)
-    const chunks: Buffer[] = []
+  const fileStream = await storageProvider.getFileStream(filePath)
+  const chunks: Buffer[] = []
+  let totalSize = 0
+  const maxSize = 100 * 1024 * 1024 // 100MB limit
 
-    for await (const chunk of fileStream) {
-      chunks.push(Buffer.from(chunk))
+  for await (const chunk of fileStream) {
+    totalSize += chunk.length
+    if (totalSize > maxSize) {
+      throw new Error(`File exceeds maximum size limit of 100MB`)
     }
-
-    return Buffer.concat(chunks)
-  } catch (error) {
-    logger.error(
-      `Failed to retrieve file from storage: ${filePath}`,
-      error as Error
-    )
-    throw error
+    chunks.push(Buffer.from(chunk))
   }
+
+  return Buffer.concat(chunks)
 }

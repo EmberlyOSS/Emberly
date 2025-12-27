@@ -1,7 +1,10 @@
 'use client'
 
+import { Download, AlertCircle } from 'lucide-react'
+
 import { Button } from '@/packages/components/ui/button'
 import { Alert, AlertTitle, AlertDescription } from '@/packages/components/ui/alert'
+import { Progress } from '@/packages/components/ui/progress'
 
 import { useDataExport } from '@/packages/hooks/use-data-export'
 
@@ -14,48 +17,58 @@ export function ProfileExport() {
     handleExport,
   } = useDataExport()
 
+  const currentProgress = status === 'preparing' ? exportProgress : downloadProgress
+  const statusText = status === 'preparing'
+    ? `Preparing export... ${exportProgress}%`
+    : status === 'downloading'
+      ? `Downloading... ${downloadProgress}%`
+      : 'Starting export...'
+
   return (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">Export Your Data</h3>
-        <p className="text-sm text-muted-foreground">Download a copy of all your uploaded files and account information.</p>
-
-        <Alert variant="warning" className="mt-3">
-          <AlertTitle className="font-extrabold text-md">Export temporarily unavailable</AlertTitle>
-          <AlertDescription className="font-light text-xs">
-            The full "Export All Data" archive is currently broken and will be re-enabled soon. You can still download your data in JSON format using the "Download JSON" tool below.
-          </AlertDescription>
-        </Alert>
-
-        <Button
-          onClick={handleExport}
-          disabled={true}
-          variant="outline"
-          className="w-full sm:w-auto mt-2"
-        >
-          {isExporting ? (
-            <div className="flex items-center gap-2">
-              <span>
-                {status === 'preparing'
-                  ? `Preparing... ${exportProgress}%`
-                  : status === 'downloading'
-                    ? `Downloading... ${downloadProgress}%`
-                    : 'Starting...'}
-              </span>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 transition-all duration-200"
-                  style={{
-                    width: `${status === 'preparing' ? exportProgress : downloadProgress}%`,
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            'Export All Data (temporarily disabled)'
-          )}
-        </Button>
+        <p className="text-sm text-muted-foreground">
+          Download a copy of all your uploaded files and account information as a ZIP archive.
+        </p>
       </div>
+
+      <Alert variant="default" className="border-primary/20 bg-primary/5">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>What's included</AlertTitle>
+        <AlertDescription className="text-sm">
+          <ul className="list-disc list-inside mt-1 space-y-0.5">
+            <li>All your uploaded files (organized by date)</li>
+            <li>Account information and settings</li>
+            <li>URL shortener history</li>
+            <li>File metadata and OCR data</li>
+          </ul>
+        </AlertDescription>
+      </Alert>
+
+      {isExporting && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{statusText}</span>
+            <span className="font-medium">{currentProgress}%</span>
+          </div>
+          <Progress value={currentProgress} className="h-2" />
+        </div>
+      )}
+
+      <Button
+        onClick={handleExport}
+        disabled={isExporting}
+        variant="outline"
+        className="w-full sm:w-auto"
+      >
+        <Download className="h-4 w-4 mr-2" />
+        {isExporting ? 'Exporting...' : 'Export All Data'}
+      </Button>
+
+      <p className="text-xs text-muted-foreground">
+        Large exports may take several minutes. Files over 100MB are excluded to prevent timeouts.
+      </p>
     </div>
   )
 }

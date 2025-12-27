@@ -21,13 +21,17 @@ export function useSetupStatus(enabled = true) {
     queryKey: SETUP_STATUS_QUERY_KEY,
     queryFn: fetchSetupStatus,
     enabled,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 3,
+    // Cache for 10 minutes - setup status rarely changes after initial setup
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchOnReconnect: true,
+    // Reduce unnecessary refetches - setup status is stable
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    // Only refetch in background when truly stale
+    refetchInterval: false,
   })
 }
 

@@ -3,19 +3,27 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/packages/lib/database/prisma'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(
+    _: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     const { response } = await requireAdmin()
     if (response) return response
 
-    const product = await prisma.product.findUnique({ where: { id: params.id } })
+    const { id } = await params
+    const product = await prisma.product.findUnique({ where: { id } })
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(product)
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     const { response } = await requireAdmin()
     if (response) return response
 
+    const { id: paramId } = await params
     const body = await req.json().catch(() => ({}))
     const {
         name,
@@ -35,7 +43,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     } = body || {}
 
     try {
-        const identifiers = [params?.id, bodyId, slug ? String(slug).toLowerCase() : null].filter(Boolean) as string[]
+        const identifiers = [paramId, bodyId, slug ? String(slug).toLowerCase() : null].filter(Boolean) as string[]
 
         const existing = identifiers.length
             ? await prisma.product.findFirst({ where: { OR: identifiers.map((val) => ({ OR: [{ id: val }, { slug: val }] })) } })
@@ -70,12 +78,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+    _: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     const { response } = await requireAdmin()
     if (response) return response
 
     try {
-        await prisma.product.delete({ where: { id: params.id } })
+        const { id } = await params
+        await prisma.product.delete({ where: { id } })
         return NextResponse.json({ ok: true })
     } catch (err: any) {
         console.error('product delete failed', err)

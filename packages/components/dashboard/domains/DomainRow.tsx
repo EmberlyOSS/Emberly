@@ -1,9 +1,34 @@
-"use client"
+'use client'
 
 import React, { useState } from 'react'
-import { Check, Trash2, RefreshCw, Copy, Cloud } from 'lucide-react'
+import {
+  Check,
+  Trash2,
+  RefreshCw,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+  Star,
+  ExternalLink,
+  AlertCircle,
+  Clock,
+  Shield,
+} from 'lucide-react'
 import { Button } from '@/packages/components/ui/button'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/packages/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/packages/components/ui/dialog'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/packages/components/ui/collapsible'
+import { Badge } from '@/packages/components/ui/badge'
 import { Icons } from '@/packages/components/shared/icons'
 import { writeToClipboard } from '@/packages/lib/utils/clipboard'
 import { Domain } from './types'
@@ -17,165 +42,380 @@ interface Props {
   onDelete: (id: string) => Promise<void>
 }
 
-export default function DomainRow({ d, rechecking, onSetPrimary, onRecheck, onDelete }: Props) {
+export default function DomainRow({
+  d,
+  rechecking,
+  onSetPrimary,
+  onRecheck,
+  onDelete,
+}: Props) {
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { toast } = useToast()
 
-  const copy = async (text: string) => {
+  const copy = async (text: string, label?: string) => {
     try {
       await writeToClipboard(text)
-      toast({ title: 'Copied', description: 'Value copied to clipboard' })
+      toast({ title: 'Copied!', description: label || 'Value copied to clipboard' })
     } catch (e) {
-      toast({ title: 'Copy failed', description: 'Could not copy to clipboard', variant: 'destructive' })
+      toast({
+        title: 'Copy failed',
+        description: 'Could not copy to clipboard',
+        variant: 'destructive',
+      })
     }
   }
 
+  const getStatusBadge = () => {
+    if (rechecking) {
+      return (
+        <Badge variant="secondary" className="gap-1.5 bg-blue-500/10 text-blue-400 border-blue-500/20">
+          <Icons.spinner className="h-3 w-3 animate-spin" />
+          Verifying
+        </Badge>
+      )
+    }
+
+    if (d.verified) {
+      return (
+        <Badge variant="secondary" className="gap-1.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+          <Check className="h-3 w-3" />
+          Verified
+        </Badge>
+      )
+    }
+
+    const status = d.cfStatus?.toLowerCase()
+    if (status === 'pending') {
+      return (
+        <Badge variant="secondary" className="gap-1.5 bg-amber-500/10 text-amber-400 border-amber-500/20">
+          <Clock className="h-3 w-3" />
+          Pending
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="secondary" className="gap-1.5 bg-rose-500/10 text-rose-400 border-rose-500/20">
+        <AlertCircle className="h-3 w-3" />
+        {d.cfStatus || 'Setup Required'}
+      </Badge>
+    )
+  }
+
   return (
-    <div className="group py-3 px-3 bg-muted/60 hover:bg-accent/20 dark:hover:bg-accent/10 rounded-md">
-      <div className="flex items-center gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setOpen((s) => !s)} className="text-left min-w-0" title={open ? 'Collapse details' : 'Expand details'}>
-              <div className="font-medium">{d.domain}</div>
-            </button>
-          </div>
-        </div>
-        <div className="hidden md:flex md:items-center md:justify-end md:w-48 text-sm text-muted-foreground gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="text-xs truncate capitalize">
-              {rechecking ?
-                'Checking' :
-                d.verified ?
-                  'Verified' :
-                  (d.cfStatus ?? 'Unverified')}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 md:w-36 md:justify-end">
-          <Button variant="ghost" size="icon" title="Re-check Cloudflare" onClick={() => onRecheck(d.id)} className="flex-shrink-0"> <RefreshCw className="h-4 w-4" /> </Button>
-          {/* settings removed — config modal deprecated */}
-          <Button variant="destructive" size="icon" title="Delete domain" onClick={() => setDeleting(true)} className="flex-shrink-0">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Inline expandable details */}
-      {open && (
-        <div className="mt-3 pl-1 text-sm text-muted-foreground">
-          <div className="pt-3 border-t border-white/6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-
-              <div>
-                <div className="text-sm font-semibold">Status</div>
-                <div className="mt-2">
-                  <div className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs bg-white/3">
-                    {rechecking ? (
-                      <>
-                        <Icons.spinner className="h-3 w-3 animate-spin" />
-                        <span>Checking</span>
-                      </>
-                    ) : d.verified ? (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-300" />
-                        <span>Verified</span>
-                      </>
-                    ) : (
-                      <>
-                        <Icons.alertCircle className="h-3 w-3 text-rose-300" />
-                        <span>{d.cfStatus ?? 'Unverified'}</span>
-                      </>
+    <>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="p-4 hover:bg-muted/30 transition-colors">
+          <div className="flex items-center gap-4">
+            {/* Domain Info */}
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-3 flex-1 min-w-0 text-left group">
+                <div className="p-2 rounded-lg bg-muted/50 group-hover:bg-muted transition-colors">
+                  {open ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium truncate">{d.domain}</span>
+                    {d.isPrimary && (
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <Star className="h-3 w-3 fill-current" />
+                        Primary
+                      </Badge>
                     )}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {d.cfHostnameId ? `ID: ${d.cfHostnameId.slice(0, 12)}...` : 'Awaiting setup'}
+                  </p>
+                </div>
+              </button>
+            </CollapsibleTrigger>
+
+            {/* Status Badge */}
+            <div className="hidden sm:block">{getStatusBadge()}</div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onRecheck(d.id)}
+                disabled={rechecking}
+                className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                title="Re-check verification"
+              >
+                <RefreshCw className={`h-4 w-4 ${rechecking ? 'animate-spin' : ''}`} />
+              </Button>
+              {!d.isPrimary && d.verified && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onSetPrimary(d.id)}
+                  className="h-8 w-8 hover:bg-amber-500/10 hover:text-amber-500"
+                  title="Set as primary"
+                >
+                  <Star className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteDialog(true)}
+                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                title="Delete domain"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Status Badge */}
+          <div className="sm:hidden mt-3">{getStatusBadge()}</div>
+        </div>
+
+        <CollapsibleContent>
+          <div className="px-4 pb-4 pt-0">
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
+              {/* Quick Actions */}
+              {d.verified && (
+                <div className="flex items-center gap-2 pb-4 border-b border-border/50">
+                  <a
+                    href={`https://${d.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Visit Domain
+                    </Button>
+                  </a>
+                </div>
+              )}
+
+              {/* DNS Configuration */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  DNS Configuration
+                </h4>
+
+                <div className="space-y-3">
+                  {/* Required CNAME */}
+                  <div className="rounded-lg bg-background/50 border border-border/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">CNAME</Badge>
+                        <span className="text-xs text-muted-foreground">Required</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Name / Host</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-sm font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                            @ or www
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => copy('@', 'Host copied')}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Target / Value</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-sm font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                            cname.emberly.site
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => copy('cname.emberly.site', 'Target copied')}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ownership Verification TXT */}
+                  {d.cfMeta?.ownership_verification && (
+                    <div className="rounded-lg bg-background/50 border border-border/50 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">TXT</Badge>
+                          <span className="text-xs text-muted-foreground">Ownership Verification</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Name</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                              {d.cfMeta.ownership_verification?.txt_name ||
+                                d.cfMeta.ownership_verification?.name ||
+                                '@'}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() =>
+                                copy(
+                                  d.cfMeta.ownership_verification?.txt_name ||
+                                  d.cfMeta.ownership_verification?.name ||
+                                  '@',
+                                  'Name copied'
+                                )
+                              }
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Value</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                              {d.cfMeta.ownership_verification?.txt_value ||
+                                d.cfMeta.ownership_verification?.value ||
+                                ''}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() =>
+                                copy(
+                                  d.cfMeta.ownership_verification?.txt_value ||
+                                  d.cfMeta.ownership_verification?.value ||
+                                  '',
+                                  'Value copied'
+                                )
+                              }
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Validation Records */}
+                  {Array.isArray(d.cfMeta?.validation_records) &&
+                    d.cfMeta.validation_records.map((r: any, i: number) => (
+                      <div
+                        key={i}
+                        className="rounded-lg bg-background/50 border border-border/50 p-3"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {(r.type || 'TXT').toUpperCase()}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">Validation Record</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Name</p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                                {r.txt_name || r.name || '@'}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => copy(r.txt_name || r.name || '@', 'Name copied')}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Value</p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                                {r.txt_value || r.value || ''}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => copy(r.txt_value || r.value || '', 'Value copied')}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                  {/* No metadata yet */}
+                  {!d.cfMeta && !d.verified && (
+                    <p className="text-sm text-muted-foreground">
+                      Add the CNAME record above, then click the refresh button to check verification
+                      status.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
-
-            <div>
-              <div className="text-sm font-medium mb-2">DNS Records</div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs text-muted-foreground text-left">
-                      <th className="py-2 pr-4">Type</th>
-                      <th className="py-2 pr-4">Name</th>
-                      <th className="py-2 pr-4">Value</th>
-                      <th className="py-2 pr-4">Proxied</th>
-                      <th className="py-2 pr-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Recommended CNAMEs (www and @) */}
-                    {[{ name: '@ or www' }].map((c) => (
-                      <tr key={c.name} className="border-t border-white/6">
-                        <td className="py-2 pr-4 align-top">CNAME</td>
-                        <td className="py-2 pr-4 align-top font-mono text-xs break-all">{c.name}</td>
-                        <td className="py-2 pr-4 align-top font-mono text-xs break-all">cname.emberly.site</td>
-                        <td className="py-2 pr-4 align-top">
-                          <div className="inline-flex items-center gap-2 rounded-full px-2 py-0.5 text-xs bg-emerald-700/10 text-emerald-200">
-                            <Cloud className="h-3 w-3" />
-                            <span>Proxied</span>
-                          </div>
-                        </td>
-                        <td className="py-2 pr-4 text-right align-top">
-                          <Button variant="ghost" size="icon" onClick={() => copy('cname.emberly.site')}><Copy className="h-4 w-4" /></Button>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {/* Ownership TXT */}
-                    {d.cfMeta?.ownership_verification && (
-                      <tr className="border-t border-white/6">
-                        <td className="py-2 pr-4 align-top">TXT</td>
-                        <td className="py-2 pr-4 align-top font-mono text-xs break-all">{d.cfMeta.ownership_verification?.txt_name || d.cfMeta.ownership_verification?.name || '@'}</td>
-                        <td className="py-2 pr-4 align-top font-mono text-xs break-all">{d.cfMeta.ownership_verification?.txt_value || d.cfMeta.ownership_verification?.value || JSON.stringify(d.cfMeta.ownership_verification)}</td>
-                        <td className="py-2 pr-4 align-top"></td>
-                        <td className="py-2 pr-4 text-right align-top">
-                          <Button variant="ghost" size="icon" onClick={() => copy(d.cfMeta.ownership_verification?.txt_value || d.cfMeta.ownership_verification?.value || JSON.stringify(d.cfMeta.ownership_verification))}><Copy className="h-4 w-4" /></Button>
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* Validation records */}
-                    {Array.isArray(d.cfMeta?.validation_records) && d.cfMeta.validation_records.map((r: any, i: number) => (
-                      <tr key={i} className="border-t border-white/6">
-                        <td className="py-2 pr-4 align-top">{(r.type || 'TXT').toUpperCase()}</td>
-                        <td className="py-2 pr-4 align-top font-mono text-xs break-all">{r.txt_name || r.name || '@'}</td>
-                        <td className="py-2 pr-4 align-top font-mono text-xs break-all">{r.txt_value || r.value || JSON.stringify(r)}</td>
-                        <td className="py-2 pr-4 align-top"></td>
-                        <td className="py-2 pr-4 text-right align-top">
-                          <Button variant="ghost" size="icon" onClick={() => copy(r.txt_value || r.value || r.name || JSON.stringify(r))}><Copy className="h-4 w-4" /></Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!d.cfMeta && <div className="text-xs text-muted-foreground mt-2">No verification metadata yet.</div>}
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* Settings removed */}
-
-      {/* Delete confirmation dialog */}
-      <Dialog open={deleting} onOpenChange={(o) => !o && setDeleting(false)}>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete domain</DialogTitle>
+            <DialogTitle>Delete Domain</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{d.domain}</strong>? This action cannot be
+              undone and will remove all associated DNS configurations.
+            </DialogDescription>
           </DialogHeader>
-          <div className="text-sm text-muted-foreground">Are you sure you want to delete <strong>{d.domain}</strong>? This action cannot be undone.</div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={async () => { await onDelete(d.id); setDeleting(false); }}>
-              Delete
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true)
+                await onDelete(d.id)
+                setDeleting(false)
+                setShowDeleteDialog(false)
+              }}
+            >
+              {deleting ? (
+                <>
+                  <Icons.spinner className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Domain'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

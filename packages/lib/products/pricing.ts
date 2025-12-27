@@ -1,4 +1,4 @@
-import { Product } from '@prisma/client'
+import { Product } from '@/prisma/generated/prisma/client'
 
 type Cadence = 'month' | 'year' | 'one-time'
 
@@ -48,7 +48,7 @@ export const getPlanPricing = (product: Product) => {
 
 export const getAddOnPricing = (product: Product) => {
   const pricePerUnitCents = product.defaultPriceCents ?? null
-  const billingPeriod = product.billingInterval === 'month' ? 'monthly' : 'one-time'
+  const billingPeriod: 'monthly' | 'one-time' = product.billingInterval === 'month' ? 'monthly' : 'one-time'
   const priceId = product.stripePriceOneTimeId || product.stripePriceMonthlyId || null
 
   return {

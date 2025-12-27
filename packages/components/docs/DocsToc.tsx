@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ChevronDown, List, FileText } from 'lucide-react'
+import { cn } from '@/packages/lib/utils'
 
 import { docLinks } from './nav-links'
 
@@ -21,8 +23,6 @@ export default function DocsToc({ headings, secondaryLinks }: Props) {
     const pathname = usePathname()
     const [open, setOpen] = useState(false)
     const [activeId, setActiveId] = useState<string | null>(null)
-
-    const cardClass = 'rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20'
 
     const hasHeadings = (headings?.length ?? 0) > 0
 
@@ -59,77 +59,124 @@ export default function DocsToc({ headings, secondaryLinks }: Props) {
                     key={h.id}
                     href={`#${h.id}`}
                     onClick={() => setOpen(false)}
-                    className={`block text-sm transition-colors ${h.level === 3 ? 'pl-4' : ''} ${isActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-primary'}`}
+                    className={cn(
+                        "block text-sm py-1.5 transition-all duration-150 border-l-2 -ml-px",
+                        h.level === 3 ? 'pl-5' : 'pl-3',
+                        isActive
+                            ? 'text-primary font-medium border-primary bg-primary/5'
+                            : 'text-muted-foreground hover:text-foreground border-transparent hover:border-white/20'
+                    )}
                 >
                     {h.text}
                 </Link>
             )
         })
-    }, [headings])
+    }, [headings, activeId])
 
     const links = secondaryLinks && secondaryLinks.length ? secondaryLinks : docLinks
 
     return (
-        <div className="space-y-4 mb-12">
+        <div className="space-y-4 mb-6 lg:mb-0">
             {/* Mobile toggle */}
             <div className="lg:hidden">
-                <div className={`${cardClass} p-4 space-y-3`}>
-                    <button
-                        type="button"
-                        onClick={() => setOpen((v) => !v)}
-                        aria-expanded={open}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-background/60 border border-white/10 text-sm font-medium"
-                    >
-                        <span>On this page</span>
-                        <span className="text-xs text-muted-foreground">{open ? 'Hide' : 'Show'}</span>
-                    </button>
-
-                    {open && (
-                        <nav className="space-y-3">
-                            <div className="space-y-1">
-                                {links.map((link) => (
-                                    <Link
-                                        key={link.href}
-                                        href={link.href}
-                                        className={`block text-sm ${pathname === link.href ? 'text-primary font-medium' : 'text-muted-foreground hover:text-primary'}`}
-                                    >
-                                        {link.label}
-                                    </Link>
-                                ))}
+                <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                    <div className="relative p-4 space-y-3">
+                        <button
+                            type="button"
+                            onClick={() => setOpen((v) => !v)}
+                            aria-expanded={open}
+                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/5 dark:bg-white/[0.02] border border-white/10 dark:border-white/5 text-sm font-medium hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <List className="h-4 w-4 text-muted-foreground" />
+                                <span>Navigation</span>
                             </div>
-                            {hasHeadings && (
-                                <div className="pt-2 border-t border-white/10 space-y-1">
-                                    <div className="text-xs uppercase tracking-wide text-muted-foreground">On this page</div>
-                                    {renderedHeadings}
+                            <ChevronDown className={cn(
+                                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                                open && "rotate-180"
+                            )} />
+                        </button>
+
+                        {open && (
+                            <nav className="space-y-4 animate-in slide-in-from-top-2 fade-in-50 duration-200">
+                                <div className="space-y-1 border-l border-white/10 ml-2">
+                                    {links.map((link) => (
+                                        <Link
+                                            key={link.href}
+                                            href={link.href}
+                                            onClick={() => setOpen(false)}
+                                            className={cn(
+                                                "block text-sm py-1.5 pl-3 border-l-2 -ml-px transition-all duration-150",
+                                                pathname === link.href
+                                                    ? 'text-primary font-medium border-primary bg-primary/5'
+                                                    : 'text-muted-foreground hover:text-foreground border-transparent hover:border-white/20'
+                                            )}
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    ))}
                                 </div>
-                            )}
-                        </nav>
-                    )}
+                                {hasHeadings && (
+                                    <div className="pt-3 border-t border-white/10 dark:border-white/5">
+                                        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2 ml-2">
+                                            <FileText className="h-3.5 w-3.5" />
+                                            <span>On this page</span>
+                                        </div>
+                                        <div className="space-y-0.5 border-l border-white/10 ml-2">
+                                            {renderedHeadings}
+                                        </div>
+                                    </div>
+                                )}
+                            </nav>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Desktop sidebar */}
             <aside className="hidden lg:block lg:sticky lg:top-24 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
-                <div className={`${cardClass} p-4 space-y-5 pr-3`}>
-                    <div>
-                        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Docs</div>
-                        <nav className="space-y-1">
-                            {links.map((link) => (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    className={`block text-sm ${pathname === link.href ? 'text-primary font-medium' : 'text-muted-foreground hover:text-primary'}`}
-                                >
-                                    {link.label}
-                                </Link>
-                            ))}
-                        </nav>
+                <div className="space-y-4">
+                    {/* Docs navigation */}
+                    <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                        <div className="relative p-4">
+                            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
+                                <List className="h-3.5 w-3.5" />
+                                <span>Documentation</span>
+                            </div>
+                            <nav className="space-y-0.5 border-l border-white/10 dark:border-white/5">
+                                {links.map((link) => (
+                                    <Link
+                                        key={link.href}
+                                        href={link.href}
+                                        className={cn(
+                                            "block text-sm py-1.5 pl-3 border-l-2 -ml-px transition-all duration-150",
+                                            pathname === link.href
+                                                ? 'text-primary font-medium border-primary bg-primary/5'
+                                                : 'text-muted-foreground hover:text-foreground border-transparent hover:border-white/20'
+                                        )}
+                                    >
+                                        {link.label}
+                                    </Link>
+                                ))}
+                            </nav>
+                        </div>
                     </div>
 
+                    {/* On this page */}
                     {hasHeadings && (
-                        <div>
-                            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">On this page</div>
-                            <nav className="space-y-1">{renderedHeadings}</nav>
+                        <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                            <div className="relative p-4">
+                                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
+                                    <FileText className="h-3.5 w-3.5" />
+                                    <span>On this page</span>
+                                </div>
+                                <nav className="space-y-0.5 border-l border-white/10 dark:border-white/5">
+                                    {renderedHeadings}
+                                </nav>
+                            </div>
                         </div>
                     )}
                 </div>

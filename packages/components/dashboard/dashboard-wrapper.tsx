@@ -23,9 +23,9 @@ export function DashboardWrapper({
       {nav === 'dashboard' && (
         <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="relative bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg shadow-black/5 supports-[backdrop-filter]:bg-background/60 transition-all duration-300 hover:shadow-xl hover:shadow-black/10">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-2xl pointer-events-none" />
-              <div className="relative flex h-16 items-center px-6">
+            <div className="relative bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl shadow-lg shadow-black/10 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-2xl pointer-events-none" />
+              <div className="relative">
                 <DashboardNav />
               </div>
             </div>

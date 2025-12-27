@@ -29,16 +29,16 @@ export function ProfileStorage({
       <div className="space-y-4">
         {quotasEnabled ? (
           <>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-lg font-medium">{formattedUsed}</span>
+                  <span className="text-xl font-bold">{formattedUsed}</span>
                   <span className="text-sm text-muted-foreground">
                     Used Space
                   </span>
                 </div>
                 <div className="flex flex-col text-right">
-                  <span className="text-lg font-medium">{formattedQuota}</span>
+                  <span className="text-xl font-bold">{formattedQuota}</span>
                   <span className="text-sm text-muted-foreground">
                     Total Space
                   </span>
@@ -49,7 +49,7 @@ export function ProfileStorage({
                 <Progress
                   value={usagePercentage}
                   className={cn(
-                    'h-3',
+                    'h-3 bg-white/10 dark:bg-black/10',
                     usagePercentage > 90
                       ? '[&>div]:bg-destructive'
                       : usagePercentage > 75
@@ -57,7 +57,7 @@ export function ProfileStorage({
                         : '[&>div]:bg-primary'
                   )}
                 />
-                <div className="flex items-center justify-between mt-1.5">
+                <div className="flex items-center justify-between mt-2">
                   {usagePercentage > 75 && (
                     <div
                       className={cn(
@@ -77,7 +77,7 @@ export function ProfileStorage({
                   )}
                   <span
                     className={cn(
-                      'text-sm font-medium',
+                      'text-sm font-medium ml-auto',
                       usagePercentage > 90
                         ? 'text-destructive'
                         : usagePercentage > 75
@@ -92,35 +92,39 @@ export function ProfileStorage({
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-4">
+          <div className="flex items-center justify-between rounded-xl p-4 bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
             <div className="flex flex-col">
-              <span className="text-lg font-medium">{formattedUsed}</span>
+              <span className="text-xl font-bold">{formattedUsed}</span>
               <span className="text-sm text-muted-foreground">
                 Total Space Used
               </span>
             </div>
-            <div className="flex items-center text-muted-foreground">
+            <div className="flex items-center text-primary/80">
               <Icons.infinity className="h-5 w-5" />
-              <span className="ml-2 text-sm">Uncapped Storage</span>
+              <span className="ml-2 text-sm font-medium">Uncapped Storage</span>
             </div>
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-4">
+          <div className="flex items-center justify-between rounded-xl p-4 bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
             <div className="flex flex-col">
-              <span className="text-lg font-medium">{fileCount}</span>
+              <span className="text-xl font-bold">{fileCount}</span>
               <span className="text-sm text-muted-foreground">Total Files</span>
             </div>
-            <Icons.file className="h-5 w-5 text-muted-foreground" />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Icons.file className="h-5 w-5 text-primary" />
+            </div>
           </div>
-          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-4">
+          <div className="flex items-center justify-between rounded-xl p-4 bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
             <div className="flex flex-col">
-              <span className="text-lg font-medium">{shortUrlCount}</span>
+              <span className="text-xl font-bold">{shortUrlCount}</span>
               <span className="text-sm text-muted-foreground">
                 Shortened URLs
               </span>
             </div>
-            <Icons.copy className="h-5 w-5 text-muted-foreground" />
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Icons.copy className="h-5 w-5 text-blue-500" />
+            </div>
           </div>
         </div>
       </div>

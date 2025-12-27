@@ -1,9 +1,13 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
+import { ImagePlus, Loader2, MessageCircle, Reply, Send, ThumbsDown, ThumbsUp, X, AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/packages/components/ui/button'
 import { Textarea } from '@/packages/components/ui/textarea'
+import { Avatar, AvatarFallback, AvatarImage } from '@/packages/components/ui/avatar'
+import { Checkbox } from '@/packages/components/ui/checkbox'
+import { Label } from '@/packages/components/ui/label'
 import { useToast } from '@/packages/hooks/use-toast'
 
 type Attachment = {
@@ -185,7 +189,6 @@ export default function Comments() {
             await onPost(comment.id, text, (r: any) => {
                 setReply('')
                 setOpen(false)
-                // append reply locally
                 setComments((prev) => prev.map((c) => (c.id === comment.id ? { ...c, replies: [...(c.replies || []), r] } : c)))
             })
             setPostingReply(false)
@@ -193,14 +196,46 @@ export default function Comments() {
 
         return (
             <div className="w-full">
-                <div className="flex items-center justify-end">
-                    <button type="button" onClick={() => { if (!currentUserId) { toast({ title: 'Please sign in to reply', variant: 'destructive' }); return } setOpen((s) => !s) }} className="text-sm text-muted-foreground">Reply</button>
-                </div>
-                {open && (
-                    <div className="mt-2 w-full min-w-0">
-                        <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} maxLength={400} className="w-full block" style={{ width: '100%' }} />
-                        <div className="flex items-center gap-2 mt-2">
-                            <Button size="sm" onClick={submit} disabled={postingReply}>{postingReply ? 'Posting...' : 'Post reply'}</Button>
+                {!open ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                            if (!currentUserId) {
+                                toast({ title: 'Please sign in to reply', variant: 'destructive' })
+                                return
+                            }
+                            setOpen(true)
+                        }}
+                    >
+                        <Reply className="h-3.5 w-3.5 mr-1.5" />
+                        Reply
+                    </Button>
+                ) : (
+                    <div className="mt-3 space-y-2">
+                        <Textarea
+                            value={reply}
+                            onChange={(e) => setReply(e.target.value)}
+                            rows={2}
+                            maxLength={400}
+                            placeholder="Write a reply..."
+                            className="bg-background/50"
+                        />
+                        <div className="flex items-center gap-2">
+                            <Button size="sm" onClick={submit} disabled={postingReply || !reply.trim()}>
+                                {postingReply ? (
+                                    <>
+                                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                        Posting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="h-3.5 w-3.5 mr-1.5" />
+                                        Post
+                                    </>
+                                )}
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
                         </div>
                     </div>
@@ -210,113 +245,221 @@ export default function Comments() {
     }
 
     return (
-        <div className="bg-background/50 border border-border rounded-lg p-4">
-            <h3 className="text-lg font-semibold mb-3">Comments</h3>
-            <form onSubmit={onSubmit} className="space-y-2 mb-4">
-                <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Share a non-spoiler thought..."
-                    maxLength={800}
-                    rows={3}
-                />
+        <div className="space-y-6">
+            {/* Comment Form */}
+            <form onSubmit={onSubmit} className="space-y-4">
+                <div className="relative rounded-xl bg-background/80 backdrop-blur border border-border/50 p-4">
+                    <Textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Share a non-spoiler thought..."
+                        maxLength={800}
+                        rows={3}
+                        className="bg-transparent border-0 focus-visible:ring-0 resize-none p-0 min-h-[80px]"
+                    />
 
-                <div className="flex items-center gap-2">
-                    <input type="file" multiple accept="image/*" onChange={handleFileInput} />
-                    <label className="ml-2 text-sm text-muted-foreground flex items-center gap-2">
-                        <input type="checkbox" checked={isSpoiler} onChange={(e) => setIsSpoiler(e.target.checked)} />
-                        <span>Mark as spoiler</span>
-                    </label>
-                </div>
+                    {files.length > 0 && (
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
+                            {files.map((f, i) => (
+                                <div key={i} className="relative group">
+                                    <img
+                                        src={URL.createObjectURL(f)}
+                                        className="h-16 w-16 object-cover rounded-lg border border-border/50"
+                                        alt={f.name}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeFile(i)}
+                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
-                {files.length > 0 && (
-                    <div className="flex gap-2 overflow-auto py-2">
-                        {files.map((f, i) => (
-                            <div key={i} className="relative">
-                                <img src={URL.createObjectURL(f)} className="h-16 w-16 object-cover rounded" alt={f.name} />
-                                <button type="button" onClick={() => removeFile(i)} className="absolute -top-1 -right-1 bg-red-600 rounded-full text-white text-xs px-1">x</button>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
+                        <div className="flex items-center gap-4">
+                            <label className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleFileInput}
+                                    className="hidden"
+                                />
+                                <ImagePlus className="h-5 w-5" />
+                            </label>
+
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="spoiler"
+                                    checked={isSpoiler}
+                                    onCheckedChange={(checked) => setIsSpoiler(checked === true)}
+                                />
+                                <Label htmlFor="spoiler" className="text-sm text-muted-foreground cursor-pointer">
+                                    Mark as spoiler
+                                </Label>
                             </div>
-                        ))}
-                    </div>
-                )}
+                        </div>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{content.length}/800</span>
-                    <Button type="submit" size="sm" disabled={posting}>{posting ? 'Posting...' : 'Post'}</Button>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground">{content.length}/800</span>
+                            <Button type="submit" size="sm" disabled={posting || (!content.trim() && files.length === 0)}>
+                                {posting ? (
+                                    <>
+                                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                        Posting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="h-3.5 w-3.5 mr-1.5" />
+                                        Post
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </form>
 
+            {/* Comments List */}
             {loading ? (
-                <div className="text-sm text-muted-foreground">Loading comments...</div>
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Loading comments...
+                </div>
             ) : comments.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No comments yet. Be the first.</div>
+                <div className="text-center py-8">
+                    <MessageCircle className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground">No comments yet. Be the first to share your thoughts!</p>
+                </div>
             ) : (
-                <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
+                <div className="space-y-4 max-h-[500px] overflow-auto pr-2">
                     {comments.map((c) => (
-                        <div key={c.id} className="rounded-md border border-border/60 bg-background/60 p-3">
-                            <div className="flex items-start justify-between text-xs text-muted-foreground mb-1">
+                        <div
+                            key={c.id}
+                            className="relative rounded-xl bg-background/60 backdrop-blur border border-border/50 p-4"
+                        >
+                            {/* Comment Header */}
+                            <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-3">
-                                    {c.user.image ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={c.user.image} alt={c.user.name || c.user.urlId} className="h-8 w-8 rounded-full object-cover" />
-                                    ) : (
-                                        <div className="h-8 w-8 rounded-full bg-muted text-xs flex items-center justify-center">{(c.user.name || c.user.urlId || '').charAt(0).toUpperCase()}</div>
-                                    )}
-                                    <div className="font-medium text-foreground">{c.user.name || c.user.urlId}</div>
+                                    <Avatar className="h-9 w-9">
+                                        <AvatarImage src={c.user.image || undefined} alt={c.user.name || c.user.urlId} />
+                                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                                            {(c.user.name || c.user.urlId || '?').charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium text-sm">{c.user.name || c.user.urlId}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {new Date(c.createdAt).toLocaleDateString(undefined, {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: 'numeric',
+                                                minute: '2-digit'
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[11px] text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
-                                    {isAdmin && (
-                                        <button onClick={() => toggleHidden(c.id, true)} className="text-xs text-destructive">Hide</button>
-                                    )}
-                                </div>
+                                {isAdmin && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => toggleHidden(c.id, true)}
+                                    >
+                                        Hide
+                                    </Button>
+                                )}
                             </div>
 
+                            {/* Comment Content */}
                             {c.isSpoiler ? (
-                                <details className="text-sm leading-relaxed whitespace-pre-wrap break-words bg-black/10 p-2 rounded">
-                                    <summary className="cursor-pointer text-sm text-muted-foreground">Spoiler — click to reveal</summary>
-                                    <div className="mt-2">{c.content}</div>
+                                <details className="group">
+                                    <summary className="cursor-pointer text-sm text-muted-foreground flex items-center gap-2 py-2 px-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                        Spoiler — click to reveal
+                                    </summary>
+                                    <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                        {c.content}
+                                    </p>
                                 </details>
                             ) : (
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{c.content}</p>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                    {c.content}
+                                </p>
                             )}
 
+                            {/* Attachments */}
                             {c.attachments && c.attachments.length > 0 && (
-                                <div className="mt-2 flex gap-2">
+                                <div className="mt-3 flex gap-2 flex-wrap">
                                     {c.attachments.map((a) => (
-                                        <a key={a.id} href={`/api/files/${a.file.id}`} target="_blank" rel="noreferrer" className="block">
-                                            <img src={`/api/files/${a.file.id}/thumbnail`} className="h-20 w-20 object-cover rounded" alt="attachment" />
+                                        <a
+                                            key={a.id}
+                                            href={`/api/files/${a.file.id}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="block"
+                                        >
+                                            <img
+                                                src={`/api/files/${a.file.id}/thumbnail`}
+                                                className="h-20 w-20 object-cover rounded-lg border border-border/50 hover:border-primary/50 transition-colors"
+                                                alt="attachment"
+                                            />
                                         </a>
                                     ))}
                                 </div>
                             )}
 
-                            <div className="mt-3 flex items-center gap-3">
-                                <button onClick={() => toggleReaction(c.id, 'like')} className={`text-sm px-2 py-1 rounded ${c.viewerReaction === 'like' ? 'bg-primary text-white' : 'bg-background/40'}`}>
-                                    👍 {c.likeCount || 0}
-                                </button>
-                                <button onClick={() => toggleReaction(c.id, 'dislike')} className={`text-sm px-2 py-1 rounded ${c.viewerReaction === 'dislike' ? 'bg-destructive text-white' : 'bg-background/40'}`}>
-                                    👎 {c.dislikeCount || 0}
-                                </button>
-                            </div>
-
-                            <div className="mt-2">
+                            {/* Reactions & Reply */}
+                            <div className="mt-4 flex items-center gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={c.viewerReaction === 'like' ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}
+                                    onClick={() => toggleReaction(c.id, 'like')}
+                                >
+                                    <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
+                                    {c.likeCount || 0}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={c.viewerReaction === 'dislike' ? 'bg-destructive/10 text-destructive' : 'text-muted-foreground'}
+                                    onClick={() => toggleReaction(c.id, 'dislike')}
+                                >
+                                    <ThumbsDown className="h-3.5 w-3.5 mr-1.5" />
+                                    {c.dislikeCount || 0}
+                                </Button>
                                 <ReplyButton comment={c} currentUserId={currentUserId} onPost={postReply} />
                             </div>
 
+                            {/* Replies */}
                             {c.replies && c.replies.length > 0 && (
-                                <div className="mt-3 space-y-2 pl-10">
+                                <div className="mt-4 ml-6 pl-4 border-l border-border/50 space-y-3">
                                     {c.replies.map((r) => (
                                         <div key={r.id} className="flex items-start gap-3">
-                                            {r.user.image ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={r.user.image} alt={r.user.name || r.user.urlId} className="h-7 w-7 rounded-full object-cover" />
-                                            ) : (
-                                                <div className="h-7 w-7 rounded-full bg-muted text-xs flex items-center justify-center">{(r.user.name || r.user.urlId || '').charAt(0).toUpperCase()}</div>
-                                            )}
-                                            <div>
-                                                <div className="text-xs font-medium">{r.user.name || r.user.urlId} <span className="text-[11px] text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</span></div>
-                                                <div className="text-sm text-muted-foreground">{r.content}</div>
+                                            <Avatar className="h-7 w-7">
+                                                <AvatarImage src={r.user.image || undefined} alt={r.user.name || r.user.urlId} />
+                                                <AvatarFallback className="bg-muted text-xs">
+                                                    {(r.user.name || r.user.urlId || '?').charAt(0).toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-sm font-medium">{r.user.name || r.user.urlId}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {new Date(r.createdAt).toLocaleDateString(undefined, {
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                            hour: 'numeric',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mt-0.5">{r.content}</p>
                                             </div>
                                         </div>
                                     ))}

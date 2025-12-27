@@ -51,7 +51,7 @@ export function ProtectedFile({
             />
 
             { }
-            <div className="flex items-center justify-center px-6 pb-4">
+            <div className="flex items-center justify-center px-3 sm:px-6 pb-4">
               <FileActions
                 urlPath={sanitizeUrl(file.urlPath)}
                 name={file.name}
@@ -60,6 +60,8 @@ export function ProtectedFile({
                 isTextBased={isTextBased}
                 content={codeContent}
                 fileId={file.id}
+                fileUserId={file.userId}
+                mimeType={file.mimeType}
               />
             </div>
           </div>

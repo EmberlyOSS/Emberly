@@ -1,6 +1,23 @@
 export const FILE_URL_PATTERN =
   /^\/[A-Za-z0-9]{5}\/[^\/]+\.[^\/]+(?:\/raw|\/direct)?$/
 
+
+export const SUPERADMIN_PATHS = [
+  '/admin/logs',
+  '/admin/email',
+  '/admin/legal',
+  '/admin/settings'
+]
+
+export const ADMIN_PATHS = [
+  '/admin/blog',
+  '/admin/docs',
+  '/admin/products',
+  '/admin/users',
+  '/admin/testimonials',
+  '/admin/partners'
+]
+
 export const PUBLIC_PATHS = [
   '/',
   '/st5',
@@ -30,7 +47,12 @@ export const PUBLIC_PATHS = [
   '/api/storage/type',
   '/api/partners',
   '/auth/login',
+  '/auth/alpha-migration',
   '/auth/register',
+  '/auth/forgot',
+  '/auth/magic',
+  'auth/reset',
+
 ]
 
 export const SETUP_PATHS = ['/setup', '/api/setup']

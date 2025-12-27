@@ -1,12 +1,20 @@
 import { ExpiryAction } from '@/packages/types/events'
 
+export interface EmailPreferences {
+  security: boolean
+  account: boolean
+  billing: boolean
+  marketing: boolean
+  productUpdates: boolean
+}
+
 export interface User {
   id: string
   name: string | null
   email: string | null
   image: string | null
   storageUsed: number
-  role: 'ADMIN' | 'USER'
+  role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   randomizeFileUrls: boolean
   enableRichEmbeds: boolean
   urlId: string
@@ -24,6 +32,9 @@ export interface User {
   } | null
   // Optional per-user quota (MB). When null, system default applies.
   storageQuotaMB?: number | null
+  // Email notification preferences
+  emailNotificationsEnabled?: boolean
+  emailPreferences?: EmailPreferences
 }
 
 export interface ProfileClientProps {

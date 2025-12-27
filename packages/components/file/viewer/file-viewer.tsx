@@ -6,9 +6,11 @@ import type { FileViewerProps } from './types'
 
 export function FileViewer({ file, verifiedPassword }: FileViewerProps) {
   return (
-    <div className="flex items-center justify-center px-2">
+    <div className="flex items-center justify-center w-full px-3 sm:px-4">
       <FileViewerProvider file={file} verifiedPassword={verifiedPassword}>
-        <FileViewerContent />
+        <div className="w-full min-w-0">
+          <FileViewerContent />
+        </div>
       </FileViewerProvider>
     </div>
   )

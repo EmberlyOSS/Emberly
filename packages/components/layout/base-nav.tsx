@@ -48,6 +48,7 @@ const baseRoutes = [
   { href: '/contact', label: 'Contact', icon: Mail },
   { href: '/blog', label: 'Blog', icon: Rss },
   { href: '/docs', label: 'Docs', icon: BookOpen },
+  { href: '/press', label: 'Press', icon: FileText },
 ]
 
 
@@ -156,19 +157,19 @@ export function BaseNav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 pt-4 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="relative bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg shadow-black/5 supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-2xl pointer-events-none" />
+        <div className="relative bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl shadow-lg shadow-black/10 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-2xl pointer-events-none" />
           <div className="relative flex h-16 items-center px-6">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2.5">
-                <Icons.logo className="h-6 w-6" />
+              <Link href="/" className="flex items-center space-x-2.5 group">
+                <Icons.logo className="h-6 w-6 transition-transform group-hover:scale-110" />
                 <span className="emberly-text text-lg font-medium">Emberly</span>
               </Link>
             </div>
 
             {/* Desktop center sections */}
             <div className="hidden md:flex flex-1 justify-center">
-              <div className="flex items-center space-x-1 bg-muted/20 backdrop-blur-sm rounded-xl p-1 border border-border/30">
+              <div className="flex items-center space-x-1 bg-white/5 dark:bg-black/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/10 dark:border-white/5 shadow-lg shadow-black/5">
                 {visibleSections.map((sec) => (
                   <div key={sec.id} className="relative">
                     <DropdownMenu
@@ -179,7 +180,7 @@ export function BaseNav() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
-                          className="h-9 px-4 rounded-lg font-medium border transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-background/50 border-transparent"
+                          className="h-9 px-4 rounded-xl font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
                         >
                           {(() => {
                             const Icon = sectionIcon(sec.id)

@@ -1,6 +1,8 @@
 import type { BaseEvent, EventWorkerOptions } from '@/packages/types/events'
 import { EventStatus } from '@/packages/types/events'
 
+import { eventCache } from '@/packages/lib/cache/event-cache'
+import { withRetry } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
 import { eventConsumer } from './consumer'
@@ -18,6 +20,8 @@ interface WorkerStats {
   lastProcessedAt: Date | null
   avgProcessingTime: number
   currentBatch: number
+  consecutiveErrors: number
+  lastErrorAt: Date | null
 }
 
 export class EventWorker {
@@ -34,8 +38,22 @@ export class EventWorker {
     lastProcessedAt: null,
     avgProcessingTime: 0,
     currentBatch: 0,
+    consecutiveErrors: 0,
+    lastErrorAt: null,
   }
   private processingTimes: number[] = []
+  // Adaptive polling: increase interval when idle, decrease when busy
+  private consecutiveEmptyPolls = 0
+  private basePollInterval = process.env.NODE_ENV === 'development' ? 5000 : 2000
+  private currentPollInterval = process.env.NODE_ENV === 'development' ? 5000 : 2000
+  private maxPollInterval = process.env.NODE_ENV === 'development' ? 60000 : 30000
+  private minPollInterval = process.env.NODE_ENV === 'development' ? 3000 : 1000
+
+  // Circuit breaker state
+  private circuitBreakerOpen = false
+  private circuitBreakerOpenedAt: Date | null = null
+  private readonly CIRCUIT_BREAKER_THRESHOLD = 5 // Open after 5 consecutive errors
+  private readonly CIRCUIT_BREAKER_RESET_MS = 30000 // Try to recover after 30s
 
   private constructor() { }
 
@@ -53,15 +71,17 @@ export class EventWorker {
     }
 
     const {
-      batchSize = 10,
-      pollInterval = 1000,
-      maxConcurrency = 5,
+      batchSize = 5,
+      pollInterval = 5000,
+      maxConcurrency = 1,
       enableScheduledEvents = true,
     } = options
 
     this.running = true
     this.stats.isRunning = true
     this.stats.startedAt = new Date()
+    this.basePollInterval = pollInterval
+    this.currentPollInterval = pollInterval
 
     logger.info('Starting event worker', {
       batchSize,
@@ -70,19 +90,88 @@ export class EventWorker {
       enableScheduledEvents,
     })
 
-    this.intervalId = setInterval(async () => {
+    // Use adaptive polling instead of fixed interval
+    this.scheduleNextPoll(batchSize, maxConcurrency, enableScheduledEvents)
+
+    logger.info('Event worker started successfully')
+  }
+
+  private scheduleNextPoll(
+    batchSize: number,
+    maxConcurrency: number,
+    enableScheduledEvents: boolean
+  ): void {
+    if (!this.running) return
+
+    this.intervalId = setTimeout(async () => {
+      // Check circuit breaker
+      if (this.circuitBreakerOpen) {
+        const elapsed = Date.now() - (this.circuitBreakerOpenedAt?.getTime() ?? 0)
+        if (elapsed < this.CIRCUIT_BREAKER_RESET_MS) {
+          // Still in cooldown - schedule next poll with long interval
+          this.currentPollInterval = this.maxPollInterval
+          this.scheduleNextPoll(batchSize, maxConcurrency, enableScheduledEvents)
+          return
+        }
+        // Try to recover
+        logger.info('Circuit breaker: attempting recovery')
+        this.circuitBreakerOpen = false
+        this.stats.consecutiveErrors = 0
+      }
+
       try {
-        await this.processEvents(batchSize, maxConcurrency)
+        const eventsProcessed = await this.processEvents(batchSize, maxConcurrency)
+
+        // Reset error state on success
+        this.stats.consecutiveErrors = 0
+
+        // Adaptive polling: adjust interval based on activity
+        if (eventsProcessed === 0) {
+          this.consecutiveEmptyPolls++
+          this.currentPollInterval = Math.min(
+            this.basePollInterval * Math.pow(1.3, Math.min(this.consecutiveEmptyPolls, 6)),
+            this.maxPollInterval
+          )
+        } else {
+          this.consecutiveEmptyPolls = 0
+          this.currentPollInterval = Math.max(this.basePollInterval, this.minPollInterval)
+        }
 
         if (enableScheduledEvents) {
           await this.activateScheduledEvents()
         }
       } catch (error) {
-        logger.error('Error in event worker', error as Error)
-      }
-    }, pollInterval)
+        this.stats.consecutiveErrors++
+        this.stats.lastErrorAt = new Date()
 
-    logger.info('Event worker started successfully')
+        // Only log error occasionally to avoid spam
+        if (this.stats.consecutiveErrors === 1 || this.stats.consecutiveErrors % 10 === 0) {
+          logger.error('Error in event worker', error as Error, {
+            consecutiveErrors: this.stats.consecutiveErrors,
+          })
+        }
+
+        // Check if we should open circuit breaker
+        if (this.stats.consecutiveErrors >= this.CIRCUIT_BREAKER_THRESHOLD) {
+          this.circuitBreakerOpen = true
+          this.circuitBreakerOpenedAt = new Date()
+          logger.warn('Circuit breaker opened due to consecutive errors', {
+            consecutiveErrors: this.stats.consecutiveErrors,
+            resetAfterMs: this.CIRCUIT_BREAKER_RESET_MS,
+          })
+        }
+
+        // Exponential backoff on errors
+        this.consecutiveEmptyPolls++
+        this.currentPollInterval = Math.min(
+          this.basePollInterval * Math.pow(1.5, Math.min(this.consecutiveEmptyPolls, 5)),
+          this.maxPollInterval
+        )
+      }
+
+      // Schedule next poll with adaptive interval
+      this.scheduleNextPoll(batchSize, maxConcurrency, enableScheduledEvents)
+    }, this.currentPollInterval)
   }
 
   async stop(): Promise<void> {
@@ -95,9 +184,13 @@ export class EventWorker {
     this.stats.isRunning = false
 
     if (this.intervalId) {
-      clearInterval(this.intervalId)
+      clearTimeout(this.intervalId)
       this.intervalId = null
     }
+
+    // Reset adaptive polling state
+    this.consecutiveEmptyPolls = 0
+    this.currentPollInterval = this.basePollInterval
 
     logger.info('Event worker stopped')
   }
@@ -112,24 +205,44 @@ export class EventWorker {
 
   private async processEvents(
     batchSize: number,
-    _maxConcurrency: number
-  ): Promise<void> {
-    const events = await eventEmitter.getEvents({
-      status: EventStatus.PENDING,
-      limit: batchSize,
-    })
+    maxConcurrency: number
+  ): Promise<number> {
+    let eventsProcessed = 0
 
-    if (events.length === 0) {
-      return
+    // Try to get events from Redis cache first (instant)
+    for (let i = 0; i < batchSize; i++) {
+      const event = await eventCache.dequeueEvent(EventStatus.PENDING)
+      if (!event) break
+
+      await this.processEventWithStats(event)
+      eventsProcessed++
     }
 
-    this.stats.currentBatch = events.length
+    // If no Redis events, fall back to database with retry logic
+    if (eventsProcessed === 0) {
+      const events = await withRetry(
+        () => eventEmitter.getEvents({
+          status: EventStatus.PENDING,
+          limit: batchSize,
+        }),
+        3,
+        1000
+      )
 
-    const processingPromises = events.map((event) =>
-      this.processEventWithStats(event)
-    )
+      if (events.length > 0) {
+        this.stats.currentBatch = events.length
+        // Limit concurrency by processing events in small chunks
+        for (let i = 0; i < events.length; i += maxConcurrency) {
+          const chunk = events.slice(i, i + maxConcurrency)
+          await Promise.all(chunk.map((event) => this.processEventWithStats(event)))
+        }
+        eventsProcessed = events.length
+      }
+    } else {
+      this.stats.currentBatch = eventsProcessed
+    }
 
-    await Promise.all(processingPromises)
+    return eventsProcessed
   }
 
   private async processEventWithStats(event: BaseEvent): Promise<void> {
@@ -208,6 +321,7 @@ export class EventWorker {
     const deletedCount = await eventEmitter.deleteEvents({
       status: EventStatus.COMPLETED,
       createdBefore: cutoffDate,
+      excludeAuditable: true, // Never delete auditable events
     })
 
     logger.info(`Cleaned up ${deletedCount} old completed events`)
@@ -221,6 +335,7 @@ export class EventWorker {
     const deletedCount = await eventEmitter.deleteEvents({
       status: EventStatus.FAILED,
       createdBefore: cutoffDate,
+      excludeAuditable: true, // Never delete auditable events
     })
 
     logger.info(`Cleaned up ${deletedCount} old failed events`)

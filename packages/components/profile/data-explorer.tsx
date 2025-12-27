@@ -48,7 +48,7 @@ export function ProfileDataExplorer() {
     }
 
     return (
-        <Card>
+        <Card className="bg-white/5 dark:bg-black/5 backdrop-blur-sm border-white/10 dark:border-white/5">
             <CardHeader>
                 <CardTitle>Your data</CardTitle>
             </CardHeader>
@@ -56,7 +56,7 @@ export function ProfileDataExplorer() {
                 <p className="text-sm text-muted-foreground mb-4">This shows the data we store for your account. You can download a copy for your records.</p>
 
                 <div className="mb-4">
-                    <Button onClick={downloadJson} disabled={!data} variant="outline">Download JSON</Button>
+                    <Button onClick={downloadJson} disabled={!data} variant="outline" className="shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all">Download JSON</Button>
                 </div>
 
                 {loading ? (
@@ -64,7 +64,7 @@ export function ProfileDataExplorer() {
                 ) : error ? (
                     <div className="text-sm text-destructive">{error}</div>
                 ) : (
-                    <pre className="rounded-md bg-muted p-4 overflow-auto text-sm max-h-96">{JSON.stringify(data, null, 2)}</pre>
+                    <pre className="rounded-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 p-4 overflow-auto text-sm max-h-96">{JSON.stringify(data, null, 2)}</pre>
                 )}
             </CardContent>
         </Card>

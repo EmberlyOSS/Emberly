@@ -34,10 +34,9 @@ export async function GET(req: Request) {
         const plan = planKeyForProduct(subscription?.product ?? null)
 
         // Basic aggregates
-        // Basic aggregates
         const [totalFiles, fileSums, totalUrls, urlClicksSum, domainsCount, verifiedDomains] = await Promise.all([
             prisma.file.count({ where: { userId: user.id } }),
-            prisma.file.aggregate({ where: { userId: user.id }, _sum: { size: true }, _sum2: undefined as any }),
+            prisma.file.aggregate({ where: { userId: user.id }, _sum: { size: true } }),
             prisma.shortenedUrl.count({ where: { userId: user.id } }),
             prisma.shortenedUrl.aggregate({ where: { userId: user.id }, _sum: { clicks: true } }),
             prisma.customDomain.count({ where: { userId: user.id } }),

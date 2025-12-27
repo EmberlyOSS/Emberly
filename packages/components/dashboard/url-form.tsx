@@ -72,18 +72,30 @@ export function URLForm({ onUrlAdded }: URLFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="url">URL to shorten</Label>
-        <div className="flex gap-2">
+        <Label htmlFor="url" className="text-sm font-medium">URL to shorten</Label>
+        <div className="flex gap-3">
           <Input
             id="url"
             type="url"
-            placeholder="https://example.com"
+            placeholder="https://example.com/very-long-url-to-shorten"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required
+            className="flex-1 bg-background/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-colors"
           />
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Creating...' : 'Shorten'}
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="px-6 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all"
+          >
+            {isLoading ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Creating...
+              </>
+            ) : (
+              'Shorten'
+            )}
           </Button>
         </div>
       </div>

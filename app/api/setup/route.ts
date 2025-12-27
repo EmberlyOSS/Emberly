@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import { updateConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
+import { invalidateSetupCache } from '@/packages/lib/database/setup'
 import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.startup
@@ -123,6 +124,9 @@ export async function POST(req: Request) {
         },
       },
     })
+
+    // Invalidate the setup cache so the next check reflects the new state
+    invalidateSetupCache()
 
     return NextResponse.json({
       success: true,

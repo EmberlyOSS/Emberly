@@ -1,4 +1,4 @@
-import { UserResponse, UserSchema } from '@/packages/types/dto/user'
+import { UserResponse, UserSchema, CreateUserSchema, UpdateUserSchema } from '@/packages/types/dto/user'
 import { hash } from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -36,6 +36,7 @@ export async function GET(req: Request) {
         role: true,
         urlId: true,
         storageUsed: true,
+        emailNotificationsEnabled: true,
         _count: {
           select: {
             files: true,
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
 
     const json = await req.json()
 
-    const result = UserSchema.safeParse(json)
+    const result = CreateUserSchema.safeParse(json)
     if (!result.success) {
       return apiError(result.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
@@ -153,16 +154,13 @@ export async function PUT(req: Request) {
 
     const json = await req.json()
 
-    const result = UserSchema.safeParse(json)
+    const result = UpdateUserSchema.safeParse(json)
     if (!result.success) {
       return apiError(result.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
 
     const body = result.data
-
-    if (!body.id) {
-      return apiError('User ID is required', HTTP_STATUS.BAD_REQUEST)
-    }
+    const raw = json as any
 
     const existingUser = await prisma.user.findUnique({
       where: { id: body.id },

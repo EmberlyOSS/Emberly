@@ -16,6 +16,7 @@ class OCRQueue {
   private processing: boolean = false
   private concurrentLimit: number = 1
   private activeProcesses: number = 0
+  private maxQueueLength: number = parseInt(process.env.OCR_MAX_QUEUE_LENGTH || '50', 10)
 
   async add(task: OCRTask, force: boolean = false) {
     if (!force) {
@@ -34,6 +35,21 @@ class OCRQueue {
         })
         return
       }
+    }
+
+    // Prevent unbounded queue growth
+    if (this.queue.length >= this.maxQueueLength) {
+      logger.warn('OCR queue full; skipping task', { fileId: task.fileId, queueLength: this.queue.length })
+      // Mark file as processed but without OCR results to avoid backlog
+      await prisma.file.update({
+        where: { id: task.fileId },
+        data: {
+          isOcrProcessed: true,
+          ocrText: null,
+          ocrConfidence: null,
+        },
+      })
+      return
     }
 
     this.queue.push(task)

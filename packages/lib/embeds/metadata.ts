@@ -16,6 +16,7 @@ interface BuildMetadataOptions {
   uploadedAt: Date
   uploaderName: string
   filePath: string
+  fileId?: string // Optional file ID for thumbnail URL
 }
 
 export async function buildRichMetadata({
@@ -28,6 +29,7 @@ export async function buildRichMetadata({
   uploadedAt,
   uploaderName,
   filePath,
+  fileId,
 }: BuildMetadataOptions): Promise<Metadata> {
   // Bail out early if critical inputs are missing to avoid Next metadata serialization crashes.
   if (!baseUrl || !fileUrlPath || !rawUrl || !fileName) {
@@ -39,6 +41,8 @@ export async function buildRichMetadata({
   const safeRawUrl = String(rawUrl)
   const safeMimeType = mimeType || 'application/octet-stream'
   const safeSize = typeof size === 'number' && Number.isFinite(size) ? size : 0
+  const safeFileId = fileId ? String(fileId) : undefined
+  const safeFilePath = filePath ? String(filePath) : ''
 
   let metadataBase: URL | undefined
   try {
@@ -75,13 +79,14 @@ export async function buildRichMetadata({
         classification.isImage,
         safeRawUrl,
         safeMimeType,
-        safeBaseUrl
+        safeBaseUrl,
+        safeFileId
       ),
       videos: await buildOpenGraphVideos(
         classification.isVideo,
         safeRawUrl,
         safeMimeType,
-        filePath
+        safeFilePath
       ),
       audio: buildOpenGraphAudio(classification.isAudio, safeRawUrl, safeMimeType),
     },
@@ -90,6 +95,8 @@ export async function buildRichMetadata({
       description: baseDescription,
       rawUrl: safeRawUrl,
       fileUrl,
+      baseUrl: safeBaseUrl,
+      fileId: safeFileId,
     }),
     other: buildOtherMetadata({
       uploadDate,
@@ -118,32 +125,38 @@ function buildOpenGraphImages(
   isImageFile: boolean,
   rawUrl: string,
   mimeType: string,
-  baseUrl: string
+  baseUrl: string,
+  fileId?: string
 ) {
-  if (isImageFile) {
+  if (isImageFile && fileId) {
+    // Use thumbnail endpoint which doesn't require password auth
+    // This allows Discord, Twitter, etc. to fetch the image preview
+    const thumbnailUrl = `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
     return [
       {
-        url: rawUrl,
+        url: thumbnailUrl,
         alt: 'Preview image',
         type: mimeType,
       },
     ]
   }
 
-  // Fallback to a site banner image when no image file is available.
-  // Expect a public asset at `/og/large_card_summary.png` (adjust path if needed).
-  try {
+  // Fallback to the site banner for non-image files
+  // This ensures Discord, Twitter, etc. always have an image to display
+  if (baseUrl) {
     const fallbackUrl = `${baseUrl.replace(/\/$/, '')}/banner.png`
     return [
       {
         url: fallbackUrl,
-        alt: 'Emberly banner',
+        width: 1200,
+        height: 630,
+        alt: 'Emberly - Simple, predictable file hosting',
         type: 'image/png',
       },
     ]
-  } catch (err) {
-    return undefined
   }
+
+  return undefined
 }
 
 async function buildOpenGraphVideos(
@@ -153,12 +166,16 @@ async function buildOpenGraphVideos(
   filePath: string
 ) {
   if (!isVideoFile) return undefined
+  if (!rawUrl || !filePath) return undefined
 
   let videoUrl = rawUrl
   try {
     const storageProvider = await getStorageProvider()
     if (storageProvider && typeof storageProvider.getFileUrl === 'function') {
-      videoUrl = await storageProvider.getFileUrl(filePath)
+      const providerUrl = await storageProvider.getFileUrl(filePath)
+      if (providerUrl) {
+        videoUrl = providerUrl
+      }
     }
   } catch (error) {
     // Fall back to rawUrl if storage provider is unavailable
@@ -199,23 +216,36 @@ interface TwitterMetadataInput {
   description: string
   rawUrl: string
   fileUrl: string
+  baseUrl?: string
+  fileId?: string
 }
 
 function buildTwitterMetadata(
   classification: ReturnType<typeof classifyMimeType>,
-  { title, description, rawUrl, fileUrl }: TwitterMetadataInput
+  { title, description, rawUrl, fileUrl, baseUrl, fileId }: TwitterMetadataInput
 ) {
   if (classification.isImage) {
+    // Use thumbnail endpoint for Twitter cards (doesn't require password auth)
+    const imageUrl = baseUrl && fileId
+      ? `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
+      : rawUrl
     return {
       card: 'summary_large_image' as const,
       title,
       description,
-      images: [rawUrl],
+      images: [imageUrl],
     }
   }
 
   if (classification.isVideo) {
-    if (!fileUrl || !rawUrl) return undefined
+    if (!fileUrl || !rawUrl) {
+      // Fallback to summary card if URLs are missing
+      return {
+        card: 'summary' as const,
+        title,
+        description,
+      }
+    }
 
     return {
       card: 'player' as const,
@@ -223,8 +253,8 @@ function buildTwitterMetadata(
       description,
       players: [
         {
-          url: String(fileUrl),
-          stream: String(rawUrl),
+          playerUrl: String(fileUrl),
+          streamUrl: String(rawUrl),
           width: 1280,
           height: 720,
         },
@@ -269,7 +299,7 @@ function buildOtherMetadata({
   isImage,
 }: OtherMetadataInput) {
   const metadata: Record<string, string> = {
-    'theme-color': '#3b82f6',
+    'theme-color': '#F97316', // Ember orange
     'article:published_time': uploadDate,
     'og:description': description,
     'al:ios:url': rawUrl,
@@ -289,3 +319,91 @@ export function buildMinimalMetadata(fileName: string): Metadata {
     description: '',
   }
 }
+
+/**
+ * Get the base URL from headers or environment.
+ */
+export async function getBaseUrl(): Promise<string> {
+  try {
+    const { headers } = await import('next/headers')
+    const headersList = await headers()
+    const host = headersList.get('host')
+    if (host) {
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      return `${protocol}://${host}`
+    }
+  } catch {
+    // headers() not available outside request context
+  }
+  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+}
+
+/**
+ * Build default site-wide metadata with OG banner fallback.
+ * Uses getConfig() to pull settings from the database.
+ */
+export async function buildSiteMetadata(overrides?: {
+  title?: string
+  description?: string
+}): Promise<Metadata> {
+  const { getConfig } = await import('@/packages/lib/config')
+  const config = await getConfig()
+  const baseUrl = await getBaseUrl()
+
+  // Site name could be made configurable in the future via config
+  const siteName = 'Emberly'
+  const title = overrides?.title || siteName
+  const description = overrides?.description || 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.'
+  const bannerUrl = `${baseUrl}/banner.png`
+
+  // Use theme color from config's custom colors if available, otherwise default
+  const themeColor = config.settings.appearance.customColors?.primary
+    ? `hsl(${config.settings.appearance.customColors.primary})`
+    : '#F97316'
+
+  return {
+    metadataBase: new URL(baseUrl),
+    title: {
+      default: siteName,
+      template: `%s | ${siteName}`,
+    },
+    description,
+    openGraph: {
+      type: 'website',
+      siteName,
+      title,
+      description,
+      url: baseUrl,
+      locale: 'en_US',
+      images: [
+        {
+          url: bannerUrl,
+          width: 1200,
+          height: 630,
+          alt: `${siteName} - Simple, predictable file hosting`,
+          type: 'image/png',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [bannerUrl],
+    },
+    other: {
+      'theme-color': themeColor,
+    },
+  }
+}
+
+/**
+ * Build page-specific metadata. OG images are inherited from layout.
+ */
+export function buildPageMetadata(options: { title: string; description?: string }): Metadata {
+  return {
+    title: options.title,
+    description: options.description || 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.',
+  }
+}
+

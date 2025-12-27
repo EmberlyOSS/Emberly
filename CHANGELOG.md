@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
-## [1.0.0-alpha.7] - UNRELEASED (WIP)
+## [1.0.0] - 2025-12-26
 
 ### Added
 - Commitlint for enforcing some sort of standard with commit messages.
@@ -22,6 +22,16 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Product/pricing system: product CRUD APIs (`/api/products` + catalog endpoints), pricing helpers for plans/add-ons, admin product manager, add-on selector, FAQ, donations tab, custom pricing CTA, and current-plan display.
 - Markdown source docs added for hosting/users/main (API, custom domains, getting started, architecture, user guides) to back the new docs system.
 - Legal hub refreshed with glassmorphic cards and alert callout; legal pages continue to render via the catch-all DB route.
+- Paste collaboration system: `FileCollaborator` and `FileEditSuggestion` Prisma models for multi-user paste editing with owner-approved suggestions.
+- Paste sharing UI: `allowSuggestions` toggle in paste creation form allowing owners to enable edit suggestions from other users.
+- "Shared with Me" dashboard section: lists pastes where the current user is a collaborator with pending suggestion badges.
+- Collaborator and suggestion management APIs: `/api/files/[id]/collaborators`, `/api/files/[id]/suggestions`, `/api/files/shared`, `/api/files/suggestions/pending`.
+- Redis caching infrastructure: new cache modules (`upload-cache`, `config-cache`, `session-cache`, `rate-limit`, `general-cache`) to offload transient data from Prisma/filesystem.
+- Upload metadata caching: chunked upload metadata now stored in Redis (with filesystem fallback) for faster multi-instance coordination.
+- Session and user lookup caching: Redis-backed caching for auth lookups with automatic invalidation on profile changes.
+- Rate limiting: Redis-based sliding-window and fixed-window rate limiters applied to registration and contact endpoints.
+- OCR safeguards: configurable `OCR_MAX_QUEUE_LENGTH` and `MAX_OCR_FILE_SIZE` environment variables to prevent memory exhaustion.
+- Page metadata: added `buildPageMetadata` exports to auth pages (login, register, forgot, reset), changelogs, blog listing, and created wrapper layouts for client-only pages (verify-email, alpha-migration, setup); added `generateMetadata` to dynamic routes (`blog/[slug]`, `legal/[...slug]`) for proper SEO.
 
 ### Changed
 - Server-side password verification when disabling 2FA: DELETE `/api/profile/2fa` now requires account password and verifies with `bcrypt.compare` before clearing 2FA.
@@ -33,6 +43,16 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Updated knip configuration (incorrect entrypoints).
 - Updated husky configs and lint-staged.
 - Legal routing now uses only `/legal/[...slug]` backed by the database (markdown fallback removed; legacy individual legal routes deleted); legal content expanded across all policies (Terms, Privacy, Cookies, Security, AUP, Accessibility, SLA, Refund, GDPR, DMCA) and contact points standardized to email.
+- Event worker defaults reduced: batch size lowered to 3–5 and concurrency to 1 to reduce DB/memory pressure.
+- Event handler execution changed from parallel `Promise.all` to sequential processing to prevent spikes.
+- `getScheduledEvents` now enforces a `take` limit (default 100) to prevent unbounded result sets.
+- Config and setup status lookups now use Redis cache with short TTL and in-memory fallback.
+- **UI overhaul**: site-wide glass-morphism styling applied across all dashboard pages, cards, panels, and components (`bg-white/10 dark:bg-black/10 backdrop-blur-xl border-white/20 dark:border-white/10`).
+- Dashboard components restyled: `SharedFileCard`, `VerificationCodesPanel`, `DataExplorer`, `ProfileAppearance`, file grid cards, URLs page, Upload page, Domains page, and Paste pages all updated with consistent glass aesthetic.
+- Changelog repo filter: replaced native `<select>` element with the site's `Select` component for visual consistency.
+- Themed logo component (`Icons.logo`) verified as the standard across all pages and components; press pages intentionally use static images for media downloads.
+- 2FA QR code rendering switched from server-side `qrcode` to client-side `QRCodeSVG` (`qrcode.react`) to eliminate `Buffer()` deprecation warning; QR container now has white background for theme compatibility with centered Emberly logo overlay.
+- Domains page completely redesigned: stats cards showing total/verified/pending counts, Cloudflare recommendation banner (dismissible), collapsible domain rows with inline DNS configuration display, and improved empty states.
 
 ### Fixed
 - Fixed broken JSX/parse error in `components/profile/security/profile-security.tsx` and restored a working client component.
@@ -43,6 +63,12 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Metadata robustness: Next metadata generation now validates inputs/base URLs, falls back to minimal metadata when data is missing/invalid, and avoids serialization crashes for embeds/OG cards.
 - Video delivery: local storage provider routes video extensions (mp4/webm/mov/avi/mkv) through `/api/files` for range-friendly playback and honors host overrides for correct streaming URLs.
 - Legal catch-all route now awaits `params` to avoid Next.js "params is a Promise" runtime errors.
+- Fixed event worker memory leaks and "heap out of memory" crashes by limiting batch sizes, concurrency, and adding OCR queue/file-size caps.
+- Fixed Prisma "Connection terminated unexpectedly" errors by reducing parallel DB load in event processing.
+- Fixed paste form Language/Filename inputs not aligning properly by adding `items-end` grid alignment and explicit input heights.
+- Fixed duplicate `border-white/10` class warning in `BlogToc.tsx`.
+- Fixed Prisma client imports across 17 files to use the generated client path (`@/prisma/generated/prisma/client`) instead of `@prisma/client`, resolving Turbopack module resolution errors during build.
+- Fixed TypeScript build errors: config path in verification-codes page, missing `id` prop on `GlassCard`, `billingPeriod` type annotation in pricing helpers, extra argument in admin email logs API, invalid `_sum2` in analytics summary, Map type and property names in top-users analytics, logger fallbacks and payload type annotations in domain routes.
 
 
 ## [1.0.0-alpha.6] - 2025-12-16

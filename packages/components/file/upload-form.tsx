@@ -5,7 +5,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 
 import { ExpiryAction } from '@/packages/types/events'
-import { $Enums } from '@prisma/client'
+import { $Enums } from '@/prisma/generated/prisma/client'
 import { format } from 'date-fns'
 import {
   CalendarIcon,
@@ -107,12 +107,19 @@ export function UploadForm({
     <div className="space-y-8">
       <Card
         {...getRootProps()}
-        className={`p-8 border-2 border-dashed transition-colors ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted'
+        className={`relative overflow-hidden p-8 border-2 border-dashed transition-all duration-300 ${isDragActive
+          ? 'border-primary bg-primary/10 scale-[1.01] shadow-lg shadow-primary/20'
+          : 'border-white/20 dark:border-white/10 bg-white/5 dark:bg-black/5 hover:border-primary/50 hover:bg-white/10 dark:hover:bg-black/10'
           }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center justify-center text-center">
-          <UploadIcon className="w-12 h-12 mb-4 text-muted-foreground" />
+          <div className={`p-4 rounded-2xl mb-4 transition-colors ${isDragActive
+            ? 'bg-primary/20 text-primary'
+            : 'bg-white/10 dark:bg-black/10 text-muted-foreground'
+            }`}>
+            <UploadIcon className="w-10 h-10" />
+          </div>
           <p className="text-lg font-medium">
             {isDragActive
               ? 'Drop the files here'
@@ -131,7 +138,7 @@ export function UploadForm({
             {files.map((file: FileWithPreview, index) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-4 rounded-lg bg-muted"
+                className="flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/10 dark:border-white/5 transition-all hover:bg-white/15 dark:hover:bg-black/15"
               >
                 {file.preview ? (
                   <Image
@@ -211,14 +218,14 @@ export function UploadForm({
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Visibility</Label>
+          <Label className="text-sm font-medium">Visibility</Label>
           <Select
             value={visibility}
             onValueChange={(value: 'PUBLIC' | 'PRIVATE') =>
               setVisibility(value)
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -229,21 +236,22 @@ export function UploadForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Password Protection (Optional)</Label>
+          <Label className="text-sm font-medium">Password Protection (Optional)</Label>
           <Input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Leave empty for no password"
+            className="h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20"
           />
         </div>
 
         <div className="space-y-2">
-          <Label>File Expiration (Optional)</Label>
+          <Label className="text-sm font-medium">File Expiration (Optional)</Label>
           <Button
             type="button"
             variant="outline"
-            className="w-full justify-start text-left font-normal"
+            className="w-full justify-start text-left font-normal h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 hover:bg-white/10 dark:hover:bg-black/10 hover:border-primary/30"
             onClick={() => setIsExpiryModalOpen(true)}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -271,7 +279,7 @@ export function UploadForm({
         </div>
 
         <Button
-          className="w-full"
+          className="w-full shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all"
           size="lg"
           onClick={uploadFiles}
           disabled={files.length === 0 || isUploading}

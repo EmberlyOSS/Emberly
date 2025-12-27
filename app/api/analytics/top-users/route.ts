@@ -24,10 +24,10 @@ export async function GET() {
         const fileCounts = await prisma.file.groupBy({ by: ['userId'], _count: { _all: true } })
 
         // merge by userId
-        const map = new Map<string, { downloads: number; clicks: number }>()
+        const map = new Map<string, { downloads: number; clicks: number; filesCount: number }>()
         downloads.forEach((d) => map.set(d.userId, { downloads: d._sum.downloads ?? 0, clicks: 0, filesCount: 0 }))
         clicks.forEach((c) => {
-            const cur = map.get(c.userId) || { downloads: 0, clicks: 0 }
+            const cur = map.get(c.userId) || { downloads: 0, clicks: 0, filesCount: 0 }
             cur.clicks = c._sum.clicks ?? 0
             map.set(c.userId, cur)
         })
@@ -42,7 +42,7 @@ export async function GET() {
         const items = Array.from(map.entries()).map(([userId, v]) => {
             const downloads = Number(v.downloads || 0)
             const clicks = Number(v.clicks || 0)
-            const filesCount = Number((v as any).filesCount || 0)
+            const filesCount = Number(v.filesCount || 0)
             const primaryScore = downloads + clicks
             const compositeScore = primaryScore + filesCount * FILE_COUNT_WEIGHT
             return { userId, downloads, clicks, filesCount, primaryScore, compositeScore }
@@ -102,7 +102,7 @@ export async function GET() {
             const end = Math.min(start + groupSize, items.length)
             const slice = items.slice(start, end)
             const count = slice.length
-            const avgScore = count > 0 ? Math.round(slice.reduce((s, x) => s + x.score, 0) / count) : 0
+            const avgScore = count > 0 ? Math.round(slice.reduce((s, x) => s + x.compositeScore, 0) / count) : 0
             const label = `${i * 10 + 1}-${Math.min((i + 1) * 10, 100)}%`
             buckets.push({ label, count, avgScore })
         }

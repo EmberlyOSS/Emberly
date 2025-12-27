@@ -68,6 +68,7 @@ export default async function RootLayout({
         <CustomHead />
       </head>
       <body
+        suppressHydrationWarning
         className={`${!hasCustomFont ? inter.variable + ' font-sans' : ''} min-h-screen flex flex-col`}
       >
         <ThemeProvider
@@ -84,7 +85,9 @@ export default async function RootLayout({
               </SetupChecker>
             </AuthProvider>
           </QueryProvider>
-          <Toaster />
+          <div suppressHydrationWarning>
+            <Toaster />
+          </div>
         </ThemeProvider>
       </body>
     </html>

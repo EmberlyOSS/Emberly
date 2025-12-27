@@ -23,6 +23,7 @@ import {
   Plus,
   Shield,
   Trash2,
+  Users,
   UserX,
   Video,
 } from 'lucide-react'
@@ -38,6 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/packages/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/packages/components/ui/avatar'
+import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
 import {
   Dialog,
@@ -150,10 +152,10 @@ interface UrlResponse {
 
 function UserTableSkeleton() {
   return (
-    <div className="rounded-md border">
+    <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="hover:bg-transparent border-border/50">
             <TableHead>User</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>URL ID</TableHead>
@@ -165,7 +167,7 @@ function UserTableSkeleton() {
         </TableHeader>
         <TableBody>
           {[...Array(3)].map((_, i) => (
-            <TableRow key={i}>
+            <TableRow key={i} className="border-border/50">
               <TableCell>
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-8 w-8 rounded-full" />
@@ -176,10 +178,10 @@ function UserTableSkeleton() {
                 </div>
               </TableCell>
               <TableCell>
-                <Skeleton className="h-4 w-[60px]" />
+                <Skeleton className="h-5 w-[70px] rounded-full" />
               </TableCell>
               <TableCell>
-                <Skeleton className="h-4 w-[50px]" />
+                <Skeleton className="h-5 w-[50px] rounded" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-[40px]" />
@@ -192,8 +194,8 @@ function UserTableSkeleton() {
               </TableCell>
               <TableCell>
                 <div className="flex justify-end gap-2">
-                  <Skeleton className="h-8 w-8" />
-                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
                 </div>
               </TableCell>
             </TableRow>
@@ -704,20 +706,39 @@ export function UserList() {
     return <UserTableSkeleton />
   }
 
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'SUPERADMIN':
+        return <Badge className="bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border-0 gap-1"><Shield className="h-3 w-3" />Superadmin</Badge>
+      case 'ADMIN':
+        return <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-0 gap-1"><Shield className="h-3 w-3" />Admin</Badge>
+      default:
+        return <Badge variant="secondary" className="bg-muted/50 gap-1"><Shield className="h-3 w-3" />User</Badge>
+    }
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Users</h2>
-        <Button onClick={handleNew}>
-          <Plus className="mr-2 h-4 w-4" />
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold">Users</h2>
+            <p className="text-sm text-muted-foreground">{users.length} user{users.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+        <Button onClick={handleNew} className="gap-2">
+          <Plus className="h-4 w-4" />
           New User
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-transparent border-border/50">
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>URL ID</TableHead>
@@ -728,120 +749,134 @@ export function UserList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.image || undefined} />
-                      <AvatarFallback>
-                        {user.name
-                          ?.split(' ')
-                          .map((n) => n[0])
-                          .join('')
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-1">
-                      <p className="font-medium leading-none">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {user.email}
-                      </p>
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-32">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
+                      <Users className="h-6 w-6 text-primary" />
                     </div>
+                    <p className="text-muted-foreground">No users found</p>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Shield
-                      className={`h-4 w-4 ${user.role === 'SUPERADMIN' ?
-                        'text-amber-500' : user.role === 'ADMIN' ?
-                          'text-primary' : 'text-muted-foreground'
-                        }`}
-                    />
-                    {user.role}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                    {user.urlId}
-                  </code>
-                </TableCell>
-                <TableCell>{user._count.files}</TableCell>
-                <TableCell>{formatFileSize(user.storageUsed)}</TableCell>
-                <TableCell>{user._count.shortenedUrls}</TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(user)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Edit User</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewFiles(user)}
-                          >
-                            <FolderOpen className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View Content</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      {user.image && (
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id} className="border-border/50 group">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border border-border/50">
+                        <AvatarImage src={user.image || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                          {user.name
+                            ?.split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-0.5">
+                        <p className="font-medium leading-none">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {getRoleBadge(user.role)}
+                  </TableCell>
+                  <TableCell>
+                    <code className="relative rounded-md bg-muted/50 px-2 py-1 font-mono text-xs">
+                      {user.urlId}
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">{user._count.files}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">{formatFileSize(user.storageUsed)}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">{user._count.shortenedUrls}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleRemoveAvatar(user.id)}
+                              onClick={() => handleEdit(user)}
+                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
                             >
-                              <UserX className="h-4 w-4" />
+                              <Edit2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Remove Avatar</p>
+                            <p>Edit User</p>
                           </TooltipContent>
                         </Tooltip>
-                      )}
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setUserToDelete(user)
-                              setIsDeleteDialogOpen(true)
-                            }}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Delete User</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewFiles(user)}
+                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View Content</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {user.image && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveAvatar(user.id)}
+                                className="h-8 w-8 hover:bg-chart-4/10 hover:text-chart-4"
+                              >
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Remove Avatar</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setUserToDelete(user)
+                                setIsDeleteDialogOpen(true)
+                              }}
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete User</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -1111,10 +1146,10 @@ export function UserList() {
                   </Select>
                 </div>
 
-                <div className="rounded-md border">
+                <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="hover:bg-transparent border-border/50">
                         <TableHead className="w-[50px]"></TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Type</TableHead>
@@ -1124,85 +1159,91 @@ export function UserList() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {userFiles.map((file: File) => (
-                        <TableRow key={file.id}>
-                          <TableCell className="w-[50px]">
-                            <div className="flex items-center justify-center">
-                              {getFilePreview(file)}
+                      {userFiles.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="h-24">
+                            <div className="flex flex-col items-center justify-center text-center">
+                              <FolderOpen className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                              <p className="text-sm text-muted-foreground">No files found</p>
                             </div>
-                          </TableCell>
-                          <TableCell className="font-medium max-w-[300px]">
-                            <div className="flex items-center justify-between gap-2">
-                              <a
-                                href={sanitizeUrl(file.urlPath)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:underline flex items-center gap-2 truncate"
-                              >
-                                {file.name}
-                              </a>
-                              <div className="flex-shrink-0">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setSelectedFile(file)
-                                        setIsFileSettingsOpen(true)
-                                      }}
-                                    >
-                                      <Lock className="h-4 w-4 mr-2" />
-                                      Settings
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={() => {
-                                        setSelectedFile(file)
-                                        setIsFileDeleteDialogOpen(true)
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <span
-                              className="truncate block"
-                              title={file.mimeType}
-                            >
-                              {file.mimeType}
-                            </span>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {formatFileSize(file.size)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <span
-                              className={cn(
-                                'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-                                file.password
-                                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100'
-                                  : file.visibility === 'PRIVATE'
-                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-100'
-                                    : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100'
-                              )}
-                            >
-                              {file.password ? 'PROTECTED' : file.visibility}
-                            </span>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {new Date(file.uploadedAt).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        userFiles.map((file: File) => (
+                          <TableRow key={file.id} className="border-border/50 group">
+                            <TableCell className="w-[50px]">
+                              <div className="flex items-center justify-center">
+                                {getFilePreview(file)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium max-w-[300px]">
+                              <div className="flex items-center justify-between gap-2">
+                                <a
+                                  href={sanitizeUrl(file.urlPath)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="hover:underline flex items-center gap-2 truncate hover:text-primary transition-colors"
+                                >
+                                  {file.name}
+                                </a>
+                                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedFile(file)
+                                          setIsFileSettingsOpen(true)
+                                        }}
+                                      >
+                                        <Lock className="h-4 w-4 mr-2" />
+                                        Settings
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() => {
+                                          setSelectedFile(file)
+                                          setIsFileDeleteDialogOpen(true)
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-[200px]">
+                              <span
+                                className="truncate block text-sm text-muted-foreground"
+                                title={file.mimeType}
+                              >
+                                {file.mimeType}
+                              </span>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-sm">
+                              {formatFileSize(file.size)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {file.password ? (
+                                <Badge className="bg-chart-4/20 text-chart-4 hover:bg-chart-4/30 border-0">Protected</Badge>
+                              ) : file.visibility === 'PRIVATE' ? (
+                                <Badge variant="secondary" className="bg-muted/50">Private</Badge>
+                              ) : (
+                                <Badge className="bg-chart-2/20 text-chart-2 hover:bg-chart-2/30 border-0">Public</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                              {new Date(file.uploadedAt).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1271,13 +1312,13 @@ export function UserList() {
                   placeholder="Search URLs..."
                   value={urlSearch}
                   onChange={(e) => handleUrlSearchChange(e.target.value)}
-                  className="w-full"
+                  className="w-full bg-background/50 border-border/50"
                 />
 
-                <div className="rounded-md border">
+                <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="hover:bg-transparent border-border/50">
                         <TableHead>Short URL</TableHead>
                         <TableHead>Target URL</TableHead>
                         <TableHead>Clicks</TableHead>
@@ -1285,53 +1326,68 @@ export function UserList() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {userUrls.map((url) => (
-                        <TableRow key={url.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center justify-between">
-                              <a
-                                href={`/u/${url.shortCode}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:underline flex items-center gap-2"
-                              >
-                                <Link2 className="h-4 w-4" />
-                                {url.shortCode}
-                              </a>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => handleDeleteUrl(url.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                      {userUrls.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-24">
+                            <div className="flex flex-col items-center justify-center text-center">
+                              <Link2 className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                              <p className="text-sm text-muted-foreground">No URLs found</p>
                             </div>
                           </TableCell>
-                          <TableCell className="max-w-[300px] truncate">
-                            <a
-                              href={url.targetUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:underline"
-                            >
-                              {url.targetUrl}
-                            </a>
-                          </TableCell>
-                          <TableCell>{url.clicks}</TableCell>
-                          <TableCell>
-                            {new Date(url.createdAt).toLocaleDateString()}
-                          </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        userUrls.map((url) => (
+                          <TableRow key={url.id} className="border-border/50 group">
+                            <TableCell className="font-medium">
+                              <div className="flex items-center justify-between">
+                                <a
+                                  href={`/u/${url.shortCode}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="hover:underline flex items-center gap-2 hover:text-primary transition-colors"
+                                >
+                                  <Link2 className="h-4 w-4" />
+                                  <code className="text-sm">{url.shortCode}</code>
+                                </a>
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() => handleDeleteUrl(url.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-[300px] truncate">
+                              <a
+                                href={url.targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline text-sm text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {url.targetUrl}
+                              </a>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="bg-muted/50">{url.clicks}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(url.createdAt).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>

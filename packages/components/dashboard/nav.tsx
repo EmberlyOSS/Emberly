@@ -53,6 +53,7 @@ const baseRoutes = [
   { href: '/contact', label: 'Contact', icon: Mail },
   { href: '/blog', label: 'Blog', icon: Rss },
   { href: '/docs', label: 'Docs', icon: BookOpen },
+  { href: '/press', label: 'Press', icon: FileText },
 ]
 
 const extrasRoutes = [
@@ -77,6 +78,7 @@ const adminRoutes = [
   { href: '/admin/legal', label: 'Legal', icon: Gavel },
   { href: '/admin/products', label: 'Products', icon: CreditCard },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/email', label: 'Email', icon: Mail },
   { href: '/admin/partners', label: 'Partners', icon: Handshake },
   { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
@@ -146,10 +148,10 @@ export function DashboardNav() {
   }
 
   return (
-    <nav className="flex items-center w-full">
+    <nav className="flex items-center w-full h-16 px-6">
       <div className="flex items-center">
-        <Link href="/dashboard" className="flex items-center space-x-2.5">
-          <Icons.logo className="h-6 w-6" />
+        <Link href="/dashboard" className="flex items-center space-x-2.5 group">
+          <Icons.logo className="h-6 w-6 transition-transform group-hover:scale-110" />
           <span className="emberly-text text-lg font-medium">Emberly</span>
         </Link>
       </div>
@@ -171,36 +173,40 @@ export function DashboardNav() {
           </SheetTrigger>
           <SheetContent side="right" className="flex flex-col">
             <SheetTitle>Navigation</SheetTitle>
-            <div className="mt-4 flex-1 overflow-auto pb-6">
+            <div className="mt-2 flex-1 overflow-auto pb-6">
               {visibleSections.map((sec) => (
-                <div key={sec.id} className="mb-4">
-                  <button
-                    className="w-full text-left font-medium mb-2 flex items-center justify-between"
+                <div key={sec.id} className="mb-4 px-2">
+                  <div
+                    className="w-full text-left font-medium mb-2 flex items-center justify-between cursor-pointer"
                     onClick={() => toggleSection(sec.id)}
-                    aria-expanded={openSections[sec.id]}
+                    role="button"
+                    tabIndex={0}
                   >
                     <div className="flex items-center gap-2">
                       {(() => {
                         const Icon = sectionIcon(sec.id)
-                        return <Icon className="h-4 w-4" />
+                        return <Icon className="h-5 w-5" />
                       })()}
-                      <span>{sec.title}</span>
+                      <span className="text-sm font-semibold">{sec.title}</span>
                     </div>
                     <ChevronDown className={`h-4 w-4 transform transition-transform ${openSections[sec.id] ? 'rotate-180' : 'rotate-0'}`} />
-                  </button>
+                  </div>
                   {openSections[sec.id] && (
-                    <div className="flex flex-col space-y-2">
-                      {sec.items.map((route) => (
-                        <Link
-                          key={route.href}
-                          href={route.href}
-                          onClick={() => setOpen(false)}
-                          className="w-full inline-flex items-center px-3 py-2 rounded-md hover:bg-background/50"
-                        >
-                          <route.icon className="mr-2 h-4 w-4" />
-                          <span className="font-medium">{route.label}</span>
-                        </Link>
-                      ))}
+                    <div className="flex flex-col divide-y divide-border/40 rounded-md overflow-hidden bg-background/50">
+                      {sec.items.map((route) => {
+                        const active = isRouteActive(route.href)
+                        return (
+                          <Link
+                            key={route.href}
+                            href={route.href}
+                            onClick={() => setOpen(false)}
+                            className={`w-full inline-flex items-center px-4 py-3 gap-3 ${active ? 'bg-secondary text-foreground' : 'hover:bg-background/60'}`}
+                          >
+                            <route.icon className="h-5 w-5" />
+                            <span className="font-medium">{route.label}</span>
+                          </Link>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -210,26 +216,29 @@ export function DashboardNav() {
             <div className="pt-4 border-t border-border/30 px-3 bg-background/80 backdrop-blur-sm">
               {session ? (
                 <div className="space-y-2">
-                  <Link href="/dashboard/profile" className="block text-sm">
+                  <Link href="/dashboard/profile" className="block text-sm" onClick={() => setOpen(false)}>
                     Profile
                   </Link>
-                  <Link href="/dashboard" className="block text-sm">
+                  <Link href="/dashboard" className="block text-sm" onClick={() => setOpen(false)}>
                     Dashboard
                   </Link>
                   <button
                     className="w-full text-left text-sm text-red-600"
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => {
+                      setOpen(false)
+                      signOut({ callbackUrl: '/' })
+                    }}
                   >
                     Sign Out
                   </button>
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => signIn()}>
+                  <Button variant="ghost" size="sm" onClick={() => { signIn(); setOpen(false) }}>
                     Sign In
                   </Button>
                   <Button asChild size="sm">
-                    <Link href="/auth/register">Register</Link>
+                    <Link href="/auth/register" onClick={() => setOpen(false)}>Register</Link>
                   </Button>
                 </div>
               )}
@@ -240,7 +249,7 @@ export function DashboardNav() {
 
       {/* Desktop */}
       <div className="hidden md:flex flex-1 justify-center">
-        <div className="flex items-center space-x-1 bg-muted/20 backdrop-blur-sm rounded-xl p-1 border border-border/30">
+        <div className="flex items-center space-x-1 bg-white/5 dark:bg-black/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/10 dark:border-white/5 shadow-lg shadow-black/5">
           {visibleSections.map((sec) => (
             <div key={sec.id} className="relative">
               <DropdownMenu
@@ -251,7 +260,7 @@ export function DashboardNav() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-9 px-4 rounded-lg font-medium border transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-background/50 border-transparent"
+                    className="h-9 px-4 rounded-xl font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
                   >
                     {(() => {
                       const Icon = sectionIcon(sec.id)

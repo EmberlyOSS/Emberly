@@ -1,4 +1,4 @@
-import { Prisma, UserRole } from '@prisma/client'
+import { Prisma, UserRole } from '@/prisma/generated/prisma/client'
 import { compare } from 'bcryptjs'
 import { NextAuthOptions, Session } from 'next-auth'
 import { JWT } from 'next-auth/jwt'
@@ -6,16 +6,20 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, NewLoginEmail } from '@/packages/lib/emails'
+import { detectNewLogin, recordLogin } from './login-detection'
 
 const userSelect = {
   id: true,
   email: true,
+  emailVerified: true,
+  createdAt: true,
   name: true,
   password: true,
   role: true,
   image: true,
   preferredUploadDomain: true,
   sessionVersion: true,
+  alphaUser: true,
 } as const
 
 // Optional: allow configuring a shared cookie domain for NextAuth via
@@ -34,6 +38,7 @@ declare module 'next-auth' {
       email: string
       image: string | null
       role: UserRole
+      alphaUser?: boolean
     }
   }
 }
@@ -46,6 +51,9 @@ declare module 'next-auth/jwt' {
     name?: string | null
     email?: string | null
     image?: string | null
+    alphaUser?: boolean
+    createdAt?: string
+    emailVerified?: boolean
   }
 }
 
@@ -56,11 +64,14 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        magicLink: { label: 'Magic Link', type: 'checkbox' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.email) {
           return null
         }
+
+        const isMagicLink = credentials.magicLink === 'true' || credentials.magicLink === true
 
         const user = await prisma.user.findUnique({
           where: {
@@ -69,7 +80,29 @@ export const authOptions: NextAuthOptions = {
           select: userSelect,
         })
 
-        if (!user || !user.password) {
+        if (!user) {
+          return null
+        }
+
+        // Magic link auth: just needs email to exist
+        if (isMagicLink) {
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            image: user.image,
+            sessionVersion: user.sessionVersion,
+            alphaUser: user.alphaUser,
+          }
+        }
+
+        // Password auth: validate password
+        if (!credentials?.password) {
+          return null
+        }
+
+        if (!user.password) {
           return null
         }
 
@@ -89,6 +122,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           image: user.image,
           sessionVersion: user.sessionVersion,
+          alphaUser: user.alphaUser,
         }
       },
     }),
@@ -107,6 +141,20 @@ export const authOptions: NextAuthOptions = {
           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
           }/dashboard/security`
 
+        // Extract geo info from various CDN headers (Vercel, Cloudflare, etc.)
+        const country = req?.headers?.get('x-vercel-ip-country') ||
+          req?.headers?.get('cf-ipcountry') ||
+          null
+        const city = req?.headers?.get('x-vercel-ip-city') ||
+          req?.headers?.get('cf-ipcity') ||
+          null
+
+        const loginContext = {
+          ip,
+          userAgent,
+          geo: (country || city) ? { country, city } : null
+        }
+
         void prisma.user
           .update({
             where: { id: user.id as string },
@@ -118,54 +166,85 @@ export const authOptions: NextAuthOptions = {
           })
           .catch((err) => console.error('Failed to update last login metadata', err))
 
-        void sendTemplateEmail({
-          to: email,
-          subject: 'New sign-in to your Emberly account',
-          template: NewLoginEmail,
-          props: {
-            userName: user.name || undefined,
-            time,
-            location: undefined,
-            ipAddress: ip,
-            device: userAgent,
-            manageUrl,
-          },
-        }).catch((err) => console.error('Failed to send new login email', err))
+        // Record login and check if this is a new device/suspicious login
+        void (async () => {
+          try {
+            const detection = await detectNewLogin(user.id as string, loginContext)
+
+            // Record this login in history
+            await recordLogin(user.id as string, loginContext, true)
+
+            // Only send alert if detection says we should
+            if (detection.shouldAlert) {
+              await sendTemplateEmail({
+                to: email,
+                subject: '⚠️ New device sign-in to your Emberly account',
+                template: NewLoginEmail,
+                props: {
+                  userName: user.name || undefined,
+                  time,
+                  location: detection.reason,
+                  ipAddress: ip,
+                  device: userAgent,
+                  manageUrl,
+                },
+              })
+            }
+          } catch (err) {
+            console.error('Failed to process login detection', err)
+          }
+        })()
       }
       return true
     },
     async jwt({ token, user }): Promise<JWT> {
       if (user) {
-        const sessionUser = user as UserWithSession
+        const sessionUser = user as UserWithSession & { alphaUser?: boolean }
         token.id = sessionUser.id
         token.role = sessionUser.role
         token.image = sessionUser.image
         token.sessionVersion = sessionUser.sessionVersion
         token.name = sessionUser.name
         token.email = sessionUser.email
+        token.alphaUser = sessionUser.alphaUser
+        token.createdAt = sessionUser.createdAt?.toISOString()
+        token.emailVerified = !!sessionUser.emailVerified
       }
 
-      const freshUser = await prisma.user.findUnique({
-        where: { id: token.id },
-        select: userSelect,
-      })
+      // Try to refresh user data from database, but don't fail the session if DB is temporarily unavailable
+      try {
+        const freshUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: userSelect,
+        })
 
-      if (!freshUser) {
-        throw new Error('Session invalidated: User not found')
+        if (!freshUser) {
+          // User was deleted - invalidate session by returning empty token
+          // This will cause the session to be cleared on next request
+          console.warn('[JWT] User not found, invalidating session for token:', token.id)
+          return {} as JWT
+        }
+
+        if (
+          token.sessionVersion &&
+          token.sessionVersion !== freshUser.sessionVersion
+        ) {
+          console.warn('[JWT] Session version mismatch, invalidating session for user:', token.id)
+          return {} as JWT
+        }
+
+        token.role = freshUser.role
+        token.image = freshUser.image
+        token.name = freshUser.name
+        token.email = freshUser.email
+        token.sessionVersion = freshUser.sessionVersion
+        token.alphaUser = freshUser.alphaUser
+        token.createdAt = freshUser.createdAt.toISOString()
+        token.emailVerified = !!freshUser.emailVerified
+      } catch (error) {
+        // For database connection errors, log and continue with cached token data
+        console.warn('[JWT] Database unavailable, using cached token data:', error instanceof Error ? error.message : error)
       }
-
-      if (
-        token.sessionVersion &&
-        token.sessionVersion !== freshUser.sessionVersion
-      ) {
-        throw new Error('Session invalidated: Version mismatch')
-      }
-
-      token.role = freshUser.role
-      token.image = freshUser.image
-      token.name = freshUser.name
-      token.email = freshUser.email
-      token.sessionVersion = freshUser.sessionVersion
 
       return token
     },
@@ -176,6 +255,7 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.image || null
         session.user.name = token.name || ''
         session.user.email = token.email || ''
+        session.user.alphaUser = token.alphaUser
       }
       return session
     },

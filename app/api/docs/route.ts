@@ -1,4 +1,4 @@
-import { DocCategory } from '@prisma/client'
+import { DocCategory } from '@/prisma/generated/prisma/client'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAuth } from '@/packages/lib/auth/api-auth'

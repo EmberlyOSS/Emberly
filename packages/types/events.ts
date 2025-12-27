@@ -80,6 +80,7 @@ export interface EventFilter {
   scheduledAfter?: Date
   createdBefore?: Date
   createdAfter?: Date
+  excludeAuditable?: boolean // If true, excludes events marked as auditable
   limit?: number
   offset?: number
 }
@@ -89,7 +90,66 @@ export enum ExpiryAction {
   SET_PRIVATE = 'SET_PRIVATE',
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared payload fragments
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RequestContext {
+  ip?: string
+  userAgent?: string
+  requestId?: string
+  geo?: {
+    country?: string
+    region?: string
+    city?: string
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event Type Map
+// ─────────────────────────────────────────────────────────────────────────────
+
 export type EventTypeMap = {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FILE EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'file.uploaded': {
+    fileId: string
+    userId: string
+    fileName: string
+    fileSize: number
+    mimeType: string
+    visibility: 'PUBLIC' | 'PRIVATE' | 'UNLISTED'
+    context?: RequestContext
+  }
+
+  'file.downloaded': {
+    fileId: string
+    userId: string
+    fileName: string
+    downloadedBy?: string // userId if authenticated
+    context?: RequestContext
+  }
+
+  'file.deleted': {
+    fileId: string
+    userId: string
+    fileName: string
+    fileSize: number
+    deletedBy: string
+    context?: RequestContext
+  }
+
+  'file.visibility-changed': {
+    fileId: string
+    userId: string
+    fileName: string
+    oldVisibility: 'PUBLIC' | 'PRIVATE' | 'UNLISTED'
+    newVisibility: 'PUBLIC' | 'PRIVATE' | 'UNLISTED'
+    context?: RequestContext
+  }
+
   'file.schedule-expiration': {
     fileId: string
     userId: string
@@ -97,6 +157,7 @@ export type EventTypeMap = {
     expiresAt: Date
     action: ExpiryAction
   }
+
   'file.expired': {
     fileId: string
     userId: string
@@ -105,7 +166,370 @@ export type EventTypeMap = {
     size: number
     action: ExpiryAction
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AUTH EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'auth.login': {
+    userId: string
+    email: string
+    method: 'credentials' | 'oauth' | 'magic-link'
+    provider?: string // 'google', 'github', etc.
+    success: boolean
+    failureReason?: string
+    isNewDevice?: boolean
+    context?: RequestContext
+  }
+
+  'auth.logout': {
+    userId: string
+    email: string
+    allSessions?: boolean
+    context?: RequestContext
+  }
+
+  'auth.password-changed': {
+    userId: string
+    email: string
+    changedBy: 'user' | 'admin' | 'reset'
+    context?: RequestContext
+  }
+
+  'auth.password-reset-requested': {
+    userId: string
+    email: string
+    token?: string // hashed/partial for logging
+    expiresAt: Date
+    context?: RequestContext
+  }
+
+  'auth.password-reset-completed': {
+    userId: string
+    email: string
+    context?: RequestContext
+  }
+
+  'auth.2fa-enabled': {
+    userId: string
+    email: string
+    method: 'totp' | 'sms' | 'webauthn'
+    context?: RequestContext
+  }
+
+  'auth.2fa-disabled': {
+    userId: string
+    email: string
+    method: 'totp' | 'sms' | 'webauthn'
+    disabledBy: 'user' | 'admin'
+    context?: RequestContext
+  }
+
+  'auth.2fa-backup-codes-generated': {
+    userId: string
+    email: string
+    codesCount: number
+    context?: RequestContext
+  }
+
+  'auth.2fa-backup-code-used': {
+    userId: string
+    email: string
+    codesRemaining: number
+    context?: RequestContext
+  }
+
+  'auth.session-revoked': {
+    userId: string
+    email: string
+    sessionId: string
+    revokedBy: 'user' | 'admin' | 'system'
+    reason?: string
+    context?: RequestContext
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ACCOUNT EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'account.created': {
+    userId: string
+    email: string
+    method: 'signup' | 'oauth' | 'invite' | 'admin'
+    provider?: string
+    context?: RequestContext
+  }
+
+  'account.email-changed': {
+    userId: string
+    oldEmail: string
+    newEmail: string
+    changedBy: 'user' | 'admin'
+    context?: RequestContext
+  }
+
+  'account.email-verification-requested': {
+    userId: string
+    email: string
+    token?: string // hashed/partial
+    expiresAt: Date
+    context?: RequestContext
+  }
+
+  'account.email-verified': {
+    userId: string
+    email: string
+    context?: RequestContext
+  }
+
+  'account.profile-updated': {
+    userId: string
+    email: string
+    fields: string[] // which fields changed
+    context?: RequestContext
+  }
+
+  'account.export-requested': {
+    userId: string
+    email: string
+    exportId: string
+    context?: RequestContext
+  }
+
+  'account.export-completed': {
+    userId: string
+    email: string
+    exportId: string
+    downloadUrl?: string
+    expiresAt?: Date
+  }
+
+  'account.deletion-requested': {
+    userId: string
+    email: string
+    scheduledAt: Date
+    context?: RequestContext
+  }
+
+  'account.deletion-cancelled': {
+    userId: string
+    email: string
+    context?: RequestContext
+  }
+
+  'account.deleted': {
+    userId: string
+    email: string
+    deletedBy: 'user' | 'admin' | 'system'
+    reason?: string
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMAIL / NOTIFICATION EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'email.send': {
+    to: string
+    template: string
+    subject: string
+    variables: Record<string, unknown>
+    userId?: string
+    priority?: 'high' | 'normal' | 'low'
+    sourceEvent?: string // The event that triggered this email (for preference checking)
+  }
+
+  'email.sent': {
+    to: string
+    template: string
+    messageId?: string
+    userId?: string
+  }
+
+  'email.failed': {
+    to: string
+    template: string
+    error: string
+    userId?: string
+    willRetry: boolean
+  }
+
+  'email.bounced': {
+    to: string
+    messageId?: string
+    bounceType: 'hard' | 'soft'
+    userId?: string
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BILLING EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'billing.subscription-created': {
+    userId: string
+    email: string
+    subscriptionId: string
+    planId: string
+    planName: string
+    interval: 'month' | 'year'
+    amount: number
+    currency: string
+  }
+
+  'billing.subscription-updated': {
+    userId: string
+    email: string
+    subscriptionId: string
+    oldPlanId?: string
+    newPlanId: string
+    newPlanName: string
+    changeType: 'upgrade' | 'downgrade' | 'interval-change'
+  }
+
+  'billing.subscription-cancelled': {
+    userId: string
+    email: string
+    subscriptionId: string
+    planId: string
+    cancelledBy: 'user' | 'admin' | 'system'
+    reason?: string
+    effectiveAt: Date
+  }
+
+  'billing.payment-succeeded': {
+    userId: string
+    email: string
+    paymentId: string
+    amount: number
+    currency: string
+    invoiceId?: string
+    receiptUrl?: string
+  }
+
+  'billing.payment-failed': {
+    userId: string
+    email: string
+    paymentId?: string
+    amount: number
+    currency: string
+    failureReason: string
+    nextRetryAt?: Date
+  }
+
+  'billing.refund-issued': {
+    userId: string
+    email: string
+    refundId: string
+    paymentId: string
+    amount: number
+    currency: string
+    reason?: string
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECURITY / AUDIT EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'security.suspicious-activity': {
+    userId?: string
+    email?: string
+    activityType: string
+    details: string
+    severity: 'low' | 'medium' | 'high' | 'critical'
+    context?: RequestContext
+  }
+
+  'security.rate-limit-exceeded': {
+    userId?: string
+    email?: string
+    endpoint: string
+    limit: number
+    window: string
+    context?: RequestContext
+  }
+
+  'security.api-key-created': {
+    userId: string
+    email: string
+    keyId: string
+    keyName: string
+    scopes: string[]
+    expiresAt?: Date
+    context?: RequestContext
+  }
+
+  'security.api-key-revoked': {
+    userId: string
+    email: string
+    keyId: string
+    keyName: string
+    revokedBy: 'user' | 'admin' | 'system'
+    reason?: string
+    context?: RequestContext
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'admin.user-role-changed': {
+    targetUserId: string
+    targetEmail: string
+    adminUserId: string
+    oldRole: string
+    newRole: string
+    context?: RequestContext
+  }
+
+  'admin.user-suspended': {
+    targetUserId: string
+    targetEmail: string
+    adminUserId: string
+    reason: string
+    duration?: number // minutes, undefined = permanent
+    context?: RequestContext
+  }
+
+  'admin.user-unsuspended': {
+    targetUserId: string
+    targetEmail: string
+    adminUserId: string
+    context?: RequestContext
+  }
+
+  'admin.content-removed': {
+    contentType: 'file' | 'comment' | 'post'
+    contentId: string
+    ownerId: string
+    adminUserId: string
+    reason: string
+    context?: RequestContext
+  }
+
+  'admin.broadcast-sent': {
+    adminId: string
+    recipientCount: number
+    subject: string
+    priority: string
+    failedCount: number
+    context?: RequestContext
+  }
 }
 
 export type EventType = keyof EventTypeMap
 export type EventPayload<T extends EventType> = EventTypeMap[T]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event categories for filtering/grouping
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const EventCategories = {
+  file: ['file.uploaded', 'file.downloaded', 'file.deleted', 'file.visibility-changed', 'file.schedule-expiration', 'file.expired'],
+  auth: ['auth.login', 'auth.logout', 'auth.password-changed', 'auth.password-reset-requested', 'auth.password-reset-completed', 'auth.2fa-enabled', 'auth.2fa-disabled', 'auth.2fa-backup-codes-generated', 'auth.2fa-backup-code-used', 'auth.session-revoked'],
+  account: ['account.created', 'account.email-changed', 'account.email-verification-requested', 'account.email-verified', 'account.profile-updated', 'account.export-requested', 'account.export-completed', 'account.deletion-requested', 'account.deletion-cancelled', 'account.deleted'],
+  email: ['email.send', 'email.sent', 'email.failed', 'email.bounced'],
+  billing: ['billing.subscription-created', 'billing.subscription-updated', 'billing.subscription-cancelled', 'billing.payment-succeeded', 'billing.payment-failed', 'billing.refund-issued'],
+  security: ['security.suspicious-activity', 'security.rate-limit-exceeded', 'security.api-key-created', 'security.api-key-revoked'],
+  admin: ['admin.user-role-changed', 'admin.user-suspended', 'admin.user-unsuspended', 'admin.content-removed', 'admin.broadcast-sent'],
+} as const
+
+export type EventCategory = keyof typeof EventCategories

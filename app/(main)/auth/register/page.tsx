@@ -5,6 +5,12 @@ import { DynamicBackground } from '@/packages/components/layout/dynamic-backgrou
 import { Icons } from '@/packages/components/shared/icons'
 
 import { getConfig } from '@/packages/lib/config'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Register',
+  description: 'Create a new Emberly account to start uploading and sharing files.',
+})
 
 export const dynamic = 'force-dynamic'
 

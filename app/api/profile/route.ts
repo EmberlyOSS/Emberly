@@ -1,11 +1,12 @@
 import { ProfileResponse, UpdateProfileSchema } from '@/packages/types/dto/profile'
-import { Prisma } from '@prisma/client'
+import { Prisma } from '@/prisma/generated/prisma/client'
 import { compare, hash } from 'bcryptjs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { sessionCache } from '@/packages/lib/cache/session-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -25,6 +26,8 @@ export async function GET(req: Request) {
         image: true,
         randomizeFileUrls: true,
         enableRichEmbeds: true,
+        emailNotificationsEnabled: true,
+        emailPreferences: true,
         createdAt: true,
         updatedAt: true,
         files: {
@@ -132,6 +135,18 @@ export async function PUT(req: Request) {
       updateData.defaultFileExpiration = body.defaultFileExpiration
     if (body.defaultFileExpirationAction)
       updateData.defaultFileExpirationAction = body.defaultFileExpirationAction
+    // Email notification preferences
+    if (typeof body.emailNotificationsEnabled === 'boolean')
+      updateData.emailNotificationsEnabled = body.emailNotificationsEnabled
+    if (body.emailPreferences) {
+      // Merge with existing preferences
+      const existingUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { emailPreferences: true },
+      })
+      const existingPrefs = (existingUser?.emailPreferences as Record<string, boolean>) || {}
+      updateData.emailPreferences = { ...existingPrefs, ...body.emailPreferences }
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -143,8 +158,13 @@ export async function PUT(req: Request) {
         image: true,
         randomizeFileUrls: true,
         enableRichEmbeds: true,
+        emailNotificationsEnabled: true,
+        emailPreferences: true,
       },
     })
+
+    // Invalidate session cache
+    await sessionCache.invalidateUserSession(user.id)
 
     return apiResponse<ProfileResponse>(updatedUser)
   } catch (error) {

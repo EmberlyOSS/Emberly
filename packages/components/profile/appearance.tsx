@@ -72,14 +72,14 @@ export function ProfileAppearance() {
 
     return (
         <div className="space-y-4">
-            <Card className="p-4">
+            <Card className="p-4 bg-white/5 dark:bg-black/5 backdrop-blur-sm border-white/10 dark:border-white/5">
                 <div className="text-sm font-semibold mb-2">Curated themes</div>
                 <div className="grid gap-3 sm:grid-cols-2">
                     {THEME_PRESETS.map((preset) => (
                         <button
                             key={preset.name}
                             onClick={() => applyPreset(preset)}
-                            className="relative overflow-hidden rounded-md border bg-card/60 p-4 text-left transition hover:border-primary/70 hover:shadow-md"
+                            className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 dark:bg-black/5 p-4 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
                         >
                             <div
                                 className="absolute inset-0 opacity-60"
@@ -96,14 +96,14 @@ export function ProfileAppearance() {
                 </div>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 bg-white/5 dark:bg-black/5 backdrop-blur-sm border-white/10 dark:border-white/5">
                 <div className="text-sm font-semibold mb-2">Quick hues</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {PRESET_HUES.map(({ hue, name, saturation, lightness }) => (
                         <button
                             key={hue}
                             onClick={() => applyHue(hue)}
-                            className={`relative h-14 w-full overflow-hidden rounded-md border transition-[border,opacity] hover:opacity-100`}
+                            className={`relative h-14 w-full overflow-hidden rounded-xl border border-white/10 transition-all hover:border-white/30 hover:shadow-lg`}
                             style={{ background: `hsl(${hue}, ${saturation}%, ${lightness}%)` }}
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/20 pointer-events-none" />
@@ -119,7 +119,7 @@ export function ProfileAppearance() {
                     <button
                         disabled={!selectedTheme}
                         onClick={handleSave}
-                        className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium ${selectedTheme ? 'bg-primary text-primary-foreground' : 'opacity-50 cursor-not-allowed'}`}
+                        className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium transition-all ${selectedTheme ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30' : 'opacity-50 cursor-not-allowed bg-white/10'}`}
                     >
                         Save Appearance
                     </button>

@@ -13,9 +13,28 @@ export async function processImageOCRTask({ filePath, fileId }: OCRTask) {
     const storageProvider = await getStorageProvider()
     const stream = await storageProvider.getFileStream(filePath)
 
+    // Stream file into memory but enforce a hard size cap to avoid OOM
+    const MAX_OCR_FILE_SIZE = parseInt(process.env.MAX_OCR_FILE_SIZE || String(20 * 1024 * 1024), 10) // 20MB default
+
     const chunks: Buffer[] = []
+    let totalLength = 0
     for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk))
+      const buf = Buffer.from(chunk)
+      totalLength += buf.length
+      if (totalLength > MAX_OCR_FILE_SIZE) {
+        logger.warn('OCR file too large, skipping OCR', { filePath, fileId, size: totalLength })
+        // Mark as processed without OCR to avoid requeueing
+        await prisma.file.update({
+          where: { id: fileId },
+          data: {
+            isOcrProcessed: true,
+            ocrText: null,
+            ocrConfidence: null,
+          },
+        })
+        return { success: false, error: 'File too large for OCR' }
+      }
+      chunks.push(buf)
     }
     const fileBuffer = Buffer.concat(chunks)
 

@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server"
 
+import { rateLimiter } from "@/packages/lib/cache/rate-limit"
+
 export async function POST(req: Request) {
     try {
+        // Rate limit: 3 contact submissions per minute per IP
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+        const rateLimit = await rateLimiter.checkFixed(`contact:${ip}`, 3, 60)
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { message: "Too many submissions. Please try again later." },
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+                    },
+                }
+            )
+        }
+
         const data = await req.json()
         const { name, email, subject, message } = data || {}
 

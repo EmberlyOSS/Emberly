@@ -1,6 +1,7 @@
 import type { InputJsonValue } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 
+import { configCache } from '@/packages/lib/cache/config-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -177,11 +178,23 @@ export async function initConfig(): Promise<EmberlyConfig> {
 
 export async function getConfig(): Promise<EmberlyConfig> {
   try {
+    // Try Redis cache first
+    const cached = await configCache.getConfig<EmberlyConfig>()
+    if (cached) {
+      return configSchema.parse(cached)
+    }
+
+    // Cache miss - fetch from database
     const configRow = await prisma.config.findFirst()
 
     if (!configRow) return initConfig()
 
-    return configSchema.parse(configRow.value)
+    const config = configSchema.parse(configRow.value)
+
+    // Cache the result
+    await configCache.setConfig(config)
+
+    return config
   } catch (error) {
     logger.warn('Could not access database for config, using default', {
       error,
@@ -270,6 +283,9 @@ export async function updateConfig(
         },
       })
     }
+
+    // Invalidate cache
+    await configCache.invalidateConfig()
 
     logger.info('Configuration updated successfully')
     return validatedConfig

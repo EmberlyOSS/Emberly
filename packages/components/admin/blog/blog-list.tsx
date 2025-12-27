@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, FileText, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/packages/components/ui/button'
+import { Badge } from '@/packages/components/ui/badge'
 import { Skeleton } from '@/packages/components/ui/skeleton'
 import {
   Table,
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/packages/components/ui/table'
+import { useToast } from '@/packages/hooks/use-toast'
 
 type Post = {
   id: string
@@ -25,20 +27,20 @@ type Post = {
 
 function PostTableSkeleton() {
   return (
-    <div className="rounded-md border">
+    <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Slug</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Published</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="border-border/50 hover:bg-transparent">
+            <TableHead className="text-muted-foreground font-medium">Title</TableHead>
+            <TableHead className="text-muted-foreground font-medium">Slug</TableHead>
+            <TableHead className="text-muted-foreground font-medium">Status</TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">Published</TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {[...Array(3)].map((_, i) => (
-            <TableRow key={i}>
+            <TableRow key={i} className="border-border/50">
               <TableCell>
                 <Skeleton className="h-4 w-[220px]" />
               </TableCell>
@@ -46,15 +48,15 @@ function PostTableSkeleton() {
                 <Skeleton className="h-4 w-[120px]" />
               </TableCell>
               <TableCell>
-                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-5 w-20 rounded-full" />
               </TableCell>
               <TableCell className="text-right">
                 <Skeleton className="h-4 w-24 ml-auto" />
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Skeleton className="h-8 w-8" />
-                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
                 </div>
               </TableCell>
             </TableRow>
@@ -65,7 +67,21 @@ function PostTableSkeleton() {
   )
 }
 
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'PUBLISHED':
+      return <Badge className="bg-chart-2/20 text-chart-2 hover:bg-chart-2/30 border-0">Published</Badge>
+    case 'DRAFT':
+      return <Badge variant="secondary" className="bg-muted/50">Draft</Badge>
+    case 'ARCHIVED':
+      return <Badge variant="outline" className="text-muted-foreground">Archived</Badge>
+    default:
+      return <Badge variant="secondary">{status}</Badge>
+  }
+}
+
 export function BlogList({ onEdit }: { onEdit?: (id: string) => void }) {
+  const { toast } = useToast()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -96,53 +112,73 @@ export function BlogList({ onEdit }: { onEdit?: (id: string) => void }) {
         credentials: 'include',
       })
       if (!res.ok) throw new Error('Delete failed')
+      toast({
+        title: 'Post deleted',
+        description: 'The post has been deleted successfully.',
+      })
       await load()
     } catch (e) {
-      alert(String(e))
+      toast({
+        title: 'Error',
+        description: String(e),
+        variant: 'destructive',
+      })
     }
   }
 
   if (loading) return <PostTableSkeleton />
 
   if (!loading && posts.length === 0) {
-    return <div className="text-center text-muted-foreground">No posts yet.</div>
+    return (
+      <div className="rounded-xl border border-border/50 border-dashed bg-background/30 p-12 text-center">
+        <div className="flex justify-center mb-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+            <FileText className="h-7 w-7 text-primary" />
+          </div>
+        </div>
+        <h3 className="text-lg font-medium mb-2">No posts yet</h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+          Start creating blog posts to share news and updates with your audience.
+        </p>
+      </div>
+    )
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Slug</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Published</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="border-border/50 hover:bg-transparent">
+            <TableHead className="text-muted-foreground font-medium">Title</TableHead>
+            <TableHead className="text-muted-foreground font-medium">Slug</TableHead>
+            <TableHead className="text-muted-foreground font-medium">Status</TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">Published</TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {posts.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell className="font-medium max-w-[350px] truncate">
-                {p.title}
+            <TableRow key={p.id} className="border-border/50 group">
+              <TableCell className="font-medium max-w-[350px]">
+                <div className="truncate">{p.title}</div>
                 {p.excerpt && (
-                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  <div className="text-sm text-muted-foreground mt-1 line-clamp-1">
                     {p.excerpt}
                   </div>
                 )}
               </TableCell>
-              <TableCell className="max-w-[220px] truncate">{p.slug}</TableCell>
-              <TableCell>{p.status}</TableCell>
-              <TableCell className="text-right">
-                {p.publishedAt ? new Date(p.publishedAt).toLocaleString() : '-'}
+              <TableCell className="max-w-[220px] truncate text-muted-foreground font-mono text-sm">{p.slug}</TableCell>
+              <TableCell>{getStatusBadge(p.status)}</TableCell>
+              <TableCell className="text-right text-sm text-muted-foreground">
+                {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit?.(p.id)}>
+                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit?.(p.id)} className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
                     <Edit2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </TableCell>

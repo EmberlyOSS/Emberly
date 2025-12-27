@@ -1,127 +1,269 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertTriangle, RefreshCcw } from 'lucide-react'
+import { useState } from 'react'
+
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  Bug,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  ClipboardCopy,
+  Home,
+  LayoutDashboard,
+  MessageCircle,
+  RefreshCcw,
+  Settings,
+} from 'lucide-react'
 
 import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
 import { DashboardNav } from '@/packages/components/dashboard/nav'
 import { Button } from '@/packages/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/packages/components/ui/card'
+import { Badge } from '@/packages/components/ui/badge'
 
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+// Reusable GlassCard component
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+      <div className="relative">{children}</div>
+    </div>
+  )
+}
+
+const QUICK_LINKS = [
+  {
+    icon: LayoutDashboard,
+    title: 'Dashboard',
+    description: 'Your files',
+    href: '/dashboard',
+  },
+  {
+    icon: Settings,
+    title: 'Settings',
+    description: 'Account',
+    href: '/dashboard/settings',
+  },
+  {
+    icon: MessageCircle,
+    title: 'Discord',
+    description: 'Get help',
+    href: '/discord',
+  },
+]
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  const [showDetails, setShowDetails] = useState(false)
+  const [copied, setCopied] = useState(false)
+
   const message = error?.message || 'An unexpected error occurred'
   const stack = String((error as any)?.stack || '')
+  const isDev = process.env.NODE_ENV === 'development'
+
+  const handleCopy = async () => {
+    const errorInfo = `Error: ${message}\n\nDigest: ${error?.digest || 'N/A'}\n\n${isDev ? `Stack:\n${stack}` : ''}`
+    try {
+      await navigator.clipboard.writeText(errorInfo)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { }
+  }
 
   return (
-    <div className="relative flex flex-col min-h-screen mt-24">
+    <div className="relative flex flex-col min-h-screen">
       <DynamicBackground />
 
-      <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="relative rounded-2xl border border-border/50 bg-background/85 p-2 shadow-lg backdrop-blur-xl">
-            <div className="relative flex h-16 items-center px-4 sm:px-6">
+      <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="relative bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl shadow-lg shadow-black/10">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-2xl pointer-events-none" />
+            <div className="relative">
               <DashboardNav />
             </div>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 px-4 pb-12 pt-24 sm:px-6 sm:pt-28">
-        <div className="mx-auto flex max-w-5xl flex-col gap-6">
-          <Card className="relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-xl backdrop-blur-xl">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/15" />
-            <div className="relative p-6 sm:p-8 space-y-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-                    <AlertTriangle className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Error</p>
-                    <h1 className="text-2xl font-bold sm:text-3xl">Something went wrong</h1>
-                    <p className="mt-2 text-sm text-muted-foreground">We hit a snag while loading this page. You can retry, head back to the dashboard, or copy the details below if you need to report it.</p>
+      <main className="flex-1 w-full pt-28 relative z-10">
+        <div className="max-w-4xl mx-auto py-8 px-4 md:px-6 space-y-6">
+          {/* Main Error Card */}
+          <GlassCard>
+            <div className="p-8 md:p-10">
+              <div className="flex flex-col md:flex-row md:items-start gap-6">
+                {/* Error Icon */}
+                <div className="flex-shrink-0">
+                  <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                    <AlertTriangle className="h-10 w-10 text-red-500" />
                   </div>
                 </div>
-                {error?.digest && (
-                  <div className="inline-flex items-center rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground">
-                    Code: {error.digest}
+
+                {/* Error Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <Badge variant="destructive" className="text-sm">
+                      <Bug className="h-3 w-3 mr-1" />
+                      Error
+                    </Badge>
+                    {error?.digest && (
+                      <Badge variant="secondary" className="bg-background/50 font-mono text-xs">
+                        Code: {error.digest}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+                    Something went
+                    <span className="block bg-gradient-to-r from-destructive via-destructive/80 to-primary bg-clip-text text-transparent">
+                      wrong
+                    </span>
+                  </h1>
+
+                  <p className="mt-4 text-muted-foreground leading-relaxed max-w-xl">
+                    We hit a snag while loading this page. You can try again,
+                    head back to the dashboard, or copy the error details below
+                    if you need to report it.
+                  </p>
+
+                  {/* Actions */}
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Button onClick={reset} size="lg" className="group">
+                      <RefreshCcw className="h-4 w-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                      Try Again
+                    </Button>
+                    <Button variant="outline" size="lg" asChild className="bg-background/50">
+                      <Link href="/dashboard">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Go to Dashboard
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Details Accordion */}
+              <div className="mt-8 pt-6 border-t border-border/50">
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showDetails ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                  {showDetails ? 'Hide' : 'Show'} error details
+                </button>
+
+                {showDetails && (
+                  <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    {/* Error Message */}
+                    <div className="p-4 rounded-xl bg-background/30 border border-border/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Error Message
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCopy}
+                          className="h-7 text-xs"
+                        >
+                          {copied ? (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1 text-emerald-500" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <ClipboardCopy className="h-3 w-3 mr-1" />
+                              Copy
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-sm break-words font-mono">{message}</p>
+                    </div>
+
+                    {/* Stack Trace (Dev only) */}
+                    {isDev && stack && (
+                      <div className="p-4 rounded-xl bg-background/30 border border-border/50">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Stack Trace
+                        </span>
+                        <pre className="mt-2 text-xs overflow-auto max-h-48 text-muted-foreground font-mono whitespace-pre-wrap">
+                          {stack}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+            </div>
+          </GlassCard>
 
-              <div className="grid gap-4 grid-cols-1">
-                <div className="space-y-4 rounded-xl border border-border/60 bg-background/80 p-4">
-                  <div className="text-sm font-semibold text-foreground/90">Details</div>
-                  <p className="text-sm text-muted-foreground break-words">{message}</p>
-                  {process.env.NODE_ENV === 'development' && stack && (
-                    <pre className="max-h-56 overflow-auto rounded-lg bg-muted/80 p-3 text-xs sm:text-sm text-foreground/80">{stack}</pre>
-                  )}
-                </div>
-
-                <div className="space-y-3 rounded-xl border border-border/60 bg-background/80 p-4">
-                  <div className="text-sm font-semibold text-foreground/90">Quick actions</div>
-                  <div className="grid gap-3 sm:grid-cols-1">
-                    <Button asChild className="w-full" size="lg" variant="destructive">
-                      <Link href="/dashboard">Go to dashboard</Link>
-                    </Button>
-                    <Button size="lg" variant="secondary" onClick={() => reset()} className="w-full gap-2">
-                      <RefreshCcw className="h-4 w-4" aria-hidden="true" />
-                      Try again
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      onClick={() => navigator.clipboard?.writeText(`${message}\n\n${stack}`)}
-                      className="w-full"
-                    >
-                      Copy details
-                    </Button>
-                    <Button asChild size="lg" variant="ghost" className="w-full">
-                      <Link href="/discord">Report issue</Link>
-                    </Button>
+          {/* Quick Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {QUICK_LINKS.map((link) => (
+              <GlassCard key={link.href} className="group hover:border-primary/30 transition-colors">
+                <Link href={link.href} className="block p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                      <link.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm group-hover:text-primary transition-colors">
+                        {link.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {link.description}
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </div>
+                </Link>
+              </GlassCard>
+            ))}
+          </div>
+
+          {/* Report Issue */}
+          <GlassCard>
+            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Bug className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Think this is a bug?</p>
+                  <p className="text-xs text-muted-foreground">
+                    Let us know so we can fix it
+                  </p>
                 </div>
               </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild className="bg-background/50">
+                  <Link href="/discord">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Report on Discord
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild className="bg-background/50">
+                  <Link href="https://github.com/EmberlyOSS/Website/issues" target="_blank">
+                    <Bug className="h-4 w-4 mr-2" />
+                    GitHub Issue
+                  </Link>
+                </Button>
+              </div>
             </div>
-          </Card>
-
-          <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-md backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="text-lg">Helpful links</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-3">
-              <Link href="/dashboard" className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-base">📂</span>
-                <div className="text-sm">
-                  <div className="font-semibold">Dashboard</div>
-                  <div className="text-xs text-muted-foreground">Back to your files</div>
-                </div>
-              </Link>
-
-              <Link href="/" className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-base">🏠</span>
-                <div className="text-sm">
-                  <div className="font-semibold">Home</div>
-                  <div className="text-xs text-muted-foreground">Emberly landing</div>
-                </div>
-              </Link>
-
-              <Link href="/discord" className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-base">💬</span>
-                <div className="text-sm">
-                  <div className="font-semibold">Discord</div>
-                  <div className="text-xs text-muted-foreground">Get help quickly</div>
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
+          </GlassCard>
         </div>
-      </main >
-    </div >
+      </main>
+    </div>
   )
 }

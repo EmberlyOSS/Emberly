@@ -69,6 +69,15 @@ body {
   .scrollbar-custom {
     @apply scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary/20 hover:scrollbar-thumb-primary/30;
   }
+  
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Customize scrollbar for Webkit browsers (Chrome, Safari, etc.) */

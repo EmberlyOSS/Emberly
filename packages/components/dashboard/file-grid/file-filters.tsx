@@ -212,13 +212,13 @@ export const FileFilters = memo(function FileFilters({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/60 backdrop-blur-sm border-border/50 hover:bg-background/80 transition-all duration-200"
+            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-white/5 dark:bg-white/[0.02] backdrop-blur-md border-white/10 dark:border-white/5 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 transition-all duration-200"
           >
             <span>{label}</span>
             <SortIcon className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 bg-white/5 dark:bg-black/40 backdrop-blur-xl border-white/10">
           <DropdownMenuLabel>Sort by</DropdownMenuLabel>
           { }
           <div className="px-2 py-1.5">
@@ -370,7 +370,7 @@ export const FileFilters = memo(function FileFilters({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/60 backdrop-blur-sm border-border/50 hover:bg-background/80 transition-all duration-200"
+            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-white/5 dark:bg-white/[0.02] backdrop-blur-md border-white/10 dark:border-white/5 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 transition-all duration-200"
           >
             <span>Visibility</span>
             {visibility.length > 0 ? (
@@ -382,7 +382,7 @@ export const FileFilters = memo(function FileFilters({
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 bg-white/5 dark:bg-black/40 backdrop-blur-xl border-white/10">
           <DropdownMenuLabel>Filter by visibility</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
@@ -454,7 +454,7 @@ export const FileFilters = memo(function FileFilters({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/60 backdrop-blur-sm border-border/50 hover:bg-background/80 transition-all duration-200"
+            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-white/5 dark:bg-white/[0.02] backdrop-blur-md border-white/10 dark:border-white/5 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 transition-all duration-200"
           >
             <span>File Type</span>
             {selectedTypes.length > 0 ? (
@@ -468,7 +468,7 @@ export const FileFilters = memo(function FileFilters({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-64 max-h-[400px] overflow-y-auto"
+          className="w-64 max-h-[400px] overflow-y-auto bg-white/5 dark:bg-black/40 backdrop-blur-xl border-white/10"
         >
           <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
           {Object.entries(fileTypesByCategory).map(
@@ -517,7 +517,7 @@ export const FileFilters = memo(function FileFilters({
           <Button
             variant="outline"
             className={cn(
-              'w-full sm:w-auto sm:min-w-[140px] justify-start text-left font-normal bg-background/60 backdrop-blur-sm border-border/50 hover:bg-background/80 transition-all duration-200',
+              'w-full sm:w-auto sm:min-w-[140px] justify-start text-left font-normal bg-white/5 dark:bg-white/[0.02] backdrop-blur-md border-white/10 dark:border-white/5 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 transition-all duration-200',
               !date && 'text-muted-foreground'
             )}
           >
@@ -535,7 +535,7 @@ export const FileFilters = memo(function FileFilters({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
+        <PopoverContent className="w-auto p-0 bg-white/5 dark:bg-black/40 backdrop-blur-xl border-white/10" align="end">
           <Calendar
             initialFocus
             mode="range"

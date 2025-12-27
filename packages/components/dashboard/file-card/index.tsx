@@ -13,6 +13,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  ExternalLink,
   Globe,
   KeyRound,
   Link as LinkIcon,
@@ -22,6 +23,7 @@ import {
   Trash2,
 } from 'lucide-react'
 
+import { EmbedPreviewDialog } from '@/packages/components/dashboard/file-card/embed-preview-dialog'
 import { getFileIcon } from '@/packages/components/dashboard/file-card/utils'
 import { ExpiryModal } from '@/packages/components/shared/expiry-modal'
 import { Icons } from '@/packages/components/shared/icons'
@@ -53,13 +55,15 @@ import { useToast } from '@/packages/hooks/use-toast'
 interface FileCardProps {
   file: FileType
   onDelete?: (id: string) => void
+  enableRichEmbeds?: boolean
 }
 
-export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
+export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true }: FileCardProps) {
   const { toast } = useToast()
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
   const [isVisibilityDialogOpen, setIsVisibilityDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isEmbedPreviewOpen, setIsEmbedPreviewOpen] = useState(false)
   const [password, setPassword] = useState(initialFile.password || '')
   const [file, setFile] = useState(initialFile)
   const [visibility, setVisibility] = useState<'PUBLIC' | 'PRIVATE'>(
@@ -260,8 +264,11 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
   const isImage = file.mimeType.startsWith('image/')
 
   return (
-    <Card className="group relative overflow-hidden bg-background/40 backdrop-blur-xl border-border/50 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 transition-all duration-300 hover:bg-background/60">
-      { }
+    <Card className="group relative overflow-hidden bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl border-white/10 dark:border-white/5 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 dark:hover:border-white/10 transition-all duration-300">
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+
+      {/* Thumbnail section */}
       <div className="relative">
         <Link href={sanitizeUrl(file.urlPath)} className="block">
           {isImage ? (
@@ -287,22 +294,22 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
               )}
             </div>
           ) : (
-            <div className="relative aspect-square bg-muted flex items-center justify-center">
+            <div className="relative aspect-square bg-white/5 dark:bg-white/[0.02] flex items-center justify-center">
               {getFileIcon(file.mimeType, 'h-16 w-16 text-muted-foreground')}
             </div>
           )}
         </Link>
 
-        { }
+        {/* Action overlay */}
         <div
-          className={`absolute inset-0 bg-black/50 opacity-0 ${!isLoadingOcr && 'group-hover:opacity-100'} transition-opacity flex flex-col items-center justify-center gap-3`}
+          className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20 opacity-0 ${!isLoadingOcr && 'group-hover:opacity-100'} transition-all duration-300 flex flex-col items-center justify-center gap-3`}
         >
-          { }
-          <Button variant="secondary" className="glass-hover" size="sm" asChild>
+          {/* View button */}
+          <Button variant="secondary" className="bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white" size="sm" asChild>
             <Link href={sanitizeUrl(file.urlPath)}>View</Link>
           </Button>
 
-          { }
+          {/* Action buttons */}
           <div className="flex gap-1">
             <TooltipProvider delayDuration={150}>
               <Tooltip>
@@ -310,7 +317,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 glass-hover"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={handleCopyLink}
                   >
                     <LinkIcon className="h-4 w-4" />
@@ -323,7 +330,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 glass-hover"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     asChild
                   >
                     <a
@@ -341,7 +348,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 glass-hover"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsVisibilityDialogOpen(true)}
                   >
                     <EyeOff className="h-4 w-4" />
@@ -354,7 +361,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 glass-hover"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsPasswordDialogOpen(true)}
                   >
                     <KeyRound className="h-4 w-4" />
@@ -368,7 +375,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="h-8 w-8 glass-hover"
+                      className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                       onClick={handleFetchOcr}
                       disabled={isLoadingOcr}
                     >
@@ -383,7 +390,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 glass-hover"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsExpiryModalOpen(true)}
                   >
                     <Timer className="h-4 w-4" />
@@ -396,7 +403,20 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 glass-hover"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    onClick={() => setIsEmbedPreviewOpen(true)}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Embed preview</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
                     onClick={() => setIsDeleteDialogOpen(true)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -408,9 +428,9 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
           </div>
         </div>
 
-        { }
+        {/* Visibility badge */}
         <div className="absolute bottom-2 left-2">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-background/80 text-xs backdrop-blur-sm">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 dark:bg-black/40 text-xs backdrop-blur-md border border-white/10">
             {file.password ? (
               <>
                 <KeyRound className="h-3 w-3" />
@@ -430,24 +450,24 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
           </div>
         </div>
 
-        { }
+        {/* Expiry badge */}
         {file.expiresAt && (
           <div className="absolute top-2 right-2">
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className={`flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm text-xs ${isBefore(
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-md text-xs border ${isBefore(
                       new Date(file.expiresAt),
                       new Date(Date.now() + 24 * 60 * 60 * 1000)
                     )
-                      ? 'bg-red-500/90 text-white'
+                      ? 'bg-red-500/80 border-red-400/50 text-white'
                       : isBefore(
                         new Date(file.expiresAt),
                         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                       )
-                        ? 'bg-orange-500/90 text-white'
-                        : 'bg-amber-500/90 text-white'
+                        ? 'bg-orange-500/80 border-orange-400/50 text-white'
+                        : 'bg-amber-500/80 border-amber-400/50 text-white'
                       }`}
                   >
                     <Timer className="h-3 w-3" />
@@ -467,12 +487,12 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
           </div>
         )}
 
-        { }
+        {/* Timestamp badge */}
         <div className="absolute bottom-2 right-2">
           <TooltipProvider delayDuration={150}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-background/80 text-xs backdrop-blur-sm">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 dark:bg-black/40 text-xs backdrop-blur-md border border-white/10">
                   <Clock className="h-3 w-3" />
                   {getRelativeTime(new Date(file.uploadedAt))}
                 </div>
@@ -490,15 +510,15 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
         </div>
       </div>
 
-      { }
-      <div className="p-3">
+      {/* File info section */}
+      <div className="p-3 relative border-t border-white/5">
         <div className="flex items-center justify-between gap-2">
           <TooltipProvider delayDuration={150}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
                   href={sanitizeUrl(file.urlPath)}
-                  className="font-medium hover:underline truncate block text-sm"
+                  className="font-medium hover:text-primary truncate block text-sm transition-colors"
                 >
                   {file.name}
                 </Link>
@@ -512,14 +532,14 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
             {formatFileSize(file.size)}
           </span>
         </div>
-        <div className="mt-1 flex items-center space-x-2 text-xs text-muted-foreground">
-          <div className="flex items-center">
-            <Eye className="mr-1 h-3 w-3" />
-            {file.views}
+        <div className="mt-1.5 flex items-center space-x-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Eye className="h-3 w-3" />
+            <span>{file.views}</span>
           </div>
-          <div className="flex items-center">
-            <Download className="mr-1 h-3 w-3" />
-            {file.downloads}
+          <div className="flex items-center gap-1">
+            <Download className="h-3 w-3" />
+            <span>{file.downloads}</span>
           </div>
         </div>
       </div>
@@ -643,7 +663,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
         </DialogContent>
       </Dialog>
 
-      { }
+      {/* OCR Dialog */}
       <OcrDialog
         isOpen={isOcrDialogOpen}
         onOpenChange={setIsOcrDialogOpen}
@@ -653,7 +673,7 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
         filename={file.name}
       />
 
-      { }
+      {/* Expiry Modal */}
       <ExpiryModal
         isOpen={isExpiryModalOpen}
         onOpenChange={setIsExpiryModalOpen}
@@ -661,6 +681,14 @@ export function FileCard({ file: initialFile, onDelete }: FileCardProps) {
         initialDate={file.expiresAt ? new Date(file.expiresAt) : null}
         title="Manage File Expiration"
         description="Set when this file should be automatically deleted"
+      />
+
+      {/* Embed Preview Dialog */}
+      <EmbedPreviewDialog
+        isOpen={isEmbedPreviewOpen}
+        onOpenChange={setIsEmbedPreviewOpen}
+        file={file}
+        enableRichEmbeds={enableRichEmbeds}
       />
     </Card>
   )

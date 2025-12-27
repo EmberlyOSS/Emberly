@@ -1,11 +1,12 @@
 import DocsAlert from '@/packages/components/docs/DocsAlert'
 import DocsShell from '@/packages/components/docs/DocsShell'
 import { listDocs } from '@/packages/lib/docs/service'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
-export const metadata = {
-  title: 'Documentation | Emberly',
+export const metadata = buildPageMetadata({
+  title: 'Documentation',
   description: 'Guides, API reference, and examples to help you get started with Emberly.',
-}
+})
 
 function docHref(category: string, slug: string): string | null {
   if (category === 'HOSTING') return `/docs/hosting/${slug}`

@@ -1,4 +1,4 @@
-import { Product } from '@prisma/client'
+import { Product } from '@/prisma/generated/prisma/client'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -61,9 +61,12 @@ const serializeAddOn = (product: Product) => {
   }
 }
 
-export async function GET(_req: Request, { params }: { params: { slug: string } }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
   try {
-    const slug = params.slug
+    const { slug } = await params
     const product = await prisma.product.findFirst({
       where: {
         active: true,

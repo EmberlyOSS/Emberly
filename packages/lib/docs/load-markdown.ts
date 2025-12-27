@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import { DocCategory } from '@prisma/client'
+import { DocCategory } from '@/prisma/generated/prisma/client'
 import { notFound } from 'next/navigation'
 
 import { getDocByCategorySlug } from '@/packages/lib/docs/service'

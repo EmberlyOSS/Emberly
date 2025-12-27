@@ -161,6 +161,7 @@ export async function generateMetadata({
     uploadedAt: file.uploadedAt,
     uploaderName: file.user.name || 'Anonymous',
     filePath: file.path,
+    fileId: file.id,
   })
 }
 
@@ -317,33 +318,32 @@ export default async function FilePage({
     <div className="flex-1 relative min-h-screen overflow-hidden">
       <DynamicBackground />
 
-      <div className="absolute top-6 left-6 z-20">
-        <div className="relative">
+      {/* Header with logo and uploader info - responsive layout */}
+      <div className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex items-center justify-between gap-2">
+        <div className="relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-xl" />
-          <div className="relative bg-background/60 backdrop-blur-xl border border-border/50 rounded-xl px-4 py-2 shadow-lg shadow-black/5">
+          <div className="relative bg-background/60 backdrop-blur-xl border border-border/50 rounded-xl px-3 py-2 sm:px-4 shadow-lg shadow-black/5">
             <Link href="/" className="flex items-center space-x-2.5">
-              <Icons.logo className="h-6 w-6" />
+              <Icons.logo className="h-5 w-5 sm:h-6 sm:w-6" />
             </Link>
           </div>
         </div>
-      </div>
 
-      <div className="absolute top-6 right-6 z-20">
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-xl" />
-          <div className="relative bg-background/60 backdrop-blur-xl border border-border/50 rounded-xl px-4 py-2 shadow-lg shadow-black/5">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Uploaded by</span>
-              <Avatar className="h-8 w-8">
+          <div className="relative bg-background/60 backdrop-blur-xl border border-border/50 rounded-xl px-3 py-2 sm:px-4 shadow-lg shadow-black/5">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Uploaded by</span>
+              <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
                 <AvatarImage
                   src={serializedFile.user.image}
                   alt={serializedFile.user.name}
                 />
-                <AvatarFallback>
+                <AvatarFallback className="text-xs">
                   {serializedFile.user.name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">
+              <span className="text-xs sm:text-sm font-medium max-w-[100px] sm:max-w-none truncate">
                 {serializedFile.user.name}
               </span>
             </div>
@@ -352,17 +352,17 @@ export default async function FilePage({
       </div>
 
       <main
-        className="flex items-center justify-center p-6 relative z-10"
-        style={{ minHeight: 'calc(100vh - 7rem)', paddingTop: '7rem' }}
+        className="flex items-center justify-center px-3 py-4 sm:p-6 relative z-10"
+        style={{ minHeight: 'calc(100vh - 5rem)', paddingTop: '5rem' }}
       >
-        <div className="relative">
+        <div className="relative w-full max-w-3xl">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-2xl" />
           <Card
-            className={`relative overflow-hidden bg-background/60 backdrop-blur-xl border-border/50 shadow-lg shadow-black/5 ${isMediaFile ? 'max-w-[95vw]' : 'max-w-[50vw]'}`}
+            className={`relative overflow-hidden bg-background/60 backdrop-blur-xl border-border/50 shadow-lg shadow-black/5 w-full ${isMediaFile ? 'max-w-[95vw]' : ''}`}
           >
-            <div className="px-6 pt-4 pb-2">
+            <div className="px-4 sm:px-6 pt-4 pb-2">
               <div className="text-center space-y-1">
-                <h1 className="text-base font-medium text-foreground/90 truncate max-w-[600px] mx-auto">
+                <h1 className="text-sm sm:text-base font-medium text-foreground/90 truncate">
                   {serializedFile.name}
                 </h1>
                 <p className="text-xs text-muted-foreground/60 font-medium">

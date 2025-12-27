@@ -1,15 +1,14 @@
 import Link from 'next/link'
 
-import { Metadata } from 'next'
-
 import PageShell from '@/packages/components/layout/PageShell'
 import { Alert, AlertDescription, AlertTitle } from '@/packages/components/ui/alert'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { listLegal } from '@/packages/lib/legal/service'
 
-export const metadata: Metadata = {
-  title: 'Legal | Emberly',
+export const metadata = buildPageMetadata({
+  title: 'Legal',
   description: 'Emberly legal hub: Terms of Service, Privacy Policy, Cookie Policy, Security Policy, and GDPR information.',
-}
+})
 
 function formatUpdated(date?: Date | null) {
   if (!date) return null

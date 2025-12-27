@@ -7,8 +7,9 @@ import type {
   EventType,
 } from '@/packages/types/events'
 import { EventStatus } from '@/packages/types/events'
-import type { Prisma } from '@prisma/client'
+import type { Prisma } from '@/prisma/generated/prisma/client'
 
+import { eventCache } from '@/packages/lib/cache/event-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -55,6 +56,11 @@ export class EventEmitter {
       eventId: event.id,
       priority: event.priority,
       status: event.status,
+    })
+
+    // Enqueue to Redis for fast polling (non-blocking)
+    eventCache.enqueueEvent(event as BaseEvent).catch((err) => {
+      logger.warn('Failed to enqueue event to Redis', err)
     })
 
     return event as BaseEvent
@@ -237,6 +243,7 @@ export class EventEmitter {
       scheduledAfter,
       createdBefore,
       createdAfter,
+      excludeAuditable = false,
     } = filter
 
     const where: Prisma.EventWhereInput = {}
@@ -253,6 +260,10 @@ export class EventEmitter {
       where.createdAt = {}
       if (createdBefore) where.createdAt.lte = createdBefore
       if (createdAfter) where.createdAt.gte = createdAfter
+    }
+    // Exclude auditable events from deletion (they should be retained permanently)
+    if (excludeAuditable) {
+      where.isAuditable = false
     }
 
     const result = await prisma.event.deleteMany({
@@ -298,9 +309,12 @@ export class EventEmitter {
       },
     }
 
+    // Prevent unbounded result sets; default to 100 scheduled events
+    const limit = 100
     const events = await prisma.event.findMany({
       where,
       orderBy: [{ priority: 'desc' }, { scheduledAt: 'asc' }],
+      take: limit,
     })
 
     return events as BaseEvent[]

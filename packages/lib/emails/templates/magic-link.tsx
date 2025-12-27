@@ -3,22 +3,22 @@ import type { ReactElement } from 'react'
 import { BasicEmail } from './basic'
 
 export type MagicLinkEmailProps = {
-    link: string
+    signInUrl: string
     expiresMinutes?: number
-    action?: string
+    userName?: string
 }
 
-export function MagicLinkEmail({ link, expiresMinutes = 15, action = 'sign in' }: MagicLinkEmailProps): ReactElement {
+export function MagicLinkEmail({ signInUrl, expiresMinutes = 15, userName = 'there' }: MagicLinkEmailProps): ReactElement {
     return (
         <BasicEmail
-            title="Your magic link"
-            preheader={`Click to ${action}.`}
-            headline="One click sign in"
+            title="Your sign-in link"
+            preheader="Click to sign in to your account."
+            headline={`Hi ${userName}, here's your sign-in link`}
             body={[
-                `Click the button below to ${action}.`,
-                `This link expires in ${expiresMinutes} minute${expiresMinutes === 1 ? '' : 's'}. If you didn't request this, no action is needed.`,
+                'Click the button below to sign in to your Emberly account.',
+                `This link expires in ${expiresMinutes} minute${expiresMinutes === 1 ? '' : 's'}. If you didn't request this, you can ignore this email.`,
             ]}
-            cta={{ label: 'Open magic link', href: link }}
+            cta={{ label: 'Sign in to Emberly', href: signInUrl }}
             footerNote="Sent from Emberly · embrly.ca"
         />
     )

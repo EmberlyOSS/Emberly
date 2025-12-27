@@ -7,7 +7,7 @@ import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getCustomHostname, createCustomHostname, listCustomHostnames, listDnsRecords } from '@/packages/lib/cloudflare/client'
 
-const logger = loggers.domains || loggers.app
+const logger = loggers.domains
 
 export async function POST(
     req: Request,
@@ -69,7 +69,13 @@ export async function POST(
                     }
                 }
 
-                const payload = {
+                const payload: {
+                    error: string
+                    status: any
+                    body: any
+                    suggestion?: string
+                    stack?: string
+                } = {
                     error: String(err?.message || err || 'Unknown error'),
                     status: err?.status ?? null,
                     body: safeStringify(err?.body ?? err),
@@ -81,7 +87,7 @@ export async function POST(
                     if (bodyObj && Array.isArray(bodyObj.errors)) {
                         const codes = (bodyObj.errors || []).map((e: any) => e.code)
                         if (codes.includes(7003) || codes.includes(7000)) {
-                            payload['suggestion'] = 'Your Cloudflare account does not appear to support SSL for SaaS. Enable the feature or contact Cloudflare support/your account manager.'
+                            payload.suggestion = 'Your Cloudflare account does not appear to support SSL for SaaS. Enable the feature or contact Cloudflare support/your account manager.'
                             try {
                                 // Persist an explicit status/meta so the UI/back-end stop reattempting account-level hostname creation
                                 await prisma.customDomain.update({ where: { id }, data: { cfStatus: 'unsupported', cfMeta: bodyObj, cfBackoffCount: 0, cfPauseUntil: null } })
@@ -92,7 +98,7 @@ export async function POST(
                     }
                 } catch (_) { }
 
-                if (process.env.NODE_ENV !== 'production') payload['stack'] = err?.stack
+                if (process.env.NODE_ENV !== 'production') payload.stack = err?.stack
 
                 // increment backoff count for domain to slow polling
                 try {
@@ -193,7 +199,12 @@ export async function POST(
                 }
             }
 
-            const payload = {
+            const payload: {
+                error: string
+                status: any
+                body: any
+                stack?: string
+            } = {
                 error: String(err?.message || err || 'Unknown error'),
                 status: err?.status ?? null,
                 body: safeStringify(err?.body ?? err),
@@ -210,7 +221,7 @@ export async function POST(
                 logger.error('Failed to persist CF error state (create)', { message: (dbErr as any)?.message ?? String(dbErr) })
             }
 
-            if (process.env.NODE_ENV !== 'production') payload['stack'] = err?.stack
+            if (process.env.NODE_ENV !== 'production') payload.stack = err?.stack
             return NextResponse.json(payload, { status: 500 })
         }
     } catch (error) {

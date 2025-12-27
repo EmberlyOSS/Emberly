@@ -24,6 +24,8 @@ import { Label } from "@/packages/components/ui/label"
 
 import { useToast } from "@/packages/hooks/use-toast"
 import { QRCodeSVG } from "qrcode.react"
+import { LoginHistory } from "./login-history"
+import { Icons } from '@/packages/components/shared/icons'
 
 export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
   const { update: updateSession } = useSession()
@@ -42,6 +44,8 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
   const [disablePassword, setDisablePassword] = useState("")
   const [checkingTwoFactor, setCheckingTwoFactor] = useState(true)
   const [openClicks, setOpenClicks] = useState(0)
+  const [enableVerificationCode, setEnableVerificationCode] = useState("")
+  const [disableVerificationCode, setDisableVerificationCode] = useState("")
   const { toast } = useToast()
   const router = useRouter()
 
@@ -201,22 +205,25 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
     if (!setupSecret || !setupToken) return
     setIsLoading(true)
     try {
-      const res = await fetch("/api/profile/2fa", {
+      // Stage 1: Send verification code to email
+      const sendRes = await fetch("/api/profile/2fa", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: setupSecret, token: setupToken }),
+        body: JSON.stringify({
+          secret: setupSecret,
+          token: setupToken,
+          stage: 'send-code'
+        }),
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || "Failed to enable 2FA")
+      if (!sendRes.ok) {
+        const data = await sendRes.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to send verification code")
       }
-      setTwoFactorEnabled(true)
-      setShowEnablePanel(false)
-      setSetupSecret(null)
-      setSetupToken("")
-      toast({ title: "Success", description: "Two-factor authentication enabled" })
-      onUpdate()
+
+      // Move to verification code step
+      setEnableStep(4)
+      toast({ title: "Success", description: "Verification code sent to your email" })
     } catch (error) {
       console.error("Enable 2FA error", error)
       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to enable 2FA", variant: "destructive" })
@@ -225,32 +232,100 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
     }
   }
 
-  const disable2FA = async () => {
-    await performDisable2FA(disableToken, disablePassword)
-  }
-
-  const performDisable2FA = async (token: string, password?: string) => {
-    if (!token || !password) return
+  const verifyEnable2FA = async () => {
+    if (!setupSecret || !enableVerificationCode) return
     setIsLoading(true)
     try {
-      const res = await fetch("/api/profile/2fa", {
+      // Stage 2: Verify code and enable 2FA
+      const verifyRes = await fetch("/api/profile/2fa", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret: setupSecret,
+          verificationCode: enableVerificationCode,
+          stage: 'verify-code'
+        }),
+      })
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to verify code")
+      }
+
+      setTwoFactorEnabled(true)
+      setShowEnablePanel(false)
+      setSetupSecret(null)
+      setSetupToken("")
+      setEnableVerificationCode("")
+      toast({ title: "Success", description: "Two-factor authentication enabled" })
+      onUpdate()
+    } catch (error) {
+      console.error("Verify 2FA error", error)
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to verify code", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const disable2FA = async () => {
+    if (!disablePassword) return
+    setIsLoading(true)
+    try {
+      // Stage 1: Send verification code to email
+      const sendRes = await fetch("/api/profile/2fa", {
         method: "DELETE",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({
+          password: disablePassword,
+          stage: 'send-code'
+        }),
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+      if (!sendRes.ok) {
+        const data = await sendRes.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to send verification code")
+      }
+
+      // Move to TOTP + code step
+      setDisableStep(3)
+      toast({ title: "Success", description: "Verification code sent to your email" })
+    } catch (error) {
+      console.error("Disable 2FA send code error", error)
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to send verification code", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const performDisable2FA = async (totpToken: string, verificationCode: string) => {
+    if (!totpToken || !verificationCode) return
+    setIsLoading(true)
+    try {
+      // Stage 2: Verify code + TOTP and disable 2FA
+      const verifyRes = await fetch("/api/profile/2fa", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          totpToken,
+          verificationCode,
+          stage: 'verify-code'
+        }),
+      })
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json().catch(() => ({}))
         throw new Error(data.error || "Failed to disable 2FA")
       }
+
       setTwoFactorEnabled(false)
       setDisableToken("")
       setDisablePassword("")
+      setDisableVerificationCode("")
       setShowDisablePanel(false)
       toast({ title: "Success", description: "Two-factor authentication disabled" })
       onUpdate()
     } catch (error) {
-      console.error("Disable 2FA error", error)
+      console.error("Disable 2FA verify error", error)
       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to disable 2FA", variant: "destructive" })
     } finally {
       setIsLoading(false)
@@ -339,13 +414,31 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
                     <div className="flex flex-col items-center gap-4 w-full">
                       <div className="flex justify-center w-full">
                         {otpauth ? (
-                          <QRCodeSVG value={otpauth} size={300} bgColor="hsl(var(--foreground))" fgColor="hsl(var(--accent))" />
+                          <div className="relative p-4 bg-white rounded-xl shadow-lg dark:shadow-primary/10 border border-border">
+                            <QRCodeSVG
+                              value={otpauth}
+                              size={240}
+                              bgColor="#ffffff"
+                              fgColor="#000000"
+                              level="M"
+                              includeMargin={false}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="w-12 h-12 bg-card rounded-lg flex items-center justify-center shadow-sm border border-gray-100">
+                                <Icons.logo className="h-6 w-6 transition-transform group-hover:scale-110" />
+                              </div>
+                            </div>
+                          </div>
                         ) : qrDataUrl ? (
                           // fallback to server-generated data URL if otpauth unavailable
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={qrDataUrl} alt="2FA QR code" className="w-72 h-72 object-contain" />
+                          <div className="p-4 bg-white rounded-xl shadow-lg dark:shadow-primary/10 border border-border">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={qrDataUrl} alt="2FA QR code" className="w-60 h-60 object-contain" />
+                          </div>
                         ) : (
-                          <div className="text-sm text-muted-foreground">Loading QR…</div>
+                          <div className="w-60 h-60 rounded-xl bg-muted/50 flex items-center justify-center border border-border">
+                            <div className="text-sm text-muted-foreground animate-pulse">Loading QR…</div>
+                          </div>
                         )}
                       </div>
 
@@ -373,7 +466,18 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
                     <Input placeholder="123456" value={setupToken} onChange={(e) => setSetupToken(e.target.value)} />
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" onClick={() => setEnableStep(2)}>Back</Button>
-                      <Button onClick={confirmEnable2FA} disabled={isLoading || setupToken.length < 6}>{isLoading ? 'Verifying...' : 'Confirm & Enable'}</Button>
+                      <Button onClick={confirmEnable2FA} disabled={isLoading || setupToken.length < 6}>{isLoading ? 'Sending code...' : 'Next'}</Button>
+                    </div>
+                  </div>
+                )}
+
+                {enableStep === 4 && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">Enter the verification code sent to your email to confirm enabling 2FA.</p>
+                    <Input placeholder="000000" value={enableVerificationCode} onChange={(e) => setEnableVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength="6" />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" onClick={() => setEnableStep(3)}>Back</Button>
+                      <Button onClick={verifyEnable2FA} disabled={isLoading || enableVerificationCode.length < 6}>{isLoading ? 'Verifying...' : 'Enable 2FA'}</Button>
                     </div>
                   </div>
                 )}
@@ -403,41 +507,29 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
 
                 {disableStep === 2 && (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app to confirm disabling.</p>
-                    <Input placeholder="123456" value={disableToken} onChange={(e) => setDisableToken(e.target.value)} />
+                    <p className="text-sm text-muted-foreground">For safety, please confirm your account password to begin the disable process.</p>
+                    <Input type="password" placeholder="Your account password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} />
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" onClick={() => setDisableStep(1)}>Back</Button>
-                      <Button onClick={() => setDisableStep(3)} disabled={disableToken.length < 6}>Next</Button>
+                      <Button onClick={disable2FA} disabled={!disablePassword || isLoading}>{isLoading ? 'Sending code...' : 'Next'}</Button>
                     </div>
                   </div>
                 )}
 
                 {disableStep === 3 && (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">For safety, please confirm your account password before disabling 2FA.</p>
-                    <Input type="password" placeholder="Your account password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} />
+                    <p className="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app and the verification code sent to your email.</p>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Authenticator Code</label>
+                      <Input placeholder="123456" value={disableToken} onChange={(e) => setDisableToken(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength="6" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Email Verification Code</label>
+                      <Input placeholder="000000" value={disableVerificationCode} onChange={(e) => setDisableVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength="6" />
+                    </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" onClick={() => setDisableStep(2)}>Back</Button>
-                      <Button onClick={() => setDisableStep(4)} disabled={!disablePassword}>Next</Button>
-                    </div>
-                  </div>
-                )}
-
-                {disableStep === 4 && (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">Are you sure you want to disable two-factor authentication? This action will make your account less secure.</p>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" onClick={() => setDisableStep(3)}>Back</Button>
-                      <Button variant="destructive" onClick={async () => { setDisableStep(5); await performDisable2FA(disableToken, disablePassword); }}>Yes, disable 2FA</Button>
-                    </div>
-                  </div>
-                )}
-
-                {disableStep === 5 && (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">Disabling two-factor authentication…</p>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" onClick={() => { setShowDisablePanel(false); setDisableStep(1); }}>Close</Button>
+                      <Button variant="destructive" onClick={() => performDisable2FA(disableToken, disableVerificationCode)} disabled={disableToken.length < 6 || disableVerificationCode.length < 6 || isLoading}>{isLoading ? 'Disabling...' : 'Disable 2FA'}</Button>
                     </div>
                   </div>
                 )}
@@ -446,6 +538,12 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
           )}
 
         </div>
+
+        {/* Login History & Sessions */}
+        <div className="border-t pt-6 mt-6">
+          <LoginHistory />
+        </div>
+
         <div className="space-y-2 mt-8">
           <h3 className="text-lg font-semibold text-destructive">Delete Account</h3>
           <p className="text-sm text-muted-foreground">Permanently delete your account and remove all associated data.</p>

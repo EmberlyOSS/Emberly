@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/packages/components/ui/avatar'
-import { Star } from 'lucide-react'
+import { MessageSquare, Quote, Star, ChevronDown, ChevronUp } from 'lucide-react'
+import { Badge } from '@/packages/components/ui/badge'
 
 function initialsFromName(name?: string | null, fallback?: string) {
     const source = (name || fallback || '').trim()
@@ -10,6 +11,16 @@ function initialsFromName(name?: string | null, fallback?: string) {
     const parts = source.split(/\s+/).filter(Boolean)
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
     return (parts[0][0] + parts[1][0]).toUpperCase()
+}
+
+// Reusable GlassCard component
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="relative h-full">{children}</div>
+        </div>
+    )
 }
 
 export default function TestimonialsList({ testimonials }: { testimonials?: Array<any> }) {
@@ -22,9 +33,23 @@ export default function TestimonialsList({ testimonials }: { testimonials?: Arra
     }
 
     return (
-        <section className="mt-12">
-            <h2 className="text-2xl font-semibold">What people say</h2>
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <section className="space-y-6">
+            {/* Section Header */}
+            <div className="text-center">
+                <Badge className="mb-4 bg-primary/20 text-primary border-primary/30">
+                    <MessageSquare className="h-3 w-3 mr-1" />
+                    Testimonials
+                </Badge>
+                <h2 className="text-3xl md:text-4xl font-bold">
+                    What people say
+                </h2>
+                <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+                    Real feedback from our community of developers and teams using Emberly.
+                </p>
+            </div>
+
+            {/* Testimonials Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {testimonials.map((t) => {
                     const date = t?.createdAt ? new Date(t.createdAt) : null
                     const hasValidDate = date && !isNaN(date.getTime())
@@ -33,58 +58,96 @@ export default function TestimonialsList({ testimonials }: { testimonials?: Arra
                     const preview = content.length > 160 && !isExpanded ? content.slice(0, 160).trim() + '…' : content
 
                     return (
-                        <article key={t.id} className="rounded-2xl border border-border/20 p-5 bg-background/60 shadow-sm hover:shadow-md transition-shadow" aria-labelledby={`testimonial-${t.id}`}>
-                            <div className="flex items-center gap-3">
-                                <Avatar>
-                                    {t.user?.image ? (
-                                        <AvatarImage src={t.user.image} alt={t.user?.name ?? t.user?.urlId} />
-                                    ) : (
-                                        <AvatarFallback>{initialsFromName(t.user?.name, t.user?.urlId)}</AvatarFallback>
-                                    )}
-                                </Avatar>
-                                <div>
-                                    <div id={`testimonial-${t.id}`} className="text-sm font-medium">{t.user?.name ?? t.user?.urlId}</div>
-                                    {hasValidDate && (
-                                        <div className="text-xs text-muted-foreground">{date!.toLocaleDateString()}</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <blockquote className="mt-3 text-sm text-foreground/90 italic border-l-2 pl-3">“{preview}”</blockquote>
-
-                            {content.length > 160 && (
-                                <div className="mt-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-2" aria-hidden>
-                                        {typeof t.rating === 'number' && (
-                                            <div className="flex items-center gap-1">
-                                                {Array.from({ length: 5 }).map((_, i) => (
-                                                    <Star key={i} size={14} className={i < (t.rating ?? 0) ? 'text-amber-400' : 'text-muted-foreground'} />
-                                                ))}
+                        <GlassCard
+                            key={t.id}
+                            className="group hover:border-primary/30 transition-colors flex flex-col"
+                        >
+                            <article
+                                className="p-5 flex flex-col h-full"
+                                aria-labelledby={`testimonial-${t.id}`}
+                            >
+                                {/* Header with Avatar */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <Avatar className="relative ring-2 ring-border/50 group-hover:ring-primary/30 transition-all">
+                                            {t.user?.image ? (
+                                                <AvatarImage src={t.user.image} alt={t.user?.name ?? t.user?.urlId} />
+                                            ) : (
+                                                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-primary font-semibold">
+                                                    {initialsFromName(t.user?.name, t.user?.urlId)}
+                                                </AvatarFallback>
+                                            )}
+                                        </Avatar>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div
+                                            id={`testimonial-${t.id}`}
+                                            className="text-sm font-semibold truncate"
+                                        >
+                                            {t.user?.name ?? t.user?.urlId}
+                                        </div>
+                                        {hasValidDate && (
+                                            <div className="text-xs text-muted-foreground">
+                                                {date!.toLocaleDateString(undefined, {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })}
                                             </div>
                                         )}
                                     </div>
+                                    {/* Quote Icon */}
+                                    <Quote className="h-6 w-6 text-primary/30 flex-shrink-0" />
+                                </div>
 
-                                    <div className="ml-2">
+                                {/* Rating Stars */}
+                                {typeof t.rating === 'number' && (
+                                    <div className="flex items-center gap-1 mb-3" aria-label={`Rating: ${t.rating} out of 5 stars`}>
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                            <Star
+                                                key={i}
+                                                size={16}
+                                                className={`transition-colors ${i < (t.rating ?? 0)
+                                                    ? 'text-chart-2 fill-chart-2'
+                                                    : 'text-muted-foreground/30'
+                                                    }`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Content */}
+                                <blockquote className="flex-1 text-sm text-foreground/90 leading-relaxed">
+                                    <span className="text-primary/60">"</span>
+                                    {preview}
+                                    <span className="text-primary/60">"</span>
+                                </blockquote>
+
+                                {/* Expand/Collapse Button */}
+                                {content.length > 160 && (
+                                    <div className="mt-4 pt-3 border-t border-border/30">
                                         <button
                                             onClick={() => toggle(t.id)}
-                                            className="text-sm text-primary font-medium hover:underline"
+                                            className="flex items-center gap-1 text-sm text-primary font-medium hover:text-primary/80 transition-colors group/btn"
                                             aria-expanded={isExpanded}
                                         >
-                                            {isExpanded ? 'Hide' : 'Read'}
+                                            {isExpanded ? (
+                                                <>
+                                                    <ChevronUp className="h-4 w-4 group-hover/btn:-translate-y-0.5 transition-transform" />
+                                                    Show less
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronDown className="h-4 w-4 group-hover/btn:translate-y-0.5 transition-transform" />
+                                                    Read more
+                                                </>
+                                            )}
                                         </button>
                                     </div>
-                                </div>
-                            )}
-
-                            {content.length <= 160 && typeof t.rating === 'number' && (
-                                <div className="mt-3 flex items-center gap-1" aria-hidden>
-                                    {Array.from({ length: 5 }).map((_, i) => (
-                                        <Star key={i} size={14} className={i < (t.rating ?? 0) ? 'text-amber-400' : 'text-muted-foreground'} />
-                                    ))}
-                                    <span className="sr-only">Rating: {t.rating}/5</span>
-                                </div>
-                            )}
-                        </article>
+                                )}
+                            </article>
+                        </GlassCard>
                     )
                 })}
             </div>

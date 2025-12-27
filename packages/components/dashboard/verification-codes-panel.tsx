@@ -102,8 +102,8 @@ export function VerificationCodesPanel() {
     }
 
     return (
-        <Card className="relative overflow-hidden border border-border/50 bg-background/80 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/10 pointer-events-none" />
+        <Card className="relative overflow-hidden bg-white/5 dark:bg-black/5 backdrop-blur-xl border-white/10 dark:border-white/5 shadow-lg shadow-black/5">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10 pointer-events-none" />
             <CardHeader className="relative">
                 <CardTitle className="text-xl font-semibold">Verification codes</CardTitle>
                 <CardDescription>Store and manage codes for actions that need an extra check.</CardDescription>
@@ -118,9 +118,9 @@ export function VerificationCodesPanel() {
                             value={newCode}
                             onChange={(e) => setNewCode(e.target.value)}
                             disabled={saving}
-                            className="h-11 bg-background/60 focus:bg-background"
+                            className="h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20"
                         />
-                        <Button onClick={addCode} disabled={saving} className="sm:w-auto h-11">
+                        <Button onClick={addCode} disabled={saving} className="sm:w-auto h-11 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all">
                             {saving ? (
                                 <>
                                     <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />

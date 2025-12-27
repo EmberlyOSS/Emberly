@@ -90,14 +90,15 @@ export function isMusic(mimeType: string): boolean {
   return musicMimeTypes.has(mimeType)
 }
 
-export function classifyMimeType(mimeType: string): FileClassification {
+export function classifyMimeType(mimeType: string | undefined | null): FileClassification {
+  const safeMimeType = mimeType || 'application/octet-stream'
   return {
-    isImage: isImage(mimeType),
-    isVideo: isVideo(mimeType),
-    isAudio: isAudio(mimeType),
-    isDocument: isDocument(mimeType),
-    isCode: isCode(mimeType),
-    isText: isText(mimeType),
-    isMusic: isMusic(mimeType),
+    isImage: isImage(safeMimeType),
+    isVideo: isVideo(safeMimeType),
+    isAudio: isAudio(safeMimeType),
+    isDocument: isDocument(safeMimeType),
+    isCode: isCode(safeMimeType),
+    isText: isText(safeMimeType),
+    isMusic: isMusic(safeMimeType),
   }
 }

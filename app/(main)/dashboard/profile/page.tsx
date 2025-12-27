@@ -31,6 +31,8 @@ export default async function ProfilePage() {
       role: true,
       randomizeFileUrls: true,
       enableRichEmbeds: true,
+      emailNotificationsEnabled: true,
+      emailPreferences: true,
       defaultFileExpiration: true,
       defaultFileExpirationAction: true,
       urlId: true,
@@ -53,10 +55,20 @@ export default async function ProfilePage() {
   const config = await getConfig()
   const quotasEnabled = config.settings.general.storage.quotas.enabled
   const defaultQuota = config.settings.general.storage.quotas.default
-  // defaultQuota.value is in MB unless unit is 'GB'
-  const systemDefaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
-  // Use per-user override when set, otherwise system default
-  const quotaMB = typeof user.storageQuotaMB === 'number' && user.storageQuotaMB >= 0 ? user.storageQuotaMB : systemDefaultQuotaMB
+
+  // Use new quota system that includes purchased storage
+  let quotaMB: number
+  let purchasedMB: number = 0
+  if (quotasEnabled) {
+    const { getEffectiveQuotaMB } = await import('@/packages/lib/storage/quota')
+    const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+    const quotaInfo = await getEffectiveQuotaMB(user.id, defaultQuotaMB)
+    quotaMB = quotaInfo.quotaMB
+    purchasedMB = quotaInfo.purchasedMB
+  } else {
+    quotaMB = 0
+  }
+
   const formattedQuota = formatFileSize(quotaMB)
   const formattedUsed = formatFileSize(user.storageUsed)
   const usagePercentage = quotasEnabled ? (user.storageUsed / quotaMB) * 100 : 0

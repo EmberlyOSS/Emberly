@@ -12,60 +12,30 @@ export type BasicEmailProps = {
     footerNote?: string
 }
 
-const containerStyle = {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    backgroundColor: '#f5f5f5',
-    padding: '24px',
-}
+// Emberly brand colors - Modern gradient approach
+const COLORS = {
+    // Primary
+    ember: '#F97316',           // Main accent (orange)
+    emberLight: '#FB923C',      // Lighter orange for gradients
+    emberDark: '#EA580C',       // Darker orange for hover states
 
-const cardStyle = {
-    maxWidth: '640px',
-    margin: '0 auto',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    border: '1px solid #e5e7eb',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-    overflow: 'hidden',
-}
+    // Backgrounds
+    bgDark: '#0A0A0B',          // Very dark background
+    bgCard: '#141416',          // Card background
+    bgCardAlt: '#1A1A1D',       // Slightly lighter card
 
-const headerStyle = {
-    padding: '24px 24px 12px',
-    borderBottom: '1px solid #f1f5f9',
-}
+    // Text
+    textPrimary: '#FAFAFA',     // Bright white for headings
+    textSecondary: '#A1A1AA',   // Muted gray for body
+    textMuted: '#71717A',       // Even more muted
 
-const headlineStyle = {
-    fontSize: '24px',
-    lineHeight: '30px',
-    color: '#0f172a',
-    margin: '0 0 12px',
-}
+    // Borders & accents
+    border: '#27272A',          // Subtle border
+    borderLight: '#3F3F46',     // Lighter border for hover
 
-const bodyStyle = {
-    padding: '0 24px 24px',
-    color: '#334155',
-    fontSize: '15px',
-    lineHeight: '22px',
-}
-
-const ctaWrapperStyle = {
-    padding: '0 24px 24px',
-}
-
-const ctaStyle = {
-    display: 'inline-block',
-    padding: '12px 18px',
-    backgroundColor: '#2563eb',
-    color: '#ffffff',
-    textDecoration: 'none',
-    borderRadius: '10px',
-    fontWeight: 600,
-}
-
-const footerStyle = {
-    padding: '12px 24px 24px',
-    color: '#94a3b8',
-    fontSize: '12px',
-    lineHeight: '18px',
+    // Gradients
+    gradientStart: '#F97316',
+    gradientEnd: '#F59E0B',
 }
 
 export function BasicEmail({
@@ -77,50 +47,191 @@ export function BasicEmail({
     footerNote,
 }: BasicEmailProps): ReactElement {
     return (
-        <div style={containerStyle}>
-            {preheader ? (
-                <div
-                    style={{
-                        display: 'none',
-                        fontSize: '1px',
-                        color: '#ffffff',
-                        lineHeight: '1px',
-                        maxHeight: '0',
-                        maxWidth: '0',
-                        opacity: 0,
-                        overflow: 'hidden',
-                    }}
-                >
+        <div style={{
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            backgroundColor: COLORS.bgDark,
+            margin: 0,
+            padding: 0,
+            width: '100%',
+            minHeight: '100%',
+        }}>
+            {/* Preheader for email clients */}
+            {preheader && (
+                <div style={{
+                    display: 'none',
+                    fontSize: '1px',
+                    color: COLORS.bgDark,
+                    lineHeight: '1px',
+                    maxHeight: 0,
+                    maxWidth: 0,
+                    opacity: 0,
+                    overflow: 'hidden',
+                }}>
                     {preheader}
                 </div>
-            ) : null}
-            <div style={cardStyle}>
-                <div style={headerStyle}>
-                    <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-                        Emberly
-                    </div>
-                    <h1 style={headlineStyle}>{headline || title}</h1>
-                </div>
-                <div style={bodyStyle}>
-                    {body.map((paragraph, idx) => (
-                        <p key={idx} style={{ margin: '0 0 12px' }}>
-                            {paragraph}
-                        </p>
-                    ))}
-                </div>
-                {cta ? (
-                    <div style={ctaWrapperStyle}>
-                        <a style={ctaStyle} href={cta.href}>
-                            {cta.label}
-                        </a>
-                    </div>
-                ) : null}
-                {footerNote ? (
-                    <div style={footerStyle}>{footerNote}</div>
-                ) : (
-                    <div style={footerStyle}>Sent from Emberly · embrly.ca</div>
-                )}
-            </div>
+            )}
+
+            {/* Main container */}
+            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{
+                backgroundColor: COLORS.bgDark,
+            }}>
+                <tbody>
+                    <tr>
+                        <td align="center" style={{ padding: '40px 20px' }}>
+                            {/* Email card */}
+                            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{
+                                maxWidth: '560px',
+                                backgroundColor: COLORS.bgCard,
+                                borderRadius: '16px',
+                                border: `1px solid ${COLORS.border}`,
+                                overflow: 'hidden',
+                            }}>
+                                <tbody>
+                                    {/* Header with gradient accent */}
+                                    <tr>
+                                        <td style={{
+                                            padding: '32px 40px 24px',
+                                            borderBottom: `1px solid ${COLORS.border}`,
+                                        }}>
+                                            {/* Logo */}
+                                            <table role="presentation" cellPadding="0" cellSpacing="0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td style={{ paddingBottom: '24px' }}>
+                                                            <table role="presentation" cellPadding="0" cellSpacing="0">
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td style={{
+                                                                            width: '10px',
+                                                                            height: '10px',
+                                                                            backgroundColor: COLORS.ember,
+                                                                            borderRadius: '3px',
+                                                                        }} />
+                                                                        <td style={{
+                                                                            paddingLeft: '10px',
+                                                                            fontSize: '20px',
+                                                                            fontWeight: 700,
+                                                                            color: COLORS.textPrimary,
+                                                                            letterSpacing: '-0.5px',
+                                                                        }}>
+                                                                            Emberly
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                            {/* Headline */}
+                                            <h1 style={{
+                                                margin: 0,
+                                                fontSize: '28px',
+                                                fontWeight: 700,
+                                                color: COLORS.textPrimary,
+                                                lineHeight: '36px',
+                                                letterSpacing: '-0.5px',
+                                            }}>
+                                                {headline || title}
+                                            </h1>
+                                        </td>
+                                    </tr>
+
+                                    {/* Body content */}
+                                    <tr>
+                                        <td style={{ padding: '32px 40px' }}>
+                                            {body.map((paragraph, idx) => (
+                                                <p key={idx} style={{
+                                                    margin: idx === body.length - 1 ? 0 : '0 0 16px',
+                                                    fontSize: '15px',
+                                                    lineHeight: '26px',
+                                                    color: COLORS.textSecondary,
+                                                }}>
+                                                    {paragraph}
+                                                </p>
+                                            ))}
+
+                                            {/* CTA Button */}
+                                            {cta && (
+                                                <table role="presentation" cellPadding="0" cellSpacing="0" style={{ marginTop: '28px' }}>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td style={{
+                                                                backgroundColor: COLORS.ember,
+                                                                borderRadius: '10px',
+                                                            }}>
+                                                                <a href={cta.href} style={{
+                                                                    display: 'inline-block',
+                                                                    padding: '14px 28px',
+                                                                    fontSize: '14px',
+                                                                    fontWeight: 600,
+                                                                    color: '#ffffff',
+                                                                    textDecoration: 'none',
+                                                                    letterSpacing: '-0.2px',
+                                                                }}>
+                                                                    {cta.label}
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            )}
+                                        </td>
+                                    </tr>
+
+                                    {/* Footer */}
+                                    <tr>
+                                        <td style={{
+                                            padding: '24px 40px',
+                                            borderTop: `1px solid ${COLORS.border}`,
+                                        }}>
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '13px',
+                                                lineHeight: '20px',
+                                                color: COLORS.textMuted,
+                                            }}>
+                                                {footerNote || (
+                                                    <>
+                                                        Sent from{' '}
+                                                        <a href="https://embrly.ca" style={{
+                                                            color: COLORS.ember,
+                                                            textDecoration: 'none',
+                                                        }}>
+                                                            Emberly
+                                                        </a>
+                                                        {' · '}Secure file hosting
+                                                    </>
+                                                )}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            {/* Bottom spacing and copyright */}
+                            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{
+                                maxWidth: '560px',
+                                marginTop: '24px',
+                            }}>
+                                <tbody>
+                                    <tr>
+                                        <td align="center">
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '12px',
+                                                color: COLORS.textMuted,
+                                            }}>
+                                                © {new Date().getFullYear()} Emberly. All rights reserved.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     )
 }

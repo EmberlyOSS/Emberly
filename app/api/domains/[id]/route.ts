@@ -6,7 +6,7 @@ import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
-const logger = loggers.domains || loggers.app
+const logger = loggers.domains
 
 export async function DELETE(
   req: Request,

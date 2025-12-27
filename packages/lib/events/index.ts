@@ -55,12 +55,16 @@ export class EventSystem {
     return eventEmitter.scheduleEvent(type, payload, scheduledAt, options)
   }
 
-  async on<T extends EventType>(
+  /**
+   * Register an event handler (synchronous - stores in memory immediately)
+   * DB sync happens in background via syncHandlersToStorage()
+   */
+  on<T extends EventType>(
     eventType: T,
     handlerName: string,
     handler: EventHandlerFunction<EventPayload<T>>,
     options?: EventHandlerOptions
-  ): Promise<EventHandlerRegistration> {
+  ): EventHandlerRegistration {
     return eventConsumer.registerHandler(
       eventType,
       handlerName,

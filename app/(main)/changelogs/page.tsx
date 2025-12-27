@@ -2,6 +2,12 @@ import React from 'react'
 import ChangelogList from '@/packages/components/changelogs/ChangelogList'
 import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
 import { getConfig } from '@/packages/lib/config'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+    title: 'Changelogs',
+    description: 'View releases across all of the Emberly services. Powered by GitHub Releases!',
+})
 
 export default async function Page() {
     const config = await getConfig()

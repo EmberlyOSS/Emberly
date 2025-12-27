@@ -9,7 +9,7 @@ export interface User {
   name: string
   email: string
   image: string | null
-  role: 'ADMIN' | 'USER'
+  role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId: string
   storageUsed: number
   _count: {
@@ -34,7 +34,7 @@ export interface UserFormData {
   name: string
   email: string
   password?: string
-  role: 'ADMIN' | 'USER'
+  role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId?: string
   // admin-only fields
   storageQuotaMB?: number | null

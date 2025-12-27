@@ -8,6 +8,7 @@ import type {
 } from '@/packages/types/events'
 import { EventStatus } from '@/packages/types/events'
 
+import { eventCache } from '@/packages/lib/cache/event-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -21,6 +22,10 @@ export class EventConsumer {
   private handlerOptions: Map<string, EventHandlerOptions> = new Map()
   private processing: Set<string> = new Set()
 
+  // Track handlers that need to be synced to DB
+  private pendingDbSync: Array<{ eventType: string; handlerName: string; enabled: boolean }> = []
+  private dbSyncScheduled = false
+
   private constructor() { }
 
   static getInstance(): EventConsumer {
@@ -30,48 +35,119 @@ export class EventConsumer {
     return EventConsumer.instance
   }
 
-  async registerHandler<T extends EventType>(
+  /**
+   * Register a handler - stores in memory immediately, syncs to Redis/DB in background
+   * This is intentionally fast and non-blocking for startup performance
+   */
+  registerHandler<T extends EventType>(
     eventType: T,
     handlerName: string,
     handler: EventHandlerFunction,
     options: EventHandlerOptions = {}
-  ): Promise<EventHandlerRegistration> {
+  ): EventHandlerRegistration {
     const handlerKey = `${eventType}:${handlerName}`
+    const enabled = options.enabled ?? true
 
+    // Store in memory immediately (synchronous - this is the source of truth for runtime)
     this.handlers.set(handlerKey, handler)
     this.handlerOptions.set(handlerKey, {
-      enabled: true,
+      enabled,
       maxConcurrency: 1,
       retryDelay: 1000,
       timeout: 30000,
       ...options,
     })
 
-    const registration = await prisma.eventHandler.upsert({
-      where: {
-        eventType_handler: {
-          eventType,
-          handler: handlerName,
-        },
-      },
-      update: {
-        enabled: options.enabled ?? true,
-        updatedAt: new Date(),
-      },
-      create: {
-        eventType,
-        handler: handlerName,
-        enabled: options.enabled ?? true,
-      },
-    })
+    // Queue for background DB sync
+    this.pendingDbSync.push({ eventType, handlerName, enabled })
 
-    logger.info('Event handler registered', {
+    // Return a mock registration (actual DB record will be created in background)
+    return {
+      id: handlerKey,
       eventType,
-      handlerName,
-      enabled: options.enabled ?? true,
-    })
+      handler: handlerName,
+      enabled,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as EventHandlerRegistration
+  }
 
-    return registration as EventHandlerRegistration
+  /**
+   * Sync all registered handlers to Redis cache and DB
+   * Call this once after all handlers are registered
+   */
+  async syncHandlersToStorage(): Promise<void> {
+    if (this.pendingDbSync.length === 0) {
+      return
+    }
+
+    const handlersToSync = [...this.pendingDbSync]
+    this.pendingDbSync = []
+
+    const startTime = Date.now()
+
+    // 1. Cache to Redis first (fast, in-memory)
+    try {
+      await eventCache.cacheHandlers(handlersToSync)
+      logger.debug(`Cached ${handlersToSync.length} handlers to Redis`)
+    } catch (error) {
+      logger.warn('Failed to cache handlers to Redis', { error })
+      // Continue - Redis is optional
+    }
+
+    // 2. Sync to DB in small batches to avoid transaction timeout
+    // With 74 handlers, we'll do ~8 batches of 10
+    const BATCH_SIZE = 10
+    let dbSynced = 0
+    let dbErrors = 0
+
+    for (let i = 0; i < handlersToSync.length; i += BATCH_SIZE) {
+      const batch = handlersToSync.slice(i, i + BATCH_SIZE)
+
+      try {
+        await prisma.$transaction(
+          batch.map((h) =>
+            prisma.eventHandler.upsert({
+              where: {
+                eventType_handler: {
+                  eventType: h.eventType,
+                  handler: h.handlerName,
+                },
+              },
+              update: {
+                enabled: h.enabled,
+                updatedAt: new Date(),
+              },
+              create: {
+                eventType: h.eventType,
+                handler: h.handlerName,
+                enabled: h.enabled,
+              },
+            })
+          ),
+          { timeout: 10000 } // 10 second timeout per batch
+        )
+        dbSynced += batch.length
+      } catch (error) {
+        dbErrors += batch.length
+        logger.warn(`Failed to sync batch ${Math.floor(i / BATCH_SIZE) + 1} to DB`, { error })
+        // Continue with other batches
+      }
+    }
+
+    const duration = Date.now() - startTime
+    if (dbErrors === 0) {
+      logger.debug(`Synced ${dbSynced} handlers to DB`, { duration })
+    } else {
+      logger.warn(`Synced ${dbSynced} handlers to DB, ${dbErrors} failed`, { duration })
+    }
+  }
+
+  /**
+   * Get the number of registered handlers (in-memory)
+   */
+  getHandlerCount(): number {
+    return this.handlers.size
   }
 
   async unregisterHandler(
@@ -177,11 +253,15 @@ export class EventConsumer {
   }
 
   async processEvent(event: BaseEvent): Promise<EventProcessingResult> {
-    if (this.processing.has(event.id)) {
+    const isAlreadyProcessing = this.processing.has(event.id)
+    const isRedisProcessing = await eventCache.isProcessing(event.id)
+
+    if (isAlreadyProcessing || isRedisProcessing) {
       return { success: false, error: 'Event is already being processed' }
     }
 
     this.processing.add(event.id)
+    await eventCache.markProcessing(event.id, 300) // 5 minute lock
 
     try {
       await eventEmitter.updateEventStatus(event.id, EventStatus.PROCESSING)
@@ -194,7 +274,7 @@ export class EventConsumer {
       })
 
       if (eventHandlers.length === 0) {
-        logger.warn('No handlers found for event type', {
+        logger.trace('No handlers found for event type', {
           eventType: event.type,
           eventId: event.id,
         })
@@ -202,24 +282,19 @@ export class EventConsumer {
         return { success: true }
       }
 
-      const results = await Promise.allSettled(
-        eventHandlers.map((handler) => this.executeHandler(event, handler))
-      )
+      // Execute handlers sequentially to avoid large parallel workloads
+      const handlerErrors: string[] = []
+      for (const handler of eventHandlers) {
+        try {
+          await this.executeHandler(event, handler)
+        } catch (err) {
+          handlerErrors.push((err as Error)?.message || 'Unknown error')
+        }
+      }
 
-      const failures = results.filter((result) => result.status === 'rejected')
-
-      if (failures.length > 0) {
-        const errors = failures.map(
-          (f) => (f as PromiseRejectedResult).reason?.message || 'Unknown error'
-        )
-        const combinedError = errors.join('; ')
-
-        await eventEmitter.updateEventStatus(
-          event.id,
-          EventStatus.FAILED,
-          combinedError
-        )
-
+      if (handlerErrors.length > 0) {
+        const combinedError = handlerErrors.join('; ')
+        await eventEmitter.updateEventStatus(event.id, EventStatus.FAILED, combinedError)
         return {
           success: false,
           error: combinedError,
@@ -245,6 +320,7 @@ export class EventConsumer {
       }
     } finally {
       this.processing.delete(event.id)
+      await eventCache.unmarkProcessing(event.id)
     }
   }
 
@@ -257,7 +333,13 @@ export class EventConsumer {
     const options = this.handlerOptions.get(handlerKey)
 
     if (!handler) {
-      throw new Error(`Handler not found: ${handlerKey}`)
+      const registeredHandlers = Array.from(this.handlers.keys())
+      logger.error('Handler not found in memory', {
+        handlerKey,
+        registeredHandlers,
+        eventId: event.id,
+      })
+      throw new Error(`Handler not found: ${handlerKey}. Registered handlers: ${registeredHandlers.length}. This usually means the event system hasn't finished initializing. The event will be retried.`)
     }
 
     if (!options?.enabled) {

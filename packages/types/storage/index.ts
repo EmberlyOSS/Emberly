@@ -19,6 +19,7 @@ export interface StorageProvider {
   ): Promise<void>
   createWriteStream(path: string, mimeType: string): Promise<NodeWritable>
   deleteFile(path: string): Promise<void>
+  getFile(path: string): Promise<Buffer>
   getFileStream(path: string, range?: RangeOptions): Promise<Readable>
   getFileUrl(path: string): Promise<string>
   getFileSize(path: string): Promise<number>

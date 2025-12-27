@@ -3,6 +3,12 @@ import { DynamicBackground } from '@/packages/components/layout/dynamic-backgrou
 import { Icons } from '@/packages/components/shared/icons'
 
 import { getConfig } from '@/packages/lib/config'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Login',
+  description: 'Sign in to your Emberly account to manage your files and settings.',
+})
 
 export const dynamic = 'force-dynamic'
 
