@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import * as blog from '@/lib/blog'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import * as blog from '@/packages/lib/blog'
 
 export async function GET(request: Request) {
   try {

@@ -2,18 +2,18 @@ import {
   PublicSettings,
   SettingsUpdateResponse,
   UpdateSettingSectionRequest,
-} from '@/types/dto/settings'
+} from '@/packages/types/dto/settings'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAdmin, requireAuth } from '@/lib/auth/api-auth'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAdmin, requireAuth } from '@/packages/lib/auth/api-auth'
 import {
   EmberlyConfig,
   getConfig,
   updateConfig,
   updateConfigSection,
-} from '@/lib/config'
-import { loggers } from '@/lib/logger'
-import { invalidateStorageProvider } from '@/lib/storage'
+} from '@/packages/lib/config'
+import { loggers } from '@/packages/lib/logger'
+import { invalidateStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.config
 
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
     const config = await getConfig()
 
-    if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
+    if (user.role !== 'SUPERADMIN') {
       const publicSettings: PublicSettings = {
         version: config.version,
         settings: {

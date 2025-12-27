@@ -1,13 +1,13 @@
 import { Metadata } from 'next'
 
-import ConditionalBaseNav from '@/components/layout/conditional-base-nav'
-import FooterWrapper from '@/components/layout/footer-wrapper'
+import ConditionalBaseNav from '@/packages/components/layout/conditional-base-nav'
+import FooterWrapper from '@/packages/components/layout/footer-wrapper'
 
-import { getConfig } from '@/lib/config'
+import { getConfig } from '@/packages/lib/config'
+import { buildSiteMetadata } from '@/packages/lib/embeds/metadata'
 
-export const metadata: Metadata = {
-  title: 'Emberly',
-  description: 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.',
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSiteMetadata()
 }
 
 export default async function MainLayout({

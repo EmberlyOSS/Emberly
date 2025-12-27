@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { user, response } = await requireAuth(request)
         if (response) return response
@@ -14,8 +17,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         const type = (body?.type || '').toString()
         if (!['like', 'dislike'].includes(type)) return apiError('Invalid reaction type', HTTP_STATUS.BAD_REQUEST)
 
-        const resolvedParams: any = await params
-        const commentId = resolvedParams.id
+        const { id: commentId } = await params
 
         // check existing
         const existing = await prisma.st5CommentReaction.findUnique({ where: { commentId_userId: { commentId, userId: user.id } } })

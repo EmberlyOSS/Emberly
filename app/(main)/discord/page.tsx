@@ -1,15 +1,13 @@
 import { Bell, Code, Star, Users } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/packages/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/packages/components/ui/card'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
-
-import { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Discord | Emberly',
+export const metadata = buildPageMetadata({
+  title: 'Discord',
   description: 'Join the Emberly community on Discord for support, announcements, and more.',
-}
+})
 
 export default function DiscordPage() {
   return (

@@ -4,265 +4,374 @@ import Link from 'next/link'
 import {
     ArrowLeft,
     BookOpen,
+    Check,
+    Copy,
     Download,
+    ExternalLink,
+    Github,
     Mail,
     Palette,
-    ShieldCheck,
+    Shield,
+    Sparkles,
+    Type,
+    X,
 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/packages/components/ui/button'
+import { Badge } from '@/packages/components/ui/badge'
+import HomeShell from '@/packages/components/layout/home-shell'
+
+// Reusable GlassCard component
+function GlassCard({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
+    return (
+        <div id={id} className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="relative">{children}</div>
+        </div>
+    )
+}
 
 const BRAND_ASSETS = [
     {
-        title: 'Primary logotype',
-        description: 'Wordmark + ember icon for light backgrounds.',
-        preview: 'wordmark',
+        title: 'Primary Logo',
+        description: 'Full-color logo for light and dark backgrounds.',
+        preview: 'primary',
+        theme: 'dark',
+        download: '/icon.svg',
+    },
+    {
+        title: 'Icon Mark',
+        description: 'Minimal ember icon for favicons and avatars.',
+        preview: 'icon',
         theme: 'light',
         download: '/icon.svg',
     },
     {
-        title: 'Icon mark',
-        description: 'Minimal flame icon for favicons and avatars.',
-        preview: 'icon',
+        title: 'Wordmark',
+        description: 'Text-only logo for inline use and headers.',
+        preview: 'wordmark',
         theme: 'dark',
         download: '/icon.svg',
     },
     {
         title: 'Monochrome',
-        description: 'Use on photography or tinted backgrounds.',
+        description: 'Single-color version for limited color contexts.',
         preview: 'mono',
         theme: 'light',
         download: '/icon.svg',
     },
-    {
-        title: 'Screens & mockups',
-        description: 'Dashboard + landing page hero mockups.',
-        preview: 'mock',
-        theme: 'dark',
-        download: '/banner.png',
-    },
 ]
 
 const BRAND_COLORS = [
-    { name: 'Ember', value: '#F97316', usage: 'CTAs & highlights' },
-    { name: 'Midnight', value: '#0F172A', usage: 'Backgrounds' },
-    { name: 'Slate', value: '#64748B', usage: 'Body copy' },
-    { name: 'Cream', value: '#F8FAFC', usage: 'Light surfaces' },
+    { name: 'Ember', value: '#F97316', rgb: '249, 115, 22', usage: 'Primary brand color, CTAs' },
+    { name: 'Amber', value: '#F59E0B', rgb: '245, 158, 11', usage: 'Accents, highlights' },
+    { name: 'Midnight', value: '#0F172A', rgb: '15, 23, 42', usage: 'Dark backgrounds' },
+    { name: 'Slate', value: '#64748B', rgb: '100, 116, 139', usage: 'Body text, muted' },
+    { name: 'Cream', value: '#F8FAFC', rgb: '248, 250, 252', usage: 'Light backgrounds' },
 ]
 
-const BRAND_GUIDELINES = [
-    'Leave breathing room equal to the height of the ember icon around the logotype.',
-    'Do not skew, recolor, or apply drop shadows to the mark.',
-    'Pair the wordmark with neutral photography or gradients for best contrast.',
-    'Use Ember (#F97316) sparingly to draw attention to actions or highlights.',
+const TYPOGRAPHY = [
+    { name: 'Headings', family: 'Inter', weight: 'Bold (700-800)', usage: 'Page titles, section headers' },
+    { name: 'Body', family: 'Inter', weight: 'Regular (400)', usage: 'Paragraphs, descriptions' },
+    { name: 'UI Elements', family: 'Inter', weight: 'Medium (500)', usage: 'Buttons, labels, navigation' },
+]
+
+const USAGE_DOS = [
+    'Use official logos from this kit',
+    'Maintain clear space around the logo',
+    'Use on appropriate contrast backgrounds',
+    'Scale proportionally',
+]
+
+const USAGE_DONTS = [
+    'Stretch or distort the logo',
+    'Change brand colors',
+    'Add effects like shadows or gradients',
+    'Use on busy or clashing backgrounds',
 ]
 
 const CONTACT_POINTS = [
     {
-        label: 'Press email',
-        href: 'mailto:press@emberly.site',
+        label: 'Press inquiries',
+        href: 'mailto:press@embrly.ca',
         icon: Mail,
     },
     {
-        label: 'GitHub issues',
+        label: 'GitHub Issues',
         href: 'https://github.com/EmberlyOSS/Website/issues',
-        icon: ShieldCheck,
+        icon: Github,
     },
 ]
 
 const KIT_DOWNLOAD = 'https://github.com/EmberlyOSS/Website/releases/latest'
 
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+    title: 'Media Kit',
+    description: 'Brand assets, logos, colors, and guidelines for press and partners.',
+})
+
 export default function MediaKitPage() {
     return (
-        <main className="container mx-auto py-16">
-            <section className="max-w-6xl mx-auto px-4 space-y-10">
-                <div>
-                    <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
-                        <Link href="/press" className="flex items-center gap-2">
-                            <ArrowLeft className="h-4 w-4" /> Back to press
-                        </Link>
-                    </Button>
+        <HomeShell>
+            <div className="container space-y-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground mb-4">
+                            <Link href="/press" className="flex items-center gap-2">
+                                <ArrowLeft className="h-4 w-4" /> Back to Press
+                            </Link>
+                        </Button>
+                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Media Kit</h1>
+                        <p className="mt-3 text-muted-foreground max-w-2xl">
+                            Official brand assets, color palette, and usage guidelines.
+                            Everything you need to represent Emberly correctly.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        <Button size="lg" asChild>
+                            <Link href={KIT_DOWNLOAD} target="_blank" rel="noreferrer">
+                                <Download className="mr-2 h-4 w-4" /> Download Full Kit
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
 
-                    <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <h1 className="text-3xl font-semibold">Media kit</h1>
-                            <p className="mt-3 text-muted-foreground max-w-2xl">
-                                Logos, screenshots, color references, and tone guidelines for journalists and partners.
-                                Everything here can be used freely when writing about Emberly.
+                {/* Logo Assets */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <h2 className="text-xl font-semibold">Logo Assets</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {BRAND_ASSETS.map((asset) => (
+                            <GlassCard key={asset.title} className="group">
+                                <div className="p-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <h3 className="font-semibold">{asset.title}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" asChild>
+                                            <a href={asset.download} download>
+                                                <Download className="h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                    </div>
+                                    <AssetPreview variant={asset.preview as any} theme={asset.theme as any} />
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Color Palette */}
+                <GlassCard id="guidelines">
+                    <div className="p-8">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Palette className="h-5 w-5 text-primary" />
+                            <h2 className="text-xl font-semibold">Color Palette</h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                            {BRAND_COLORS.map((color) => (
+                                <div
+                                    key={color.name}
+                                    className="group rounded-xl border border-border/50 bg-background/30 overflow-hidden"
+                                >
+                                    <div
+                                        className="h-24 flex items-end justify-start p-3"
+                                        style={{ backgroundColor: color.value }}
+                                    >
+                                        <span className={`text-xs font-mono ${color.name === 'Midnight' ? 'text-white/70' : 'text-black/50'}`}>
+                                            {color.value}
+                                        </span>
+                                    </div>
+                                    <div className="p-3">
+                                        <div className="font-medium text-sm">{color.name}</div>
+                                        <div className="text-xs text-muted-foreground mt-0.5">RGB: {color.rgb}</div>
+                                        <div className="text-xs text-muted-foreground mt-1">{color.usage}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </GlassCard>
+
+                {/* Typography */}
+                <GlassCard>
+                    <div className="p-8">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Type className="h-5 w-5 text-primary" />
+                            <h2 className="text-xl font-semibold">Typography</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {TYPOGRAPHY.map((type) => (
+                                <div key={type.name} className="p-4 rounded-xl bg-background/30 border border-border/50">
+                                    <div className="text-2xl font-bold mb-2" style={{ fontFamily: type.family }}>
+                                        Aa
+                                    </div>
+                                    <div className="font-medium text-sm">{type.name}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        {type.family} · {type.weight}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-2">{type.usage}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-6 p-4 rounded-xl bg-background/30 border border-border/50">
+                            <p className="text-sm text-muted-foreground">
+                                <strong className="text-foreground">Note:</strong> Inter is available for free from{' '}
+                                <a href="https://fonts.google.com/specimen/Inter" target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                                    Google Fonts
+                                </a>
+                                . Use system fonts as a fallback.
                             </p>
                         </div>
-                        <div className="flex flex-wrap gap-3">
+                    </div>
+                </GlassCard>
+
+                {/* Usage Guidelines */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <GlassCard>
+                        <div className="p-8">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Check className="h-5 w-5 text-emerald-500" />
+                                <h2 className="text-xl font-semibold">Do's</h2>
+                            </div>
+                            <ul className="space-y-3">
+                                {USAGE_DOS.map((item) => (
+                                    <li key={item} className="flex items-start gap-3">
+                                        <div className="mt-0.5 p-1 rounded-full bg-emerald-500/20">
+                                            <Check className="h-3 w-3 text-emerald-500" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard>
+                        <div className="p-8">
+                            <div className="flex items-center gap-2 mb-6">
+                                <X className="h-5 w-5 text-red-500" />
+                                <h2 className="text-xl font-semibold">Don'ts</h2>
+                            </div>
+                            <ul className="space-y-3">
+                                {USAGE_DONTS.map((item) => (
+                                    <li key={item} className="flex items-start gap-3">
+                                        <div className="mt-0.5 p-1 rounded-full bg-red-500/20">
+                                            <X className="h-3 w-3 text-red-500" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                {/* Voice & Tone + Contact */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <GlassCard className="lg:col-span-2">
+                        <div className="p-8">
+                            <div className="flex items-center gap-2 mb-6">
+                                <BookOpen className="h-5 w-5 text-primary" />
+                                <h2 className="text-xl font-semibold">Voice & Tone</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="font-medium mb-3">How to describe Emberly</h3>
+                                    <ul className="space-y-2 text-sm text-muted-foreground">
+                                        <li>• Developer-first file sharing platform</li>
+                                        <li>• Privacy-focused and open source</li>
+                                        <li>• Self-hostable with modern architecture</li>
+                                        <li>• Simple, fast, and reliable</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="font-medium mb-3">Naming conventions</h3>
+                                    <ul className="space-y-2 text-sm text-muted-foreground">
+                                        <li>• Always capitalize: <strong>Emberly</strong></li>
+                                        <li>• Don't abbreviate or stylize (not "EMBERLY")</li>
+                                        <li>• Reference the project, not "the Emberly team"</li>
+                                        <li>• Use "Emberly" alone, not "Emberly app/service"</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard>
+                        <div className="p-6 h-full flex flex-col">
+                            <h3 className="font-semibold mb-2">Need something else?</h3>
+                            <p className="text-sm text-muted-foreground flex-1">
+                                Contact us for custom assets, interview requests, or bespoke materials.
+                            </p>
+                            <div className="mt-4 space-y-2">
+                                {CONTACT_POINTS.map((point) => (
+                                    <Button
+                                        key={point.label}
+                                        variant="outline"
+                                        className="w-full justify-start gap-2 bg-background/50"
+                                        asChild
+                                    >
+                                        <Link href={point.href} target="_blank" rel="noreferrer">
+                                            <point.icon className="h-4 w-4 text-primary" /> {point.label}
+                                        </Link>
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                {/* Download CTA */}
+                <GlassCard>
+                    <div className="p-8 text-center">
+                        <Download className="h-12 w-12 mx-auto text-primary/50 mb-4" />
+                        <h2 className="text-2xl font-bold">Ready to go?</h2>
+                        <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+                            Download the complete media kit including high-resolution logos,
+                            color swatches, and additional assets.
+                        </p>
+                        <div className="mt-6">
                             <Button size="lg" asChild>
                                 <Link href={KIT_DOWNLOAD} target="_blank" rel="noreferrer">
-                                    <Download className="mr-2 h-4 w-4" /> Download full kit
-                                </Link>
-                            </Button>
-                            <Button variant="outline" size="lg" asChild>
-                                <Link href="/press/media-kit#guidelines">
-                                    <BookOpen className="mr-2 h-4 w-4" /> Brand guidelines
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download Media Kit
+                                    <ExternalLink className="ml-2 h-4 w-4" />
                                 </Link>
                             </Button>
                         </div>
                     </div>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                    {BRAND_ASSETS.map((asset) => (
-                        <Card
-                            key={asset.title}
-                            className="rounded-2xl border-white/10 bg-background/70 backdrop-blur"
-                        >
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-between text-lg">
-                                    {asset.title}
-                                    <Button variant="ghost" size="sm" asChild>
-                                        <a href={asset.download} download>
-                                            <Download className="h-4 w-4" />
-                                        </a>
-                                    </Button>
-                                </CardTitle>
-                                <p className="text-sm text-muted-foreground">{asset.description}</p>
-                            </CardHeader>
-                            <CardContent>
-                                <AssetPreview variant={asset.preview} theme={asset.theme} />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-
-                <div className="grid gap-6 lg:grid-cols-[2fr,1fr]" id="guidelines">
-                    <Card className="rounded-2xl border-white/10 bg-background/70 backdrop-blur">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Palette className="h-5 w-5 text-primary" /> Color palette
-                                </CardTitle>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Base colors for UI, marketing, and press assets.
-                                </p>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                {BRAND_COLORS.map((color) => (
-                                    <div
-                                        key={color.name}
-                                        className="rounded-xl border border-white/10 bg-background/80 p-3"
-                                    >
-                                        <div
-                                            className="h-20 rounded-lg border border-white/10"
-                                            style={{ backgroundColor: color.value }}
-                                        />
-                                        <div className="mt-3 text-sm font-medium">{color.name}</div>
-                                        <div className="text-xs text-muted-foreground">{color.value}</div>
-                                        <div className="text-xs text-muted-foreground">{color.usage}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="rounded-2xl border-white/10 bg-background/70 backdrop-blur">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <BookOpen className="h-5 w-5 text-primary" /> Voice & tone
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                Quick reminders for how we describe Emberly in copy.
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-3 text-sm text-muted-foreground">
-                                {BRAND_GUIDELINES.map((item) => (
-                                    <li key={item} className="flex gap-2">
-                                        <span className="text-primary">•</span>
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card className="rounded-2xl border-white/10 bg-background/70 backdrop-blur">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Usage guidelines</CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                Proper ways to reference Emberly in articles, talks, or demos.
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <dl className="space-y-4 text-sm text-muted-foreground">
-                                <div>
-                                    <dt className="font-medium text-foreground">Naming</dt>
-                                    <dd>Always write “Emberly” with an uppercase E.</dd>
-                                </div>
-                                <div>
-                                    <dt className="font-medium text-foreground">Screenshots</dt>
-                                    <dd>
-                                        You may crop UI but avoid altering interface colors or overlaying other branding.
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt className="font-medium text-foreground">Backgrounds</dt>
-                                    <dd>Use neutral or dark gradients; avoid red/orange tints that clash with the ember tone.</dd>
-                                </div>
-                            </dl>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="rounded-2xl border-white/10 bg-background/70 backdrop-blur">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                Need something else?
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                Reach the maintainers for interview requests or bespoke assets.
-                            </p>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {CONTACT_POINTS.map((point) => (
-                                <Button
-                                    key={point.label}
-                                    variant="outline"
-                                    className="w-full justify-start gap-2 bg-background/60"
-                                    asChild
-                                >
-                                    <Link href={point.href} target="_blank" rel="noreferrer">
-                                        <point.icon className="h-4 w-4 text-primary" /> {point.label}
-                                    </Link>
-                                </Button>
-                            ))}
-                        </CardContent>
-                    </Card>
-                </div>
-            </section>
-        </main>
+                </GlassCard>
+            </div>
+        </HomeShell>
     )
 }
 
 type AssetPreviewProps = {
-    variant: 'wordmark' | 'icon' | 'mono' | 'mock'
+    variant: 'primary' | 'icon' | 'wordmark' | 'mono'
     theme: 'light' | 'dark'
 }
 
 function AssetPreview({ variant, theme }: AssetPreviewProps) {
-    const baseClasses =
-        'flex h-48 w-full items-center justify-center rounded-xl border border-white/10'
+    const baseClasses = 'flex h-40 w-full items-center justify-center rounded-xl border border-border/50'
 
     const background =
         theme === 'dark'
-            ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-            : 'bg-gradient-to-br from-white/80 via-background to-white'
+            ? 'bg-gradient-to-br from-background via-muted to-background'
+            : 'bg-gradient-to-br from-slate-100 via-white to-slate-50'
 
     if (variant === 'wordmark') {
         return (
             <div className={`${baseClasses} ${background}`}>
-                <div className="text-3xl font-semibold tracking-wide text-slate-900">
+                <span className={`text-3xl font-bold tracking-wide ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                     EMBERLY
-                </div>
+                </span>
             </div>
         )
     }
@@ -279,24 +388,20 @@ function AssetPreview({ variant, theme }: AssetPreviewProps) {
         return (
             <div className={`${baseClasses} ${background}`}>
                 <div className="rounded-full border border-dashed border-slate-300/70 p-6">
-                    <Image src="/icon.svg" alt="Emberly monochrome" width={56} height={56} className="invert" />
+                    <Image src="/icon.svg" alt="Emberly monochrome" width={48} height={48} className={theme === 'light' ? '' : 'invert'} />
                 </div>
             </div>
         )
     }
 
+    // Primary
     return (
-        <div className={`${baseClasses} ${background} flex-col items-start justify-start p-6`}>
-            <div className="rounded-xl border border-white/10 bg-background/80 p-4 shadow-lg">
-                <div className="text-sm text-muted-foreground">Dashboard preview</div>
-                <div className="mt-3 h-24 w-64 rounded-lg bg-gradient-to-br from-primary/30 via-primary/20 to-accent/30" />
-                <div className="mt-4 flex gap-2">
-                    <div className="h-2 w-16 rounded-full bg-white/40" />
-                    <div className="h-2 w-8 rounded-full bg-white/20" />
-                </div>
-            </div>
-            <div className="mt-4 text-xs text-muted-foreground">
-                Replace with your own screenshots if needed.
+        <div className={`${baseClasses} ${background}`}>
+            <div className="flex items-center gap-3">
+                <Image src="/icon.svg" alt="Emberly logo" width={48} height={48} />
+                <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    Emberly
+                </span>
             </div>
         </div>
     )

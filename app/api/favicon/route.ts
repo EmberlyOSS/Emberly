@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 
 import { join } from 'path'
 
-import { loggers } from '@/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/lib/storage'
+import { loggers } from '@/packages/lib/logger'
+import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files
 

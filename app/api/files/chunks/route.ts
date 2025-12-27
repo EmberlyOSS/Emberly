@@ -5,17 +5,21 @@ import { existsSync } from 'fs'
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
 
-import { requireAuth } from '@/lib/auth/api-auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
-import { getUniqueFilename } from '@/lib/files/filename'
-import { loggers } from '@/lib/logger'
-import { processImageOCR } from '@/lib/ocr'
-import { getStorageProvider } from '@/lib/storage'
-import { bytesToMB } from '@/lib/utils'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { uploadCache, type UploadMetadata } from '@/packages/lib/cache/upload-cache'
+import { isRedisConnected } from '@/packages/lib/cache/redis'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { getUniqueFilename } from '@/packages/lib/files/filename'
+import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
+import { loggers } from '@/packages/lib/logger'
+import { processImageOCR } from '@/packages/lib/ocr'
+import { getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB } from '@/packages/lib/utils'
 
 const logger = loggers.files
 
+// Fallback filesystem storage when Redis is unavailable
 const TEMP_DIR = join(process.cwd(), 'tmp', 'uploads')
 
 if (!existsSync(TEMP_DIR)) {
@@ -24,9 +28,16 @@ if (!existsSync(TEMP_DIR)) {
   })
 }
 
+// Cleanup stale uploads (Redis handles TTL, this is for filesystem fallback)
 setInterval(
   async () => {
     try {
+      // Clean up Redis stale entries
+      if (isRedisConnected()) {
+        await uploadCache.cleanup()
+      }
+
+      // Clean up filesystem fallback
       const { readdir } = await import('fs/promises')
       const files = await readdir(TEMP_DIR)
       const now = Date.now()
@@ -50,20 +61,6 @@ setInterval(
   60 * 60 * 1000
 )
 
-interface UploadMetadata {
-  fileKey: string
-  filename: string
-  mimeType: string
-  totalSize: number
-  userId: string
-  visibility: 'PUBLIC' | 'PRIVATE'
-  password: string | null
-  lastActivity: number
-  urlPath: string
-  s3UploadId: string
-  domain?: string | null
-}
-
 function generateLocalId(): string {
   return Math.random().toString(36).substring(2, 15)
 }
@@ -71,6 +68,13 @@ function generateLocalId(): string {
 async function getUploadMetadata(
   localId: string
 ): Promise<UploadMetadata | null> {
+  // Try Redis first
+  if (isRedisConnected()) {
+    const cached = await uploadCache.get(localId)
+    if (cached) return cached
+  }
+
+  // Fallback to filesystem
   try {
     const metadataPath = join(TEMP_DIR, `meta-${localId}`)
     const data = await readFile(metadataPath, 'utf8')
@@ -89,11 +93,24 @@ async function saveUploadMetadata(
   localId: string,
   metadata: UploadMetadata
 ): Promise<void> {
+  // Try Redis first
+  if (isRedisConnected()) {
+    const saved = await uploadCache.save(localId, metadata)
+    if (saved) return
+  }
+
+  // Fallback to filesystem
   const metadataPath = join(TEMP_DIR, `meta-${localId}`)
   await writeFile(metadataPath, JSON.stringify(metadata))
 }
 
 async function deleteUploadMetadata(localId: string) {
+  // Delete from Redis
+  if (isRedisConnected()) {
+    await uploadCache.delete(localId)
+  }
+
+  // Also clean up filesystem fallback
   try {
     const metadataPath = join(TEMP_DIR, `meta-${localId}`)
     await unlink(metadataPath)
@@ -136,17 +153,30 @@ export async function POST(req: Request) {
     }
 
     if (quotasEnabled && user.role !== 'ADMIN') {
-      const quotaMB = user.storageQuotaMB ?? defaultQuota.value * (defaultQuota.unit === 'GB' ? 1024 : 1)
+      const { canUploadSize } = await import('@/packages/lib/storage/quota')
+      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
       const fileSizeMB = bytesToMB(size)
+      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
 
-      if (user.storageUsed + fileSizeMB > quotaMB) {
+      if (!canUpload) {
         return NextResponse.json(
           {
-            error: `You have reached your storage quota of ${user.storageQuotaMB ? `${user.storageQuotaMB}MB` : `${defaultQuota.value}${defaultQuota.unit}`}`,
+            error: 'Storage quota exceeded',
+            message: `You have reached your storage quota. Purchase additional storage to continue uploading.`,
+            action: 'upgrade',
           },
           { status: 413 }
         )
       }
+    }
+
+    // Validate email verification and custom domain verification
+    const uploadValidation = await validateUploadRequest(user.id, domain)
+    if (!uploadValidation.valid) {
+      return NextResponse.json(
+        { error: uploadValidation.error, code: uploadValidation.errorCode },
+        { status: 403 }
+      )
     }
 
     const { urlSafeName, displayName } = await getUniqueFilename(

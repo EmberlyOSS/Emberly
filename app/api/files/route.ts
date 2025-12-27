@@ -2,8 +2,8 @@ import {
   FileMetadata,
   FileUploadFormDataSchema,
   FileUploadResponse,
-} from '@/types/dto/file'
-import { Prisma } from '@prisma/client'
+} from '@/packages/types/dto/file'
+import { Prisma } from '@/prisma/generated/prisma/client'
 import { hash } from 'bcryptjs'
 import { join } from 'path'
 
@@ -12,19 +12,20 @@ import {
   apiError,
   apiResponse,
   paginatedResponse,
-} from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
+} from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
 import {
   getFileExpirationInfo,
   scheduleFileExpiration,
-} from '@/lib/events/handlers/file-expiry'
-import { getUniqueFilename } from '@/lib/files/filename'
-import { loggers } from '@/lib/logger'
-import { processImageOCR } from '@/lib/ocr'
-import { getStorageProvider } from '@/lib/storage'
-import { bytesToMB, urlForHost } from '@/lib/utils'
+} from '@/packages/lib/events/handlers/file-expiry'
+import { getUniqueFilename } from '@/packages/lib/files/filename'
+import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
+import { loggers } from '@/packages/lib/logger'
+import { processImageOCR } from '@/packages/lib/ocr'
+import { getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB, urlForHost } from '@/packages/lib/utils'
 
 const logger = loggers.files
 
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
       (formData.get('visibility') as 'PUBLIC' | 'PRIVATE') || 'PUBLIC'
     const password = formData.get('password') as string | null
     const expiresAt = formData.get('expiresAt') as string | null
+    const allowSuggestions = formData.get('allowSuggestions') === 'true'
 
     const result = FileUploadFormDataSchema.safeParse({
       file: uploadedFile,
@@ -85,18 +87,23 @@ export async function POST(req: Request) {
     }
 
     if (quotasEnabled && user.role !== 'ADMIN') {
-      const quotaMB =
-        user.storageQuotaMB ??
-        defaultQuota.value * (defaultQuota.unit === 'GB' ? 1024 : 1)
+      const { canUploadSize } = await import('@/packages/lib/storage/quota')
+      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
       const fileSizeMB = bytesToMB(uploadedFile.size)
+      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
 
-      if (user.storageUsed + fileSizeMB > quotaMB) {
+      if (!canUpload) {
         return apiError(
-          `You have reached your storage quota of ${user.storageQuotaMB ? `${user.storageQuotaMB}MB` : `${defaultQuota.value}${defaultQuota.unit}`
-          }`,
+          'Storage quota exceeded. Purchase additional storage to continue uploading.',
           HTTP_STATUS.PAYLOAD_TOO_LARGE
         )
       }
+    }
+
+    // Validate email verification and custom domain verification
+    const uploadValidation = await validateUploadRequest(user.id, requestedDomain)
+    if (!uploadValidation.valid) {
+      return apiError(uploadValidation.error!, HTTP_STATUS.FORBIDDEN)
     }
 
     const { urlSafeName, displayName } = await getUniqueFilename(
@@ -142,6 +149,7 @@ export async function POST(req: Request) {
           visibility: visibility,
           password: password ? await hash(password, 10) : null,
           userId: user.id,
+          allowSuggestions,
         },
       })
 

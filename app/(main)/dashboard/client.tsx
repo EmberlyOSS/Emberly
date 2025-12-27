@@ -1,6 +1,6 @@
 'use client'
 
-import { FileGrid } from '@/components/dashboard/file-grid'
+import { FileGrid } from '@/packages/components/dashboard/file-grid'
 
 export function DashboardClient() {
   return (

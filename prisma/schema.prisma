@@ -1,40 +1,56 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id                          String               @id @default(cuid())
-  name                        String?
-  email                       String?              @unique
-  emailVerified               DateTime?
-  image                       String?
-  theme                       String?
-  twoFactorEnabled            Boolean              @default(false)
-  twoFactorSecret             String?
-  preferredUploadDomain       String?
-  password                    String?
-  role                        UserRole             @default(USER)
-  createdAt                   DateTime             @default(now())
-  updatedAt                   DateTime             @updatedAt
-  storageUsed                 Float                @default(0)
-  sessionVersion              Int                  @default(1)
-  vanityId                    String?              @unique
-  urlId                       String               @unique
-  uploadToken                 String               @unique
-  randomizeFileUrls           Boolean              @default(false)
-  enableRichEmbeds            Boolean              @default(true)
-  storageQuotaMB              Int?
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
+  theme                 String?
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecret       String?
+  preferredUploadDomain String?
+  password              String?
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  magicLinkToken        String?
+  magicLinkExpires      DateTime?
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  lastLoginUserAgent    String?
+  verificationCodes     String[]  @default([])
+  role                  UserRole  @default(USER)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  storageUsed           Float     @default(0)
+  sessionVersion        Int       @default(1)
+  vanityId              String?   @unique
+  urlId                 String    @unique
+  uploadToken           String    @unique
+  randomizeFileUrls     Boolean   @default(false)
+  enableRichEmbeds      Boolean   @default(true)
+  storageQuotaMB        Int?
+
+  alphaUser Boolean @default(false)
+
+  // Email notification preferences
+  emailNotificationsEnabled Boolean @default(true)
+  emailPreferences          Json    @default("{\"security\": true, \"account\": true, \"billing\": true, \"marketing\": false, \"productUpdates\": true}")
+
   files                       File[]
   shortenedUrls               ShortenedUrl[]
   stripeCustomerId            String?              @unique
   defaultFileExpiration       FileExpiration       @default(DISABLED)
   defaultFileExpirationAction ExpiryAction         @default(DELETE)
   blogPosts                   BlogPost[]
+  docPages                    DocPage[]
   customDomains               CustomDomain[]
   subscriptions               Subscription[]
   oneOffPurchases             OneOffPurchase[]
@@ -42,6 +58,11 @@ model User {
   st5CommentReplies           St5CommentReply[]
   st5CommentReactions         St5CommentReaction[]
   testimonials                Testimonial[]
+  legalPages                  LegalPage[]
+  fileCollaborations          FileCollaborator[]
+  editSuggestions             FileEditSuggestion[] @relation("SuggestionAuthor")
+  reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
+  loginHistory                LoginHistory[]
 }
 
 model File {
@@ -52,6 +73,7 @@ model File {
   size                  Float
   visibility            FileVisibility         @default(PUBLIC)
   uploadedAt            DateTime               @default(now())
+  updatedAt             DateTime               @default(now()) @updatedAt
   userId                String
   path                  String
   isOcrProcessed        Boolean                @default(false)
@@ -61,8 +83,58 @@ model File {
   ocrConfidence         Float?
   views                 Int                    @default(0)
   downloads             Int                    @default(0)
+  // Collaboration settings
+  allowSuggestions      Boolean                @default(false)
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   st5CommentAttachments St5CommentAttachment[]
+  collaborators         FileCollaborator[]
+  editSuggestions       FileEditSuggestion[]
+}
+
+// Collaborators who can edit a file
+model FileCollaborator {
+  id        String               @id @default(cuid())
+  fileId    String
+  userId    String
+  role      FileCollaboratorRole @default(EDITOR)
+  createdAt DateTime             @default(now())
+  file      File                 @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, userId])
+  @@index([fileId])
+  @@index([userId])
+}
+
+enum FileCollaboratorRole {
+  EDITOR // Can edit directly
+  SUGGESTER // Can only submit suggestions
+}
+
+// Edit suggestions from collaborators or public (if allowSuggestions is true)
+model FileEditSuggestion {
+  id         String                   @id @default(cuid())
+  fileId     String
+  userId     String
+  content    String
+  message    String?
+  status     FileEditSuggestionStatus @default(PENDING)
+  createdAt  DateTime                 @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+  file       File                     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user       User                     @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User?                    @relation("SuggestionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum FileEditSuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model ShortenedUrl {
@@ -100,11 +172,28 @@ model Event {
   error       String?
   metadata    Json?
 
+  // Audit fields (populated only for auditable events)
+  isAuditable Boolean  @default(false)
+  actorId     String? // User who performed the action
+  actorEmail  String? // Email at time of action (may change later)
+  targetId    String? // User/resource being acted upon (if different from actor)
+  targetEmail String? // Target email at time of action
+  action      String? // e.g., "login", "deleted", "changed"
+  resource    String? // e.g., "auth", "account", "file"
+  success     Boolean? // Whether the action succeeded
+  ip          String?
+  userAgent   String?
+  geo         Json? // { country, region, city }
+
   @@index([type])
   @@index([status])
   @@index([scheduledAt])
   @@index([createdAt])
   @@index([priority, scheduledAt])
+  @@index([isAuditable])
+  @@index([actorId])
+  @@index([actorId, createdAt])
+  @@index([isAuditable, createdAt])
 }
 
 model EventHandler {
@@ -132,6 +221,43 @@ model BlogPost {
   author      User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+model DocPage {
+  id          String      @id @default(cuid())
+  category    DocCategory
+  slug        String
+  title       String
+  content     String
+  excerpt     String?
+  status      DocStatus   @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int?
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([category, slug])
+  @@index([category, status, publishedAt])
+}
+
+model LegalPage {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  content     String
+  excerpt     String?
+  status      LegalStatus @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int?
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([sortOrder, publishedAt])
 }
 
 model CustomDomain {
@@ -185,16 +311,22 @@ model Testimonial {
 
 // Billing / Stripe models
 model Product {
-  id                String   @id @default(cuid())
-  name              String
-  slug              String   @unique
-  description       String?
-  stripeProductId   String?  @unique
-  defaultPriceCents Int?
-  billingInterval   String? // e.g. "month", "year"
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String?
+  type                 String   @default("plan") // plan, addon, one-time
+  stripeProductId      String?  @unique
+  stripePriceMonthlyId String?  @unique
+  stripePriceYearlyId  String?  @unique
+  stripePriceOneTimeId String?  @unique
+  defaultPriceCents    Int?
+  billingInterval      String? // e.g. "month", "year"
+  features             String[] @default([])
+  active               Boolean  @default(true)
+  popular              Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   plans Subscription[]
 }
@@ -232,6 +364,27 @@ model OneOffPurchase {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Login history for detecting suspicious/new device logins
+model LoginHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  ip          String?
+  userAgent   String?
+  // Normalized fingerprint for device identification
+  fingerprint String?
+  country     String?
+  city        String?
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, fingerprint])
+  @@index([userId, ip])
+  @@index([createdAt])
 }
 
 // Fan comments for the ST5 hub
@@ -325,6 +478,25 @@ enum FileExpiration {
 enum ExpiryAction {
   DELETE
   SET_PRIVATE
+}
+
+enum DocCategory {
+  MAIN
+  USERS
+  HOSTING
+  INTEGRATIONS
+}
+
+enum DocStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LegalStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum PostStatus {

@@ -2,12 +2,12 @@ import { redirect } from 'next/navigation'
 
 import { getServerSession } from 'next-auth'
 
-import { UploadForm } from '@/components/file/upload-form'
+import { UploadForm } from '@/packages/components/file/upload-form'
 
-import { authOptions } from '@/lib/auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@/lib/database/prisma'
-import { formatBytes } from '@/lib/utils'
+import { authOptions } from '@/packages/lib/auth'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { formatBytes } from '@/packages/lib/utils'
 
 export default async function UploadPage() {
   const session = await getServerSession(authOptions)

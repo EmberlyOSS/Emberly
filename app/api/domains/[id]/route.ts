@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 
 import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
 
-const logger = loggers.domains || loggers.app
+const logger = loggers.domains
 
 export async function DELETE(
   req: Request,

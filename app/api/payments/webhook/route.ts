@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/database/prisma'
+import { prisma } from '@/packages/lib/database/prisma'
 
 export async function POST(req: Request) {
     const stripeSecret = process.env.STRIPE_SECRET

@@ -4,11 +4,11 @@ import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 import { Readable } from 'stream'
 
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
-import { getConfig } from '@/lib/config'
-import { loggers } from '@/lib/logger'
-import { getStorageProvider } from '@/lib/storage'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { getConfig } from '@/packages/lib/config'
+import { loggers } from '@/packages/lib/logger'
+import { getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files.getChildLogger('raw')
 

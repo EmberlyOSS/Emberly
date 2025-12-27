@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/database/prisma'
+import { authOptions } from '@/packages/lib/auth'
+import { prisma } from '@/packages/lib/database/prisma'
 
-function planKeyForProduct(product: { id?: string | null; slug?: string | null; stripeProductId?: string | null } | null) {
+type PlanKey = 'free' | 'glow' | 'flare' | 'blaze' | 'enterprise'
+
+function planKeyForProduct(product: { id?: string | null; slug?: string | null; stripeProductId?: string | null } | null): PlanKey {
     if (!product) return 'free'
     const p = (product.slug || product.stripeProductId || '').toLowerCase()
-    if (p.includes('pro')) return 'pro'
-    if (p.includes('starter')) return 'starter'
-    if (p.includes('free')) return 'free'
-    return 'starter'
+    if (p.includes('flare') || p.includes('pro')) return 'flare'
+    if (p.includes('blaze') || p.includes('team') || p.includes('scale')) return 'blaze'
+    if (p.includes('enterprise') || p.includes('inferno')) return 'enterprise'
+    if (p.includes('glow') || p.includes('starter')) return 'glow'
+    if (p.includes('free') || p.includes('spark')) return 'free'
+    return 'glow'
 }
 
 export async function GET(req: Request) {
@@ -23,7 +27,7 @@ export async function GET(req: Request) {
         const subscription = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, include: { product: true } })
         const plan = planKeyForProduct(subscription?.product ?? null)
 
-        if (plan !== 'pro') {
+        if (!['flare', 'blaze', 'enterprise'].includes(plan)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 

@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAdmin } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { response } = await requireAdmin()
         if (response) return response
 
+        const { id } = await params
         const body = await request.json()
         const { isHidden } = body
 
@@ -17,7 +21,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         }
 
         const updated = await prisma.st5Comment.update({
-            where: { id: params.id },
+            where: { id },
             data: { isHidden },
             select: { id: true, isHidden: true },
         })
@@ -31,12 +35,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { response } = await requireAdmin()
         if (response) return response
 
-        await prisma.st5Comment.delete({ where: { id: params.id } })
+        const { id } = await params
+        await prisma.st5Comment.delete({ where: { id } })
         return apiResponse({ success: true })
     } catch (error) {
         return apiError(

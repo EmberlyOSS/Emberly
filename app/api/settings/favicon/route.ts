@@ -1,22 +1,20 @@
 import { NextResponse } from 'next/server'
 
-import { PrismaClient } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
-import { authOptions } from '@/lib/auth'
-import { getConfig } from '@/lib/config'
-import { loggers } from '@/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/lib/storage'
+import { authOptions } from '@/packages/lib/auth'
+import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
+import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files
-
-const prisma = new PrismaClient()
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (session?.user?.role !== 'ADMIN') {
+    if (session?.user?.role !== 'SUPERADMIN') {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 

@@ -1,97 +1,181 @@
 import Link from 'next/link'
 
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
+import { Calendar, User, ArrowRight, BookOpen, MessageCircle, ExternalLink, FileText } from 'lucide-react'
 
-import { listPosts } from '@/lib/blog'
-import PageShell from '@/components/layout/PageShell'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table'
+import { listPosts } from '@/packages/lib/blog'
+import PageShell from '@/packages/components/layout/PageShell'
+import { Badge } from '@/packages/components/ui/badge'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Blog',
+  description: 'News, tips and updates about Emberly and file sharing best practices.',
+})
 
 export default async function BlogListPage() {
   const posts = await listPosts({ publishedOnly: true, limit: 20, offset: 0 })
 
   return (
-    <PageShell title="Emberly Blog" subtitle="News, tips and updates about Emberly and file sharing best practices.">
-      <div className="max-w-7xl mx-auto py-0 px-0">
+    <PageShell title="Emberly Blog" subtitle="News, tips and updates about Emberly and file sharing best practices." bodyVariant="plain">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <main className="lg:col-span-2">
-            <div className="rounded-2xl border border-border/30 bg-background/40 p-4">
-              {posts.length === 0 ? (
-                <div className="text-muted-foreground">No posts yet.</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <tr>
-                      <TableHead>Post</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead />
-                    </tr>
-                  </TableHeader>
-                  <TableBody>
-                    {posts.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>
-                          <div className="font-medium">
-                            <Link href={`/blog/${p.slug}`} className="hover:underline">
-                              {p.title}
-                            </Link>
-                          </div>
-                          {p.excerpt && (
-                            <div className="text-sm text-muted-foreground line-clamp-2">
-                              {p.excerpt}
+          {/* Main content - Blog posts */}
+          <main className="lg:col-span-2 space-y-6">
+            {posts.length === 0 ? (
+              <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 p-12 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-muted/10 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium">No posts yet</p>
+                    <p className="text-sm text-muted-foreground">Check back soon for updates!</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              posts.map((p, index) => (
+                <Link key={p.id} href={`/blog/${p.slug}`} className="block group">
+                  <article className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden transition-all duration-200 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 dark:hover:border-white/10">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    {/* Featured badge for first post */}
+                    {index === 0 && (
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-primary/20 text-primary border-0 font-medium">
+                          Latest
+                        </Badge>
+                      </div>
+                    )}
+
+                    <div className="relative p-6">
+                      <div className="space-y-3">
+                        {/* Title */}
+                        <h2 className="text-xl font-semibold tracking-tight group-hover:text-primary transition-colors pr-16">
+                          {p.title}
+                        </h2>
+
+                        {/* Excerpt */}
+                        {p.excerpt && (
+                          <p className="text-muted-foreground line-clamp-2">
+                            {p.excerpt}
+                          </p>
+                        )}
+
+                        {/* Meta info */}
+                        <div className="flex flex-wrap items-center gap-4 pt-2">
+                          {/* Author */}
+                          {p.author && (
+                            <div className="flex items-center gap-2">
+                              {p.author.image ? (
+                                <img
+                                  src={p.author.image}
+                                  alt={p.author.name || 'Author'}
+                                  className="h-6 w-6 rounded-full ring-2 ring-white/10"
+                                />
+                              ) : (
+                                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                                  {(p.author.name || 'A').charAt(0)}
+                                </div>
+                              )}
+                              <span className="text-sm text-muted-foreground">
+                                {p.author.name}
+                              </span>
                             </div>
                           )}
-                        </TableCell>
 
-                        <TableCell>
-                          {p.publishedAt ? format(new Date(p.publishedAt), 'PPP') : 'Unpublished'}
-                        </TableCell>
+                          {/* Date */}
+                          {p.publishedAt && (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5" />
+                              <span>{format(new Date(p.publishedAt), 'MMM d, yyyy')}</span>
+                              <span className="text-muted-foreground/60">
+                                ({formatDistanceToNow(new Date(p.publishedAt), { addSuffix: true })})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                        <TableCell>{p.author?.name ?? '—'}</TableCell>
-
-                        <TableCell>
-                          <Link href={`/blog/${p.slug}`} className="text-primary font-medium">
-                            Read →
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+                      {/* Read more indicator */}
+                      <div className="absolute bottom-6 right-6 flex items-center gap-1 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Read more</span>
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ))
+            )}
           </main>
 
+          {/* Sidebar */}
           <aside className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              <div className="rounded-2xl bg-background/10 border border-border/20 p-4">
-                <h3 className="text-lg font-semibold">About this blog</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Announcements, how-to guides, and updates from the Emberly team.
-                </p>
+              {/* About card */}
+              <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                <div className="relative p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-semibold">About this blog</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Announcements, how-to guides, and updates from the Emberly team. Stay up to date with the latest features and best practices.
+                  </p>
+                </div>
               </div>
 
-              <div className="rounded-2xl bg-background/10 border border-border/20 p-4">
-                <h4 className="text-sm font-semibold">Quick Links</h4>
-                <ul className="mt-3 space-y-2 text-sm">
-                  <li>
-                    <Link href="/discord" className="text-primary">
-                      Join our Discord
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/legal" className="text-primary">
-                      Legal
-                    </Link>
-                  </li>
-                </ul>
+              {/* Quick Links card */}
+              <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+                <div className="relative p-5">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Quick Links</h4>
+                  <ul className="space-y-3">
+                    <li>
+                      <Link
+                        href="/discord"
+                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors group"
+                      >
+                        <MessageCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span>Join our Discord</span>
+                        <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground/50" />
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/changelogs"
+                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors group"
+                      >
+                        <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span>Changelogs</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/legal"
+                        className="flex items-center gap-2 text-sm hover:text-primary transition-colors group"
+                      >
+                        <BookOpen className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span>Legal</span>
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Stats card */}
+              <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+                <div className="relative p-5">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-primary">{posts.length}</div>
+                    <div className="text-sm text-muted-foreground mt-1">Published articles</div>
+                  </div>
+                </div>
               </div>
             </div>
           </aside>

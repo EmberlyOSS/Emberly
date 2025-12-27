@@ -1,14 +1,14 @@
-import { ExpiryAction } from '@/types/events'
+import { ExpiryAction } from '@/packages/types/events'
 
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAuth } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
 import {
   cancelFileExpiration,
   getFileExpirationInfo,
   scheduleFileExpiration,
-} from '@/lib/events/handlers/file-expiry'
-import { loggers } from '@/lib/logger'
+} from '@/packages/lib/events/handlers/file-expiry'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.files
 

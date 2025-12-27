@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { getStorageProvider } from '@/lib/storage'
+import { getStorageProvider } from '@/packages/lib/storage'
 
 function mapAwsErrorToStatus(errAny: any): number | null {
     try {

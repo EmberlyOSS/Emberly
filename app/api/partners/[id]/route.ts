@@ -1,13 +1,17 @@
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAdmin } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
-import { loggers } from '@/lib/logger'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
+import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.files || console
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const partner = await prisma.partner.findUnique({ where: { id: params.id } })
+        const { id } = await params
+        const partner = await prisma.partner.findUnique({ where: { id } })
         if (!partner) return apiError('Partner not found', HTTP_STATUS.NOT_FOUND)
         return apiResponse(partner)
     } catch (error) {
@@ -16,19 +20,23 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { response } = await requireAdmin()
         if (response) return response
 
+        const { id } = await params
         const json = await req.json()
         const { name, tagline, url, imagePath, active, sortOrder } = json
 
-        const existing = await prisma.partner.findUnique({ where: { id: params.id } })
+        const existing = await prisma.partner.findUnique({ where: { id } })
         if (!existing) return apiError('Partner not found', HTTP_STATUS.NOT_FOUND)
 
         const updated = await prisma.partner.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 ...(name !== undefined && { name }),
                 ...(tagline !== undefined && { tagline }),
@@ -46,15 +54,19 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { response } = await requireAdmin()
         if (response) return response
 
-        const existing = await prisma.partner.findUnique({ where: { id: params.id } })
+        const { id } = await params
+        const existing = await prisma.partner.findUnique({ where: { id } })
         if (!existing) return apiError('Partner not found', HTTP_STATUS.NOT_FOUND)
 
-        await prisma.partner.delete({ where: { id: params.id } })
+        await prisma.partner.delete({ where: { id } })
 
         return apiResponse({ success: true })
     } catch (error) {

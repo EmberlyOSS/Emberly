@@ -7,7 +7,7 @@ deployment instructions.
 
 If you are looking for the upstream open-source codebase (self-hostable):
 
-- GitHub: https://github.com/EmberlyOSS/Emberly
+- GitHub: https://github.com/EmberlyOSS/Emberly - (COMING SOON - WIP)
 
 This repo includes the full frontend, site pages (docs, pricing, marketing), and
 additional pages we run on our hosted service. The open-source repo provides the

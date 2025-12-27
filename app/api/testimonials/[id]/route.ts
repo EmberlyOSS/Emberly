@@ -1,12 +1,13 @@
-import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
-import { requireAdmin } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/database/prisma'
+import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
+import { prisma } from '@/packages/lib/database/prisma'
 
-export async function GET(req: Request) {
+export async function GET(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const url = new URL(req.url)
-        const id = url.pathname.split('/').pop()
-        if (!id) return apiError('Not found', HTTP_STATUS.NOT_FOUND)
+        const { id } = await params
 
         const t = await prisma.testimonial.findUnique({ where: { id }, include: { user: { select: { id: true, name: true, urlId: true } } } })
         if (!t) return apiError('Not found', HTTP_STATUS.NOT_FOUND)
@@ -17,14 +18,15 @@ export async function GET(req: Request) {
     }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { response } = await requireAdmin()
         if (response) return response
 
-        const url = new URL(req.url)
-        const id = url.pathname.split('/').pop()
-        if (!id) return apiError('Not found', HTTP_STATUS.NOT_FOUND)
+        const { id } = await params
 
         const body = await req.json()
         const approved = body?.approved === true
@@ -32,7 +34,7 @@ export async function PUT(req: Request) {
         const archived = typeof body?.archived === 'boolean' ? body.archived : undefined
         const hidden = typeof body?.hidden === 'boolean' ? body.hidden : undefined
 
-        const updateData: any = {}
+        const updateData: Record<string, unknown> = {}
         if (approved !== undefined) updateData.approved = approved
         if (content !== undefined) updateData.content = content
         if (archived !== undefined) updateData.archived = archived
@@ -45,14 +47,15 @@ export async function PUT(req: Request) {
     }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const { response } = await requireAdmin()
         if (response) return response
 
-        const url = new URL(req.url)
-        const id = url.pathname.split('/').pop()
-        if (!id) return apiError('Not found', HTTP_STATUS.NOT_FOUND)
+        const { id } = await params
 
         await prisma.testimonial.delete({ where: { id } })
         return apiResponse({ id })

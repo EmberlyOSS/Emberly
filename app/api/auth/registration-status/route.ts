@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { getConfig } from '@/lib/config'
+import { getConfig } from '@/packages/lib/config'
 
 export async function GET() {
   try {
