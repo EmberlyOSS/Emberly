@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2025-12-27
+
+### Added
+- Dynamic Open Graph and Twitter card images (`opengraph-image.tsx`, `twitter-image.tsx`) using Next.js ImageResponse API with Hawkins Neon theme styling, Emberly branding, and feature pills.
+- Current plan banner on pricing page: dedicated `CurrentPlanBanner` component displaying the user's active plan prominently above the plans grid with plan details, feature preview pills, and "Manage Billing" link.
+- CORS headers and `OPTIONS`/`HEAD` handlers added to raw file route (`/[userUrlId]/[filename]/raw`) for Discord and Twitter video embed compatibility.
+- Video metadata tags: explicit `og:video`, `og:video:secure_url`, `og:video:type`, `og:video:width`, and `og:video:height` meta tags in `buildOtherMetadata` for proper video embeds on social platforms.
+
+### Changed
+- Pricing page tabs restyled: `TabsList` and billing cycle toggle now share consistent glass-morphism styling (`bg-muted/50 rounded-xl`) with matching active states (`bg-primary text-primary-foreground`).
+- Plans grid refactored: current plan is now separated from the upgrade options grid; remaining plans display under an "Upgrade your plan" section header.
+- `PlanSection` component restructured into smaller components (`CurrentPlanBanner`, `PlanCard`) for cleaner code organization.
+- Video thumbnail route updated to handle video files by redirecting to a placeholder or generating appropriate thumbnails.
+- Bot handler logic clarified for video content type detection and metadata delivery.
+
+### Fixed
+- Magic link authentication session loading: fixed `sessionVersion` mismatch where the stale value was used instead of the incremented value from `prisma.user.update()`, causing immediate session invalidation after login.
+- Middleware constants: fixed typo in `PUBLIC_PATHS` array that could cause incorrect path matching.
+- Pricing tabs `RovingFocusGroupItem` error: restored `TabsList` wrapper around `TabsTrigger` components to satisfy Radix UI's accessibility context requirements.
+
 ## [1.0.0] - 2025-12-26
 
 ### Added

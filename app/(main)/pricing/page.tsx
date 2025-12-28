@@ -5,9 +5,15 @@ import { prisma } from '@/packages/lib/database/prisma'
 import CurrentPlan from '@/packages/components/pricing/CurrentPlan'
 import CustomPricingCTA from '@/packages/components/pricing/CustomPricingCTA'
 import PricingHero from '@/packages/components/pricing/PricingHero'
-import PageShell from '@/packages/components/layout/PageShell'
+import HomeShell from '@/packages/components/layout/home-shell'
 import PricingTabs from '@/packages/components/pricing/PricingTabs'
 import { getAddOnPricing, getPlanPricing } from '@/packages/lib/products/pricing'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Pricing',
+  description: 'Flexible plans for individuals, teams, and self-hosted deployments. Start free or scale up with advanced features.',
+})
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions)
@@ -82,14 +88,12 @@ export default async function PricingPage() {
   })
 
   return (
-    <PageShell bodyVariant="plain">
-      <section className="max-w-5xl mx-auto px-4 py-16">
+    <HomeShell>
+      <div className="container space-y-8">
         <PricingHero />
 
         {activeSubscription && (
-          <div className="mt-6">
-            <CurrentPlan productId={activeSubscription.productId} productName={currentPlanName} status={activeSubscription.status} />
-          </div>
+          <CurrentPlan productId={activeSubscription.productId} productName={currentPlanName} status={activeSubscription.status} />
         )}
 
         <PricingTabs
@@ -99,7 +103,7 @@ export default async function PricingPage() {
         />
 
         <CustomPricingCTA />
-      </section>
-    </PageShell>
+      </div>
+    </HomeShell>
   )
 }

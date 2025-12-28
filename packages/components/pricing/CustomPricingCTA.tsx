@@ -1,23 +1,46 @@
 import React from 'react'
+import Link from 'next/link'
+import { ArrowRight, Building2, Mail } from 'lucide-react'
+
 import { Button } from '@/packages/components/ui/button'
+
+// Reusable GlassCard component
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="relative">{children}</div>
+        </div>
+    )
+}
 
 export default function CustomPricingCTA() {
     return (
-        <section className="mt-12">
-            <div className="rounded-2xl border border-border/40 bg-background/60 p-6 shadow-sm text-center space-y-3">
-                <h2 className="text-2xl font-semibold">Need custom pricing?</h2>
-                <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-                    If the plans we offer just aren't quite what you're looking for, we're here to help. Reach out to our sales team to discuss tailored solutions that fit your unique needs.
+        <GlassCard className="mt-10">
+            <div className="p-8 text-center">
+                <div className="inline-flex p-3 rounded-xl bg-primary/20 mb-4">
+                    <Building2 className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold">Need custom pricing?</h2>
+                <p className="mt-3 text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                    If the plans we offer just aren't quite what you're looking for, we're here to help. 
+                    Reach out to our sales team to discuss tailored solutions that fit your unique needs.
                 </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-                    <Button asChild>
-                        <a href="/contact">Contact sales</a>
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <Button size="lg" asChild className="group">
+                        <Link href="/contact">
+                            Contact sales
+                            <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Link>
                     </Button>
-                    <Button variant="outline" asChild>
-                        <a href="mailto:sales@embrly.ca">sales@embrly.ca</a>
+                    <Button size="lg" variant="outline" asChild className="bg-background/50">
+                        <a href="mailto:sales@embrly.ca">
+                            <Mail className="h-4 w-4 mr-2" />
+                            sales@embrly.ca
+                        </a>
                     </Button>
                 </div>
             </div>
-        </section>
+        </GlassCard>
     )
 }

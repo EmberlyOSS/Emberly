@@ -1,6 +1,17 @@
 import React from 'react'
+import { Crown, ExternalLink } from 'lucide-react'
+
 import { Button } from '@/packages/components/ui/button'
-import { Card, CardContent } from '@/packages/components/ui/card'
+
+// Reusable GlassCard component
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="relative">{children}</div>
+        </div>
+    )
+}
 
 type Props = {
     productId: string
@@ -9,20 +20,35 @@ type Props = {
 }
 
 export default function CurrentPlan({ productId, productName, status }: Props) {
+    const statusDisplay = status === 'active' ? 'Active' : status === 'trialing' ? 'Trial' : status
+    const statusColor = status === 'active' || status === 'trialing' 
+        ? 'text-green-500 bg-green-500/10' 
+        : 'text-muted-foreground bg-muted'
+
     return (
-        <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                    <div className="text-sm text-muted-foreground">Current plan</div>
-                    <div className="font-semibold">{productName || productId}</div>
+        <GlassCard>
+            <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-xl bg-primary/20">
+                        <Crown className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <div className="text-sm text-muted-foreground">Current plan</div>
+                        <div className="font-semibold text-lg">{productName || productId}</div>
+                    </div>
                 </div>
-                <div className="text-sm text-muted-foreground">{status}</div>
-                <div>
-                    <Button asChild>
-                        <a href="/api/payments/portal">Manage billing</a>
+                <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+                        {statusDisplay}
+                    </span>
+                    <Button asChild size="sm" className="group">
+                        <a href="/api/payments/portal">
+                            Manage billing
+                            <ExternalLink className="h-3.5 w-3.5 ml-2 group-hover:translate-x-0.5 transition-transform" />
+                        </a>
                     </Button>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </GlassCard>
     )
 }
