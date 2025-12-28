@@ -1,10 +1,20 @@
 "use client"
 
 import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Package } from 'lucide-react'
 
 import CheckoutButton from '@/packages/components/payments/CheckoutButton'
 import { Button } from '@/packages/components/ui/button'
+
+// Reusable GlassCard component
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="relative">{children}</div>
+        </div>
+    )
+}
 
 // Minimal slider using input[type=range] so we don't depend on a UI slider package.
 function QuantitySlider({ value, min, max, step, onChange }: { value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
@@ -16,7 +26,7 @@ function QuantitySlider({ value, min, max, step, onChange }: { value: number; mi
             step={step}
             value={value}
             onChange={(e) => onChange(parseInt(e.target.value, 10))}
-            className="w-full accent-primary"
+            className="w-full accent-primary h-2 rounded-full bg-border/50"
         />
     )
 }
@@ -75,72 +85,82 @@ export default function AddOnSelector({
     }, [min, max, step])
 
     return (
-        <div className="rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-                <div>
-                    <h3 className="text-lg font-semibold">{title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{description}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        <span className="font-extrabold">STARTING AT:</span>{" "}
-                        <span className="font-medium text-primary">
-                            {pricePerUnit != null ? `$${pricePerUnit.toFixed(2)} / ${unitLabel} (${billingPeriod === 'monthly' ? 'per month' : 'one-time'})` : 'Set pricing to enable checkout'}
-                        </span>
-                    </p>
+        <GlassCard>
+            <div className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2.5 rounded-xl bg-primary/20 shrink-0">
+                            <Package className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold">{title}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">{description}</p>
+                            <div className="mt-2 flex items-baseline gap-1">
+                                <span className="text-2xl font-extrabold text-primary">
+                                    {pricePerUnit != null ? `$${pricePerUnit.toFixed(2)}` : '—'}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                    / {unitLabel} ({billingPeriod === 'monthly' ? 'per month' : 'one-time'})
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)} className="shrink-0 bg-background/50">
+                        {open ? (
+                            <>
+                                Hide <ChevronUp className="w-4 h-4 ml-2" />
+                            </>
+                        ) : (
+                            <>
+                                Configure <ChevronDown className="w-4 h-4 ml-2" />
+                            </>
+                        )}
+                    </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
-                    {open ? (
-                        <>
-                            Hide <ChevronUp className="w-4 h-4 ml-2" />
-                        </>
-                    ) : (
-                        <>
-                            Buy <ChevronDown className="w-4 h-4 ml-2" />
-                        </>
-                    )}
-                </Button>
-            </div>
 
-            {open && (
-                <div className="mt-4 space-y-4">
-                    {pricePerUnit == null || !priceId ? (
-                        <p className="text-sm text-muted-foreground">Pricing not set for this add-on.</p>
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between text-sm">
-                                <span>Quantity</span>
-                                <span className="font-medium">{qty} {unitLabel}</span>
-                            </div>
-                            <QuantitySlider value={qty} min={min} max={max} step={step} onChange={setQty} />
-                            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                                {marks.map((mark) => {
-                                    const active = qty === mark
-                                    return (
-                                        <button
-                                            key={mark}
-                                            type="button"
-                                            onClick={() => setQty(mark)}
-                                            className={`flex-1 min-w-0 text-center px-2 py-1 rounded-md border transition-colors ${active ? 'border-primary text-primary bg-primary/10' : 'border-border/60 hover:border-primary/60 hover:text-primary'}`}
-                                        >
-                                            {mark}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                                <span>Total</span>
-                                <span className="font-semibold">${total}</span>
-                            </div>
-                            <CheckoutButton
-                                priceId={priceId}
-                                mode={mode}
-                                label={`Buy ${qty} ${unitLabel}`}
-                                type={type}
-                                quantity={qty}
-                            />
-                        </>
-                    )}
-                </div>
-            )}
-        </div>
+                {open && (
+                    <div className="mt-6 pt-6 border-t border-border/50 space-y-4">
+                        {pricePerUnit == null || !priceId ? (
+                            <p className="text-sm text-muted-foreground">Pricing not set for this add-on.</p>
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="font-medium">Quantity</span>
+                                    <span className="font-bold text-primary">{qty} {unitLabel}</span>
+                                </div>
+                                <QuantitySlider value={qty} min={min} max={max} step={step} onChange={setQty} />
+                                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                    {marks.map((mark) => {
+                                        const active = qty === mark
+                                        return (
+                                            <button
+                                                key={mark}
+                                                type="button"
+                                                onClick={() => setQty(mark)}
+                                                className={`flex-1 min-w-0 text-center px-2 py-1.5 rounded-lg border transition-all ${active ? 'border-primary text-primary bg-primary/10 font-medium' : 'border-border/50 hover:border-primary/50 hover:text-primary bg-background/50'}`}
+                                            >
+                                                {mark}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-background/80 border border-border/50">
+                                    <span className="text-sm font-medium">Total</span>
+                                    <span className="text-xl font-bold">${total}</span>
+                                </div>
+                                <CheckoutButton
+                                    priceId={priceId}
+                                    mode={mode}
+                                    label={`Purchase ${qty} ${unitLabel}`}
+                                    type={type}
+                                    quantity={qty}
+                                    className="w-full"
+                                />
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+        </GlassCard>
     )
 }

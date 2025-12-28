@@ -12,6 +12,14 @@ import { getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files.getChildLogger('raw')
 
+// CORS headers for video embeds (Discord, Twitter, etc.)
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+  'Access-Control-Allow-Headers': 'Range, Content-Type',
+  'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+}
+
 function encodeFilename(filename: string): string {
   const encoded = encodeURIComponent(filename)
   return `"${encoded.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
@@ -101,6 +109,80 @@ function createRobustStream(nodeStream: Readable): ReadableStream {
   )
 }
 
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  })
+}
+
+// Handle HEAD requests (used by Discord, Twitter, etc. to check video before fetching)
+export async function HEAD(
+  req: Request,
+  { params }: { params: Promise<{ userUrlId: string; filename: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    const { userUrlId, filename } = await params
+    const urlPath = `/${userUrlId}/${filename}`
+    const url = new URL(req.url)
+    const providedPassword = url.searchParams.get('password')
+
+    let file = await prisma.file.findUnique({
+      where: { urlPath },
+    })
+
+    if (!file && filename.includes(' ')) {
+      const urlSafeFilename = filename.replace(/ /g, '-')
+      const urlSafePath = `/${userUrlId}/${urlSafeFilename}`
+      file = await prisma.file.findUnique({
+        where: { urlPath: urlSafePath },
+      })
+    }
+
+    if (!file) {
+      return new Response(null, { status: 404, headers: CORS_HEADERS })
+    }
+
+    const isOwner = session?.user?.id === file.userId
+    const isPrivate = file.visibility === 'PRIVATE' && !session?.user
+
+    if (isPrivate) {
+      return new Response(null, { status: 404, headers: CORS_HEADERS })
+    }
+
+    if (file.password && !isOwner) {
+      if (!providedPassword) {
+        return new Response(null, { status: 401, headers: CORS_HEADERS })
+      }
+
+      const isPasswordValid = await compare(providedPassword, file.password)
+      if (!isPasswordValid) {
+        return new Response(null, { status: 401, headers: CORS_HEADERS })
+      }
+    }
+
+    const storageProvider = await getStorageProvider()
+    const size = await storageProvider.getFileSize(file.path)
+
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        ...CORS_HEADERS,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': size.toString(),
+        'Content-Type': file.mimeType,
+        'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    })
+  } catch (error) {
+    console.error('HEAD request error:', error)
+    return new Response(null, { status: 500, headers: CORS_HEADERS })
+  }
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ userUrlId: string; filename: string }> }
@@ -125,24 +207,24 @@ export async function GET(
     }
 
     if (!file) {
-      return new Response(null, { status: 404 })
+      return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
 
     const isOwner = session?.user?.id === file.userId
     const isPrivate = file.visibility === 'PRIVATE' && !session?.user
 
     if (isPrivate) {
-      return new Response(null, { status: 404 })
+      return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
 
     if (file.password && !isOwner) {
       if (!providedPassword) {
-        return new Response(null, { status: 401 })
+        return new Response(null, { status: 401, headers: CORS_HEADERS })
       }
 
       const isPasswordValid = await compare(providedPassword, file.password)
       if (!isPasswordValid) {
-        return new Response(null, { status: 401 })
+        return new Response(null, { status: 401, headers: CORS_HEADERS })
       }
     }
 
@@ -180,6 +262,7 @@ export async function GET(
       })
 
       const headers = {
+        ...CORS_HEADERS,
         'Content-Range': `bytes ${start}-${end}/${size}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunkSize.toString(),
@@ -202,6 +285,7 @@ export async function GET(
       size,
     })
     const headers = {
+      ...CORS_HEADERS,
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
       'Content-Type': file.mimeType,
@@ -215,8 +299,8 @@ export async function GET(
   } catch (error) {
     console.error('File serve error:', error)
     if (error instanceof Error && error.message.includes('NoSuchKey')) {
-      return new Response(null, { status: 404 })
+      return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
-    return new Response(null, { status: 500 })
+    return new Response(null, { status: 500, headers: CORS_HEADERS })
   }
 }

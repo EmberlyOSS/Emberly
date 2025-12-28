@@ -64,6 +64,23 @@ export async function buildRichMetadata({
     uploadedAt,
   })
 
+  // Get video URL for embeds (Discord, Twitter, etc.)
+  let resolvedVideoUrl: string | undefined
+  if (classification.isVideo) {
+    resolvedVideoUrl = safeRawUrl
+    try {
+      const storageProvider = await getStorageProvider()
+      if (storageProvider && typeof storageProvider.getFileUrl === 'function') {
+        const providerUrl = await storageProvider.getFileUrl(safeFilePath)
+        if (providerUrl) {
+          resolvedVideoUrl = providerUrl
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get video URL from storage provider:', error)
+    }
+  }
+
   const metadata: Metadata = {
     title: baseTitle,
     description: baseDescription,
@@ -80,14 +97,19 @@ export async function buildRichMetadata({
         safeRawUrl,
         safeMimeType,
         safeBaseUrl,
-        safeFileId
-      ),
-      videos: await buildOpenGraphVideos(
+        safeFileId,
         classification.isVideo,
-        safeRawUrl,
-        safeMimeType,
-        safeFilePath
+        resolvedVideoUrl
       ),
+      videos: classification.isVideo && resolvedVideoUrl ? [
+        {
+          url: resolvedVideoUrl,
+          secureUrl: resolvedVideoUrl,
+          type: safeMimeType,
+          width: 1280,
+          height: 720,
+        },
+      ] : undefined,
       audio: buildOpenGraphAudio(classification.isAudio, safeRawUrl, safeMimeType),
     },
     twitter: buildTwitterMetadata(classification, {
@@ -97,12 +119,16 @@ export async function buildRichMetadata({
       fileUrl,
       baseUrl: safeBaseUrl,
       fileId: safeFileId,
+      videoUrl: resolvedVideoUrl,
     }),
     other: buildOtherMetadata({
       uploadDate,
       description: baseDescription,
       rawUrl: safeRawUrl,
       isImage: classification.isImage,
+      isVideo: classification.isVideo,
+      mimeType: safeMimeType,
+      videoUrl: resolvedVideoUrl,
     }),
   }
 
@@ -126,7 +152,9 @@ function buildOpenGraphImages(
   rawUrl: string,
   mimeType: string,
   baseUrl: string,
-  fileId?: string
+  fileId?: string,
+  isVideoFile?: boolean,
+  videoUrl?: string
 ) {
   if (isImageFile && fileId) {
     // Use thumbnail endpoint which doesn't require password auth
@@ -137,6 +165,22 @@ function buildOpenGraphImages(
         url: thumbnailUrl,
         alt: 'Preview image',
         type: mimeType,
+      },
+    ]
+  }
+
+  // For video files, we need to provide an image for platforms that don't auto-generate thumbnails
+  // Some platforms will use this as the preview image before the video plays
+  if (isVideoFile && fileId && baseUrl) {
+    // Try to use video thumbnail if available, otherwise fall back to banner
+    const thumbnailUrl = `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
+    return [
+      {
+        url: thumbnailUrl,
+        width: 1280,
+        height: 720,
+        alt: 'Video preview',
+        type: 'image/png',
       },
     ]
   }
@@ -157,43 +201,6 @@ function buildOpenGraphImages(
   }
 
   return undefined
-}
-
-async function buildOpenGraphVideos(
-  isVideoFile: boolean,
-  rawUrl: string,
-  mimeType: string,
-  filePath: string
-) {
-  if (!isVideoFile) return undefined
-  if (!rawUrl || !filePath) return undefined
-
-  let videoUrl = rawUrl
-  try {
-    const storageProvider = await getStorageProvider()
-    if (storageProvider && typeof storageProvider.getFileUrl === 'function') {
-      const providerUrl = await storageProvider.getFileUrl(filePath)
-      if (providerUrl) {
-        videoUrl = providerUrl
-      }
-    }
-  } catch (error) {
-    // Fall back to rawUrl if storage provider is unavailable
-    console.error('Failed to get video URL from storage provider:', error)
-  }
-
-  if (!videoUrl) return undefined
-
-  const safeUrl = String(videoUrl)
-  const safeMime = mimeType || 'video/mp4'
-
-  return [
-    {
-      url: safeUrl,
-      type: safeMime,
-      secureUrl: safeUrl,
-    },
-  ]
 }
 
 function buildOpenGraphAudio(
@@ -218,11 +225,12 @@ interface TwitterMetadataInput {
   fileUrl: string
   baseUrl?: string
   fileId?: string
+  videoUrl?: string
 }
 
 function buildTwitterMetadata(
   classification: ReturnType<typeof classifyMimeType>,
-  { title, description, rawUrl, fileUrl, baseUrl, fileId }: TwitterMetadataInput
+  { title, description, rawUrl, fileUrl, baseUrl, fileId, videoUrl }: TwitterMetadataInput
 ) {
   if (classification.isImage) {
     // Use thumbnail endpoint for Twitter cards (doesn't require password auth)
@@ -238,27 +246,18 @@ function buildTwitterMetadata(
   }
 
   if (classification.isVideo) {
-    if (!fileUrl || !rawUrl) {
-      // Fallback to summary card if URLs are missing
-      return {
-        card: 'summary' as const,
-        title,
-        description,
-      }
-    }
+    // For video files, use summary_large_image with a thumbnail
+    // The player card requires whitelisting from Twitter and doesn't work for most sites
+    // Instead, Discord and other platforms use og:video tags (handled in buildOtherMetadata)
+    const thumbnailUrl = baseUrl && fileId
+      ? `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
+      : `${baseUrl?.replace(/\/$/, '')}/banner.png`
 
     return {
-      card: 'player' as const,
+      card: 'summary_large_image' as const,
       title,
       description,
-      players: [
-        {
-          playerUrl: String(fileUrl),
-          streamUrl: String(rawUrl),
-          width: 1280,
-          height: 720,
-        },
-      ],
+      images: thumbnailUrl ? [thumbnailUrl] : undefined,
     }
   }
 
@@ -290,6 +289,9 @@ interface OtherMetadataInput {
   description: string
   rawUrl: string
   isImage: boolean
+  isVideo?: boolean
+  mimeType?: string
+  videoUrl?: string
 }
 
 function buildOtherMetadata({
@@ -297,6 +299,9 @@ function buildOtherMetadata({
   description,
   rawUrl,
   isImage,
+  isVideo,
+  mimeType,
+  videoUrl,
 }: OtherMetadataInput) {
   const metadata: Record<string, string> = {
     'theme-color': '#F97316', // Ember orange
@@ -308,6 +313,17 @@ function buildOtherMetadata({
 
   if (isImage) {
     metadata['og:image:alt'] = 'Preview image'
+  }
+
+  // Discord requires explicit og:video tags for video embeds
+  // These are added via 'other' since Next.js Metadata openGraph.videos
+  // doesn't generate the exact format Discord expects
+  if (isVideo && videoUrl) {
+    metadata['og:video'] = videoUrl
+    metadata['og:video:secure_url'] = videoUrl
+    metadata['og:video:type'] = mimeType || 'video/mp4'
+    metadata['og:video:width'] = '1280'
+    metadata['og:video:height'] = '720'
   }
 
   return metadata

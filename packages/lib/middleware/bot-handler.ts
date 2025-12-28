@@ -27,8 +27,17 @@ export function handleBotRequest(request: NextRequest): NextResponse | null {
   const fileExt = request.nextUrl.pathname.split('.').pop()?.toLowerCase()
   const isVideo = fileExt && VIDEO_EXTENSIONS.includes(fileExt)
   const isDirectPath = request.nextUrl.pathname.endsWith('/direct')
+  const isRawPath = request.nextUrl.pathname.endsWith('/raw')
 
-  if (!isVideo && !request.nextUrl.pathname.endsWith('/raw') && !isDirectPath) {
+  // For videos: Let bots access the page to get metadata with og:video tags
+  // The og:video tags point to the /raw URL which Discord/Twitter will then fetch
+  if (isVideo) {
+    return NextResponse.next()
+  }
+
+  // For non-video files (images, etc): Redirect bots directly to /raw
+  // so they get the actual file content for embedding
+  if (!isRawPath && !isDirectPath) {
     const url = new URL(request.url)
     url.pathname = `${url.pathname}/raw`
     return NextResponse.redirect(url)

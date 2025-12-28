@@ -101,25 +101,26 @@ export const authOptions: NextAuthOptions = {
              return null
            }
 
-           // Consume the token atomically
-           await prisma.user.update({
+           // Consume the token atomically and get the updated user with new sessionVersion
+           const updatedUser = await prisma.user.update({
              where: { id: user.id },
              data: {
                magicLinkToken: null,
                magicLinkExpires: null,
                sessionVersion: { increment: 1 } // Invalidate old sessions
-             }
+             },
+             select: userSelect
            })
 
-           // Return user session data
+           // Return user session data with the NEW sessionVersion
            return {
-            id: validUser.id,
-            email: validUser.email,
-            name: validUser.name,
-            role: validUser.role,
-            image: validUser.image,
-            sessionVersion: validUser.sessionVersion, // Updated version
-            alphaUser: validUser.alphaUser,
+            id: updatedUser.id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            role: updatedUser.role,
+            image: updatedUser.image,
+            sessionVersion: updatedUser.sessionVersion, // Use updated version from DB
+            alphaUser: updatedUser.alphaUser,
           }
         }
 

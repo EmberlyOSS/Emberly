@@ -35,8 +35,15 @@ export async function GET(
       return new NextResponse('File not found', { status: 404 })
     }
 
-    if (!file.mimeType.startsWith('image/')) {
-      return new NextResponse('Not an image', { status: 400 })
+    const isImage = file.mimeType.startsWith('image/')
+    const isVideo = file.mimeType.startsWith('video/')
+
+    // For non-image/video files, redirect to the default banner
+    if (!isImage && !isVideo) {
+      // Return a redirect to the banner image for unsupported file types
+      const baseUrl = request.headers.get('host') || 'localhost:3000'
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      return NextResponse.redirect(`${protocol}://${baseUrl}/banner.png`)
     }
 
     // Check access permissions (similar to main file endpoint)
@@ -46,6 +53,14 @@ export async function GET(
 
     if (isPrivate) {
       return new NextResponse('File not found', { status: 404 })
+    }
+
+    // For video files, redirect to banner since we can't generate thumbnails easily
+    // In the future, this could be enhanced to use ffmpeg or a video processing service
+    if (isVideo) {
+      const baseUrl = request.headers.get('host') || 'localhost:3000'
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      return NextResponse.redirect(`${protocol}://${baseUrl}/banner.png`)
     }
 
     // Skip password check for thumbnails (thumbnails should be accessible if file is accessible)
