@@ -1,0 +1,604 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
+  theme                 String?
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecret       String?
+  preferredUploadDomain String?
+  password              String?
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  passwordBreachDetectedAt DateTime?
+  magicLinkToken        String?
+  magicLinkExpires      DateTime?
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  lastLoginUserAgent    String?
+  verificationCodes     String[]  @default([])
+  role                  UserRole  @default(USER)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  storageUsed           Float     @default(0)
+  sessionVersion        Int       @default(1)
+  vanityId              String?   @unique
+  urlId                 String    @unique
+  uploadToken           String    @unique
+  randomizeFileUrls     Boolean   @default(false)
+  enableRichEmbeds      Boolean   @default(true)
+  storageQuotaMB        Int?
+
+  alphaUser Boolean @default(false)
+
+  // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, AFFILIATE, etc)
+  perkRoles         String[]  @default([])
+  lastPerkCheckAt   DateTime?
+
+  // Referral/Affiliate system
+  referralCode      String?   @unique
+  referrerUserId    String?
+  referrer          User?     @relation("ReferralChildren", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  referrals         User[]    @relation("ReferralChildren")
+  referralCredits   Float     @default(0) // Billing credits earned from referrals (in dollars)
+  referralStats     Json      @default("{\"count\": 0, \"credited\": 0, \"lastCreditedAt\": null}") // Track referral metrics
+
+  // Email notification preferences
+  emailNotificationsEnabled Boolean @default(true)
+  emailPreferences          Json    @default("{\"security\": true, \"account\": true, \"billing\": true, \"marketing\": false, \"productUpdates\": true}")
+
+  files                       File[]
+  shortenedUrls               ShortenedUrl[]
+  stripeCustomerId            String?              @unique
+  defaultFileExpiration       FileExpiration       @default(DISABLED)
+  defaultFileExpirationAction ExpiryAction         @default(DELETE)
+  blogPosts                   BlogPost[]
+  docPages                    DocPage[]
+  customDomains               CustomDomain[]
+  subscriptions               Subscription[]
+  oneOffPurchases             OneOffPurchase[]
+  st5Comments                 St5Comment[]
+  st5CommentReplies           St5CommentReply[]
+  st5CommentReactions         St5CommentReaction[]
+  testimonials                Testimonial[]
+  legalPages                  LegalPage[]
+  fileCollaborations          FileCollaborator[]
+  editSuggestions             FileEditSuggestion[] @relation("SuggestionAuthor")
+  reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
+  loginHistory                LoginHistory[]
+  linkedAccounts              LinkedAccount[]
+  twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
+  passwordHistory             PasswordHistory[]
+  creditTransactions          CreditTransaction[]
+  creditTransactionsAsRelated CreditTransaction[] @relation("CreditTransactions")
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([referralCode])
+  @@index([referrerUserId])
+}
+
+model File {
+  id               String                 @id @default(cuid())
+  name             String
+  urlPath          String                 @unique
+  mimeType         String
+  size             Float
+  visibility       FileVisibility         @default(PUBLIC)
+  uploadedAt       DateTime               @default(now())
+  updatedAt        DateTime               @default(now()) @updatedAt
+  userId           String
+  path             String
+  isOcrProcessed   Boolean                @default(false)
+  ocrText          String?
+  password         String?
+  isPaste          Boolean                @default(false)
+  ocrConfidence    Float?
+  views            Int                    @default(0)
+  downloads        Int                    @default(0)
+  // Collaboration settings
+  allowSuggestions Boolean                @default(false)
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  editSuggestions  FileEditSuggestion[]
+  collaborators    FileCollaborator[]
+  st5Attachments   St5CommentAttachment[]
+
+  @@index([visibility, uploadedAt]) // Recent public files
+  @@index([isOcrProcessed]) // Worker queue filtering
+}
+
+// Collaborators who can edit a file
+model FileCollaborator {
+  id        String               @id @default(cuid())
+  fileId    String
+  userId    String
+  role      FileCollaboratorRole @default(EDITOR)
+  createdAt DateTime             @default(now())
+  file      File                 @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, userId])
+  @@index([fileId])
+  @@index([userId])
+}
+
+enum FileCollaboratorRole {
+  EDITOR // Can edit directly
+  SUGGESTER // Can only submit suggestions
+}
+
+// Edit suggestions from collaborators or public (if allowSuggestions is true)
+model FileEditSuggestion {
+  id         String                   @id @default(cuid())
+  fileId     String
+  userId     String
+  content    String
+  message    String?
+  status     FileEditSuggestionStatus @default(PENDING)
+  createdAt  DateTime                 @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+  file       File                     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user       User                     @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User?                    @relation("SuggestionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum FileEditSuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ShortenedUrl {
+  id        String   @id @default(cuid())
+  shortCode String   @unique
+  targetUrl String
+  clicks    Int      @default(0)
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Config {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  type        String
+  payload     Json
+  status      EventStatus @default(PENDING)
+  priority    Int         @default(0)
+  scheduledAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  processedAt DateTime?
+  failedAt    DateTime?
+  retryCount  Int         @default(0)
+  maxRetries  Int         @default(3)
+  error       String?
+  metadata    Json?
+
+  // Audit fields (populated only for auditable events)
+  isAuditable Boolean  @default(false)
+  actorId     String? // User who performed the action
+  actorEmail  String? // Email at time of action (may change later)
+  targetId    String? // User/resource being acted upon (if different from actor)
+  targetEmail String? // Target email at time of action
+  action      String? // e.g., "login", "deleted", "changed"
+  resource    String? // e.g., "auth", "account", "file"
+  success     Boolean? // Whether the action succeeded
+  ip          String?
+  userAgent   String?
+  geo         Json? // { country, region, city }
+
+  @@index([type])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@index([priority, scheduledAt])
+  @@index([isAuditable])
+  @@index([actorId])
+  @@index([actorId, createdAt])
+  @@index([isAuditable, createdAt])
+  @@index([status, priority, scheduledAt]) // Optimized valid job queue polling
+}
+
+model EventHandler {
+  id        String   @id @default(cuid())
+  eventType String
+  handler   String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventType, handler])
+  @@index([eventType])
+  @@index([enabled])
+}
+
+model BlogPost {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  content     String
+  excerpt     String?
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?
+  authorId    String?
+  author      User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model DocPage {
+  id          String      @id @default(cuid())
+  category    DocCategory
+  slug        String
+  title       String
+  content     String
+  excerpt     String?
+  status      DocStatus   @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int?
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([category, slug])
+  @@index([category, status, publishedAt])
+}
+
+model LegalPage {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  content     String
+  excerpt     String?
+  status      LegalStatus @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int?
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([sortOrder, publishedAt])
+}
+
+model CustomDomain {
+  id             String    @id @default(cuid())
+  domain         String    @unique
+  userId         String
+  verified       Boolean   @default(false)
+  cfHostnameId   String?
+  cfStatus       String?
+  cfMeta         Json?
+  cfBackoffCount Int       @default(0)
+  cfPauseUntil   DateTime?
+  isPrimary      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  tagline   String?
+  url       String?  @unique
+  imagePath String? // path under /public/partners or uploaded file path
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  content   String
+  rating    Int? // optional 1-5 rating
+  approved  Boolean  @default(false)
+  archived  Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([approved])
+  @@index([createdAt])
+}
+
+// Billing / Stripe models
+model Product {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String?
+  type                 String   @default("plan") // plan, addon, one-time
+  stripeProductId      String?  @unique
+  stripePriceMonthlyId String?  @unique
+  stripePriceYearlyId  String?  @unique
+  stripePriceOneTimeId String?  @unique
+  defaultPriceCents    Int?
+  billingInterval      String? // e.g. "month", "year"
+  features             String[] @default([])
+  active               Boolean  @default(true)
+  popular              Boolean  @default(false)
+  
+  // Plan-specific limits (only used when type="plan")
+  storageQuotaGB       Int?     // Total storage allocation in GB (e.g., 10, 25, 75, 200)
+  customDomainsLimit   Int?     // Number of custom domains allowed
+  uploadSizeCapMB      Int?     // Maximum single file upload size in MB
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  plans Subscription[]
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  productId            String
+  stripeSubscriptionId String?   @unique
+  status               String    @default("active")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  metadata             Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status, currentPeriodEnd]) // Expiration check speedup
+}
+
+// One-off purchases for extra-storage, custom-domain purchases, etc.
+model OneOffPurchase {
+  id                    String   @id @default(cuid())
+  userId                String
+  type                  String // e.g. "extra_storage", "custom_domain"
+  quantity              Int      @default(1)
+  amountCents           Int
+  stripePaymentIntentId String?  @unique
+  metadata              Json?
+  createdAt             DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Credit transaction log for tracking referral credits earned and applied to purchases
+model CreditTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // "earned_referral", "applied_checkout", "applied_purchase", "manual_adjustment"
+  amountCents     Int      // Positive for credits earned, negative for credits applied
+  description     String?  // e.g. "Referral from user@example.com", "Applied to checkout", "Applied to storage purchase"
+  relatedUserId   String?  // User ID if this is a referral transaction
+  relatedOrderId  String?  // Stripe session ID, payment intent ID, etc
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedUser User? @relation("CreditTransactions", fields: [relatedUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([relatedUserId])
+}
+
+// Login history for detecting suspicious/new device logins
+model LoginHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  ip          String?
+  userAgent   String?
+  // Normalized fingerprint for device identification
+  fingerprint String?
+  country     String?
+  city        String?
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, fingerprint])
+  @@index([userId, ip])
+  @@index([createdAt])
+}
+
+// Fan comments for the ST5 hub
+model St5Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  isHidden  Boolean  @default(false)
+  isSpoiler Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  attachments St5CommentAttachment[]
+  replies     St5CommentReply[]
+  reactions   St5CommentReaction[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model St5CommentReply {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
+  @@index([userId])
+}
+
+model St5CommentReaction {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  type      String
+  createdAt DateTime @default(now())
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model St5CommentAttachment {
+  id        String   @id @default(cuid())
+  commentId String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  file    File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
+  @@index([fileId])
+}
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  USER
+}
+
+enum FileVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum EventStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SCHEDULED
+}
+
+enum FileExpiration {
+  DISABLED
+  HOUR
+  DAY
+  WEEK
+  MONTH
+}
+
+enum ExpiryAction {
+  DELETE
+  SET_PRIVATE
+}
+
+enum DocCategory {
+  MAIN
+  USERS
+  HOSTING
+  INTEGRATIONS
+}
+
+enum DocStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LegalStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model LinkedAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // "github" or "discord"
+  providerUserId String  // GitHub login or Discord user ID
+  providerUsername String? // GitHub login or Discord username
+  providerData  Json?    // Additional provider-specific data (avatar, etc)
+  accessToken   String?  // OAuth access token (encrypted in practice)
+  refreshToken  String?  // OAuth refresh token (encrypted in practice)
+  linkedAt      DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([provider, providerUserId])
+}
+
+model TwoFactorRecoveryCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // Format: "XXXX-XXXX" (8 chars + dash)
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  batchId   String   // To track which batch of codes this belongs to (for regeneration)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+  @@index([userId, batchId])
+  @@index([userId, used])
+}
+
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String   // Encrypted password hash (same as User.password)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
