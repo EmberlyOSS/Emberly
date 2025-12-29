@@ -151,7 +151,6 @@ export async function generateMetadata({
     fileId: file.id,
   })
 }
-}
 
 export default async function FilePage({
   params,
