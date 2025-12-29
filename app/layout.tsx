@@ -32,6 +32,7 @@ const inter = localFont({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://embrly.ca'),
   title: null,
   description: null,
   icons: {
