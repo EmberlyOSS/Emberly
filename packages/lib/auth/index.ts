@@ -7,6 +7,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, NewLoginEmail } from '@/packages/lib/emails'
 import { detectNewLogin, recordLogin } from './login-detection'
+import { RedisSessionAdapter } from './redis-session-adapter'
 
 const userSelect = {
   id: true,
@@ -29,6 +30,13 @@ const userSelect = {
 // subdomains of a single registrable domain (for example, *.example.com).
 // Do NOT set this to a different registrable domain.
 const NEXTAUTH_COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN || undefined
+
+// Parse trusted origins for multi-domain support
+// Format: comma-separated list of origins (e.g. "https://emberly.site,https://embrly.ca")
+const NEXTAUTH_TRUSTED_ORIGINS = (process.env.NEXTAUTH_TRUSTED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(origin => origin.length > 0)
 
 type UserWithSession = Prisma.UserGetPayload<{ select: typeof userSelect }>
 
@@ -60,6 +68,9 @@ declare module 'next-auth/jwt' {
     twoFactorEnabled?: boolean
   }
 }
+
+// Adapter for cross-domain session sharing via Redis
+const sessionAdapter = RedisSessionAdapter()
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -206,28 +217,20 @@ export const authOptions: NextAuthOptions = {
       // Fire-and-forget new login email + last login metadata
       const email = user?.email
       if (email) {
-        // Note: req is not available in signIn callback in this version.
-        // We'll skip IP logging for now or implement via middleware context later.
-        const ip = undefined 
-        const userAgent = undefined
-        // const forwarded = req?.headers?.get('x-forwarded-for') || ''
-        // const ip = forwarded.split(',')[0]?.trim() || req?.headers?.get('x-real-ip') || undefined
-        // const userAgent = req?.headers?.get('user-agent') || undefined
+        // Get context from middleware-stored headers
+        const email_key = `login_context:${email}:${Date.now()}`
+        const storedContext = globalThis.__nextAuthLoginContext?.[email_key] || {}
+        
+        const ip = storedContext.ip
+        const userAgent = storedContext.userAgent
+        const country = storedContext.geo?.country
+        const city = storedContext.geo?.city
+
         const time = new Date().toISOString()
         const manageUrl = `${process.env.APP_BASE_URL ||
           process.env.NEXTAUTH_URL ||
           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-          }/dashboard/security`
-
-        // Extract geo info from various CDN headers (Vercel, Cloudflare, etc.)
-        const country = null
-        // const country = req?.headers?.get('x-vercel-ip-country') ||
-        //   req?.headers?.get('cf-ipcountry') ||
-        //   null
-        const city = null
-        // const city = req?.headers?.get('x-vercel-ip-city') ||
-        //   req?.headers?.get('cf-ipcity') ||
-        //   null
+          }/profile?tab=security`
 
         const loginContext = {
           ip,
@@ -240,8 +243,8 @@ export const authOptions: NextAuthOptions = {
             where: { id: user.id as string },
             data: {
               lastLoginAt: new Date(time),
-              lastLoginIp: ip,
-              lastLoginUserAgent: userAgent,
+              lastLoginIp: ip || null,
+              lastLoginUserAgent: userAgent || null,
             },
           })
           .catch((err) => console.error('Failed to update last login metadata', err))
@@ -277,72 +280,37 @@ export const authOptions: NextAuthOptions = {
       }
       return true
     },
-    async jwt({ token, user }): Promise<JWT> {
+    async session({ session, user }): Promise<Session> {
       if (user) {
-        const sessionUser = user as UserWithSession & { alphaUser?: boolean; twoFactorEnabled?: boolean }
-        token.id = sessionUser.id
-        token.role = sessionUser.role
-        token.image = sessionUser.image
-        token.sessionVersion = sessionUser.sessionVersion
-        token.name = sessionUser.name
-        token.email = sessionUser.email
-        token.alphaUser = sessionUser.alphaUser
-        token.twoFactorEnabled = sessionUser.twoFactorEnabled
-        token.createdAt = sessionUser.createdAt?.toISOString()
-        token.emailVerified = !!sessionUser.emailVerified
-      }
+        session.user.id = user.id
+        // Fetch fresh user data from database
+        try {
+          const freshUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: userSelect,
+          })
 
-      // Try to refresh user data from database, but don't fail the session if DB is temporarily unavailable
-      try {
-        const freshUser = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: userSelect,
-        })
-
-        if (!freshUser) {
-          // User was deleted - invalidate session by returning empty token
-          // This will cause the session to be cleared on next request
-          console.warn('[JWT] User not found, invalidating session for token:', token.id)
-          return {} as JWT
+          if (freshUser) {
+            session.user.id = freshUser.id
+            session.user.role = freshUser.role
+            session.user.image = freshUser.image || null
+            session.user.name = freshUser.name || ''
+            session.user.email = freshUser.email || ''
+            session.user.alphaUser = freshUser.alphaUser
+            session.user.twoFactorEnabled = freshUser.twoFactorEnabled
+          }
+        } catch (error) {
+          // If DB is unavailable, continue with basic user info from session
+          console.warn('[Session] Database unavailable, using session user data:', error instanceof Error ? error.message : error)
         }
-
-        if (
-          token.sessionVersion &&
-          token.sessionVersion !== freshUser.sessionVersion
-        ) {
-          console.warn('[JWT] Session version mismatch, invalidating session for user:', token.id)
-          return {} as JWT
-        }
-
-        token.role = freshUser.role
-        token.image = freshUser.image
-        token.name = freshUser.name
-        token.email = freshUser.email
-        token.sessionVersion = freshUser.sessionVersion
-        token.alphaUser = freshUser.alphaUser
-        token.twoFactorEnabled = freshUser.twoFactorEnabled
-        token.createdAt = freshUser.createdAt.toISOString()
-        token.emailVerified = !!freshUser.emailVerified
-      } catch (error) {
-        // For database connection errors, log and continue with cached token data
-        console.warn('[JWT] Database unavailable, using cached token data:', error instanceof Error ? error.message : error)
-      }
-
-      return token
-    },
-    async session({ session, token }): Promise<Session> {
-      if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
-        session.user.image = token.image || null
-        session.user.name = token.name || ''
-        session.user.email = token.email || ''
-        session.user.alphaUser = token.alphaUser
-        session.user.twoFactorEnabled = token.twoFactorEnabled
       }
       return session
     },
   },
+  // Trust multiple origins for cross-domain auth
+  // Use NEXTAUTH_TRUSTED_ORIGINS env var to specify allowed origins
+  // Format: "https://emberly.site,https://embrly.ca"
+  trustHost: NEXTAUTH_TRUSTED_ORIGINS.length > 0 || process.env.NEXTAUTH_URL?.includes('localhost'),
   // Configure cookie domain only when NEXTAUTH_COOKIE_DOMAIN is provided.
   // This makes the session cookie valid across subdomains (e.g. uploads.example.com)
   // but cannot be used to share cookies across unrelated registrable domains.
@@ -366,8 +334,9 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/login',
     newUser: '/auth/register',
   },
+  adapter: sessionAdapter,
   session: {
-    strategy: 'jwt',
+    strategy: 'database',
     maxAge: 30 * 24 * 60 * 60,
   },
 }

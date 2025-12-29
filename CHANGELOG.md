@@ -17,6 +17,22 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Added metadata exports to home page using `buildSiteMetadata()` for dynamic OG/Twitter image generation.
   - Added metadata to all admin pages: User Management, Platform Settings, Blog Management, Products, Docs Management, Legal Pages, Partner Management, Testimonial Management, Audit Logs, and Email Broadcasts.
   - All metadata uses consistent `buildPageMetadata()` helper with title and description for SEO and social previews.
+- GitHub/Discord account linking system for social authentication and perk system integration.
+  - OAuth endpoints for GitHub (`/api/auth/link/github`) and Discord (`/api/auth/link/discord`) account linking.
+  - Automatic contributor detection: users with 1000+ lines of code across EmberlyOSS repos get +1GB storage per 1000 LOC.
+  - Automatic Discord booster detection: server boosters get +5GB storage + 1 custom domain slot.
+  - LinkedAccount model to store OAuth connections with access tokens and provider metadata.
+  - Perk utilities for calculating storage/domain bonuses and managing contributor levels.
+- Cross-domain session sharing via Redis for seamless login across multiple domains.
+  - Switched from JWT to database session strategy using Redis adapter.
+  - Sessions now shared between `emberly.site` and `embrly.ca` domains automatically.
+  - Users log in on one domain and are authenticated on both.
+- Enhanced login history tracking with complete device and IP information.
+  - Captures client IP address with support for Vercel, Cloudflare, and standard x-forwarded-for headers.
+  - Stores user agent, device fingerprint, country, and city for each login.
+  - Displays parsed device type (Desktop/Mobile/Tablet), browser, and OS in security dashboard.
+  - Device icons and detailed geographic information shown in login history.
+  - New device detection triggers automatic email alerts for suspicious logins.
 
 ### Changed
 - Metadata system significantly refactored and simplified:
@@ -38,6 +54,13 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Short URL layout metadata cleaned up:
   - Removed 30+ lines of verbose metadata with explicit null/empty field definitions.
   - Simplified to only include essential `robots: { index: false, follow: false }` to prevent search engine indexing.
+- OG/Twitter image generation updated to use actual Emberly logo instead of placeholder.
+  - Logo now renders with dynamic colors based on selected theme.
+  - Proper two-color flame icon design applied to social media previews.
+- Storage quota system now includes perk bonuses.
+  - Domain slot calculation includes Discord booster +1 domain bonus.
+  - Storage quota calculation includes contributor and booster storage bonuses.
+  - Perk bonuses stack additively for users with multiple perk roles.
 - README updated to clearly establish this as the Emberly Cloud instance:
   - Added tech stack documentation (Next.js 14, TypeScript, PostgreSQL, Prisma, NextAuth.js, Tailwind CSS, shadcn/ui).
   - Clarified distinction between this cloud-hosted repository and the upcoming self-hosted open-source distribution.
@@ -48,6 +71,12 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Critical 2FA enforcement vulnerability: users with 2FA enabled were able to bypass authentication without entering an authenticator code.
   - Root cause: NextAuth's `authorize` function was returning user objects on password validation, which NextAuth interprets as successful authentication regardless of 2FA status.
   - Solution: Changed to throw `Error('TwoFactorRequired')` when 2FA is enabled but code is missing, properly failing authentication and forcing 2FA prompt on frontend.
+- EmberlyIcon component now respects all theme modes including individual hue selections.
+  - Updated to use Tailwind `fill-foreground` and `fill-primary` classes instead of inline CSS variables.
+  - Icon properly displays with custom theme colors set via the theme customizer.
+- Login tracking IP address and device information now properly captured and stored.
+  - Updated proxy middleware to extract client IP from multiple header sources with proper fallback handling.
+  - Login context (IP, UserAgent, Geo) now passed through to NextAuth callbacks via global context store.
 - Metadata loading inconsistencies for Twitter and Open Graph embeds:
   - Simplified fallback chains reduced failure points.
   - Fixed `enableRichEmbeds` being ignored for some file types.

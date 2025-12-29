@@ -40,6 +40,10 @@ model User {
 
   alphaUser Boolean @default(false)
 
+  // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, etc)
+  perkRoles         String[]  @default([])
+  lastPerkCheckAt   DateTime?
+
   // Email notification preferences
   emailNotificationsEnabled Boolean @default(true)
   emailPreferences          Json    @default("{\"security\": true, \"account\": true, \"billing\": true, \"marketing\": false, \"productUpdates\": true}")
@@ -63,6 +67,7 @@ model User {
   editSuggestions             FileEditSuggestion[] @relation("SuggestionAuthor")
   reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
   loginHistory                LoginHistory[]
+  linkedAccounts              LinkedAccount[]
 
   @@index([role])
   @@index([createdAt])
@@ -517,4 +522,21 @@ enum PostStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+model LinkedAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // "github" or "discord"
+  providerUserId String  // GitHub login or Discord user ID
+  providerUsername String? // GitHub login or Discord username
+  providerData  Json?    // Additional provider-specific data (avatar, etc)
+  accessToken   String?  // OAuth access token (encrypted in practice)
+  refreshToken  String?  // OAuth refresh token (encrypted in practice)
+  linkedAt      DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([provider, providerUserId])
 }

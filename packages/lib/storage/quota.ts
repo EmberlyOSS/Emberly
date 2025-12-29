@@ -5,11 +5,14 @@
  * 1. User's plan determines base storage quota (Spark: 10GB, Glow: 25GB, etc.)
  * 2. Admins can override per-user quota via storageQuotaMB
  * 3. Users can purchase additional storage via OneOffPurchase records
- * 4. Final quota = max(admin override, plan storage + purchased storage)
- * 5. Plan also determines upload size cap and custom domain limit
+ * 4. Perks add bonuses: Contributors get +1GB per 1000 LOC, Discord Boosters get +5GB
+ * 5. Final quota = max(admin override, plan storage + perk bonuses + purchased storage)
+ * 6. Plan also determines upload size cap and custom domain limit
  */
 
-import { prisma } from '@/packages/lib/database/prisma'
+import { prisma } from '@/packages/lib/database'
+import { calculateStorageBonusGB, calculateDomainSlotBonus } from '@/packages/lib/perks'
+import { calculateStorageBonusGB, calculateDomainSlotBonus } from '@/packages/lib/perks'
 
 export interface QuotaInfo {
     quotaMB: number
@@ -76,11 +79,20 @@ export async function getUserDomainCount(userId: string): Promise<number> {
 
 /**
  * Check if user can add more custom domains.
+ * Takes perk bonuses into account.
  */
 export async function canAddCustomDomain(userId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { perkRoles: true },
+    })
+
     const limits = await getPlanLimits(userId)
     const currentCount = await getUserDomainCount(userId)
-    return currentCount < limits.customDomainsLimit
+    const domainBonus = calculateDomainSlotBonus(user?.perkRoles || [])
+    const totalLimit = limits.customDomainsLimit + domainBonus
+    
+    return currentCount < totalLimit
 }
 
 /**
@@ -116,6 +128,7 @@ export async function getEffectiveQuotaMB(userId: string, defaultQuotaMB?: numbe
         select: {
             storageUsed: true,
             storageQuotaMB: true,
+            perkRoles: true,
         },
     })
 
@@ -126,10 +139,14 @@ export async function getEffectiveQuotaMB(userId: string, defaultQuotaMB?: numbe
     const planLimits = await getPlanLimits(userId)
     const purchasedMB = await getPurchasedStorageMB(userId)
     
-    // Priority: admin override > plan quota > default quota
+    // Calculate perk bonuses
+    const perkStorageBonusGB = calculateStorageBonusGB(user.perkRoles || [])
+    const perkStorageBonusMB = perkStorageBonusGB * 1024
+    
+    // Priority: admin override > plan quota + perks > default quota
     let baseQuotaMB = user.storageQuotaMB
     if (!baseQuotaMB) {
-        baseQuotaMB = planLimits.storageQuotaGB * 1024
+        baseQuotaMB = (planLimits.storageQuotaGB + perkStorageBonusGB) * 1024
     }
     if (!baseQuotaMB && defaultQuotaMB) {
         baseQuotaMB = defaultQuotaMB
