@@ -5,6 +5,12 @@ import { getServerSession } from 'next-auth'
 import { URLsClient } from '@/packages/components/dashboard/urls-client'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'URL Shortener',
+  description: 'Shorten long URLs and monitor their traffic.',
+})
 
 export default async function URLsPage() {
   const session = await getServerSession(authOptions)

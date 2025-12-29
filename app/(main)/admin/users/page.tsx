@@ -5,6 +5,12 @@ import { getServerSession } from 'next-auth'
 import { UserList } from '@/packages/components/dashboard/user-list'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'User Management',
+  description: 'Manage user accounts, roles, and permissions.',
+})
 
 export default async function UsersPage() {
   const session = await getServerSession(authOptions)

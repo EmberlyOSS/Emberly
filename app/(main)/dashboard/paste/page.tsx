@@ -6,6 +6,12 @@ import { getServerSession } from 'next-auth'
 import { PasteForm } from '@/packages/components/dashboard/paste-form'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Create Paste',
+  description: 'Share code snippets with syntax highlighting support.',
+})
 
 export default async function PastePage() {
   const session = await getServerSession(authOptions)

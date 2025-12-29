@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth/next'
 
 import TestimonialList from '@/packages/components/admin/testimonials/testimonial-list'
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Testimonial Management',
+  description: 'Manage user-submitted testimonials shown on the site.',
+})
 
 export default async function TestimonialsPage() {
     const session = await getServerSession(authOptions)

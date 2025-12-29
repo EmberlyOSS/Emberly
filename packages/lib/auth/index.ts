@@ -20,6 +20,8 @@ const userSelect = {
   preferredUploadDomain: true,
   sessionVersion: true,
   alphaUser: true,
+  twoFactorEnabled: true,
+  twoFactorSecret: true,
 } as const
 
 // Optional: allow configuring a shared cookie domain for NextAuth via
@@ -39,6 +41,7 @@ declare module 'next-auth' {
       image: string | null
       role: UserRole
       alphaUser?: boolean
+      twoFactorEnabled?: boolean
     }
   }
 }
@@ -54,6 +57,7 @@ declare module 'next-auth/jwt' {
     alphaUser?: boolean
     createdAt?: string
     emailVerified?: boolean
+    twoFactorEnabled?: boolean
   }
 }
 
@@ -65,6 +69,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
         token: { label: 'Magic Link Token', type: 'text' },
+        twoFactorCode: { label: '2FA Code', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email) {
@@ -101,6 +106,26 @@ export const authOptions: NextAuthOptions = {
              return null
            }
 
+           // Check if user has 2FA enabled and code not provided
+           if (validUser.twoFactorEnabled && !credentials.twoFactorCode) {
+             // Throw error to fail auth and prompt for 2FA
+             const error = new Error('TwoFactorRequired')
+             error.name = 'TwoFactorRequired'
+             throw error
+           }
+
+           // Verify 2FA code if provided
+           if (validUser.twoFactorEnabled && credentials.twoFactorCode) {
+             if (!validUser.twoFactorSecret) {
+               return null
+             }
+             const { authenticator } = await import('otplib')
+             const isValidCode = authenticator.check(credentials.twoFactorCode, validUser.twoFactorSecret)
+             if (!isValidCode) {
+               return null
+             }
+           }
+
            // Consume the token atomically and get the updated user with new sessionVersion
            const updatedUser = await prisma.user.update({
              where: { id: user.id },
@@ -121,6 +146,7 @@ export const authOptions: NextAuthOptions = {
             image: updatedUser.image,
             sessionVersion: updatedUser.sessionVersion, // Use updated version from DB
             alphaUser: updatedUser.alphaUser,
+            twoFactorEnabled: updatedUser.twoFactorEnabled,
           }
         }
 
@@ -142,6 +168,26 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // Check if user has 2FA enabled and code not provided
+        if (user.twoFactorEnabled && !credentials.twoFactorCode) {
+          // Throw error to fail auth and prompt for 2FA
+          const error = new Error('TwoFactorRequired')
+          error.name = 'TwoFactorRequired'
+          throw error
+        }
+
+        // Verify 2FA code if provided
+        if (user.twoFactorEnabled && credentials.twoFactorCode) {
+          if (!user.twoFactorSecret) {
+            return null
+          }
+          const { authenticator } = await import('otplib')
+          const isValidCode = authenticator.check(credentials.twoFactorCode, user.twoFactorSecret)
+          if (!isValidCode) {
+            return null
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -150,6 +196,7 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           sessionVersion: user.sessionVersion,
           alphaUser: user.alphaUser,
+          twoFactorEnabled: user.twoFactorEnabled,
         }
       },
     }),
@@ -232,7 +279,7 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user }): Promise<JWT> {
       if (user) {
-        const sessionUser = user as UserWithSession & { alphaUser?: boolean }
+        const sessionUser = user as UserWithSession & { alphaUser?: boolean; twoFactorEnabled?: boolean }
         token.id = sessionUser.id
         token.role = sessionUser.role
         token.image = sessionUser.image
@@ -240,6 +287,7 @@ export const authOptions: NextAuthOptions = {
         token.name = sessionUser.name
         token.email = sessionUser.email
         token.alphaUser = sessionUser.alphaUser
+        token.twoFactorEnabled = sessionUser.twoFactorEnabled
         token.createdAt = sessionUser.createdAt?.toISOString()
         token.emailVerified = !!sessionUser.emailVerified
       }
@@ -272,6 +320,7 @@ export const authOptions: NextAuthOptions = {
         token.email = freshUser.email
         token.sessionVersion = freshUser.sessionVersion
         token.alphaUser = freshUser.alphaUser
+        token.twoFactorEnabled = freshUser.twoFactorEnabled
         token.createdAt = freshUser.createdAt.toISOString()
         token.emailVerified = !!freshUser.emailVerified
       } catch (error) {
@@ -289,6 +338,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name || ''
         session.user.email = token.email || ''
         session.user.alphaUser = token.alphaUser
+        session.user.twoFactorEnabled = token.twoFactorEnabled
       }
       return session
     },

@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth/next'
 
 import AdminProductManager from '@/packages/components/admin/products/ProductManager'
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Products',
+  description: 'Create and manage plan products and pricing.',
+})
 
 export default async function AdminProductsPage() {
     const session = await getServerSession(authOptions)

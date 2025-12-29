@@ -3,7 +3,13 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth/next'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { ProfileDomains } from '@/packages/components/dashboard/domains'
+
+export const metadata = buildPageMetadata({
+  title: 'Custom Domains',
+  description: 'Connect your own domains to serve files from branded URLs.',
+})
 
 export default async function DomainsPage() {
   const session = await getServerSession(authOptions)

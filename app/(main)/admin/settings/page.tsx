@@ -4,6 +4,12 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Platform Settings',
+  description: 'Configure system-wide controls, limits, and defaults.',
+})
 
 const SettingsManager = dynamic(() =>
   import('@/packages/components/admin/settings/settings-manager').then(

@@ -12,6 +12,7 @@ import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
+import { TwoFactorForm } from './two-factor-form'
 
 interface LoginFormProps {
   registrationsEnabled: boolean
@@ -27,6 +28,8 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [magicEmail, setMagicEmail] = useState('')
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null)
 
   async function onPasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -44,6 +47,13 @@ export function LoginForm({
         redirect: false,
         callbackUrl: '/dashboard',
       })
+
+      // If 2FA is required, show 2FA form instead of error
+      if (result?.error === 'TwoFactorRequired') {
+        setRequiresTwoFactor(true)
+        setPendingCredentials({ email, password })
+        return
+      }
 
       if (result?.error) {
         setError('Invalid email or password')
@@ -85,6 +95,21 @@ export function LoginForm({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // If waiting for 2FA, show 2FA form
+  if (requiresTwoFactor && pendingCredentials) {
+    return (
+      <TwoFactorForm
+        email={pendingCredentials.email}
+        password={pendingCredentials.password}
+        onCancel={() => {
+          setRequiresTwoFactor(false)
+          setPendingCredentials(null)
+          setError(null)
+        }}
+      />
+    )
   }
 
   return (

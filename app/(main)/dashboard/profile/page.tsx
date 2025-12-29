@@ -6,9 +6,15 @@ import dynamic from 'next/dynamic'
 const ProfileClient = dynamic(() => import('@/packages/components/profile').then((m) => m.ProfileClient))
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { formatFileSize } from '@/packages/lib/utils'
+
+export const metadata = buildPageMetadata({
+  title: 'Profile Settings',
+  description: 'Manage your account profile, preferences, and personal information.',
+})
 
 import { LogoutButton } from './logout-button'
 

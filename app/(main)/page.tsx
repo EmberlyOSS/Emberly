@@ -1,5 +1,8 @@
+import { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+
+import { buildSiteMetadata } from '@/packages/lib/embeds/metadata'
 
 import {
   ArrowRight,
@@ -37,6 +40,10 @@ import HomeShell from '@/packages/components/layout/home-shell'
 
 import { authOptions } from '@/packages/lib/auth'
 import { checkSetupCompletion } from '@/packages/lib/database/setup'
+
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSiteMetadata()
+}
 
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {

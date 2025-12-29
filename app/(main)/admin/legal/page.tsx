@@ -2,6 +2,12 @@ import dynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Legal Pages',
+  description: 'Manage policies, terms, and public legal documents.',
+})
 
 const LegalManager = dynamic(() =>
     import('@/packages/components/admin/legal/legal-manager').then((m) => m.LegalManager)

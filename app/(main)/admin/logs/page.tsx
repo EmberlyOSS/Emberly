@@ -4,6 +4,12 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Audit Logs',
+  description: 'Review system events, security signals, and admin actions.',
+})
 
 const AdminAuditLogs = dynamic(() =>
     import('@/packages/components/admin/audit/audit-logs').then((m) => m.AdminAuditLogs)

@@ -5,9 +5,15 @@ import { getServerSession } from 'next-auth'
 import { UploadForm } from '@/packages/components/file/upload-form'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { formatBytes } from '@/packages/lib/utils'
+
+export const metadata = buildPageMetadata({
+  title: 'Upload Files',
+  description: 'Upload and manage your files with Emberly.',
+})
 
 export default async function UploadPage() {
   const session = await getServerSession(authOptions)

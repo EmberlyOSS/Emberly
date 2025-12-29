@@ -1,8 +1,14 @@
 import { VerificationCodesPanel } from '@/packages/components/dashboard/verification-codes-panel'
 import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
 import { getConfig } from '@/packages/lib/config'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = buildPageMetadata({
+  title: 'Verification Codes',
+  description: 'View and manage the codes associated with your account.',
+})
 
 export default async function VerificationCodesPage() {
     const config = await getConfig()

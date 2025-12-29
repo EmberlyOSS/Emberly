@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth'
 
 import PartnerList from '@/packages/components/admin/partners/partner-list'
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Partner Management',
+  description: 'Manage partner entries shown on the site.',
+})
 
 export default async function PartnersPage() {
     const session = await getServerSession(authOptions)

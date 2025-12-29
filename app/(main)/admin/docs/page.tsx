@@ -2,6 +2,12 @@ import dynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Docs Management',
+  description: 'Edit, publish, and organize documentation content.',
+})
 
 const DocManager = dynamic(() =>
     import('@/packages/components/admin/docs/doc-manager').then((m) => m.DocManager)

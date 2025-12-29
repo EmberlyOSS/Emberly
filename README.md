@@ -1,14 +1,49 @@
-# Emberly
+# Emberly Cloud
 
-This repository contains the public, hosted Emberly website and its accompanying
-admin/dashboard UI used on our live instance. It is not the minimal self-hostable
-distribution — see the Open Source project for the self-hostable server and
-deployment instructions.
+The official cloud-hosted Emberly instance website and admin dashboard. This is the production codebase powering **emberly.app** and the Emberly Team's managed file sharing, URL shortening, and content delivery platform.
 
-If you are looking for the upstream open-source codebase (self-hostable):
+## About This Repository
 
-- GitHub: https://github.com/EmberlyOSS/Emberly - (COMING SOON - WIP)
+This is **not** the self-hostable open-source distribution. This repository contains:
 
-This repo includes the full frontend, site pages (docs, pricing, marketing), and
-additional pages we run on our hosted service. The open-source repo provides the
-core Next.js app, API routes, and instructions for self-hosting.
+- **Marketing & Public Pages** — Homepage, pricing, documentation, blog, changelogs, and legal pages
+- **Authenticated Dashboard** — User file management, analytics, profile settings, URL shortener, paste collaboration, and two-factor authentication
+- **Admin Console** — Platform administration tools for managing users, settings, products, documentation, partners, testimonials, and audit logs
+- **Cloud-Specific Features** — Stripe billing integration, transactional email system (Resend), analytics tracking, and hosted infrastructure configuration
+
+## Self-Hosted Emberly
+
+If you're looking to **self-host** Emberly on your own infrastructure:
+
+→ **GitHub**: https://github.com/EmberlyOSS/Emberly (Open Source - COMING SOON)
+
+The open-source repository provides the core Next.js application, API routes, database schema, and complete self-hosting deployment instructions.
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Database**: PostgreSQL + Prisma ORM
+- **Authentication**: NextAuth.js with JWT + 2FA (TOTP)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **File Storage**: Multi-provider support (Local, S3)
+- **Email**: Resend (transactional)
+- **Payments**: Stripe
+- **Deployment**: Optimized for Vercel/Docker
+
+## Development
+
+```bash
+# Install dependencies
+bun install
+
+# Run development server
+bun dev
+
+# Build for production
+bun run build
+```
+
+## Contributing
+
+This is the official Emberly Cloud instance maintained by the Emberly Team. For feature requests, bug reports, and discussions, please refer to the main project repository once it's public.

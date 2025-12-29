@@ -16,7 +16,7 @@ interface BuildMetadataOptions {
   uploadedAt: Date
   uploaderName: string
   filePath: string
-  fileId?: string // Optional file ID for thumbnail URL
+  fileId?: string
 }
 
 export async function buildRichMetadata({
@@ -31,30 +31,21 @@ export async function buildRichMetadata({
   filePath,
   fileId,
 }: BuildMetadataOptions): Promise<Metadata> {
-  // Bail out early if critical inputs are missing to avoid Next metadata serialization crashes.
-  if (!baseUrl || !fileUrlPath || !rawUrl || !fileName) {
+  // Validate required inputs
+  if (!baseUrl || !fileUrlPath || !rawUrl || !fileName || !fileId) {
     return buildMinimalMetadata(fileName || 'Emberly file')
   }
 
-  const safeBaseUrl = String(baseUrl)
-  const safeFileUrlPath = String(fileUrlPath)
-  const safeRawUrl = String(rawUrl)
-  const safeMimeType = mimeType || 'application/octet-stream'
-  const safeSize = typeof size === 'number' && Number.isFinite(size) ? size : 0
-  const safeFileId = fileId ? String(fileId) : undefined
-  const safeFilePath = filePath ? String(filePath) : ''
-
-  let metadataBase: URL | undefined
+  let metadataBase: URL
   try {
-    metadataBase = new URL(safeBaseUrl)
-  } catch (err) {
-    console.error('Invalid baseUrl for metadata, falling back to minimal metadata', err)
+    metadataBase = new URL(baseUrl)
+  } catch {
     return buildMinimalMetadata(fileName)
   }
 
   const classification = classifyMimeType(mimeType)
-  const fileUrl = `${safeBaseUrl}${safeFileUrlPath}`
-  const formattedSize = formatFileSize(safeSize)
+  const fileUrl = new URL(fileUrlPath, baseUrl).toString()
+  const formattedSize = formatFileSize(size)
   const uploadDate = uploadedAt.toISOString()
 
   const baseTitle = fileName
@@ -64,16 +55,19 @@ export async function buildRichMetadata({
     uploadedAt,
   })
 
-  // Get video URL for embeds (Discord, Twitter, etc.)
-  let resolvedVideoUrl: string | undefined
+  // Build thumbnail URL for images and videos
+  const thumbnailUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
+
+  // Build video URL for Discord/social embeds
+  let videoUrl: string | undefined
   if (classification.isVideo) {
-    resolvedVideoUrl = safeRawUrl
+    videoUrl = rawUrl
     try {
       const storageProvider = await getStorageProvider()
-      if (storageProvider && typeof storageProvider.getFileUrl === 'function') {
-        const providerUrl = await storageProvider.getFileUrl(safeFilePath)
+      if (storageProvider?.getFileUrl) {
+        const providerUrl = await storageProvider.getFileUrl(filePath)
         if (providerUrl) {
-          resolvedVideoUrl = providerUrl
+          videoUrl = providerUrl
         }
       }
     } catch (error) {
@@ -92,44 +86,46 @@ export async function buildRichMetadata({
       siteName: 'Emberly',
       locale: 'en_US',
       type: getOpenGraphType(classification),
-      images: buildOpenGraphImages(
-        classification.isImage,
-        safeRawUrl,
-        safeMimeType,
-        safeBaseUrl,
-        safeFileId,
-        classification.isVideo,
-        resolvedVideoUrl
-      ),
-      videos: classification.isVideo && resolvedVideoUrl ? [
+      images: getOpenGraphImages(classification, thumbnailUrl),
+      videos: classification.isVideo && videoUrl ? [
         {
-          url: resolvedVideoUrl,
-          secureUrl: resolvedVideoUrl,
-          type: safeMimeType,
+          url: videoUrl,
+          secureUrl: videoUrl,
+          type: mimeType || 'video/mp4',
           width: 1280,
           height: 720,
         },
       ] : undefined,
-      audio: buildOpenGraphAudio(classification.isAudio, safeRawUrl, safeMimeType),
+      audio: classification.isAudio ? [
+        {
+          url: rawUrl,
+          type: mimeType || 'audio/mpeg',
+        },
+      ] : undefined,
     },
-    twitter: buildTwitterMetadata(classification, {
+    twitter: {
+      card: 'summary_large_image',
       title: baseTitle,
       description: baseDescription,
-      rawUrl: safeRawUrl,
-      fileUrl,
-      baseUrl: safeBaseUrl,
-      fileId: safeFileId,
-      videoUrl: resolvedVideoUrl,
-    }),
-    other: buildOtherMetadata({
-      uploadDate,
-      description: baseDescription,
-      rawUrl: safeRawUrl,
-      isImage: classification.isImage,
-      isVideo: classification.isVideo,
-      mimeType: safeMimeType,
-      videoUrl: resolvedVideoUrl,
-    }),
+      images: [thumbnailUrl],
+    },
+    other: {
+      'theme-color': '#F97316',
+      'article:published_time': uploadDate,
+      'og:description': baseDescription,
+      'al:ios:url': rawUrl,
+      'al:android:url': rawUrl,
+      ...(classification.isVideo && videoUrl && {
+        'og:video': videoUrl,
+        'og:video:secure_url': videoUrl,
+        'og:video:type': mimeType || 'video/mp4',
+        'og:video:width': '1280',
+        'og:video:height': '720',
+      }),
+      ...(classification.isImage && {
+        'og:image:alt': 'Preview image',
+      }),
+    },
   }
 
   return metadata
@@ -138,195 +134,25 @@ export async function buildRichMetadata({
 function getOpenGraphType(classification: ReturnType<typeof classifyMimeType>) {
   if (classification.isVideo) return 'video.other'
   if (classification.isMusic) return 'music.song'
-  if (
-    classification.isImage ||
-    classification.isDocument ||
-    classification.isCode
-  )
+  if (classification.isImage || classification.isDocument || classification.isCode) {
     return 'article'
+  }
   return 'website'
 }
 
-function buildOpenGraphImages(
-  isImageFile: boolean,
-  rawUrl: string,
-  mimeType: string,
-  baseUrl: string,
-  fileId?: string,
-  isVideoFile?: boolean,
-  videoUrl?: string
+function getOpenGraphImages(
+  classification: ReturnType<typeof classifyMimeType>,
+  thumbnailUrl: string
 ) {
-  if (isImageFile && fileId) {
-    // Use thumbnail endpoint which doesn't require password auth
-    // This allows Discord, Twitter, etc. to fetch the image preview
-    const thumbnailUrl = `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
-    return [
-      {
-        url: thumbnailUrl,
-        alt: 'Preview image',
-        type: mimeType,
-      },
-    ]
-  }
-
-  // For video files, we need to provide an image for platforms that don't auto-generate thumbnails
-  // Some platforms will use this as the preview image before the video plays
-  if (isVideoFile && fileId && baseUrl) {
-    // Try to use video thumbnail if available, otherwise fall back to banner
-    const thumbnailUrl = `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
-    return [
-      {
-        url: thumbnailUrl,
-        width: 1280,
-        height: 720,
-        alt: 'Video preview',
-        type: 'image/png',
-      },
-    ]
-  }
-
-  // Fallback to the site banner for non-image files
-  // This ensures Discord, Twitter, etc. always have an image to display
-  if (baseUrl) {
-    const fallbackUrl = `${baseUrl.replace(/\/$/, '')}/banner.png`
-    return [
-      {
-        url: fallbackUrl,
-        width: 1200,
-        height: 630,
-        alt: 'Emberly - Simple, predictable file hosting',
-        type: 'image/png',
-      },
-    ]
-  }
-
-  return undefined
-}
-
-function buildOpenGraphAudio(
-  isAudioFile: boolean,
-  rawUrl: string,
-  mimeType: string
-) {
-  if (!isAudioFile) return undefined
-
   return [
     {
-      url: rawUrl,
-      type: mimeType,
+      url: thumbnailUrl,
+      width: 1280,
+      height: 720,
+      alt: classification.isImage ? 'Preview image' : 'File preview',
+      type: 'image/png',
     },
   ]
-}
-
-interface TwitterMetadataInput {
-  title: string
-  description: string
-  rawUrl: string
-  fileUrl: string
-  baseUrl?: string
-  fileId?: string
-  videoUrl?: string
-}
-
-function buildTwitterMetadata(
-  classification: ReturnType<typeof classifyMimeType>,
-  { title, description, rawUrl, fileUrl, baseUrl, fileId, videoUrl }: TwitterMetadataInput
-) {
-  if (classification.isImage) {
-    // Use thumbnail endpoint for Twitter cards (doesn't require password auth)
-    const imageUrl = baseUrl && fileId
-      ? `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
-      : rawUrl
-    return {
-      card: 'summary_large_image' as const,
-      title,
-      description,
-      images: [imageUrl],
-    }
-  }
-
-  if (classification.isVideo) {
-    // For video files, use summary_large_image with a thumbnail
-    // The player card requires whitelisting from Twitter and doesn't work for most sites
-    // Instead, Discord and other platforms use og:video tags (handled in buildOtherMetadata)
-    const thumbnailUrl = baseUrl && fileId
-      ? `${baseUrl.replace(/\/$/, '')}/api/files/${fileId}/thumbnail`
-      : `${baseUrl?.replace(/\/$/, '')}/banner.png`
-
-    return {
-      card: 'summary_large_image' as const,
-      title,
-      description,
-      images: thumbnailUrl ? [thumbnailUrl] : undefined,
-    }
-  }
-
-  if (classification.isAudio) {
-    return {
-      card: 'summary' as const,
-      title,
-      description,
-    }
-  }
-
-  if (
-    classification.isDocument ||
-    classification.isCode ||
-    classification.isText
-  ) {
-    return {
-      card: 'summary' as const,
-      title,
-      description,
-    }
-  }
-
-  return undefined
-}
-
-interface OtherMetadataInput {
-  uploadDate: string
-  description: string
-  rawUrl: string
-  isImage: boolean
-  isVideo?: boolean
-  mimeType?: string
-  videoUrl?: string
-}
-
-function buildOtherMetadata({
-  uploadDate,
-  description,
-  rawUrl,
-  isImage,
-  isVideo,
-  mimeType,
-  videoUrl,
-}: OtherMetadataInput) {
-  const metadata: Record<string, string> = {
-    'theme-color': '#F97316', // Ember orange
-    'article:published_time': uploadDate,
-    'og:description': description,
-    'al:ios:url': rawUrl,
-    'al:android:url': rawUrl,
-  }
-
-  if (isImage) {
-    metadata['og:image:alt'] = 'Preview image'
-  }
-
-  // Discord requires explicit og:video tags for video embeds
-  // These are added via 'other' since Next.js Metadata openGraph.videos
-  // doesn't generate the exact format Discord expects
-  if (isVideo && videoUrl) {
-    metadata['og:video'] = videoUrl
-    metadata['og:video:secure_url'] = videoUrl
-    metadata['og:video:type'] = mimeType || 'video/mp4'
-    metadata['og:video:width'] = '1280'
-    metadata['og:video:height'] = '720'
-  }
-
-  return metadata
 }
 
 export function buildMinimalMetadata(fileName: string): Metadata {
@@ -356,7 +182,6 @@ export async function getBaseUrl(): Promise<string> {
 
 /**
  * Build default site-wide metadata with OG banner fallback.
- * Uses getConfig() to pull settings from the database.
  */
 export async function buildSiteMetadata(overrides?: {
   title?: string
@@ -366,13 +191,10 @@ export async function buildSiteMetadata(overrides?: {
   const config = await getConfig()
   const baseUrl = await getBaseUrl()
 
-  // Site name could be made configurable in the future via config
   const siteName = 'Emberly'
   const title = overrides?.title || siteName
   const description = overrides?.description || 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.'
-  const bannerUrl = `${baseUrl}/banner.png`
 
-  // Use theme color from config's custom colors if available, otherwise default
   const themeColor = config.settings.appearance.customColors?.primary
     ? `hsl(${config.settings.appearance.customColors.primary})`
     : '#F97316'
@@ -391,21 +213,11 @@ export async function buildSiteMetadata(overrides?: {
       description,
       url: baseUrl,
       locale: 'en_US',
-      images: [
-        {
-          url: bannerUrl,
-          width: 1200,
-          height: 630,
-          alt: `${siteName} - Simple, predictable file hosting`,
-          type: 'image/png',
-        },
-      ],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [bannerUrl],
     },
     other: {
       'theme-color': themeColor,
@@ -413,9 +225,6 @@ export async function buildSiteMetadata(overrides?: {
   }
 }
 
-/**
- * Build page-specific metadata. OG images are inherited from layout.
- */
 export function buildPageMetadata(options: { title: string; description?: string }): Metadata {
   return {
     title: options.title,

@@ -2,6 +2,12 @@ import dynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Blog Management',
+  description: 'Publish and curate blog posts and announcements.',
+})
 
 const BlogManager = dynamic(() =>
   import('@/packages/components/admin/blog/blog-manager').then((m) => m.BlogManager)

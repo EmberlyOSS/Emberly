@@ -3,7 +3,6 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 
 import { ProtectedFile } from '@/packages/components/file/protected-file'
@@ -92,22 +91,25 @@ export async function generateMetadata({
   const session = await getServerSession(authOptions)
   const providedPassword = (await searchParams).password as string | undefined
 
+  // Skip metadata for /raw requests
   const path = headersList.get('x-invoke-path') || ''
   if (path.endsWith('/raw')) {
     return {}
   }
 
+  // Find the file
   let file = await prisma.file.findUnique({
     where: { urlPath },
-    include: { user: true },
+    include: { user: { select: { name: true, image: true, urlId: true, enableRichEmbeds: true } } },
   })
 
+  // Try alternate path if filename has spaces
   if (!file && filename.includes(' ')) {
     const urlSafeFilename = filename.replace(/ /g, '-')
     const urlSafePath = `/${userUrlId}/${urlSafeFilename}`
     file = await prisma.file.findUnique({
       where: { urlPath: urlSafePath },
-      include: { user: true },
+      include: { user: { select: { name: true, image: true, urlId: true, enableRichEmbeds: true } } },
     })
   }
 
@@ -115,41 +117,26 @@ export async function generateMetadata({
     return {}
   }
 
+  // Check access permissions
   const isOwner = session?.user?.id === file.userId
   const isPrivate = file.visibility === 'PRIVATE' && !isOwner
+  const isPasswordProtected = file.password && !isOwner
 
-  if (isPrivate || (file.password && !isOwner)) {
-    return {
-      title: 'Protected File - Emberly',
-      description: 'This file is protected',
-    }
+  // Return minimal metadata for inaccessible or protected files
+  if (isPrivate || isPasswordProtected) {
+    return buildMinimalMetadata('Protected File')
   }
 
-  if (file.password && !isOwner) {
-    if (!providedPassword) {
-      return {
-        title: 'Protected File - Emberly',
-        description: 'This file is protected',
-      }
-    }
-
-    const isPasswordValid = await compare(providedPassword, file.password)
-    if (!isPasswordValid) {
-      return {
-        title: 'Protected File - Emberly',
-        description: 'This file is protected',
-      }
-    }
+  // Respect user's enableRichEmbeds setting
+  if (!file.user.enableRichEmbeds) {
+    return buildMinimalMetadata(file.name)
   }
 
+  // Build rich metadata for accessible files with embeds enabled
   const host = headersList.get('host') || 'localhost:3000'
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
   const baseUrl = `${protocol}://${host}`
   const rawUrl = `${baseUrl}${urlPath}/raw`
-  const enableRichEmbeds = file.user.enableRichEmbeds ?? true
-  if (!enableRichEmbeds) {
-    return buildMinimalMetadata(file.name)
-  }
 
   return buildRichMetadata({
     baseUrl,
@@ -163,6 +150,7 @@ export async function generateMetadata({
     filePath: file.path,
     fileId: file.id,
   })
+}
 }
 
 export default async function FilePage({

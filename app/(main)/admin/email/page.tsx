@@ -4,6 +4,12 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+
+export const metadata = buildPageMetadata({
+  title: 'Email Broadcasts',
+  description: 'Send announcements and operational emails to users.',
+})
 
 const AdminEmailManager = dynamic(() =>
     import('@/packages/components/admin/email/email-manager').then((m) => m.AdminEmailManager)

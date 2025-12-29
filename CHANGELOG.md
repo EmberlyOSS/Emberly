@@ -4,6 +4,59 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2025-12-28
+
+### Added
+- Complete two-factor authentication (2FA) system using TOTP (Time-based One-Time Password) with authenticator app support.
+  - New `TwoFactorForm` component for secure 6-digit authenticator code entry with real-time validation.
+  - 2FA enforcement in NextAuth credentials provider: users with `twoFactorEnabled` must enter a valid authenticator code before login succeeds.
+  - Added `twoFactorEnabled` and `twoFactorSecret` fields to JWT and session interfaces for persistent 2FA state tracking.
+  - Proper error-based 2FA flow: throws `TwoFactorRequired` error when 2FA is enabled but code not provided, forcing frontend to show 2FA form.
+  - Support for both password and magic link authentication paths with identical 2FA enforcement.
+- Comprehensive metadata coverage across all pages:
+  - Added metadata exports to home page using `buildSiteMetadata()` for dynamic OG/Twitter image generation.
+  - Added metadata to all admin pages: User Management, Platform Settings, Blog Management, Products, Docs Management, Legal Pages, Partner Management, Testimonial Management, Audit Logs, and Email Broadcasts.
+  - All metadata uses consistent `buildPageMetadata()` helper with title and description for SEO and social previews.
+
+### Changed
+- Metadata system significantly refactored and simplified:
+  - Consolidated metadata building from ~400+ lines across multiple helper functions into streamlined `buildRichMetadata()`, `buildSiteMetadata()`, and `buildPageMetadata()` functions.
+  - Removed 150+ lines of unnecessary helper functions (`buildOpenGraphImages`, `buildOpenGraphAudio`, `buildTwitterMetadata`, `buildOtherMetadata`).
+  - Removed hardcoded image references in favor of Next.js auto-detection of `opengraph-image.tsx` and `twitter-image.tsx`.
+  - Improved URL handling using URL constructor instead of manual string manipulation.
+  - `enableRichEmbeds` setting now properly enforced: disables rich metadata for both images and videos, returning minimal metadata instead.
+  - Password-protected files now return minimal metadata to prevent embedding sensitive content in social previews.
+  - Added strict `fileId` validation requirement for rich metadata generation to ensure thumbnail URLs are available.
+- Login form updated to detect 2FA requirement and display `TwoFactorForm` component:
+  - Stores pending credentials during 2FA verification flow.
+  - Clear error messaging for invalid authenticator codes.
+  - "Back to login" button allows users to restart authentication flow.
+- Dashboard metadata conflicts resolved:
+  - Removed redundant metadata definitions from `dashboard/layout.tsx` and `pricing/layout.tsx`.
+  - Each dashboard page now defines its own specific metadata with unique titles and descriptions.
+  - Applied `buildPageMetadata()` consistently across all dashboard pages.
+- Short URL layout metadata cleaned up:
+  - Removed 30+ lines of verbose metadata with explicit null/empty field definitions.
+  - Simplified to only include essential `robots: { index: false, follow: false }` to prevent search engine indexing.
+- README updated to clearly establish this as the Emberly Cloud instance:
+  - Added tech stack documentation (Next.js 14, TypeScript, PostgreSQL, Prisma, NextAuth.js, Tailwind CSS, shadcn/ui).
+  - Clarified distinction between this cloud-hosted repository and the upcoming self-hosted open-source distribution.
+  - Included cloud-specific features (Stripe billing, Resend email, analytics, 2FA).
+  - Added development setup instructions.
+
+### Fixed
+- Critical 2FA enforcement vulnerability: users with 2FA enabled were able to bypass authentication without entering an authenticator code.
+  - Root cause: NextAuth's `authorize` function was returning user objects on password validation, which NextAuth interprets as successful authentication regardless of 2FA status.
+  - Solution: Changed to throw `Error('TwoFactorRequired')` when 2FA is enabled but code is missing, properly failing authentication and forcing 2FA prompt on frontend.
+- Metadata loading inconsistencies for Twitter and Open Graph embeds:
+  - Simplified fallback chains reduced failure points.
+  - Fixed `enableRichEmbeds` being ignored for some file types.
+  - Improved validation to prevent undefined/null values in metadata generation.
+  - Protected files no longer expose metadata that could reveal sensitive information in social previews.
+- Metadata coverage gaps:
+  - All public and admin pages now have explicit metadata exports, ensuring consistent SEO and social preview handling.
+  - Removed metadata configuration fragmentation across layouts and pages.
+
 ## [1.1.0] - 2025-12-27
 
 ### Added
