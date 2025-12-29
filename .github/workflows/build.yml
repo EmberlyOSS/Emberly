@@ -2,9 +2,9 @@ name: Build Checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, development ]
   pull_request:
-    branches: [ main ]
+    branches: [ master, development ]
 
 jobs:
   build:
@@ -35,25 +35,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
 
       - name: Install dependencies
         uses: nick-fields/retry@v2
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: npm ci
+          command: bun install
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: bun x prisma generate
 
       - name: Run Prisma Migrations
-        run: npx prisma migrate deploy
+        run: bun x prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emberly_test
 
       - name: Build
-        run: npm run build
+        run: bun run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emberly_test
           NEXTAUTH_SECRET: test-secret

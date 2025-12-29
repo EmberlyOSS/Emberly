@@ -2,9 +2,9 @@ name: Code Quality
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, development ]
   pull_request:
-    branches: [ main ]
+    branches: [ master, development ]
 
 jobs:
   code-quality:
@@ -20,20 +20,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
 
       - name: Install dependencies
         uses: nick-fields/retry@v2
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: npm ci
+          command: bun install
 
       - name: Type Check
-        run: npx tsc --noEmit
+        run: bun x tsc --noEmit
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Check formatting
-        run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
+        run: bun x prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
