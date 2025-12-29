@@ -10,8 +10,7 @@
  * 6. Plan also determines upload size cap and custom domain limit
  */
 
-import { prisma } from '@/packages/lib/database'
-import { calculateStorageBonusGB, calculateDomainSlotBonus } from '@/packages/lib/perks'
+import { prisma } from '@/packages/lib/database/prisma'
 import { calculateStorageBonusGB, calculateDomainSlotBonus } from '@/packages/lib/perks'
 
 export interface QuotaInfo {

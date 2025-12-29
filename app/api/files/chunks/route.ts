@@ -12,6 +12,7 @@ import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { getUniqueFilename } from '@/packages/lib/files/filename'
 import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
+import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -176,6 +177,42 @@ export async function POST(req: Request) {
         { error: uploadValidation.error, code: uploadValidation.errorCode },
         { status: 403 }
       )
+    }
+
+    // Security check: validate filename and MIME type against dangerous files and VirusTotal
+    const securityCheck = await validateFileSecurityChecksWithVT(
+      Buffer.alloc(0), // Empty buffer for initial check - full validation on completion
+      filename,
+      mimeType
+    )
+    if (!securityCheck.valid) {
+      logger.warn('Chunk upload file security validation failed', {
+        fileName: filename,
+        mimeType,
+        error: securityCheck.error,
+        userId: user.id,
+      })
+      return NextResponse.json(
+        { error: securityCheck.error || 'File failed security validation' },
+        { status: 400 }
+      )
+    }
+
+    if (securityCheck.virusTotal?.scanPerformed) {
+      logger.info('Chunk upload scanned by VirusTotal', {
+        fileName: filename,
+        detected: securityCheck.virusTotal.detected,
+        detectionRatio: securityCheck.virusTotal.detectionRatio,
+        userId: user.id,
+      })
+    }
+
+    if (securityCheck.warnings?.length) {
+      logger.info('Chunk upload file security warnings', {
+        fileName: filename,
+        warnings: securityCheck.warnings,
+        userId: user.id,
+      })
     }
 
     const { urlSafeName, displayName } = await getUniqueFilename(

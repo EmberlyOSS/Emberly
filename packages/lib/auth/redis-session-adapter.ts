@@ -1,5 +1,5 @@
 import { Adapter } from 'next-auth/adapters'
-import { redis } from '@/packages/lib/cache/redis'
+import { getRedisClient } from '@/packages/lib/cache/redis'
 
 const SESSION_PREFIX = 'nextauth:session:'
 const USER_SESSIONS_PREFIX = 'nextauth:user-sessions:'
@@ -18,6 +18,7 @@ export interface RedisSession {
 export function RedisSessionAdapter(): Adapter {
   return {
     async createSession(session) {
+      const redis = await getRedisClient()
       const sessionToken = session.sessionToken
       const userId = session.userId
       const expiresAt = session.expires.getTime()
@@ -47,6 +48,7 @@ export function RedisSessionAdapter(): Adapter {
     },
 
     async getSessionAndUser(sessionToken) {
+      const redis = await getRedisClient()
       const data = await redis.get(`${SESSION_PREFIX}${sessionToken}`)
       
       if (!data) {
@@ -75,6 +77,7 @@ export function RedisSessionAdapter(): Adapter {
     },
 
     async updateSession(session) {
+      const redis = await getRedisClient()
       const sessionToken = session.sessionToken
       const expiresAt = session.expires.getTime()
 
@@ -103,6 +106,7 @@ export function RedisSessionAdapter(): Adapter {
     },
 
     async deleteSession(sessionToken) {
+      const redis = await getRedisClient()
       const data = await redis.get(`${SESSION_PREFIX}${sessionToken}`)
       
       if (data) {

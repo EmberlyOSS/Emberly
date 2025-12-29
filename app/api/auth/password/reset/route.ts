@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { prisma } from '@/packages/lib/database/prisma'
 import { AccountChangeEmail, sendTemplateEmail } from '@/packages/lib/emails'
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
+import { checkPasswordReuse, recordPasswordHistory } from '@/packages/lib/security/password-reuse-checker'
 
 const requestSchema = z.object({
     email: z.string().email(),
@@ -57,6 +58,20 @@ export async function POST(req: Request) {
     // If password is unchanged, reject to avoid no-op resets
     if (user.password && (await compare(password, user.password))) {
         return NextResponse.json({ error: 'New password must be different' }, { status: 400 })
+    }
+
+    // Check if password is being reused
+    const reuseCheck = await checkPasswordReuse(user.id, password)
+    if (reuseCheck.isReused) {
+        return NextResponse.json(
+            { error: 'Cannot reuse a recent password. Please use a different password.' },
+            { status: 400 }
+        )
+    }
+
+    // Record the current password to history before updating
+    if (user.password) {
+        await recordPasswordHistory(user.id, user.password)
     }
 
     const newPassword = await hash(password, 10)

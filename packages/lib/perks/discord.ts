@@ -2,15 +2,37 @@
  * Discord booster checking and perk verification
  */
 
-import { Client, GatewayIntentBits, REST, Routes } from 'discord.js'
 import { loggers } from '@/packages/lib/logger'
 import { addPerkRole, removePerkRole } from './index'
 import { PERK_ROLES } from './constants'
+import { events } from '@/packages/lib/events'
+import { prisma } from '@/packages/lib/database/prisma'
 
 const logger = loggers.api
 
 const DISCORD_SERVER_ID = '871204257649557604'
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || ''
+const DISCORD_API_VERSION = '10'
+const DISCORD_API_BASE = `https://discord.com/api/v${DISCORD_API_VERSION}`
+
+/**
+ * Make a Discord API request
+ */
+async function discordApiCall<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${DISCORD_API_BASE}${endpoint}`, {
+    headers: {
+      Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Discord API error: ${response.status} ${error}`)
+  }
+
+  return response.json() as Promise<T>
+}
 
 /**
  * Verify if a Discord user is a booster in the specified server
@@ -22,20 +44,21 @@ export async function isDiscordBooster(discordUserId: string): Promise<boolean> 
   }
 
   try {
-    const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN)
-
     // Get guild member
-    const member = (await rest.get(Routes.guildMember(DISCORD_SERVER_ID, discordUserId))) as any
+    const member = await discordApiCall<any>(
+      `/guilds/${DISCORD_SERVER_ID}/members/${discordUserId}`
+    )
 
     // Check if user has the booster role (premium subscriber)
-    // Discord adds a special "Boosters" role to those who boost the server
+    // Discord adds premium_since timestamp when user boosts the server
     if (member.premium_since) {
       return true
     }
 
     return false
   } catch (error) {
-    if ((error as any).code === 10007) {
+    const errorMessage = (error as Error).message
+    if (errorMessage.includes('404')) {
       // Member not found in guild
       logger.debug(`Discord user ${discordUserId} not in server`, error as Error)
       return false
@@ -49,19 +72,55 @@ export async function isDiscordBooster(discordUserId: string): Promise<boolean> 
 
 /**
  * Verify and update Discord booster status for a user
+ * This is a one-time perk - once earned, it cannot be lost even if boost expires
  */
 export async function verifyDiscordBoosterStatus(
   userId: string,
   discordUserId: string
 ): Promise<boolean> {
   try {
+    // Import here to avoid circular dependency
+    const { hasEarnedOneTimePerk } = await import('./index')
+    
+    // Check if user already earned booster perk once
+    const alreadyEarned = await hasEarnedOneTimePerk(userId, 'DISCORD_BOOSTER')
+    
     const isBooster = await isDiscordBooster(discordUserId)
 
     if (isBooster) {
-      await addPerkRole(userId, PERK_ROLES.DISCORD_BOOSTER)
+      if (!alreadyEarned) {
+        // First time - award the perk
+        await addPerkRole(userId, PERK_ROLES.DISCORD_BOOSTER)
+        logger.info('Discord booster perk awarded to user', { userId, discordUserId })
+        
+        // Get user email for event emission
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true },
+        })
+        
+        if (user?.email) {
+          // Emit perk-gained event
+          await events.emit('user.perk-gained', {
+            userId,
+            email: user.email,
+            perkName: 'Discord Booster',
+            perkDescription: 'Unlock exclusive perks for boosting the Emberly Discord server',
+            perkIcon: '🎉',
+            expiresAt: null, // Discord booster perk doesn't expire
+            viewUrl: '/profile?tab=security#linked-accounts',
+          })
+        }
+      }
       return true
     } else {
-      await removePerkRole(userId, PERK_ROLES.DISCORD_BOOSTER)
+      // User is not currently a booster
+      if (alreadyEarned) {
+        // Already earned once - perk is permanent, don't remove
+        logger.debug('User no longer booster but perk retained as one-time award', { userId, discordUserId })
+        return false // Return false because they're not currently boosting
+      }
+      // Never earned it
       return false
     }
   } catch (error) {
@@ -87,8 +146,7 @@ export async function getDiscordUserInfo(discordUserId: string): Promise<{
   }
 
   try {
-    const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN)
-    const user = (await rest.get(Routes.user(discordUserId))) as any
+    const user = await discordApiCall<any>(`/users/${discordUserId}`)
 
     return {
       id: user.id,
@@ -113,8 +171,7 @@ export async function validateDiscordBot(): Promise<boolean> {
   }
 
   try {
-    const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN)
-    const guild = (await rest.get(Routes.guild(DISCORD_SERVER_ID))) as any
+    const guild = await discordApiCall<any>(`/guilds/${DISCORD_SERVER_ID}`)
 
     if (guild) {
       logger.info('Discord bot connection validated', {

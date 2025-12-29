@@ -7,14 +7,16 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, NewLoginEmail } from '@/packages/lib/emails'
 import { detectNewLogin, recordLogin } from './login-detection'
-import { RedisSessionAdapter } from './redis-session-adapter'
+import { validateAndConsumeRecoveryCode } from './recovery-codes'
+import { ensurePasswordInHistory } from '@/packages/lib/security/password-reuse-checker'
+import { checkPasswordBreach } from '@/packages/lib/security/password-breach-checker'
 
 const userSelect = {
   id: true,
   email: true,
+  name: true,
   emailVerified: true,
   createdAt: true,
-  name: true,
   password: true,
   role: true,
   image: true,
@@ -23,6 +25,7 @@ const userSelect = {
   alphaUser: true,
   twoFactorEnabled: true,
   twoFactorSecret: true,
+  passwordBreachDetectedAt: true,
 } as const
 
 // Optional: allow configuring a shared cookie domain for NextAuth via
@@ -50,6 +53,8 @@ declare module 'next-auth' {
       role: UserRole
       alphaUser?: boolean
       twoFactorEnabled?: boolean
+      emailVerified?: boolean
+      passwordBreachDetectedAt?: string | null
     }
   }
 }
@@ -66,37 +71,48 @@ declare module 'next-auth/jwt' {
     createdAt?: string
     emailVerified?: boolean
     twoFactorEnabled?: boolean
+    passwordBreachDetectedAt?: string | null
   }
 }
-
-// Adapter for cross-domain session sharing via Redis
-const sessionAdapter = RedisSessionAdapter()
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        emailOrUsername: { label: 'Email or Username', type: 'text' },
+        email: { label: 'Email', type: 'email' }, // For backward compatibility with magic links
         password: { label: 'Password', type: 'password' },
         token: { label: 'Magic Link Token', type: 'text' },
         twoFactorCode: { label: '2FA Code', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email) {
+        // Support both emailOrUsername (password auth) and email (magic link auth)
+        const identifier = credentials?.emailOrUsername || credentials?.email
+        if (!identifier) {
           return null
         }
 
-        // 1. Fetch user by email first
-        const user = await prisma.user.findUnique({
+        // 1. Fetch user by email or username (name field)
+        // Try direct email match first, then case-insensitive username match
+        const user = await prisma.user.findFirst({
           where: {
-            email: credentials.email,
+            OR: [
+              { email: { equals: identifier, mode: 'insensitive' } },
+              { name: { equals: identifier, mode: 'insensitive' } },
+            ]
           },
           select: userSelect,
         })
 
         if (!user) {
+          console.log(`[Auth] User not found for identifier: ${identifier}`)
           return null
+        }
+
+        // Safety check: warn if username looks like an email
+        if (user.name && user.name.includes('@')) {
+          console.warn(`[Auth] WARNING: User ${user.id} has email-like username: "${user.name}". This should not happen in production.`)
         }
 
         // Magic link auth: requires valid token
@@ -131,9 +147,18 @@ export const authOptions: NextAuthOptions = {
                return null
              }
              const { authenticator } = await import('otplib')
+             
+             // Try TOTP code first
              const isValidCode = authenticator.check(credentials.twoFactorCode, validUser.twoFactorSecret)
              if (!isValidCode) {
-               return null
+               // Try recovery code
+               const isValidRecoveryCode = await validateAndConsumeRecoveryCode(
+                 validUser.id,
+                 credentials.twoFactorCode
+               )
+               if (!isValidRecoveryCode) {
+                 return null
+               }
              }
            }
 
@@ -163,10 +188,12 @@ export const authOptions: NextAuthOptions = {
 
         // Password auth: validate password
         if (!credentials?.password) {
+          console.log(`[Auth] No password provided for user: ${user.email}`)
           return null
         }
 
         if (!user.password) {
+          console.log(`[Auth] User ${user.email} has no password set`)
           return null
         }
 
@@ -176,8 +203,26 @@ export const authOptions: NextAuthOptions = {
         )
 
         if (!isPasswordValid) {
+          console.log(`[Auth] Invalid password for user: ${user.email}`)
           return null
         }
+
+        // Check for password breach in background (non-blocking)
+        void (async () => {
+          try {
+            const breachResult = await checkPasswordBreach(credentials.password)
+            if (breachResult.isCompromised) {
+              // Mark user as having detected breach
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { passwordBreachDetectedAt: new Date() },
+              })
+              console.log(`[Auth] Password breach detected for user ${user.email}`)
+            }
+          } catch (err) {
+            console.error('Failed to check password breach', err)
+          }
+        })()
 
         // Check if user has 2FA enabled and code not provided
         if (user.twoFactorEnabled && !credentials.twoFactorCode) {
@@ -193,9 +238,18 @@ export const authOptions: NextAuthOptions = {
             return null
           }
           const { authenticator } = await import('otplib')
+          
+          // Try TOTP code first
           const isValidCode = authenticator.check(credentials.twoFactorCode, user.twoFactorSecret)
           if (!isValidCode) {
-            return null
+            // Try recovery code
+            const isValidRecoveryCode = await validateAndConsumeRecoveryCode(
+              user.id,
+              credentials.twoFactorCode
+            )
+            if (!isValidRecoveryCode) {
+              return null
+            }
           }
         }
 
@@ -208,18 +262,54 @@ export const authOptions: NextAuthOptions = {
           sessionVersion: user.sessionVersion,
           alphaUser: user.alphaUser,
           twoFactorEnabled: user.twoFactorEnabled,
+          passwordBreachDetectedAt: user.passwordBreachDetectedAt?.toISOString() || null,
         }
       },
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
+    async jwt({ token, user }) {
+      // Populate JWT with user data on sign in
+      if (user) {
+        token.id = user.id
+        token.role = (user as any).role
+        token.sessionVersion = (user as any).sessionVersion
+        token.alphaUser = (user as any).alphaUser
+        token.twoFactorEnabled = (user as any).twoFactorEnabled
+        token.emailVerified = (user as any).emailVerified // Pass DateTime (or null) directly
+        token.name = user.name
+        token.email = user.email
+        token.image = user.image
+        token.passwordBreachDetectedAt = (user as any).passwordBreachDetectedAt
+        console.log(`[JWT] User signed in: ${token.email}, emailVerified: ${token.emailVerified}`)
+      }
+      
+      // On subsequent requests, if emailVerified isn't set, fetch from database
+      // This ensures verified users don't get redirected on token refresh
+      if (token.id && !('emailVerified' in token)) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { emailVerified: true },
+          })
+          if (dbUser) {
+            token.emailVerified = dbUser.emailVerified
+            console.log(`[JWT] Refreshed emailVerified from DB for ${token.email}: ${token.emailVerified}`)
+          }
+        } catch (error) {
+          console.warn('[JWT] Failed to fetch emailVerified from DB:', error instanceof Error ? error.message : error)
+        }
+      }
+      
+      return token
+    },
+    async signIn({ user, account, profile, email, credentials }) {
+      // Support both social and credentials-based signins
       // Fire-and-forget new login email + last login metadata
-      const email = user?.email
-      if (email) {
+      const userEmail = user?.email
+      if (userEmail) {
         // Get context from middleware-stored headers
-        const email_key = `login_context:${email}:${Date.now()}`
-        const storedContext = globalThis.__nextAuthLoginContext?.[email_key] || {}
+        const storedContext = globalThis.__nextAuthLoginContext || {}
         
         const ip = storedContext.ip
         const userAgent = storedContext.userAgent
@@ -248,6 +338,29 @@ export const authOptions: NextAuthOptions = {
             },
           })
           .catch((err) => console.error('Failed to update last login metadata', err))
+
+        // For password auth, ensure current password is in history (backward compatibility)
+        if (credentials?.password) {
+          void (async () => {
+            try {
+              const dbUser = await prisma.user.findUnique({
+                where: { id: user.id as string },
+                select: { password: true },
+              })
+              if (dbUser?.password) {
+                const wasAdded = await ensurePasswordInHistory(
+                  user.id as string,
+                  dbUser.password
+                )
+                if (wasAdded) {
+                  console.log(`[Auth] Password history initialized for user ${user.id} on login`)
+                }
+              }
+            } catch (err) {
+              console.error('Failed to ensure password in history', err)
+            }
+          })()
+        }
 
         // Record login and check if this is a new device/suspicious login
         void (async () => {
@@ -280,32 +393,58 @@ export const authOptions: NextAuthOptions = {
       }
       return true
     },
-    async session({ session, user }): Promise<Session> {
-      if (user) {
-        session.user.id = user.id
-        // Fetch fresh user data from database
+    async session({ session, token }): Promise<Session> {
+      if (token) {
+        session.user.id = token.id
+        session.user.role = token.role
+        session.user.image = token.image || null
+        session.user.name = token.name || ''
+        session.user.email = token.email || ''
+        session.user.alphaUser = token.alphaUser
+        session.user.twoFactorEnabled = token.twoFactorEnabled
+        session.user.emailVerified = token.emailVerified ? true : false // Convert DateTime/null to boolean for session
+        session.user.passwordBreachDetectedAt = token.passwordBreachDetectedAt as string | null | undefined
+        
+        // Periodically refresh user data from database (on each request for now)
         try {
           const freshUser = await prisma.user.findUnique({
-            where: { id: user.id },
+            where: { id: token.id },
             select: userSelect,
           })
 
           if (freshUser) {
-            session.user.id = freshUser.id
+            // Update session with fresh data
             session.user.role = freshUser.role
             session.user.image = freshUser.image || null
             session.user.name = freshUser.name || ''
             session.user.email = freshUser.email || ''
             session.user.alphaUser = freshUser.alphaUser
             session.user.twoFactorEnabled = freshUser.twoFactorEnabled
+            session.user.emailVerified = freshUser.emailVerified ? true : false // Convert DateTime/null to boolean
+            session.user.passwordBreachDetectedAt = freshUser.passwordBreachDetectedAt?.toISOString() || null
+            
+            // Update token for next request if sessionVersion changed
+            if (freshUser.sessionVersion !== token.sessionVersion) {
+              token.sessionVersion = freshUser.sessionVersion
+            }
           }
         } catch (error) {
-          // If DB is unavailable, continue with basic user info from session
-          console.warn('[Session] Database unavailable, using session user data:', error instanceof Error ? error.message : error)
+          // If DB is unavailable, continue with JWT data
+          console.warn('[Session] Database unavailable, using JWT data:', error instanceof Error ? error.message : error)
         }
       }
       return session
     },
+  },
+  // JWT session strategy (required for CredentialsProvider)
+  // Session callback fetches fresh user data from database on each request
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Update JWT every 24 hours
+  },
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   // Trust multiple origins for cross-domain auth
   // Use NEXTAUTH_TRUSTED_ORIGINS env var to specify allowed origins
@@ -333,10 +472,6 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/login',
     newUser: '/auth/register',
-  },
-  adapter: sessionAdapter,
-  session: {
-    strategy: 'database',
-    maxAge: 30 * 24 * 60 * 60,
+    error: '/auth/error',
   },
 }

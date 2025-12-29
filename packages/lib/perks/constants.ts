@@ -5,6 +5,7 @@
 export const PERK_ROLES = {
   CONTRIBUTOR: 'CONTRIBUTOR',
   DISCORD_BOOSTER: 'DISCORD_BOOSTER',
+  AFFILIATE: 'AFFILIATE',
 } as const
 
 export type PerkRole = (typeof PERK_ROLES)[keyof typeof PERK_ROLES]
@@ -15,6 +16,7 @@ export type PerkRole = (typeof PERK_ROLES)[keyof typeof PERK_ROLES]
 export const PERK_STORAGE_BONUS_GB: Record<PerkRole, number> = {
   [PERK_ROLES.CONTRIBUTOR]: 1, // +1GB per 1000 lines of code
   [PERK_ROLES.DISCORD_BOOSTER]: 5, // +5GB one-time for Discord boosters
+  [PERK_ROLES.AFFILIATE]: 0, // Affiliates earn billing credits, not storage
 }
 
 /**
@@ -23,6 +25,7 @@ export const PERK_STORAGE_BONUS_GB: Record<PerkRole, number> = {
 export const PERK_DOMAIN_BONUS: Record<PerkRole, number> = {
   [PERK_ROLES.CONTRIBUTOR]: 0, // No domain bonus for contributors
   [PERK_ROLES.DISCORD_BOOSTER]: 1, // +1 domain slot for Discord boosters
+  [PERK_ROLES.AFFILIATE]: 0, // Affiliates earn billing credits, not domains
 }
 
 /**

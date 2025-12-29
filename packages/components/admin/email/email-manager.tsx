@@ -1,11 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import {
     AlertCircle,
     CheckCircle2,
+    ChevronDown,
     Clock,
+    Copy,
     History,
     Mail,
     RefreshCw,
@@ -57,10 +59,12 @@ interface EmailLog {
     template: string
     messageId: string | null
     status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'SCHEDULED'
+    type?: 'email.sent' | 'email.failed'
     createdAt: string
     processedAt: string | null
     failedAt: string | null
     error: string | null
+    willRetry?: boolean
 }
 
 const EMAIL_CATEGORIES = [
@@ -97,6 +101,7 @@ export function AdminEmailManager() {
     // Logs filter state
     const [logsStatus, setLogsStatus] = useState('all')
     const [logsOffset, setLogsOffset] = useState(0)
+    const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -674,60 +679,171 @@ export function AdminEmailManager() {
                                                 </thead>
                                                 <tbody>
                                                     {emailLogs.map((log) => (
-                                                        <tr key={log.id} className="border-b hover:bg-muted/50 transition-colors">
-                                                            <td className="px-4 py-3 whitespace-nowrap text-xs">
-                                                                {new Date(log.createdAt).toLocaleString('en-US', {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                })}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-xs truncate max-w-xs" title={log.to}>
-                                                                {log.to}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-xs truncate max-w-sm" title={log.subject}>
-                                                                {log.subject}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-xs">
-                                                                <Badge variant="outline" className="font-mono">
-                                                                    {log.template}
-                                                                </Badge>
-                                                            </td>
-                                                            <td className="px-4 py-3">
-                                                                {log.status === 'COMPLETED' && (
-                                                                    <Badge className="bg-green-900/50 text-green-200 hover:bg-green-900/50 border-green-700">
-                                                                        ✓ Sent
+                                                        <React.Fragment key={log.id}>
+                                                            <tr
+                                                                className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                                                                onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                                                            >
+                                                                <td className="px-4 py-3 whitespace-nowrap text-xs">
+                                                                    {new Date(log.createdAt).toLocaleString('en-US', {
+                                                                        month: 'short',
+                                                                        day: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                    })}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs truncate max-w-xs" title={log.to}>
+                                                                    {log.to}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs truncate max-w-sm" title={log.subject}>
+                                                                    {log.subject}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs">
+                                                                    <Badge variant="outline" className="font-mono">
+                                                                        {log.template}
                                                                     </Badge>
-                                                                )}
-                                                                {log.status === 'PENDING' && (
-                                                                    <Badge className="bg-yellow-900/50 text-yellow-200 hover:bg-yellow-900/50 border-yellow-700">
-                                                                        ⏱ Pending
-                                                                    </Badge>
-                                                                )}
-                                                                {log.status === 'PROCESSING' && (
-                                                                    <Badge className="bg-blue-900/50 text-blue-200 hover:bg-blue-900/50 border-blue-700">
-                                                                        ⟳ Processing
-                                                                    </Badge>
-                                                                )}
-                                                                {log.status === 'FAILED' && (
-                                                                    <Badge
-                                                                        className="bg-red-900/50 text-red-200 hover:bg-red-900/50 border-red-700 cursor-help"
-                                                                        title={log.error || 'Unknown error'}
-                                                                    >
-                                                                        ✕ Failed
-                                                                    </Badge>
-                                                                )}
-                                                                {log.status === 'SCHEDULED' && (
-                                                                    <Badge className="bg-purple-900/50 text-purple-200 hover:bg-purple-900/50 border-purple-700">
-                                                                        📅 Scheduled
-                                                                    </Badge>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-xs font-mono text-muted-foreground truncate max-w-xs" title={log.messageId || 'N/A'}>
-                                                                {log.messageId ? log.messageId.slice(0, 20) + '...' : 'N/A'}
-                                                            </td>
-                                                        </tr>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {log.status === 'COMPLETED' && (
+                                                                            <Badge className="bg-green-900/50 text-green-200 hover:bg-green-900/50 border-green-700">
+                                                                                ✓ Sent
+                                                                            </Badge>
+                                                                        )}
+                                                                        {log.status === 'PENDING' && (
+                                                                            <Badge className="bg-yellow-900/50 text-yellow-200 hover:bg-yellow-900/50 border-yellow-700">
+                                                                                ⏱ Pending
+                                                                            </Badge>
+                                                                        )}
+                                                                        {log.status === 'PROCESSING' && (
+                                                                            <Badge className="bg-blue-900/50 text-blue-200 hover:bg-blue-900/50 border-blue-700">
+                                                                                ⟳ Processing
+                                                                            </Badge>
+                                                                        )}
+                                                                        {log.status === 'FAILED' && (
+                                                                            <Badge className="bg-red-900/50 text-red-200 hover:bg-red-900/50 border-red-700">
+                                                                                ✕ Failed
+                                                                            </Badge>
+                                                                        )}
+                                                                        {log.status === 'SCHEDULED' && (
+                                                                            <Badge className="bg-purple-900/50 text-purple-200 hover:bg-purple-900/50 border-purple-700">
+                                                                                📅 Scheduled
+                                                                            </Badge>
+                                                                        )}
+                                                                        <ChevronDown
+                                                                            className={`h-4 w-4 text-muted-foreground transition-transform ${
+                                                                                expandedLogId === log.id ? 'rotate-180' : ''
+                                                                            }`}
+                                                                        />
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs font-mono text-muted-foreground truncate max-w-xs" title={log.messageId || 'N/A'}>
+                                                                    {log.messageId ? log.messageId.slice(0, 20) + '...' : 'N/A'}
+                                                                </td>
+                                                            </tr>
+                                                            {expandedLogId === log.id && (
+                                                                <tr className="border-b bg-muted/20">
+                                                                    <td colSpan={6} className="px-4 py-4">
+                                                                        <div className="space-y-3">
+                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-muted-foreground mb-1">Full Email Address</p>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <code className="text-xs bg-background p-2 rounded border border-border/50 flex-1 truncate">
+                                                                                            {log.to}
+                                                                                        </code>
+                                                                                        <Button
+                                                                                            size="sm"
+                                                                                            variant="ghost"
+                                                                                            className="h-8 w-8 p-0"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation()
+                                                                                                navigator.clipboard.writeText(log.to)
+                                                                                                toast({ title: 'Copied!', description: 'Email address copied to clipboard' })
+                                                                                            }}
+                                                                                        >
+                                                                                            <Copy className="h-3 w-3" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-muted-foreground mb-1">Message ID</p>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <code className="text-xs bg-background p-2 rounded border border-border/50 flex-1 truncate font-mono">
+                                                                                            {log.messageId || 'N/A'}
+                                                                                        </code>
+                                                                                        {log.messageId && (
+                                                                                            <Button
+                                                                                                size="sm"
+                                                                                                variant="ghost"
+                                                                                                className="h-8 w-8 p-0"
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation()
+                                                                                                    navigator.clipboard.writeText(log.messageId || '')
+                                                                                                    toast({ title: 'Copied!', description: 'Message ID copied to clipboard' })
+                                                                                                }}
+                                                                                            >
+                                                                                                <Copy className="h-3 w-3" />
+                                                                                            </Button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div>
+                                                                                <p className="text-xs font-medium text-muted-foreground mb-1">Full Subject</p>
+                                                                                <p className="text-sm bg-background p-2 rounded border border-border/50">
+                                                                                    {log.subject || '(No subject)'}
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-muted-foreground mb-1">Created</p>
+                                                                                    <p className="text-xs text-foreground">
+                                                                                        {new Date(log.createdAt).toLocaleString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                                {log.processedAt && (
+                                                                                    <div>
+                                                                                        <p className="text-xs font-medium text-muted-foreground mb-1">Processed</p>
+                                                                                        <p className="text-xs text-foreground">
+                                                                                            {new Date(log.processedAt).toLocaleString()}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {log.error && (
+                                                                                <div className="p-3 rounded-lg bg-red-900/20 border border-red-700/50">
+                                                                                    <p className="text-xs font-medium text-red-200 mb-1">Error Message</p>
+                                                                                    <p className="text-sm text-red-100 font-mono whitespace-pre-wrap break-words">
+                                                                                        {log.error}
+                                                                                    </p>
+                                                                                    {log.willRetry && (
+                                                                                        <p className="text-xs text-red-200 mt-2">
+                                                                                            ⟳ Will retry
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+
+                                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                                <div className="p-2 rounded border border-border/50 bg-background/50">
+                                                                                    <p className="text-muted-foreground">Template</p>
+                                                                                    <code className="font-mono text-foreground">{log.template}</code>
+                                                                                </div>
+                                                                                <div className="p-2 rounded border border-border/50 bg-background/50">
+                                                                                    <p className="text-muted-foreground">Event Type</p>
+                                                                                    <code className="font-mono text-foreground">{log.type || 'unknown'}</code>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
                                                     ))}
                                                 </tbody>
                                             </table>

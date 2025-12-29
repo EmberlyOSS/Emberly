@@ -19,19 +19,21 @@ export async function GET(req: NextRequest) {
         const offset = parseInt(searchParams.get('offset') || '0')
         const sinceDate = searchParams.get('since') // ISO date string for filtering
 
-        // Build where clause for email events
+        // Build where clause for email events (both sent and failed)
         const where: any = {
-            type: 'email.sent',
+            type: { in: ['email.sent', 'email.failed'] }, // Include both success and failure events
         }
 
         // Filter by status if specified
         if (status !== 'all') {
             if (status === 'sent' || status === 'success' || status === 'completed') {
                 where.status = 'COMPLETED'
+                where.type = 'email.sent'
             } else if (status === 'pending') {
                 where.status = 'PENDING'
             } else if (status === 'failed') {
                 where.status = 'FAILED'
+                where.type = 'email.failed'
             }
         }
 
@@ -51,6 +53,7 @@ export async function GET(req: NextRequest) {
             where,
             select: {
                 id: true,
+                type: true,
                 payload: true,
                 status: true,
                 createdAt: true,
@@ -66,17 +69,21 @@ export async function GET(req: NextRequest) {
         // Format logs for display
         const formattedLogs = logs.map((log) => {
             const payload = log.payload as any
+            const isFailure = log.type === 'email.failed'
+            
             return {
                 id: log.id,
                 to: payload?.to || 'Unknown',
                 subject: payload?.subject || 'No subject',
                 template: payload?.template || 'Unknown',
                 messageId: payload?.messageId || null,
-                status: log.status,
+                status: isFailure ? 'FAILED' : log.status,
+                type: log.type, // 'email.sent' or 'email.failed'
                 createdAt: log.createdAt,
                 processedAt: log.processedAt,
                 failedAt: log.failedAt,
-                error: log.error,
+                error: log.error || payload?.error || null, // Include error from payload or event
+                willRetry: isFailure ? payload?.willRetry : undefined,
             }
         })
 

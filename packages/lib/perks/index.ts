@@ -78,7 +78,23 @@ export async function hasPermission(userId: string, perkRole: PerkRole): Promise
 }
 
 /**
- * Add perk role to user (deduplicates)
+ * Check if user has already earned a one-time perk
+ */
+export async function hasEarnedOneTimePerk(userId: string, perkRole: 'DISCORD_BOOSTER' | 'CONTRIBUTOR'): Promise<boolean> {
+  const perks = await getUserPerks(userId)
+  if (perkRole === 'DISCORD_BOOSTER') {
+    return perks.includes(PERK_ROLES.DISCORD_BOOSTER)
+  }
+  if (perkRole === 'CONTRIBUTOR') {
+    return perks.some(p => p.startsWith('CONTRIBUTOR'))
+  }
+  return false
+}
+
+
+/**
+ * Add perk role to user (deduplicates and prevents re-awarding one-time perks)
+ * One-time perks: DISCORD_BOOSTER, CONTRIBUTOR (can only be earned once, though contributors can level up)
  */
 export async function addPerkRole(userId: string, perkRole: string) {
   const user = await prisma.user.findUnique({
@@ -87,7 +103,29 @@ export async function addPerkRole(userId: string, perkRole: string) {
   })
 
   const currentPerks = user?.perkRoles || []
-  if (!currentPerks.includes(perkRole)) {
+  
+  // Check if this is a one-time perk that's already been awarded
+  const isOneTimePerk = perkRole === PERK_ROLES.DISCORD_BOOSTER
+  const alreadyHasPerk = currentPerks.some(p => p.startsWith(perkRole.split(':')[0])) // Check base perk name
+  
+  if (isOneTimePerk && alreadyHasPerk) {
+    // User already has this one-time perk, don't add it again
+    return
+  }
+  
+  // For CONTRIBUTOR perks, allow leveling up but track if it's their first time
+  if (perkRole.startsWith('CONTRIBUTOR')) {
+    const hasContributor = currentPerks.some(p => p.startsWith('CONTRIBUTOR'))
+    const newPerks = currentPerks.filter(p => !p.startsWith('CONTRIBUTOR'))
+    
+    // Add "first-time" marker if this is their first contributor perk
+    if (!hasContributor) {
+      newPerks.push('CONTRIBUTOR:FIRST_TIME')
+    }
+    
+    newPerks.push(perkRole)
+    await updateUserPerks(userId, newPerks)
+  } else if (!currentPerks.includes(perkRole)) {
     await updateUserPerks(userId, [...currentPerks, perkRole])
   }
 }

@@ -20,6 +20,7 @@ model User {
   password              String?
   passwordResetToken    String?
   passwordResetExpires  DateTime?
+  passwordBreachDetectedAt DateTime?
   magicLinkToken        String?
   magicLinkExpires      DateTime?
   lastLoginAt           DateTime?
@@ -40,9 +41,17 @@ model User {
 
   alphaUser Boolean @default(false)
 
-  // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, etc)
+  // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, AFFILIATE, etc)
   perkRoles         String[]  @default([])
   lastPerkCheckAt   DateTime?
+
+  // Referral/Affiliate system
+  referralCode      String?   @unique
+  referrerUserId    String?
+  referrer          User?     @relation("ReferralChildren", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  referrals         User[]    @relation("ReferralChildren")
+  referralCredits   Float     @default(0) // Billing credits earned from referrals (in dollars)
+  referralStats     Json      @default("{\"count\": 0, \"credited\": 0, \"lastCreditedAt\": null}") // Track referral metrics
 
   // Email notification preferences
   emailNotificationsEnabled Boolean @default(true)
@@ -68,9 +77,15 @@ model User {
   reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
   loginHistory                LoginHistory[]
   linkedAccounts              LinkedAccount[]
+  twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
+  passwordHistory             PasswordHistory[]
+  creditTransactions          CreditTransaction[]
+  creditTransactionsAsRelated CreditTransaction[] @relation("CreditTransactions")
 
   @@index([role])
   @@index([createdAt])
+  @@index([referralCode])
+  @@index([referrerUserId])
 }
 
 model File {
@@ -385,6 +400,26 @@ model OneOffPurchase {
   @@index([userId])
 }
 
+// Credit transaction log for tracking referral credits earned and applied to purchases
+model CreditTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // "earned_referral", "applied_checkout", "applied_purchase", "manual_adjustment"
+  amountCents     Int      // Positive for credits earned, negative for credits applied
+  description     String?  // e.g. "Referral from user@example.com", "Applied to checkout", "Applied to storage purchase"
+  relatedUserId   String?  // User ID if this is a referral transaction
+  relatedOrderId  String?  // Stripe session ID, payment intent ID, etc
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedUser User? @relation("CreditTransactions", fields: [relatedUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([relatedUserId])
+}
+
 // Login history for detecting suspicious/new device logins
 model LoginHistory {
   id          String   @id @default(cuid())
@@ -539,4 +574,31 @@ model LinkedAccount {
 
   @@unique([userId, provider])
   @@index([provider, providerUserId])
+}
+
+model TwoFactorRecoveryCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // Format: "XXXX-XXXX" (8 chars + dash)
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  batchId   String   // To track which batch of codes this belongs to (for regeneration)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+  @@index([userId, batchId])
+  @@index([userId, used])
+}
+
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String   // Encrypted password hash (same as User.password)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

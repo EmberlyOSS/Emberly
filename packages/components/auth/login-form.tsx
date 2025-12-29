@@ -29,7 +29,7 @@ export function LoginForm({
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [magicEmail, setMagicEmail] = useState('')
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
-  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null)
+  const [pendingCredentials, setPendingCredentials] = useState<{ emailOrUsername: string; password: string } | null>(null)
 
   async function onPasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -37,12 +37,12 @@ export function LoginForm({
     setError(null)
 
     const formData = new FormData(event.currentTarget)
-    const email = formData.get('email') as string
+    const emailOrUsername = formData.get('emailOrUsername') as string
     const password = formData.get('password') as string
 
     try {
       const result = await signIn('credentials', {
-        email,
+        emailOrUsername,
         password,
         redirect: false,
         callbackUrl: '/dashboard',
@@ -51,7 +51,7 @@ export function LoginForm({
       // If 2FA is required, show 2FA form instead of error
       if (result?.error === 'TwoFactorRequired') {
         setRequiresTwoFactor(true)
-        setPendingCredentials({ email, password })
+        setPendingCredentials({ emailOrUsername, password })
         return
       }
 
@@ -101,7 +101,7 @@ export function LoginForm({
   if (requiresTwoFactor && pendingCredentials) {
     return (
       <TwoFactorForm
-        email={pendingCredentials.email}
+        emailOrUsername={pendingCredentials.emailOrUsername}
         password={pendingCredentials.password}
         onCancel={() => {
           setRequiresTwoFactor(false)
@@ -141,18 +141,18 @@ export function LoginForm({
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium" htmlFor="email">
-                Email address
+              <Label className="text-sm font-medium" htmlFor="emailOrUsername">
+                Email or Username
               </Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="name@example.com"
+                id="emailOrUsername"
+                name="emailOrUsername"
+                type="text"
+                placeholder="name@example.com or username"
                 required
                 disabled={isLoading}
                 className="h-11 bg-background/50 focus:bg-background transition-colors"
-                autoComplete="email"
+                autoComplete="username"
                 autoFocus
               />
             </div>

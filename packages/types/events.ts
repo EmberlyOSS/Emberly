@@ -325,6 +325,42 @@ export type EventTypeMap = {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // PERK / QUOTA / FEATURE EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'user.perk-gained': {
+    userId: string
+    email: string
+    perkName: string
+    perkDescription?: string
+    perkIcon?: string
+    expiresAt?: Date
+    context?: RequestContext
+  }
+
+  'user.quota-reached': {
+    userId: string
+    email: string
+    quotaType: string
+    currentUsage: number
+    quotaLimit: number
+    unit?: string
+    percentage: number
+    context?: RequestContext
+  }
+
+  'user.storage-assigned': {
+    userId: string
+    email: string
+    storageAmount: number
+    unit?: string
+    totalStorage?: number
+    reason?: string
+    expiresAt?: Date
+    context?: RequestContext
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // EMAIL / NOTIFICATION EVENTS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -526,6 +562,7 @@ export const EventCategories = {
   file: ['file.uploaded', 'file.downloaded', 'file.deleted', 'file.visibility-changed', 'file.schedule-expiration', 'file.expired'],
   auth: ['auth.login', 'auth.logout', 'auth.password-changed', 'auth.password-reset-requested', 'auth.password-reset-completed', 'auth.2fa-enabled', 'auth.2fa-disabled', 'auth.2fa-backup-codes-generated', 'auth.2fa-backup-code-used', 'auth.session-revoked'],
   account: ['account.created', 'account.email-changed', 'account.email-verification-requested', 'account.email-verified', 'account.profile-updated', 'account.export-requested', 'account.export-completed', 'account.deletion-requested', 'account.deletion-cancelled', 'account.deleted'],
+  user: ['user.perk-gained', 'user.quota-reached', 'user.storage-assigned'],
   email: ['email.send', 'email.sent', 'email.failed', 'email.bounced'],
   billing: ['billing.subscription-created', 'billing.subscription-updated', 'billing.subscription-cancelled', 'billing.payment-succeeded', 'billing.payment-failed', 'billing.refund-issued'],
   security: ['security.suspicious-activity', 'security.rate-limit-exceeded', 'security.api-key-created', 'security.api-key-revoked'],

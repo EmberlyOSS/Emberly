@@ -6,6 +6,7 @@ import { compare } from 'bcryptjs'
 import { prisma } from '@/packages/lib/database/prisma'
 import { apiError, apiResponse } from '@/packages/lib/api/response'
 import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
+import { createRecoveryCodes, invalidateRecoveryCodes } from '@/packages/lib/auth/recovery-codes'
 
 interface StoredVerificationCode {
     code: string
@@ -160,7 +161,14 @@ export async function POST(req: Request) {
                 },
             })
 
-            return apiResponse({ success: true, message: '2FA enabled successfully' })
+            // Generate recovery codes
+            const recoveryCodes = await createRecoveryCodes(user.id)
+
+            return apiResponse({ 
+                success: true, 
+                message: '2FA enabled successfully',
+                recoveryCodes, // Return codes to user
+            })
         } else {
             return apiError('Invalid stage parameter', 400)
         }
@@ -292,6 +300,9 @@ export async function DELETE(req: Request) {
                     verificationCodes: updatedCodes,
                 },
             })
+
+            // Invalidate all recovery codes
+            await invalidateRecoveryCodes(user.id)
 
             return apiResponse({ success: true, message: '2FA disabled successfully' })
         } else {

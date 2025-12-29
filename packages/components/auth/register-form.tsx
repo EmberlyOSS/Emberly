@@ -11,6 +11,7 @@ import { Icons } from '@/packages/components/shared/icons'
 import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
+import { validatePasswordAction } from '@/packages/lib/security/password-actions'
 
 export function RegisterForm() {
   const router = useRouter()
@@ -34,8 +35,9 @@ export function RegisterForm() {
       return
     }
 
+    // Basic validation - just check it's not empty
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long')
+      setError('Password must be at least 8 characters')
       setIsLoading(false)
       return
     }
@@ -58,8 +60,17 @@ export function RegisterForm() {
         throw new Error(data.error || 'Failed to register')
       }
 
+      const data = await res.json()
+
+      // If email verification is required, redirect to verification page
+      if (data.requiresVerification) {
+        router.push('/auth/verify-email')
+        return
+      }
+
+      // First user doesn't require verification, auto-sign in
       const result = await signIn('credentials', {
-        email,
+        emailOrUsername: email,
         password,
         redirect: false,
       })

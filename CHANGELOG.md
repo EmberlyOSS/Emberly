@@ -4,9 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] - 2025-12-28
+## [1.2.0] - 2025-12-29
 
 ### Added
+- **2FA Recovery Codes System** - One-time backup codes for account recovery if authenticator is lost.
+  - Generate 10 recovery codes when enabling 2FA, displayed only once to the user.
+  - Codes stored in database with used/unused tracking and timestamps.
+  - Users can regenerate codes anytime to invalidate old ones and create new ones.
+  - Recovery codes work as valid 2FA authentication alongside TOTP codes.
+  - Download recovery codes as text file for offline storage.
+  - Visual status dashboard showing total codes, used codes, and remaining codes.
+  - Warning indicators when only 3 or fewer codes remain.
+  - Automatic invalidation of all codes when 2FA is disabled.
+  - New `TwoFactorRecoveryCode` model with batchId for tracking code generations.
+  - `/api/profile/2fa/recovery-codes` endpoints for status, regeneration, and download.
+  - `RecoveryCodesManager` component in security settings to manage codes.
 - Complete two-factor authentication (2FA) system using TOTP (Time-based One-Time Password) with authenticator app support.
   - New `TwoFactorForm` component for secure 6-digit authenticator code entry with real-time validation.
   - 2FA enforcement in NextAuth credentials provider: users with `twoFactorEnabled` must enter a valid authenticator code before login succeeds.
@@ -33,6 +45,27 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Displays parsed device type (Desktop/Mobile/Tablet), browser, and OS in security dashboard.
   - Device icons and detailed geographic information shown in login history.
   - New device detection triggers automatic email alerts for suspicious logins.
+- **Billing Credits & Transaction Logging System** - Comprehensive credit tracking for audit trail and financial transparency.
+  - New `CreditTransaction` Prisma model with userId, type, amount, description, and related metadata fields.
+  - Transaction logging for all credit operations: referral earnings, credit applications, manual adjustments, and refunds.
+  - `/api/profile/billing-history` endpoint for retrieving credit transaction history with graceful error handling.
+  - `BillingCreditsSection` component in user profile displaying current balance, Stripe customer balance, and recent transaction activity.
+  - Transaction metadata includes relatedUserId for referral tracking and relatedOrderId for purchase attribution.
+  - Automatic transaction logging when credits are applied to Stripe customer balance during checkout.
+- **Custom Referral Codes System** - User-friendly referral code creation replacing auto-generated codes.
+  - Users can create custom, memorable referral codes (3-30 characters, alphanumeric with hyphens/underscores).
+  - Custom code form in profile with real-time validation feedback.
+  - Validation prevents reserved words (admin, api, auth, dashboard, settings, profile, billing, null).
+  - Brand name protection blocks referral codes containing trademarked terms (emberly, pixelated, codemeapixel).
+  - Case-insensitive substring matching ensures brand variations cannot bypass restrictions.
+  - `/api/profile/referrals` POST endpoint supports creating custom codes with comprehensive validation.
+  - Two-state referral component: creation form when no code exists, full statistics and sharing options when code is active.
+- **Enhanced Payment Routes with Centralized Stripe Utilities** - Consolidated payment processing infrastructure.
+  - All payment routes (`/api/payments/portal`, `/api/payments/webhook`, `/api/payments/checkout`, `/api/payments/purchase`) refactored to use centralized utilities.
+  - `ensureStripeCustomer()` utility validates and creates Stripe customer IDs consistently across all payment flows.
+  - `applyReferralCreditsToStripe()` utility manages credit application and transaction logging with metadata tracking.
+  - Webhook handler enhanced with credit transaction logging for purchase completion events.
+  - Checkout and purchase routes now include order metadata for credit transaction attribution.
 
 ### Changed
 - Metadata system significantly refactored and simplified:

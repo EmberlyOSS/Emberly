@@ -17,6 +17,7 @@ import { registerEmailHandlers } from './email'
 import { registerFileHandlers } from './file'
 import { registerFileExpiryHandlers } from './file-expiry'
 import { registerSecurityHandlers } from './security'
+import { registerUserHandlers } from './user'
 
 const logger = loggers.events.getChildLogger('handlers')
 
@@ -40,6 +41,7 @@ export async function registerAllHandlers(): Promise<void> {
     registerBillingHandlers()
     registerSecurityHandlers()
     registerAdminHandlers()
+    registerUserHandlers()
 
     const handlerCount = eventConsumer.getHandlerCount()
     const memoryDuration = Date.now() - startTime
@@ -69,3 +71,4 @@ export { registerEmailHandlers, setEmailService, EMAIL_TEMPLATES } from './email
 export { registerFileHandlers } from './file'
 export { registerFileExpiryHandlers, scheduleFileExpiration, cancelFileExpiration, getFileExpirationInfo } from './file-expiry'
 export { registerSecurityHandlers } from './security'
+export { registerUserHandlers } from './user'

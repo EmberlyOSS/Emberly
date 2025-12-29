@@ -58,6 +58,9 @@ export async function POST(req: Request) {
                         if (!user.stripeCustomerId && typeof customer === 'string') {
                             await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer } })
                         }
+
+                        // Log subscription creation as event (not a credit transaction, just an event)
+                        console.log(`[Webhook] Subscription created for user ${user.id}: ${subId}`)
                     }
                 } else {
                     // one-off payment via checkout.session (mode=payment)
@@ -69,7 +72,7 @@ export async function POST(req: Request) {
                         user = await prisma.user.findFirst({ where: { stripeCustomerId: customer } })
                     }
                     if (user) {
-                        await prisma.oneOffPurchase.create({
+                        const purchase = await prisma.oneOffPurchase.create({
                             data: {
                                 userId: user.id,
                                 type: metadata?.type || 'one_off',
@@ -79,6 +82,26 @@ export async function POST(req: Request) {
                                 metadata: metadata || {},
                             },
                         })
+
+                        // Log purchase completion and credit transaction if credits were applied
+                        const amountPaid = session.amount_total || 0
+                        const originalAmount = metadata?.originalAmountCents ? parseInt(metadata.originalAmountCents) : amountPaid
+                        const creditsApplied = originalAmount - amountPaid
+
+                        if (creditsApplied > 0) {
+                            await prisma.creditTransaction.create({
+                                data: {
+                                    userId: user.id,
+                                    type: 'applied_purchase',
+                                    amountCents: -creditsApplied, // Negative = credits spent
+                                    description: `Applied $${creditsApplied / 100} credit to ${metadata?.type || 'purchase'}`,
+                                    relatedOrderId: session.payment_intent || session.id,
+                                    metadata: { purchaseType: metadata?.type, quantity: metadata?.quantity },
+                                },
+                            })
+                            console.log(`[Webhook] Applied $${creditsApplied / 100} credit to user ${user.id} for purchase`)
+                        }
+
                         // apply side-effects for specific one-off purchases
                         if ((metadata?.type || 'one_off') === 'extra_storage') {
                             const qty = metadata?.quantity ? parseInt(metadata.quantity) : 1
@@ -86,6 +109,7 @@ export async function POST(req: Request) {
                             const addMB = qty * 1024
                             const current = user.storageQuotaMB ?? 0
                             await prisma.user.update({ where: { id: user.id }, data: { storageQuotaMB: current + addMB } })
+                            console.log(`[Webhook] Added ${qty}GB storage to user ${user.id}`)
                         }
                     }
                 }
@@ -119,6 +143,10 @@ export async function POST(req: Request) {
                                 metadata: stripeSub.metadata || {},
                             },
                         })
+
+                        // Log invoice payment
+                        const amountPaid = invoice.amount_paid || 0
+                        console.log(`[Webhook] Invoice paid for user ${user.id}: $${amountPaid / 100}`)
                     }
                 }
                 break
@@ -128,6 +156,7 @@ export async function POST(req: Request) {
                 const subscriptionId = invoice.subscription
                 if (subscriptionId) {
                     await prisma.subscription.updateMany({ where: { stripeSubscriptionId: subscriptionId }, data: { status: 'past_due' } })
+                    console.log(`[Webhook] Payment failed for subscription ${subscriptionId}`)
                 }
                 break
             }

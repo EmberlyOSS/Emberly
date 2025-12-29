@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/packages/lib/auth'
 
 import { loggers } from '@/packages/lib/logger'
 
@@ -34,7 +35,7 @@ export async function withLogging<T>(
     const hasSessionCookie = cookieHeader.includes('next-auth.session-token') || cookieHeader.includes('__Secure-next-auth.session-token')
 
     if (hasSessionCookie) {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (session?.user) {
           userId = (session.user as { id?: string }).id
           sessionId = (session as { sessionToken?: string }).sessionToken

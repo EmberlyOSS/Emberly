@@ -123,6 +123,47 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // EMAIL VERIFICATION CHECK - Enforce email verification for authenticated users
+  // Users who haven't verified their email can ONLY access:
+  // - Auth pages (/auth/*)
+  // - NextAuth routes (/api/auth/*)
+  // - Email verification endpoint (/api/auth/verify-email)
+  const isVerifyEmailPage = pathname === '/auth/verify-email'
+  const isVerifyEmailApi = pathname === '/api/auth/verify-email'
+  const isAuthPage = pathname.startsWith('/auth/')
+
+  if (token) {
+    const isEmailVerified = token.emailVerified ? true : false
+
+    if (!isEmailVerified && !isVerifyEmailPage && !isVerifyEmailApi && !isAuthPage && !isNextAuthRoute && !isApiRoute) {
+      console.log(`[Proxy] Unverified user ${token.email} blocked from ${pathname}`)
+      return NextResponse.redirect(new URL('/auth/verify-email', request.url))
+    }
+  }
+
+  // PASSWORD BREACH CHECK - Redirect to security tab if breach detected
+  // Users with detected password breaches are redirected to profile security tab
+  const isProfileSecurityTab = pathname === '/dashboard/profile' && request.nextUrl.searchParams.get('tab') === 'security'
+  const isProfilePath = pathname === '/dashboard/profile'
+  const isDashboardRoot = pathname === '/dashboard'
+
+  if (token && token.passwordBreachDetectedAt) {
+    // If already on profile security tab, allow through
+    if (isProfileSecurityTab) {
+      return NextResponse.next()
+    }
+    // If on dashboard root, redirect to profile security
+    if (isDashboardRoot) {
+      console.log(`[Proxy] User ${token.email} with password breach detected, redirecting from dashboard to profile security`)
+      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', request.url))
+    }
+    // If on profile but not security tab, redirect to security tab
+    if (isProfilePath && !request.nextUrl.searchParams.get('tab')) {
+      console.log(`[Proxy] User ${token.email} with password breach detected, redirecting to security tab`)
+      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', request.url))
+    }
+  }
+
   // Continue with normal routing
   if (
     pathname.endsWith('/raw') ||
@@ -176,6 +217,18 @@ export async function proxy(request: NextRequest) {
 
   const botResponse = handleBotRequest(request)
   if (botResponse) return botResponse
+
+  // Allow unauthenticated access to email verification and resend pages
+  // (users registering need to access these without a token yet)
+  const isEmailVerificationFlow = 
+    pathname === '/auth/verify-email' ||
+    pathname === '/auth/resend-verification' ||
+    pathname === '/api/auth/verify-email' ||
+    pathname === '/api/auth/resend-verification'
+  
+  if (isEmailVerificationFlow) {
+    return NextResponse.next()
+  }
 
   if (
     request.nextUrl.pathname.startsWith('/setup') ||

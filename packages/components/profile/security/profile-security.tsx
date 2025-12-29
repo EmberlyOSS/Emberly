@@ -25,6 +25,7 @@ import { Label } from "@/packages/components/ui/label"
 import { useToast } from "@/packages/hooks/use-toast"
 import { QRCodeSVG } from "qrcode.react"
 import { LoginHistory } from "./login-history"
+import { RecoveryCodesManager } from "./recovery-codes-manager"
 import { Icons } from '@/packages/components/shared/icons'
 
 export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
@@ -538,6 +539,13 @@ export function ProfileSecurity({ onUpdate }: ProfileSecurityProps) {
           )}
 
         </div>
+
+        {/* Recovery Codes */}
+        {twoFactorEnabled && (
+          <div className="border-t pt-6 mt-6">
+            <RecoveryCodesManager />
+          </div>
+        )}
 
         {/* Login History & Sessions */}
         <div className="border-t pt-6 mt-6">
