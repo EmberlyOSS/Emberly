@@ -136,33 +136,32 @@ export async function POST(req: Request) {
       )
     }
 
-    const config = await getConfig()
-    const maxSize = config.settings.general.storage.maxUploadSize
-    const maxBytes =
-      maxSize.value * (maxSize.unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
-    const quotasEnabled = config.settings.general.storage.quotas.enabled
-    const defaultQuota = config.settings.general.storage.quotas.default
-
-    if (size > maxBytes) {
-      return NextResponse.json(
-        {
-          error: `Maximum file size is ${maxSize.value}${maxSize.unit}`,
-        },
-        { status: 413 }
-      )
-    }
-
-    if (quotasEnabled && user.role !== 'ADMIN') {
-      const { canUploadSize } = await import('@/packages/lib/storage/quota')
-      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+    // Check file size against plan upload cap and storage quota
+    if (user.role !== 'ADMIN') {
+      const { getPlanLimits, canUploadSize } = await import('@/packages/lib/storage/quota')
+      const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(size)
-      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
-
-      if (!canUpload) {
+      
+      // Check plan upload size cap
+      const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
+      if (size > maxUploadBytes) {
+        return NextResponse.json(
+          {
+            error: `File exceeds ${planLimits.planName} plan limit`,
+            message: `Maximum file size for ${planLimits.planName} is ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+            action: 'upgrade',
+          },
+          { status: 413 }
+        )
+      }
+      
+      // Check storage quota
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
+      if (!uploadCheck.allowed) {
         return NextResponse.json(
           {
             error: 'Storage quota exceeded',
-            message: `You have reached your storage quota. Purchase additional storage to continue uploading.`,
+            message: uploadCheck.reason || 'You have reached your storage quota. Purchase additional storage to continue uploading.',
             action: 'upgrade',
           },
           { status: 413 }

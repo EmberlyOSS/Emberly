@@ -109,16 +109,12 @@ export async function POST(
 
     // Re-check quotas before creating the file record in case the user's
     // storage usage changed since initialization.
-    const config = await getConfig()
-    const quotasEnabled = config.settings.general.storage.quotas.enabled
-    const defaultQuota = config.settings.general.storage.quotas.default
-
-    if (quotasEnabled && user.role !== 'ADMIN') {
+    if (user.role !== 'ADMIN') {
       const { canUploadSize } = await import('@/packages/lib/storage/quota')
-      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
       const fileSizeMB = bytesToMB(metadata.totalSize)
-      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
-      if (!canUpload) {
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
+      
+      if (!uploadCheck.allowed) {
         // Attempt to clean up the assembled object in storage
         try {
           await storageProvider.deleteFile(metadata.fileKey)

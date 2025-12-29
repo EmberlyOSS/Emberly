@@ -56,6 +56,9 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - Metadata coverage gaps:
   - All public and admin pages now have explicit metadata exports, ensuring consistent SEO and social preview handling.
   - Removed metadata configuration fragmentation across layouts and pages.
+- Metadata inheritance override issue: `(main)` layout's `generateMetadata()` was incorrectly overriding child page metadata.
+  - Root cause: Next.js layout metadata exports take precedence over child page metadata, causing pages like `/about` to display incorrect metadata.
+  - Solution: Removed dynamic `generateMetadata()` from `(main)` layout, allowing each page to properly define its own metadata without interference.
 
 ## [1.1.0] - 2025-12-27
 

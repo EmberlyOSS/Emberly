@@ -332,6 +332,12 @@ model Product {
   features             String[] @default([])
   active               Boolean  @default(true)
   popular              Boolean  @default(false)
+  
+  // Plan-specific limits (only used when type="plan")
+  storageQuotaGB       Int?     // Total storage allocation in GB (e.g., 10, 25, 75, 200)
+  customDomainsLimit   Int?     // Number of custom domains allowed
+  uploadSizeCapMB      Int?     // Maximum single file upload size in MB
+  
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

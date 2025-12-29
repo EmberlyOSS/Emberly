@@ -1,14 +1,7 @@
-import { Metadata } from 'next'
-
 import ConditionalBaseNav from '@/packages/components/layout/conditional-base-nav'
 import FooterWrapper from '@/packages/components/layout/footer-wrapper'
 
 import { getConfig } from '@/packages/lib/config'
-import { buildSiteMetadata } from '@/packages/lib/embeds/metadata'
-
-export async function generateMetadata(): Promise<Metadata> {
-  return buildSiteMetadata()
-}
 
 export default async function MainLayout({
   children,

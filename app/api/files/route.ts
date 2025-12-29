@@ -72,29 +72,26 @@ export async function POST(req: Request) {
       return apiError(result.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
 
-    const config = await getConfig()
-    const maxSize = config.settings.general.storage.maxUploadSize
-    const maxBytes =
-      maxSize.value * (maxSize.unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
-    const quotasEnabled = config.settings.general.storage.quotas.enabled
-    const defaultQuota = config.settings.general.storage.quotas.default
-
-    if (uploadedFile.size > maxBytes) {
-      return apiError(
-        `Maximum file size is ${maxSize.value}${maxSize.unit}`,
-        HTTP_STATUS.PAYLOAD_TOO_LARGE
-      )
-    }
-
-    if (quotasEnabled && user.role !== 'ADMIN') {
-      const { canUploadSize } = await import('@/packages/lib/storage/quota')
-      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+    // Check file size against plan upload cap and storage quota
+    if (user.role !== 'ADMIN') {
+      const { getPlanLimits, canUploadSize } = await import('@/packages/lib/storage/quota')
+      const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(uploadedFile.size)
-      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
-
-      if (!canUpload) {
+      
+      // Check plan upload size cap
+      const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
+      if (uploadedFile.size > maxUploadBytes) {
         return apiError(
-          'Storage quota exceeded. Purchase additional storage to continue uploading.',
+          `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+          HTTP_STATUS.PAYLOAD_TOO_LARGE
+        )
+      }
+      
+      // Check storage quota
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
+      if (!uploadCheck.allowed) {
+        return apiError(
+          uploadCheck.reason || 'Storage quota exceeded. Purchase additional storage to continue uploading.',
           HTTP_STATUS.PAYLOAD_TOO_LARGE
         )
       }

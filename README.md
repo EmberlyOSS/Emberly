@@ -1,6 +1,6 @@
 # Emberly Cloud
 
-The official cloud-hosted Emberly instance website and admin dashboard. This is the production codebase powering **emberly.app** and the Emberly Team's managed file sharing, URL shortening, and content delivery platform.
+The official cloud hosted Emberly instance website and admin dashboard.
 
 ## About This Repository
 
