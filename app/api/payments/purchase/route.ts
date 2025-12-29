@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { ensureStripeCustomer, applyReferralCreditsToStripe } from '@/packages/lib/stripe/credits'
 
 // POST /api/payments/purchase
 // body: { type: 'extra_storage'|'custom_domain', quantity?: number, priceId: string }
@@ -24,20 +25,12 @@ export async function POST(req: Request) {
         const stripe = new Stripe(stripeSecret, { apiVersion: '2025-11-17.clover' as any })
 
         // ensure stripe customer (defensive: stored ID may be from test mode)
-        let customerId = user.stripeCustomerId
-        if (customerId) {
-            try {
-                await stripe.customers.retrieve(customerId)
-            } catch (e: any) {
-                console.warn('Stored Stripe customer could not be retrieved, creating new customer:', e?.message)
-                const cust = await stripe.customers.create({ email: user.email || undefined, metadata: { userId: user.id } })
-                customerId = cust.id
-                await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } })
-            }
-        } else {
-            const cust = await stripe.customers.create({ email: user.email || undefined, metadata: { userId: user.id } })
-            customerId = cust.id
-            await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } })
+        const customerId = await ensureStripeCustomer(user.id, user.email, stripe)
+
+        // Apply referral credits before creating the checkout session
+        const creditsResult = await applyReferralCreditsToStripe(user.id, stripe, { relatedOrderId: priceId })
+        if (creditsResult.applied) {
+          console.log(`[Purchase] Applied $${creditsResult.creditAmount} in referral credits to user ${user.id}`)
         }
 
         const checkout = await stripe.checkout.sessions.create({

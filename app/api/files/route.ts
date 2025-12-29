@@ -22,6 +22,7 @@ import {
 } from '@/packages/lib/events/handlers/file-expiry'
 import { getUniqueFilename } from '@/packages/lib/files/filename'
 import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
+import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -72,29 +73,26 @@ export async function POST(req: Request) {
       return apiError(result.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
 
-    const config = await getConfig()
-    const maxSize = config.settings.general.storage.maxUploadSize
-    const maxBytes =
-      maxSize.value * (maxSize.unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
-    const quotasEnabled = config.settings.general.storage.quotas.enabled
-    const defaultQuota = config.settings.general.storage.quotas.default
-
-    if (uploadedFile.size > maxBytes) {
-      return apiError(
-        `Maximum file size is ${maxSize.value}${maxSize.unit}`,
-        HTTP_STATUS.PAYLOAD_TOO_LARGE
-      )
-    }
-
-    if (quotasEnabled && user.role !== 'ADMIN') {
-      const { canUploadSize } = await import('@/packages/lib/storage/quota')
-      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+    // Check file size against plan upload cap and storage quota
+    if (user.role !== 'ADMIN') {
+      const { getPlanLimits, canUploadSize } = await import('@/packages/lib/storage/quota')
+      const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(uploadedFile.size)
-      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
-
-      if (!canUpload) {
+      
+      // Check plan upload size cap
+      const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
+      if (uploadedFile.size > maxUploadBytes) {
         return apiError(
-          'Storage quota exceeded. Purchase additional storage to continue uploading.',
+          `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+          HTTP_STATUS.PAYLOAD_TOO_LARGE
+        )
+      }
+      
+      // Check storage quota
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
+      if (!uploadCheck.allowed) {
+        return apiError(
+          uploadCheck.reason || 'Storage quota exceeded. Purchase additional storage to continue uploading.',
           HTTP_STATUS.PAYLOAD_TOO_LARGE
         )
       }
@@ -117,6 +115,45 @@ export async function POST(req: Request) {
 
     const storageProvider = await getStorageProvider()
     const bytes = await uploadedFile.arrayBuffer()
+    
+    // Security check: validate file against zip bombs, malware, dangerous types, and VirusTotal
+    const securityCheck = await validateFileSecurityChecksWithVT(
+      Buffer.from(bytes),
+      uploadedFile.name,
+      uploadedFile.type
+    )
+    if (!securityCheck.valid) {
+      logger.warn('File security validation failed', {
+        fileName: uploadedFile.name,
+        mimeType: uploadedFile.type,
+        error: securityCheck.error,
+        virusTotal: securityCheck.virusTotal,
+        userId: user.id,
+      })
+      return apiError(
+        securityCheck.error || 'File failed security validation',
+        HTTP_STATUS.BAD_REQUEST
+      )
+    }
+
+    if (securityCheck.virusTotal?.scanPerformed) {
+      logger.info('File scanned by VirusTotal', {
+        fileName: uploadedFile.name,
+        detected: securityCheck.virusTotal.detected,
+        detectionRatio: securityCheck.virusTotal.detectionRatio,
+        permalink: securityCheck.virusTotal.permalink,
+        userId: user.id,
+      })
+    }
+
+    if (securityCheck.warnings?.length) {
+      logger.info('File security warnings', {
+        fileName: uploadedFile.name,
+        warnings: securityCheck.warnings,
+        userId: user.id,
+      })
+    }
+    
     // carry through host headers as metadata so storage/proxy can use them
     const meta: Record<string, string> = {}
     try {

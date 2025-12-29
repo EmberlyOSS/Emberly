@@ -1,6 +1,6 @@
 import type { EventPayload, EventType } from '@/packages/types/events'
 
-import { sendTemplateEmail, BasicEmail, AdminBroadcastEmail } from '@/packages/lib/emails'
+import { sendTemplateEmail, BasicEmail, AdminBroadcastEmail, AccountChangeEmail } from '@/packages/lib/emails'
 import { loggers } from '@/packages/lib/logger'
 
 import { events } from '../index'
@@ -39,12 +39,53 @@ async function sendEmail(options: {
         return { messageId: result.id || `email-${Date.now()}` }
     }
 
+    // Map account change events to AccountChangeEmail template
+    if (['password-changed', '2fa-enabled', '2fa-disabled', 'account-change'].includes(template)) {
+        const changes: string[] = []
+        
+        if (template === 'password-changed') {
+            changes.push('Password updated')
+        } else if (template === '2fa-enabled') {
+            changes.push(`Two-factor authentication enabled (${String(variables.method) || 'Authenticator'})`)
+        } else if (template === '2fa-disabled') {
+            changes.push(`Two-factor authentication disabled (${String(variables.method) || 'Authenticator'})`)
+        } else if (Array.isArray(variables.changes)) {
+            changes.push(...variables.changes as string[])
+        }
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || 'http://localhost:3000'
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: AccountChangeEmail,
+            props: {
+                userName: typeof variables.userName === 'string' ? variables.userName : undefined,
+                changes,
+                manageUrl: `${baseUrl}/dashboard/profile`,
+                supportUrl: `${baseUrl}/contact`,
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
     // Default: use BasicEmail for other templates
-    const bodyContent = typeof variables.body === 'string'
-        ? variables.body.split('\n').filter(Boolean)
-        : Array.isArray(variables.body)
-            ? variables.body
-            : [String(variables.body || 'No content')]
+    let bodyContent: string[] = []
+    
+    if (typeof variables.body === 'string') {
+        // Split by newlines and filter empty lines
+        bodyContent = variables.body.split('\n').filter(line => line.trim().length > 0)
+    } else if (Array.isArray(variables.body)) {
+        // Filter empty strings from array
+        bodyContent = variables.body.filter(line => typeof line === 'string' && line.trim().length > 0)
+    } else if (variables.body) {
+        bodyContent = [String(variables.body)]
+    }
+    
+    // Ensure we have at least some content
+    if (bodyContent.length === 0) {
+        bodyContent = ['(No content provided)']
+    }
 
     const result = await sendTemplateEmail({
         to,
@@ -126,10 +167,14 @@ export function registerEmailHandlers(): void {
                 })
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                const errorStack = error instanceof Error ? error.stack : undefined
 
                 logger.error('Failed to send email', error as Error, {
                     to: payload.to,
                     template: payload.template,
+                    variables: payload.variables,
+                    errorMessage,
+                    errorStack,
                 })
 
                 // Emit failure event

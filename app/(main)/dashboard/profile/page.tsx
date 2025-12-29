@@ -43,6 +43,7 @@ export default async function ProfilePage() {
       defaultFileExpirationAction: true,
       urlId: true,
       stripeCustomerId: true,
+      passwordBreachDetectedAt: true,
       subscriptions: {
         select: { id: true, productId: true, status: true, currentPeriodEnd: true },
         take: 1,
@@ -125,6 +126,7 @@ export default async function ProfilePage() {
               shortUrlCount: user._count.shortenedUrls,
               defaultFileExpiration: user.defaultFileExpiration,
               defaultFileExpirationAction: user.defaultFileExpirationAction,
+              passwordBreachDetectedAt: user.passwordBreachDetectedAt?.toISOString() || null,
             }}
             quotasEnabled={quotasEnabled}
             formattedQuota={formattedQuota}

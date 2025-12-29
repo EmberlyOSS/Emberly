@@ -12,6 +12,7 @@ import { requireAdmin, requireSuperAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
+import { events } from '@/packages/lib/events'
 
 const logger = loggers.users
 
@@ -216,6 +217,29 @@ export async function PUT(req: Request) {
             metadata: { adminGranted: true },
           },
         })
+
+        // Emit storage assigned event
+        const user = await prisma.user.findUnique({
+          where: { id: body.id },
+          select: { email: true, storageUsed: true, storageQuotaMB: true },
+        })
+
+        if (user?.email) {
+          // Calculate total storage after grant
+          const { getPurchasedStorageMB } = await import('@/packages/lib/storage/quota')
+          const purchasedMB = await getPurchasedStorageMB(body.id)
+          const baseQuotaMB = user.storageQuotaMB ?? 5120 // 5GB default
+          const totalStorageMB = baseQuotaMB + purchasedMB
+
+          await events.emit('user.storage-assigned', {
+            userId: body.id,
+            email: user.email,
+            storageAmount: body.grantStorageGB,
+            unit: 'GB',
+            totalStorage: Math.round(totalStorageMB / 1024 * 100) / 100, // Convert to GB
+            reason: 'Admin grant',
+          })
+        }
       } catch (err) {
         logger.error('Failed creating one-off extra storage', err as Error)
       }

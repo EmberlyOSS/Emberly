@@ -18,6 +18,10 @@ tmp/TODO.md
 # testing
 /coverage
 
+# dev docs
+/docs
+/docs/**/*
+
 # next.js
 /.next/
 /out/

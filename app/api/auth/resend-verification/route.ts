@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { prisma } from '@/packages/lib/database/prisma'
-import { sendTemplateEmail, VerifyEmailEmail } from '@/packages/lib/emails'
+import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
 
 const resendSchema = z.object({
     email: z.string().email(),
@@ -49,13 +49,15 @@ export async function POST(req: Request) {
             })
         }
 
-        // Generate new verification token
+        // Generate new verification token and short code
         const verificationToken = randomBytes(32).toString('hex')
+        const shortCode = Math.floor(100000 + Math.random() * 900000).toString() // 6-digit code
         const verificationExpires = Date.now() + 60 * 60 * 1000 // 1 hour
 
         // Create verification code data
         const verificationCodeData = JSON.stringify({
             code: verificationToken,
+            shortCode: shortCode,
             context: 'email-verification',
             expiresAt: verificationExpires,
         })
@@ -91,11 +93,11 @@ export async function POST(req: Request) {
             await sendTemplateEmail({
                 to: user.email!,
                 subject: 'Verify your Emberly email address',
-                template: VerifyEmailEmail,
+                template: VerificationCodeEmail,
                 props: {
-                    verifyUrl,
-                    expiresMinutes: 60,
-                    userName: user.name || undefined,
+                    code: shortCode,
+                    verificationUrl: verifyUrl,
+                    expiresInMinutes: 60,
                 },
             })
         } catch (err) {

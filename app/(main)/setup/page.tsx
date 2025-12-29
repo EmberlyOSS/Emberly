@@ -95,7 +95,7 @@ export default function SetupPage() {
       }
 
       const result = await signIn('credentials', {
-        email: setupData.admin.email,
+        emailOrUsername: setupData.admin.email,
         password: setupData.admin.password,
         redirect: false,
       })

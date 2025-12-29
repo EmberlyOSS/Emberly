@@ -37,6 +37,11 @@ const EVENT_TO_PREFERENCE_MAP: Record<string, keyof EmailPreferences> = {
     'account.deletion-cancelled': 'account',
     'account.deleted': 'account',
 
+    // User feature events
+    'user.perk-gained': 'productUpdates',
+    'user.quota-reached': 'account',
+    'user.storage-assigned': 'productUpdates',
+
     // Billing events
     'billing.subscription-created': 'billing',
     'billing.subscription-updated': 'billing',

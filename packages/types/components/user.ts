@@ -35,6 +35,8 @@ export interface User {
   // Email notification preferences
   emailNotificationsEnabled?: boolean
   emailPreferences?: EmailPreferences
+  // Password breach detection
+  passwordBreachDetectedAt?: string | null
 }
 
 export interface ProfileClientProps {

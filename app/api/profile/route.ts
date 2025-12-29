@@ -9,6 +9,7 @@ import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { sessionCache } from '@/packages/lib/cache/session-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
+import { checkPasswordReuse, recordPasswordHistory } from '@/packages/lib/security/password-reuse-checker'
 
 const logger = loggers.users
 
@@ -23,6 +24,7 @@ export async function GET(req: Request) {
         id: true,
         name: true,
         email: true,
+        emailVerified: true,
         image: true,
         randomizeFileUrls: true,
         enableRichEmbeds: true,
@@ -61,6 +63,7 @@ export async function GET(req: Request) {
       return apiError('User not found', HTTP_STATUS.NOT_FOUND)
     }
 
+    logger.info('Profile fetched', { userId: user.id, emailVerified: userData.emailVerified })
     return apiResponse(userData)
   } catch (error) {
     logger.error('Profile fetch error:', error as Error)
@@ -119,12 +122,28 @@ export async function PUT(req: Request) {
       if (!isPasswordValid) {
         return apiError('Invalid credentials', HTTP_STATUS.BAD_REQUEST)
       }
+
+      // Check if new password is being reused
+      const reuseCheck = await checkPasswordReuse(user.id, body.newPassword)
+      if (reuseCheck.isReused) {
+        return apiError('Cannot reuse a recent password. Please use a different password.', HTTP_STATUS.BAD_REQUEST)
+      }
     }
 
     const updateData: Prisma.UserUpdateInput = {}
     if (body.name) updateData.name = body.name
     if (body.email) updateData.email = body.email
-    if (body.newPassword) updateData.password = await hash(body.newPassword, 10)
+    if (body.newPassword) {
+      // Record current password to history before updating
+      const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { password: true },
+      })
+      if (currentUser?.password) {
+        await recordPasswordHistory(user.id, currentUser.password)
+      }
+      updateData.password = await hash(body.newPassword, 10)
+    }
     if (body.image) updateData.image = body.image
     if (typeof body.randomizeFileUrls === 'boolean')
       updateData.randomizeFileUrls = body.randomizeFileUrls

@@ -153,19 +153,15 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
 
 export async function initConfig(): Promise<EmberlyConfig> {
   try {
-    // Find any existing config row. This removes the need for new/legacy keys.
-    const configRow = await prisma.config.findFirst()
-
-    if (!configRow) {
-      // No config found — create a single row with a neutral key.
-      await prisma.config.create({
-        data: {
-          key: 'site_config',
-          value: DEFAULT_CONFIG as InputJsonValue,
-        },
-      })
-      return DEFAULT_CONFIG
-    }
+    // Use upsert to handle race conditions - if a config row already exists, use it
+    const configRow = await prisma.config.upsert({
+      where: { key: 'site_config' },
+      update: {}, // Don't update if it exists
+      create: {
+        key: 'site_config',
+        value: DEFAULT_CONFIG as InputJsonValue,
+      },
+    })
 
     return configSchema.parse(configRow.value)
   } catch (error) {
@@ -276,8 +272,11 @@ export async function updateConfig(
         data: { value: validatedConfig as InputJsonValue },
       })
     } else {
-      await prisma.config.create({
-        data: {
+      // Use upsert to handle race conditions
+      await prisma.config.upsert({
+        where: { key: 'site_config' },
+        update: { value: validatedConfig as InputJsonValue },
+        create: {
           key: 'site_config',
           value: validatedConfig as InputJsonValue,
         },

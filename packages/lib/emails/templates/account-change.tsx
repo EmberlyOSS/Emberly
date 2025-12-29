@@ -1,42 +1,147 @@
-import type { ReactElement } from 'react'
+import React from 'react'
+import {
+  Container,
+  Head,
+  Html,
+  Body,
+  Section,
+  Row,
+  Column,
+  Text,
+  Link,
+  Button,
+  Hr,
+  Preview,
+} from '@react-email/components'
+import { Tailwind } from '@react-email/tailwind'
 
-import { BasicEmail } from './basic'
-
-export type AccountChangeEmailProps = {
-    userName?: string
-    changes: string[]
-    manageUrl?: string
-    supportUrl?: string
+interface AccountChangeEmailProps {
+  userName?: string
+  changes: string[]
+  manageUrl?: string
+  supportUrl?: string
 }
 
 export function AccountChangeEmail({
-    userName = 'there',
-    changes,
-    manageUrl,
-    supportUrl,
-}: AccountChangeEmailProps): ReactElement {
-    const paragraphs = [
-        `${userName}, we noticed the following changes on your account:`,
-        ...changes.map((change) => `• ${change}`),
-        'If you made these changes, no further action is needed.',
-    ]
+  userName,
+  changes,
+  manageUrl = 'https://emberly.dev/dashboard/profile',
+  supportUrl = 'https://emberly.dev/contact',
+}: AccountChangeEmailProps) {
+  return (
+    <Html>
+      <Head>
+        <Preview>Your Emberly account has been modified</Preview>
+      </Head>
+      <Tailwind>
+        <Body className="bg-white font-sans">
+          <Container className="mx-auto max-w-2xl px-4 py-8">
+            {/* Header */}
+            <Section className="mb-8">
+              <Row>
+                <Column align="left">
+                  <Link href="https://emberly.dev" className="inline-block">
+                    <Text className="m-0 text-xl font-bold text-orange-600">
+                      Emberly
+                    </Text>
+                  </Link>
+                </Column>
+              </Row>
+            </Section>
 
-    if (manageUrl) {
-        paragraphs.push('Need to review or undo something? Manage your account settings below.')
-    }
+            {/* Alert Banner */}
+            <Section className="mb-6 border-l-4 border-blue-500 rounded-lg bg-blue-50 p-4">
+              <Text className="m-0 text-sm font-semibold text-blue-800">
+                ℹ️ Account Change Notice
+              </Text>
+            </Section>
 
-    if (supportUrl) {
-        paragraphs.push(`Need help? Visit support: ${supportUrl}`)
-    }
+            {/* Main content */}
+            <Section className="border border-gray-200 rounded-lg bg-white p-8">
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-4 text-2xl font-bold text-gray-900">
+                    Account modification
+                  </Text>
+                </Column>
+              </Row>
 
-    return (
-        <BasicEmail
-            title="Account changes noticed"
-            preheader="We detected updates on your account."
-            headline="Account updates"
-            body={paragraphs}
-            cta={manageUrl ? { label: 'Review account settings', href: manageUrl } : undefined}
-            footerNote="If this wasn’t you, secure your account and contact support. Sent from Emberly · embrly.ca"
-        />
-    )
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-6 text-base leading-relaxed text-gray-700">
+                    {userName ? `Hi ${userName},` : ''} Your Emberly account has been modified. Here are the details:
+                  </Text>
+                </Column>
+              </Row>
+
+              {/* Changes List */}
+              <Section className="mb-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
+                {changes.map((change, idx) => (
+                  <Row key={idx} className="mb-2">
+                    <Column className="w-6">
+                      <Text className="m-0 text-gray-700">•</Text>
+                    </Column>
+                    <Column>
+                      <Text className="m-0 text-sm text-gray-600">
+                        {change}
+                      </Text>
+                    </Column>
+                  </Row>
+                ))}
+              </Section>
+
+              {/* CTA Button */}
+              <Row>
+                <Column align="center">
+                  <Button
+                    href={manageUrl}
+                    className="rounded-lg bg-orange-600 px-8 py-3 text-center text-base font-semibold text-white no-underline"
+                  >
+                    Manage Account
+                  </Button>
+                </Column>
+              </Row>
+
+              {/* Security info */}
+              <Row className="mt-6">
+                <Column className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+                  <Text className="m-0 text-sm text-blue-900">
+                    <strong>Didn't make this change?</strong> If you didn't authorize this modification, please{' '}
+                    <Link
+                      href={supportUrl}
+                      className="text-blue-700 font-semibold no-underline"
+                    >
+                      contact support
+                    </Link>{' '}
+                    immediately.
+                  </Text>
+                </Column>
+              </Row>
+
+              {/* Footer note */}
+              <Row className="mt-4">
+                <Column>
+                  <Text className="m-0 text-xs text-gray-600">
+                    <strong>Why are you receiving this?</strong> We send notifications when important account changes are made to help keep your account secure.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+
+            {/* Bottom Footer */}
+            <Section className="mt-12">
+              <Hr className="border border-gray-200" />
+              <Row className="mt-8">
+                <Column align="center">
+                  <Text className="m-0 text-xs text-gray-500">
+                    © 2025 Emberly. All rights reserved.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  )
 }
