@@ -106,26 +106,6 @@ export const authOptions: NextAuthOptions = {
              return null
            }
 
-           // Check if user has 2FA enabled and code not provided
-           if (validUser.twoFactorEnabled && !credentials.twoFactorCode) {
-             // Throw error to fail auth and prompt for 2FA
-             const error = new Error('TwoFactorRequired')
-             error.name = 'TwoFactorRequired'
-             throw error
-           }
-
-           // Verify 2FA code if provided
-           if (validUser.twoFactorEnabled && credentials.twoFactorCode) {
-             if (!validUser.twoFactorSecret) {
-               return null
-             }
-             const { authenticator } = await import('otplib')
-             const isValidCode = authenticator.check(credentials.twoFactorCode, validUser.twoFactorSecret)
-             if (!isValidCode) {
-               return null
-             }
-           }
-
            // Consume the token atomically and get the updated user with new sessionVersion
            const updatedUser = await prisma.user.update({
              where: { id: user.id },
@@ -146,7 +126,6 @@ export const authOptions: NextAuthOptions = {
             image: updatedUser.image,
             sessionVersion: updatedUser.sessionVersion, // Use updated version from DB
             alphaUser: updatedUser.alphaUser,
-            twoFactorEnabled: updatedUser.twoFactorEnabled,
           }
         }
 
