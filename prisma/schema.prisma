@@ -20,6 +20,7 @@ model User {
   password              String?
   passwordResetToken    String?
   passwordResetExpires  DateTime?
+  passwordBreachDetectedAt DateTime?
   magicLinkToken        String?
   magicLinkExpires      DateTime?
   lastLoginAt           DateTime?
@@ -39,6 +40,18 @@ model User {
   storageQuotaMB        Int?
 
   alphaUser Boolean @default(false)
+
+  // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, AFFILIATE, etc)
+  perkRoles         String[]  @default([])
+  lastPerkCheckAt   DateTime?
+
+  // Referral/Affiliate system
+  referralCode      String?   @unique
+  referrerUserId    String?
+  referrer          User?     @relation("ReferralChildren", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  referrals         User[]    @relation("ReferralChildren")
+  referralCredits   Float     @default(0) // Billing credits earned from referrals (in dollars)
+  referralStats     Json      @default("{\"count\": 0, \"credited\": 0, \"lastCreditedAt\": null}") // Track referral metrics
 
   // Email notification preferences
   emailNotificationsEnabled Boolean @default(true)
@@ -63,9 +76,16 @@ model User {
   editSuggestions             FileEditSuggestion[] @relation("SuggestionAuthor")
   reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
   loginHistory                LoginHistory[]
+  linkedAccounts              LinkedAccount[]
+  twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
+  passwordHistory             PasswordHistory[]
+  creditTransactions          CreditTransaction[]
+  creditTransactionsAsRelated CreditTransaction[] @relation("CreditTransactions")
 
   @@index([role])
   @@index([createdAt])
+  @@index([referralCode])
+  @@index([referrerUserId])
 }
 
 model File {
@@ -332,6 +352,12 @@ model Product {
   features             String[] @default([])
   active               Boolean  @default(true)
   popular              Boolean  @default(false)
+  
+  // Plan-specific limits (only used when type="plan")
+  storageQuotaGB       Int?     // Total storage allocation in GB (e.g., 10, 25, 75, 200)
+  customDomainsLimit   Int?     // Number of custom domains allowed
+  uploadSizeCapMB      Int?     // Maximum single file upload size in MB
+  
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -372,6 +398,26 @@ model OneOffPurchase {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Credit transaction log for tracking referral credits earned and applied to purchases
+model CreditTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // "earned_referral", "applied_checkout", "applied_purchase", "manual_adjustment"
+  amountCents     Int      // Positive for credits earned, negative for credits applied
+  description     String?  // e.g. "Referral from user@example.com", "Applied to checkout", "Applied to storage purchase"
+  relatedUserId   String?  // User ID if this is a referral transaction
+  relatedOrderId  String?  // Stripe session ID, payment intent ID, etc
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedUser User? @relation("CreditTransactions", fields: [relatedUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([relatedUserId])
 }
 
 // Login history for detecting suspicious/new device logins
@@ -511,4 +557,48 @@ enum PostStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+model LinkedAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // "github" or "discord"
+  providerUserId String  // GitHub login or Discord user ID
+  providerUsername String? // GitHub login or Discord username
+  providerData  Json?    // Additional provider-specific data (avatar, etc)
+  accessToken   String?  // OAuth access token (encrypted in practice)
+  refreshToken  String?  // OAuth refresh token (encrypted in practice)
+  linkedAt      DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([provider, providerUserId])
+}
+
+model TwoFactorRecoveryCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // Format: "XXXX-XXXX" (8 chars + dash)
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  batchId   String   // To track which batch of codes this belongs to (for regeneration)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+  @@index([userId, batchId])
+  @@index([userId, used])
+}
+
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String   // Encrypted password hash (same as User.password)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

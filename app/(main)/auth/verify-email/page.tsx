@@ -1,97 +1,50 @@
-'use client'
+import { VerifyEmailForm } from '@/packages/components/auth/verify-email-form'
+import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
+import { Icons } from '@/packages/components/shared/icons'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
-import { Button } from '@/packages/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/packages/components/ui/card'
+export const metadata = buildPageMetadata({
+  title: 'Verify Email',
+  description: 'Verify your email address to complete your Emberly account setup.',
+})
 
-export default function VerifyEmailPage() {
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const token = searchParams.get('token')
+export const dynamic = 'force-dynamic'
 
-    const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
-    const [message, setMessage] = useState('')
+export default async function VerifyEmailPage(props: {
+  searchParams: Promise<{ token?: string }>
+}) {
+  const searchParams = await props.searchParams
+  const token = searchParams.token
 
-    useEffect(() => {
-        if (!token) {
-            setStatus('error')
-            setMessage('No verification token provided')
-            return
-        }
+  return (
+    <main className="relative min-h-[calc(100vh-57px)] overflow-hidden">
+      <DynamicBackground />
 
-        const verifyEmail = async () => {
-            try {
-                const response = await fetch(`/api/auth/verify-email?token=${token}`)
-                const data = await response.json()
+      <div className="relative z-10 flex min-h-[calc(100vh-57px)] flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[400px] space-y-8">
+          {/* Emberly Logo */}
+          <div className="flex flex-col items-center justify-center">
+            <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
+              <div className="relative flex items-center justify-center space-x-3 px-6 py-4">
+                <Icons.logo className="h-8 w-8 text-primary" />
+                <span className="emberly-text text-2xl text-primary">
+                  Emberly
+                </span>
+              </div>
+            </div>
+          </div>
 
-                if (response.ok) {
-                    setStatus('success')
-                    setMessage(data.message || 'Email verified successfully!')
-                    // Redirect to login after 3 seconds
-                    setTimeout(() => {
-                        router.push('/auth/login?verified=true')
-                    }, 3000)
-                } else {
-                    setStatus('error')
-                    setMessage(data.error || 'Verification failed')
-                }
-            } catch {
-                setStatus('error')
-                setMessage('An error occurred during verification')
-            }
-        }
-
-        verifyEmail()
-    }, [token, router])
-
-    return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <CardTitle className="flex items-center justify-center gap-2">
-                        {status === 'loading' && (
-                            <>
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                                Verifying Email
-                            </>
-                        )}
-                        {status === 'success' && (
-                            <>
-                                <CheckCircle className="h-6 w-6 text-green-500" />
-                                Email Verified
-                            </>
-                        )}
-                        {status === 'error' && (
-                            <>
-                                <XCircle className="h-6 w-6 text-red-500" />
-                                Verification Failed
-                            </>
-                        )}
-                    </CardTitle>
-                    <CardDescription>{message}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                    {status === 'success' && (
-                        <p className="text-sm text-muted-foreground text-center">
-                            Redirecting to login page...
-                        </p>
-                    )}
-                    {status === 'error' && (
-                        <div className="flex flex-col gap-2">
-                            <Button asChild>
-                                <Link href="/auth/login">Go to Login</Link>
-                            </Button>
-                            <Button variant="outline" asChild>
-                                <Link href="/auth/register">Create New Account</Link>
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+          {/* Form Card */}
+          <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
+            <div className="relative p-8">
+              <VerifyEmailForm token={token} />
+            </div>
+          </div>
         </div>
-    )
+      </div>
+    </main>
+  )
 }

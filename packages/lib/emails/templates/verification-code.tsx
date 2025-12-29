@@ -1,207 +1,143 @@
-import type { ReactElement } from 'react'
+import React from 'react'
+import {
+  Container,
+  Head,
+  Html,
+  Body,
+  Section,
+  Row,
+  Column,
+  Text,
+  Link,
+  Button,
+  Hr,
+  Preview,
+  Code,
+} from '@react-email/components'
+import { Tailwind } from '@react-email/tailwind'
 
-export type VerificationCodeEmailProps = {
-    code: string
-    expiresMinutes?: number
-    action?: string
-    userName?: string
+interface VerificationCodeEmailProps {
+  code: string
+  verificationUrl?: string
+  expiresInMinutes?: number
 }
 
-// Colors matching BasicEmail
-const COLORS = {
-    ember: '#F97316',
-    bgDark: '#0A0A0B',
-    bgCard: '#141416',
-    bgCodeBox: '#1A1A1D',
-    textPrimary: '#FAFAFA',
-    textSecondary: '#A1A1AA',
-    textMuted: '#71717A',
-    border: '#27272A',
-}
+export function VerificationCodeEmail({
+  code,
+  verificationUrl,
+  expiresInMinutes = 30,
+}: VerificationCodeEmailProps) {
+  return (
+    <Html>
+      <Head>
+        <Preview>Your Emberly verification code: {code}</Preview>
+      </Head>
+      <Tailwind>
+        <Body className="bg-white font-sans">
+          <Container className="mx-auto max-w-2xl px-4 py-8">
+            {/* Header */}
+            <Section className="mb-8">
+              <Row>
+                <Column align="left">
+                  <Link href="https://emberly.dev" className="inline-block">
+                    <Text className="m-0 text-xl font-bold text-orange-600">
+                      Emberly
+                    </Text>
+                  </Link>
+                </Column>
+              </Row>
+            </Section>
 
-export function VerificationCodeEmail({ code, expiresMinutes = 10, action = 'verify your request', userName }: VerificationCodeEmailProps): ReactElement {
-    const greeting = userName ? `Hi ${userName},` : 'Hi there,'
+            {/* Main content */}
+            <Section className="border border-gray-200 rounded-lg bg-white p-8">
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-2 text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                    Verification Code
+                  </Text>
+                  <Text className="m-0 mb-4 text-2xl font-bold text-gray-900">
+                    Verify your email
+                  </Text>
+                </Column>
+              </Row>
 
-    return (
-        <div style={{
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            backgroundColor: COLORS.bgDark,
-            margin: 0,
-            padding: 0,
-            width: '100%',
-        }}>
-            {/* Preheader */}
-            <div style={{
-                display: 'none',
-                fontSize: '1px',
-                color: COLORS.bgDark,
-                lineHeight: '1px',
-                maxHeight: 0,
-                maxWidth: 0,
-                opacity: 0,
-                overflow: 'hidden',
-            }}>
-                Your verification code is {code}
-            </div>
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-6 text-base leading-relaxed text-gray-700">
+                    Your verification code is:
+                  </Text>
+                </Column>
+              </Row>
 
-            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{
-                backgroundColor: COLORS.bgDark,
-            }}>
-                <tbody>
-                    <tr>
-                        <td align="center" style={{ padding: '40px 20px' }}>
-                            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{
-                                maxWidth: '560px',
-                                backgroundColor: COLORS.bgCard,
-                                borderRadius: '16px',
-                                border: `1px solid ${COLORS.border}`,
-                                overflow: 'hidden',
-                            }}>
-                                <tbody>
-                                    {/* Header */}
-                                    <tr>
-                                        <td style={{
-                                            padding: '32px 40px 24px',
-                                            borderBottom: `1px solid ${COLORS.border}`,
-                                        }}>
-                                            <table role="presentation" cellPadding="0" cellSpacing="0">
-                                                <tbody>
-                                                    <tr>
-                                                        <td style={{ paddingBottom: '24px' }}>
-                                                            <table role="presentation" cellPadding="0" cellSpacing="0">
-                                                                <tbody>
-                                                                    <tr>
-                                                                        <td style={{
-                                                                            width: '10px',
-                                                                            height: '10px',
-                                                                            backgroundColor: COLORS.ember,
-                                                                            borderRadius: '3px',
-                                                                        }} />
-                                                                        <td style={{
-                                                                            paddingLeft: '10px',
-                                                                            fontSize: '20px',
-                                                                            fontWeight: 700,
-                                                                            color: COLORS.textPrimary,
-                                                                            letterSpacing: '-0.5px',
-                                                                        }}>
-                                                                            Emberly
-                                                                        </td>
-                                                                    </tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                            <h1 style={{
-                                                margin: 0,
-                                                fontSize: '28px',
-                                                fontWeight: 700,
-                                                color: COLORS.textPrimary,
-                                                lineHeight: '36px',
-                                                letterSpacing: '-0.5px',
-                                            }}>
-                                                Verification Code
-                                            </h1>
-                                        </td>
-                                    </tr>
+              {/* Code display - Copy friendly */}
+              <Row>
+                <Column align="center">
+                  <div className="rounded-lg bg-gray-100 p-4 mb-6 text-center">
+                    <Text className="m-0 text-3xl font-mono font-bold tracking-wider text-gray-900">
+                      {code}
+                    </Text>
+                  </div>
+                </Column>
+              </Row>
 
-                                    {/* Body */}
-                                    <tr>
-                                        <td style={{ padding: '32px 40px' }}>
-                                            <p style={{
-                                                margin: '0 0 24px',
-                                                fontSize: '15px',
-                                                lineHeight: '26px',
-                                                color: COLORS.textSecondary,
-                                            }}>
-                                                {greeting} Use the code below to {action}:
-                                            </p>
+              {/* CTA Button */}
+              {verificationUrl && (
+                <Row className="mb-6">
+                  <Column align="center">
+                    <Button
+                      href={verificationUrl}
+                      className="rounded-lg bg-orange-600 px-8 py-3 text-center text-base font-semibold text-white no-underline"
+                    >
+                      Verify Email Address
+                    </Button>
+                  </Column>
+                </Row>
+              )}
 
-                                            {/* Code Box */}
-                                            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0">
-                                                <tbody>
-                                                    <tr>
-                                                        <td style={{
-                                                            backgroundColor: COLORS.bgCodeBox,
-                                                            borderRadius: '12px',
-                                                            border: `1px solid ${COLORS.border}`,
-                                                            padding: '24px',
-                                                            textAlign: 'center',
-                                                        }}>
-                                                            <span style={{
-                                                                fontSize: '36px',
-                                                                fontWeight: 700,
-                                                                color: COLORS.ember,
-                                                                letterSpacing: '8px',
-                                                                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                                                            }}>
-                                                                {code}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+              {/* Info */}
+              <Row>
+                <Column align="center">
+                  <Text className="m-0 text-sm text-gray-600 mb-2">
+                    Can't click the button? Enter this code:
+                  </Text>
+                </Column>
+              </Row>
 
-                                            <p style={{
-                                                margin: '24px 0 0',
-                                                fontSize: '14px',
-                                                lineHeight: '22px',
-                                                color: COLORS.textMuted,
-                                            }}>
-                                                This code expires in {expiresMinutes} minute{expiresMinutes === 1 ? '' : 's'}. If you didn't request this, you can safely ignore this email.
-                                            </p>
-                                        </td>
-                                    </tr>
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-4 text-sm text-gray-600">
+                    This code expires in <strong>{expiresInMinutes} minutes</strong>.
+                  </Text>
+                  <Text className="m-0 text-sm text-gray-600">
+                    If you didn't request this code, you can safely ignore this email.
+                  </Text>
+                </Column>
+              </Row>
 
-                                    {/* Footer */}
-                                    <tr>
-                                        <td style={{
-                                            padding: '24px 40px',
-                                            borderTop: `1px solid ${COLORS.border}`,
-                                        }}>
-                                            <p style={{
-                                                margin: 0,
-                                                fontSize: '13px',
-                                                lineHeight: '20px',
-                                                color: COLORS.textMuted,
-                                            }}>
-                                                Sent from{' '}
-                                                <a href="https://embrly.ca" style={{
-                                                    color: COLORS.ember,
-                                                    textDecoration: 'none',
-                                                }}>
-                                                    Emberly
-                                                </a>
-                                                {' · '}Secure file hosting
-                                            </p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+              {/* Security note */}
+              <Row className="mt-6">
+                <Column className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+                  <Text className="m-0 text-sm text-blue-900">
+                    🔒 <strong>Security tip:</strong> Never share this code with anyone. Emberly staff will never ask for it.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
 
-                            <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{
-                                maxWidth: '560px',
-                                marginTop: '24px',
-                            }}>
-                                <tbody>
-                                    <tr>
-                                        <td align="center">
-                                            <p style={{
-                                                margin: 0,
-                                                fontSize: '12px',
-                                                color: COLORS.textMuted,
-                                            }}>
-                                                © {new Date().getFullYear()} Emberly. All rights reserved.
-                                            </p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    )
+            {/* Footer */}
+            <Section className="mt-12">
+              <Hr className="border border-gray-200" />
+              <Row className="mt-8">
+                <Column align="center">
+                  <Text className="m-0 text-xs text-gray-500">
+                    © 2025 Emberly. All rights reserved.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  )
 }

@@ -9,12 +9,24 @@ import { z } from 'zod'
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
-import { sendTemplateEmail, VerifyEmailEmail } from '@/packages/lib/emails'
+import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
+import { processReferralSignup } from '@/packages/lib/referrals'
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  name: z.string().min(2),
+  name: z.string()
+    .min(2, 'Username must be at least 2 characters')
+    .max(50, 'Username must be at most 50 characters')
+    .refine(
+      (name) => !name.includes('@'),
+      'Username cannot contain @ symbol (looks like an email)'
+    )
+    .refine(
+      (name) => name.trim().length >= 2,
+      'Username cannot be only whitespace'
+    ),
+  referralCode: z.string().optional(), // Referral code from query/body
 })
 
 function generateUrlId() {
@@ -54,17 +66,27 @@ export async function POST(req: Request) {
     const json = await req.json()
     const body = registerSchema.parse(json)
 
-    const exists = await prisma.user.findUnique({
+    const exists = await prisma.user.findFirst({
       where: {
-        email: body.email,
+        OR: [
+          { email: body.email },
+          { name: body.name },
+        ]
       },
     })
 
     if (exists) {
-      return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 400 }
-      )
+      if (exists.email === body.email) {
+        return NextResponse.json(
+          { error: 'Email already exists' },
+          { status: 400 }
+        )
+      } else {
+        return NextResponse.json(
+          { error: 'Username already taken' },
+          { status: 400 }
+        )
+      }
     }
 
     let urlId = generateUrlId()
@@ -83,13 +105,15 @@ export async function POST(req: Request) {
     const userCount = await prisma.user.count()
     const isFirstUser = userCount === 0
 
-    // Generate email verification token
-    const verificationToken = randomBytes(32).toString('hex')
+    // Generate email verification - both a short code and a URL token
+    const verificationToken = randomBytes(32).toString('hex') // For URL verification
+    const shortCode = Math.floor(100000 + Math.random() * 900000).toString() // 6-digit code
     const verificationExpires = Date.now() + 60 * 60 * 1000 // 1 hour
 
-    // Create verification code data
+    // Create verification code data - store both token and short code
     const verificationCodeData = JSON.stringify({
       code: verificationToken,
+      shortCode: shortCode,
       context: 'email-verification',
       expiresAt: verificationExpires,
     })
@@ -134,17 +158,29 @@ export async function POST(req: Request) {
         await sendTemplateEmail({
           to: body.email,
           subject: 'Verify your Emberly email address',
-          template: VerifyEmailEmail,
+          template: VerificationCodeEmail,
           props: {
-            verifyUrl,
-            expiresMinutes: 60,
-            userName: body.name,
+            code: shortCode,
+            verificationUrl: verifyUrl,
+            expiresInMinutes: 60,
           },
         })
       } catch (err) {
         console.error('Failed to send verification email', err)
         // Don't fail registration if email fails - user can request resend
       }
+    }
+
+    // Process referral if provided
+    if (body.referralCode) {
+      void (async () => {
+        try {
+          const result = await processReferralSignup(user.id, body.referralCode!)
+          console.log(`[Referral] ${result.message}`)
+        } catch (err) {
+          console.error('Failed to process referral', err)
+        }
+      })()
     }
 
     return NextResponse.json({

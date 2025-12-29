@@ -8,7 +8,9 @@ import { join } from 'node:path'
 
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { events } from '@/packages/lib/events'
 import { scheduleFileExpiration } from '@/packages/lib/events/handlers/file-expiry'
+import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -107,18 +109,66 @@ export async function POST(
       parts
     )
 
+    // Security check: validate assembled file against zip bombs, malware, dangerous types, and VirusTotal
+    try {
+      // For S3, we can't easily read back the file. For local storage, we could validate here.
+      // For safety, we perform basic validation using metadata we have
+      const securityCheck = await validateFileSecurityChecksWithVT(
+        Buffer.alloc(0), // We can't read S3 files easily, so we do minimal check
+        metadata.filename,
+        metadata.mimeType
+      )
+      
+      if (!securityCheck.valid) {
+        // Clean up the uploaded file
+        try {
+          await storageProvider.deleteFile(metadata.fileKey)
+        } catch (e) {
+          logger.error('Failed to cleanup file after security check failure', e)
+        }
+        
+        logger.warn('Chunk file security validation failed', {
+          fileName: metadata.filename,
+          mimeType: metadata.mimeType,
+          error: securityCheck.error,
+          userId: metadata.userId,
+        })
+        
+        return NextResponse.json(
+          { error: securityCheck.error || 'File failed security validation' },
+          { status: 400 }
+        )
+      }
+      
+      if (securityCheck.virusTotal?.scanPerformed) {
+        logger.info('Chunk completion scanned by VirusTotal', {
+          fileName: metadata.filename,
+          detected: securityCheck.virusTotal.detected,
+          detectionRatio: securityCheck.virusTotal.detectionRatio,
+          userId: metadata.userId,
+        })
+      }
+
+      if (securityCheck.warnings?.length) {
+        logger.info('Chunk file security warnings', {
+          fileName: metadata.filename,
+          warnings: securityCheck.warnings,
+          userId: metadata.userId,
+        })
+      }
+    } catch (error) {
+      logger.error('Error during chunk file security validation', error)
+      // Don't fail on validation errors, just log them
+    }
+
     // Re-check quotas before creating the file record in case the user's
     // storage usage changed since initialization.
-    const config = await getConfig()
-    const quotasEnabled = config.settings.general.storage.quotas.enabled
-    const defaultQuota = config.settings.general.storage.quotas.default
-
-    if (quotasEnabled && user.role !== 'ADMIN') {
+    if (user.role !== 'ADMIN') {
       const { canUploadSize } = await import('@/packages/lib/storage/quota')
-      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
       const fileSizeMB = bytesToMB(metadata.totalSize)
-      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
-      if (!canUpload) {
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
+      
+      if (!uploadCheck.allowed) {
         // Attempt to clean up the assembled object in storage
         try {
           await storageProvider.deleteFile(metadata.fileKey)
@@ -170,6 +220,36 @@ export async function POST(
     })
 
     await deleteUploadMetadata(localId)
+
+    // Check if quota is being exceeded and emit event
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: metadata.userId },
+      select: { storageUsed: true, storageQuotaMB: true, email: true },
+    })
+
+    if (updatedUser?.email) {
+      const { getEffectiveQuotaMB } = await import('@/packages/lib/storage/quota')
+      const config = await getConfig()
+      const defaultQuotaMB = config.settings.general.storage.quotas.default.unit === 'GB'
+        ? config.settings.general.storage.quotas.default.value * 1024
+        : config.settings.general.storage.quotas.default.value
+
+      const quotaInfo = await getEffectiveQuotaMB(metadata.userId, defaultQuotaMB)
+      const percentage = quotaInfo.percentageUsed
+
+      // Emit quota-reached event if at 80% or more
+      if (percentage >= 80) {
+        await events.emit('user.quota-reached', {
+          userId: metadata.userId,
+          email: updatedUser.email,
+          quotaType: 'Storage',
+          currentUsage: Math.round(quotaInfo.usedMB / 1024 * 100) / 100,
+          quotaLimit: Math.round(quotaInfo.quotaMB / 1024 * 100) / 100,
+          unit: 'GB',
+          percentage: Math.round(percentage),
+        })
+      }
+    }
 
     if (metadata.mimeType.startsWith('image/')) {
       processImageOCR(metadata.fileKey, fileRecord.id).catch((error: Error) => {

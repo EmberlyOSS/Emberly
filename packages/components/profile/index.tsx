@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { ProfileClientProps } from '@/packages/types/components/profile'
 
@@ -20,6 +20,10 @@ import { ProfileStorage } from './storage'
 import { ProfileTools } from './tools'
 import { ProfileTestimonials } from './testimonials'
 import ProfileAppearance from './appearance'
+import { LinkedAccounts } from './accounts/linked-accounts'
+import { PasswordBreachAlert } from './password-breach-alert'
+import { ProfileReferrals } from './referrals'
+import { BillingCreditsSection } from './billing-credits'
 
 // Glass card wrapper component for consistent styling
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -56,6 +60,11 @@ export function ProfileClient({
     window.location.reload()
   }, [])
 
+  // Determine default tab - show security if password breach detected
+  const defaultTab = useMemo(() => {
+    return user.passwordBreachDetectedAt ? 'security' : 'profile'
+  }, [user.passwordBreachDetectedAt])
+
   // Default email preferences if not set
   const defaultEmailPreferences = {
     security: true,
@@ -66,14 +75,17 @@ export function ProfileClient({
   }
 
   return (
-    <Tabs defaultValue="profile" className="space-y-6">
+    <Tabs defaultValue={defaultTab} className="space-y-6">
       <div className="overflow-x-auto">
         <TabsList className="min-w-max inline-flex h-10 items-center justify-start rounded-xl bg-white/5 dark:bg-black/5 backdrop-blur-sm border border-white/10 dark:border-white/5 p-1 text-muted-foreground gap-1">
           <TabsTrigger value="profile" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Profile</TabsTrigger>
+          <TabsTrigger value="billing" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Billing</TabsTrigger>
+          <TabsTrigger value="uploads" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Uploads</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Security</TabsTrigger>
+          <TabsTrigger value="referrals" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Referrals</TabsTrigger>
           <TabsTrigger value="notifications" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Notifications</TabsTrigger>
           <TabsTrigger value="appearance" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Appearance</TabsTrigger>
           <TabsTrigger value="testimonials" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Testimonials</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Security</TabsTrigger>
           <TabsTrigger value="data" className="rounded-lg data-[state=active]:bg-white/10 dark:data-[state=active]:bg-white/5 data-[state=active]:text-foreground transition-all">Data</TabsTrigger>
         </TabsList>
       </div>
@@ -88,7 +100,20 @@ export function ProfileClient({
           </GlassCardContent>
         </GlassCard>
 
-        {/* Billing card */}
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Linked Accounts</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Connect your social accounts to unlock exclusive perks and features
+            </p>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <LinkedAccounts />
+          </GlassCardContent>
+        </GlassCard>
+      </TabsContent>
+
+      <TabsContent value="billing" className="space-y-6">
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Billing</GlassCardTitle>
@@ -132,10 +157,15 @@ export function ProfileClient({
                   View plans
                 </Button>
               </div>
+
+              {/* Billing Credits Section */}
+              <BillingCreditsSection />
             </div>
           </GlassCardContent>
         </GlassCard>
+      </TabsContent>
 
+      <TabsContent value="uploads" className="space-y-6">
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Storage Usage</GlassCardTitle>
@@ -162,6 +192,32 @@ export function ProfileClient({
         </GlassCard>
       </TabsContent>
 
+      <TabsContent value="security" className="space-y-6">
+        <PasswordBreachAlert passwordBreachDetectedAt={user.passwordBreachDetectedAt} />
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Security Settings</GlassCardTitle>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <ProfileSecurity onUpdate={handleRefresh} />
+          </GlassCardContent>
+        </GlassCard>
+      </TabsContent>
+
+      <TabsContent value="referrals" className="space-y-6">
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Referral Program</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Earn $10 billing credits for each friend who signs up using your referral link. They also get $10 credit!
+            </p>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <ProfileReferrals />
+          </GlassCardContent>
+        </GlassCard>
+      </TabsContent>
+
       <TabsContent value="notifications" className="space-y-6">
         <GlassCard>
           <GlassCardHeader>
@@ -178,19 +234,20 @@ export function ProfileClient({
         </GlassCard>
       </TabsContent>
 
-      <TabsContent value="testimonials" className="space-y-6">
-        <ProfileTestimonials />
-      </TabsContent>
-
-      <TabsContent value="security" className="space-y-6">
+      <TabsContent value="appearance" className="space-y-6">
         <GlassCard>
           <GlassCardHeader>
-            <GlassCardTitle>Security Settings</GlassCardTitle>
+            <GlassCardTitle>Appearance</GlassCardTitle>
           </GlassCardHeader>
           <GlassCardContent>
-            <ProfileSecurity onUpdate={handleRefresh} />
+            {/* Lazy-load simple appearance selector (client-only) */}
+            <ProfileAppearance />
           </GlassCardContent>
         </GlassCard>
+      </TabsContent>
+
+      <TabsContent value="testimonials" className="space-y-6">
+        <ProfileTestimonials />
       </TabsContent>
 
       <TabsContent value="data" className="space-y-6">
@@ -204,18 +261,6 @@ export function ProfileClient({
             <Separator className="my-6 bg-white/10" />
 
             <ProfileDataExplorer />
-          </GlassCardContent>
-        </GlassCard>
-      </TabsContent>
-
-      <TabsContent value="appearance" className="space-y-6">
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Appearance</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            {/* Lazy-load simple appearance selector (client-only) */}
-            <ProfileAppearance />
           </GlassCardContent>
         </GlassCard>
       </TabsContent>

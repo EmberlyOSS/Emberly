@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
 import { authOptions } from '@/packages/lib/auth'
-import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
@@ -36,25 +35,16 @@ export async function POST(req: Request) {
     const quotasEnabled = config.settings.general.storage.quotas.enabled
     const defaultQuota = config.settings.general.storage.quotas.default
 
-    if (quotasEnabled && (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { storageUsed: true },
-      })
-
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 400 })
-      }
-
-      const quotaMB =
-        defaultQuota.value * (defaultQuota.unit === 'GB' ? 1024 : 1)
+    if ((session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
+      const { canUploadSize } = await import('@/packages/lib/storage/quota')
       const fileSizeMB = bytesToMB(file.size)
+      const uploadCheck = await canUploadSize(session.user.id, fileSizeMB)
 
-      if (user.storageUsed + fileSizeMB > quotaMB) {
+      if (!uploadCheck.allowed) {
         return NextResponse.json(
           {
             error: 'Storage quota exceeded',
-            message: `You have reached your storage quota of ${defaultQuota.value}${defaultQuota.unit}`,
+            message: uploadCheck.reason || 'You have reached your storage quota. Purchase additional storage to continue.',
           },
           { status: 413 }
         )

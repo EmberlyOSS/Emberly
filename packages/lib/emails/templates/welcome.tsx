@@ -1,78 +1,162 @@
-import type { ReactElement } from 'react'
+import React from 'react'
+import {
+  Container,
+  Head,
+  Html,
+  Body,
+  Section,
+  Row,
+  Column,
+  Text,
+  Link,
+  Button,
+  Hr,
+  Preview,
+} from '@react-email/components'
+import { Tailwind } from '@react-email/tailwind'
 
-import { BasicEmail } from './basic'
-
-export type WelcomeEmailProps = {
-    userName?: string
-    dashboardUrl: string
+interface WelcomeEmailProps {
+  name?: string
+  verificationUrl?: string
 }
 
-export function WelcomeEmail({ userName, dashboardUrl }: WelcomeEmailProps): ReactElement {
-    const name = userName || 'there'
-    return (
-        <BasicEmail
-            title="Welcome to Emberly"
-            preheader="Your account is ready. Let's get started."
-            headline={`Welcome aboard, ${name}!`}
-        >
-            <div style={{ marginBottom: '8px' }}>
-                <p style={{ margin: '0 0 24px' }}>
-                    Thanks for joining us! We're thrilled to have you on board.
-                </p>
-                <p style={{ margin: '0 0 32px' }}>
-                    We've set up your dashboard so you can start uploading files, creating short links, and managing your content right away. Here's what you can do next:
-                </p>
+export function WelcomeEmail({ name = 'there', verificationUrl }: WelcomeEmailProps) {
+  return (
+    <Html>
+      <Head>
+        <Preview>Welcome to Emberly – Get started with secure file sharing</Preview>
+      </Head>
+      <Tailwind>
+        <Body className="bg-white font-sans">
+          <Container className="mx-auto max-w-2xl px-4 py-8">
+            {/* Header */}
+            <Section className="mb-8">
+              <Row>
+                <Column align="left">
+                  <Link href="https://emberly.dev" className="inline-block">
+                    <Text className="m-0 text-xl font-bold text-orange-600">
+                      Emberly
+                    </Text>
+                  </Link>
+                </Column>
+              </Row>
+            </Section>
 
-                {/* Feature List */}
-                <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{ marginBottom: '32px' }}>
-                    <tbody>
-                        <tr>
-                            <td width="24" valign="top" style={{ paddingTop: '4px' }}>🚀</td>
-                            <td style={{ paddingLeft: '16px', paddingBottom: '16px' }}>
-                                <p style={{ margin: 0, fontWeight: 600, color: '#FAFAFA' }}>Upload Files</p>
-                                <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#A1A1AA' }}>Securely host your files with customizable expiration.</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td width="24" valign="top" style={{ paddingTop: '4px' }}>🔗</td>
-                            <td style={{ paddingLeft: '16px', paddingBottom: '16px' }}>
-                                <p style={{ margin: 0, fontWeight: 600, color: '#FAFAFA' }}>Shorten Links</p>
-                                <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#A1A1AA' }}>Create branded short links with analytics.</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td width="24" valign="top" style={{ paddingTop: '4px' }}>🎨</td>
-                            <td style={{ paddingLeft: '16px' }}>
-                                <p style={{ margin: 0, fontWeight: 600, color: '#FAFAFA' }}>Customize Profile</p>
-                                <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#A1A1AA' }}>Make your public profile truly yours.</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            {/* Main content */}
+            <Section className="border border-gray-200 rounded-lg bg-gradient-to-br from-orange-50 to-white p-8">
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-2 text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                    Welcome Aboard
+                  </Text>
+                  <Text className="m-0 mb-4 text-2xl font-bold text-gray-900">
+                    Hi {name}! 👋
+                  </Text>
+                </Column>
+              </Row>
 
-                <table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style={{ marginBottom: '24px' }}>
-                    <tbody>
-                        <tr>
-                            <td align="center">
-                                <a href={dashboardUrl} style={{
-                                    display: 'inline-block',
-                                    padding: '16px 36px',
-                                    backgroundColor: '#F97316',
-                                    color: '#ffffff',
-                                    textDecoration: 'none',
-                                    borderRadius: '12px',
-                                    fontWeight: 600,
-                                    fontSize: '16px',
-                                    letterSpacing: '-0.2px',
-                                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3), 0 0 0 1px rgba(249, 115, 22, 0.2)'
-                                }}>
-                                    Go to Dashboard
-                                </a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </BasicEmail>
-    )
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-4 text-base leading-relaxed text-gray-700">
+                    Thanks for signing up with Emberly. We're excited to have you on board!
+                  </Text>
+                  <Text className="m-0 mb-4 text-base leading-relaxed text-gray-700">
+                    Emberly makes it easy to share files securely with custom domains, rich metadata, and powerful APIs.
+                  </Text>
+                </Column>
+              </Row>
+
+              {/* Features list */}
+              <Row className="mt-6">
+                <Column>
+                  <Text className="m-0 mb-3 font-semibold text-gray-900">
+                    Get started with:
+                  </Text>
+                </Column>
+              </Row>
+
+              {[
+                { icon: '🔒', title: 'Privacy First', desc: 'End-to-end encryption and password protection' },
+                { icon: '⚡', title: 'Lightning Fast', desc: 'CDN-backed delivery and instant short URLs' },
+                { icon: '🌍', title: 'Custom Domains', desc: 'Serve files under your own brand' },
+              ].map((feature, idx) => (
+                <Row key={idx} className="mb-3">
+                  <Column className="w-8">
+                    <Text className="m-0 text-lg">{feature.icon}</Text>
+                  </Column>
+                  <Column className="flex-1">
+                    <Text className="m-0 font-semibold text-gray-900">
+                      {feature.title}
+                    </Text>
+                    <Text className="m-0 text-sm text-gray-600">
+                      {feature.desc}
+                    </Text>
+                  </Column>
+                </Row>
+              ))}
+
+              {/* CTA */}
+              {verificationUrl && (
+                <Row className="mt-8">
+                  <Column align="center">
+                    <Button
+                      href={verificationUrl}
+                      className="rounded-lg bg-orange-600 px-6 py-3 text-center text-base font-semibold text-white no-underline"
+                    >
+                      Verify Your Email
+                    </Button>
+                  </Column>
+                </Row>
+              )}
+
+              <Row className="mt-6">
+                <Column align="center">
+                  <Text className="m-0 text-sm text-gray-600">
+                    Have questions?{' '}
+                    <Link
+                      href="https://emberly.dev/contact"
+                      className="text-orange-600 font-semibold no-underline"
+                    >
+                      Get in touch
+                    </Link>
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+
+            {/* Footer */}
+            <Section className="mt-12">
+              <Hr className="border border-gray-200" />
+              <Row className="mt-8">
+                <Column align="center">
+                  <Text className="m-0 text-xs text-gray-500">
+                    © 2025 Emberly. All rights reserved.
+                  </Text>
+                </Column>
+              </Row>
+              <Row>
+                <Column align="center">
+                  <Text className="m-0 mt-2 text-xs text-gray-400">
+                    <Link
+                      href="https://emberly.dev/privacy"
+                      className="text-gray-400 no-underline mr-3"
+                    >
+                      Privacy
+                    </Link>
+                    {' | '}
+                    <Link
+                      href="https://emberly.dev/terms"
+                      className="text-gray-400 no-underline ml-3"
+                    >
+                      Terms
+                    </Link>
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  )
 }

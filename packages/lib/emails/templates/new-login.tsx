@@ -1,127 +1,178 @@
+import React from 'react'
+import {
+  Container,
+  Head,
+  Html,
+  Body,
+  Section,
+  Row,
+  Column,
+  Text,
+  Link,
+  Button,
+  Hr,
+  Preview,
+} from '@react-email/components'
+import { Tailwind } from '@react-email/tailwind'
 
-import type { ReactElement } from 'react'
-
-import { BasicEmail } from './basic'
-
-export type NewLoginEmailProps = {
-    userName?: string
-    ipAddress?: string
-    location?: string
-    device?: string
-    time?: string
-    manageUrl?: string
-    supportUrl?: string
+interface NewLoginEmailProps {
+  loginLocation?: string
+  loginTime?: string
+  loginDevice?: string
+  reviewUrl?: string
 }
 
 export function NewLoginEmail({
-    userName = 'there',
-    ipAddress,
-    location,
-    device,
-    time,
-    manageUrl,
-    supportUrl,
-}: NewLoginEmailProps): ReactElement {
-    return (
-        <BasicEmail
-            title="New login detected"
-            preheader="We noticed a new sign-in to your Emberly account."
-            headline="New sign-in detected"
-        >
-            <div style={{ marginBottom: '24px' }}>
-                <p style={{ margin: '0 0 24px' }}>
-                    Hi {userName},
-                </p>
-                <p style={{ margin: '0 0 24px' }}>
-                    We noticed a new sign-in to your Emberly account from a device we don't recognize. If this was you, you can safely ignore this email.
-                </p>
+  loginLocation = 'Unknown location',
+  loginTime = new Date().toLocaleString(),
+  loginDevice = 'Unknown device',
+  reviewUrl = 'https://emberly.dev/dashboard/security',
+}: NewLoginEmailProps) {
+  return (
+    <Html>
+      <Head>
+        <Preview>New login to your Emberly account</Preview>
+      </Head>
+      <Tailwind>
+        <Body className="bg-white font-sans">
+          <Container className="mx-auto max-w-2xl px-4 py-8">
+            {/* Header */}
+            <Section className="mb-8">
+              <Row>
+                <Column align="left">
+                  <Link href="https://emberly.dev" className="inline-block">
+                    <Text className="m-0 text-xl font-bold text-orange-600">
+                      Emberly
+                    </Text>
+                  </Link>
+                </Column>
+              </Row>
+            </Section>
 
-                {/* Security Alert Card */}
-                <div style={{
-                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                    border: '1px solid rgba(249, 115, 22, 0.2)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    marginBottom: '24px',
-                }}>
-                    <table role="presentation" width="100%" cellPadding="0" cellSpacing="0">
-                        <tbody>
-                            <tr>
-                                <td width="24" valign="top" style={{ paddingTop: '2px' }}>
-                                    {/* Warning Icon emoji as fallback, or SVG if email client supports */}
-                                    <span style={{ fontSize: '18px' }}>🛡️</span>
-                                </td>
-                                <td style={{ paddingLeft: '12px' }}>
-                                    <p style={{
-                                        margin: '0 0 12px',
-                                        fontSize: '14px',
-                                        fontWeight: 600,
-                                        color: '#F97316', // Ember Orange
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.5px'
-                                    }}>
-                                        Login Details
-                                    </p>
-                                    <table role="presentation" width="100%" cellPadding="0" cellSpacing="0">
-                                        {time && (
-                                            <tr>
-                                                <td style={{ paddingBottom: '8px', color: '#A1A1AA', fontSize: '13px', width: '80px' }}>Time</td>
-                                                <td style={{ paddingBottom: '8px', color: '#FAFAFA', fontSize: '13px', fontWeight: 500 }}>{time}</td>
-                                            </tr>
-                                        )}
-                                        {location && (
-                                            <tr>
-                                                <td style={{ paddingBottom: '8px', color: '#A1A1AA', fontSize: '13px' }}>Location</td>
-                                                <td style={{ paddingBottom: '8px', color: '#FAFAFA', fontSize: '13px', fontWeight: 500 }}>{location}</td>
-                                            </tr>
-                                        )}
-                                        {ipAddress && (
-                                            <tr>
-                                                <td style={{ paddingBottom: '8px', color: '#A1A1AA', fontSize: '13px' }}>IP Address</td>
-                                                <td style={{ paddingBottom: '8px', color: '#FAFAFA', fontSize: '13px', fontWeight: 500, fontFamily: 'monospace' }}>{ipAddress}</td>
-                                            </tr>
-                                        )}
-                                        {device && (
-                                            <tr>
-                                                <td style={{ color: '#A1A1AA', fontSize: '13px' }}>Device</td>
-                                                <td style={{ color: '#FAFAFA', fontSize: '13px', fontWeight: 500 }}>{device}</td>
-                                            </tr>
-                                        )}
-                                    </table>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            {/* Alert Banner */}
+            <Section className="mb-6 border-l-4 border-yellow-500 rounded-lg bg-yellow-50 p-4">
+              <Text className="m-0 text-sm font-semibold text-yellow-800">
+                ⚠️ New Login Activity
+              </Text>
+            </Section>
 
-                <p style={{ margin: '0 0 24px' }}>
-                    If this wasn't you, your password may be compromised. You should change your password immediately or contact support.
-                </p>
+            {/* Main content */}
+            <Section className="border border-gray-200 rounded-lg bg-white p-8">
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-4 text-2xl font-bold text-gray-900">
+                    New login detected
+                  </Text>
+                </Column>
+              </Row>
 
-                {manageUrl && (
-                    <table role="presentation" cellPadding="0" cellSpacing="0" style={{ width: '100%' }}>
-                        <tbody>
-                            <tr>
-                                <td align="center">
-                                    <a href={manageUrl} style={{
-                                        display: 'inline-block',
-                                        padding: '14px 32px',
-                                        backgroundColor: '#F97316',
-                                        color: '#ffffff',
-                                        textDecoration: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: 600,
-                                        fontSize: '14px',
-                                        boxShadow: '0 4px 12px rgba(249, 115, 22, 0.25)'
-                                    }}>
-                                        Secure My Account
-                                    </a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                )}
-            </div>
-        </BasicEmail>
-    )
+              <Row>
+                <Column>
+                  <Text className="m-0 mb-6 text-base leading-relaxed text-gray-700">
+                    We detected a new login to your Emberly account. If this was you, no action is needed. If this wasn't you, please review the details below and secure your account.
+                  </Text>
+                </Column>
+              </Row>
+
+              {/* Login Details */}
+              <Section className="mb-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
+                <Row className="mb-4">
+                  <Column className="w-32">
+                    <Text className="m-0 text-sm font-semibold text-gray-700">
+                      📍 Location:
+                    </Text>
+                  </Column>
+                  <Column>
+                    <Text className="m-0 text-sm text-gray-600">
+                      {loginLocation}
+                    </Text>
+                  </Column>
+                </Row>
+
+                <Row className="mb-4">
+                  <Column className="w-32">
+                    <Text className="m-0 text-sm font-semibold text-gray-700">
+                      ⏰ Time:
+                    </Text>
+                  </Column>
+                  <Column>
+                    <Text className="m-0 text-sm text-gray-600">
+                      {loginTime}
+                    </Text>
+                  </Column>
+                </Row>
+
+                <Row>
+                  <Column className="w-32">
+                    <Text className="m-0 text-sm font-semibold text-gray-700">
+                      💻 Device:
+                    </Text>
+                  </Column>
+                  <Column>
+                    <Text className="m-0 text-sm text-gray-600">
+                      {loginDevice}
+                    </Text>
+                  </Column>
+                </Row>
+              </Section>
+
+              {/* CTA Button */}
+              <Row>
+                <Column align="center">
+                  <Button
+                    href={reviewUrl}
+                    className="rounded-lg bg-orange-600 px-8 py-3 text-center text-base font-semibold text-white no-underline"
+                  >
+                    Review Activity
+                  </Button>
+                </Column>
+              </Row>
+
+              {/* Security actions */}
+              <Row className="mt-6">
+                <Column className="rounded-lg bg-red-50 p-4 border border-red-200">
+                  <Text className="m-0 text-sm font-semibold text-red-900 mb-2">
+                    🔒 Suspicious activity?
+                  </Text>
+                  <Text className="m-0 text-sm text-red-900">
+                    If you don't recognize this login, we recommend:
+                  </Text>
+                  <Text className="m-0 text-sm text-red-900 mt-2">
+                    1. Change your password immediately
+                  </Text>
+                  <Text className="m-0 text-sm text-red-900">
+                    2. Enable two-factor authentication
+                  </Text>
+                  <Text className="m-0 text-sm text-red-900">
+                    3. Review your account activity
+                  </Text>
+                </Column>
+              </Row>
+
+              {/* Footer note */}
+              <Row className="mt-6">
+                <Column>
+                  <Text className="m-0 text-xs text-gray-600">
+                    <strong>Why are you receiving this?</strong> We send notifications for new logins to help keep your account secure.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+
+            {/* Bottom Footer */}
+            <Section className="mt-12">
+              <Hr className="border border-gray-200" />
+              <Row className="mt-8">
+                <Column align="center">
+                  <Text className="m-0 text-xs text-gray-500">
+                    © 2025 Emberly. All rights reserved.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  )
 }

@@ -45,12 +45,14 @@ export type TemplateComponent<P> = (props: P) => ReactElement
 export { BasicEmail } from './templates/basic'
 export { WelcomeEmail } from './templates/welcome'
 export { VerificationCodeEmail } from './templates/verification-code'
-export { VerifyEmailEmail } from './templates/verify-email'
 export { MagicLinkEmail } from './templates/magic-link'
 export { PasswordResetEmail } from './templates/password-reset'
 export { AccountChangeEmail } from './templates/account-change'
 export { NewLoginEmail } from './templates/new-login'
 export { AdminBroadcastEmail } from './templates/admin-broadcast'
+export { PerkGainedEmail } from './templates/perk-gained'
+export { QuotaReachedEmail } from './templates/quota-reached'
+export { StorageAssignedEmail } from './templates/storage-assigned'
 
 export async function sendEmail({
     to,

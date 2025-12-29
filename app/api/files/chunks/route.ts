@@ -12,6 +12,7 @@ import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { getUniqueFilename } from '@/packages/lib/files/filename'
 import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
+import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -136,33 +137,32 @@ export async function POST(req: Request) {
       )
     }
 
-    const config = await getConfig()
-    const maxSize = config.settings.general.storage.maxUploadSize
-    const maxBytes =
-      maxSize.value * (maxSize.unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
-    const quotasEnabled = config.settings.general.storage.quotas.enabled
-    const defaultQuota = config.settings.general.storage.quotas.default
-
-    if (size > maxBytes) {
-      return NextResponse.json(
-        {
-          error: `Maximum file size is ${maxSize.value}${maxSize.unit}`,
-        },
-        { status: 413 }
-      )
-    }
-
-    if (quotasEnabled && user.role !== 'ADMIN') {
-      const { canUploadSize } = await import('@/packages/lib/storage/quota')
-      const defaultQuotaMB = defaultQuota.unit === 'GB' ? defaultQuota.value * 1024 : defaultQuota.value
+    // Check file size against plan upload cap and storage quota
+    if (user.role !== 'ADMIN') {
+      const { getPlanLimits, canUploadSize } = await import('@/packages/lib/storage/quota')
+      const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(size)
-      const canUpload = await canUploadSize(user.id, fileSizeMB, defaultQuotaMB)
-
-      if (!canUpload) {
+      
+      // Check plan upload size cap
+      const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
+      if (size > maxUploadBytes) {
+        return NextResponse.json(
+          {
+            error: `File exceeds ${planLimits.planName} plan limit`,
+            message: `Maximum file size for ${planLimits.planName} is ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+            action: 'upgrade',
+          },
+          { status: 413 }
+        )
+      }
+      
+      // Check storage quota
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
+      if (!uploadCheck.allowed) {
         return NextResponse.json(
           {
             error: 'Storage quota exceeded',
-            message: `You have reached your storage quota. Purchase additional storage to continue uploading.`,
+            message: uploadCheck.reason || 'You have reached your storage quota. Purchase additional storage to continue uploading.',
             action: 'upgrade',
           },
           { status: 413 }
@@ -177,6 +177,42 @@ export async function POST(req: Request) {
         { error: uploadValidation.error, code: uploadValidation.errorCode },
         { status: 403 }
       )
+    }
+
+    // Security check: validate filename and MIME type against dangerous files and VirusTotal
+    const securityCheck = await validateFileSecurityChecksWithVT(
+      Buffer.alloc(0), // Empty buffer for initial check - full validation on completion
+      filename,
+      mimeType
+    )
+    if (!securityCheck.valid) {
+      logger.warn('Chunk upload file security validation failed', {
+        fileName: filename,
+        mimeType,
+        error: securityCheck.error,
+        userId: user.id,
+      })
+      return NextResponse.json(
+        { error: securityCheck.error || 'File failed security validation' },
+        { status: 400 }
+      )
+    }
+
+    if (securityCheck.virusTotal?.scanPerformed) {
+      logger.info('Chunk upload scanned by VirusTotal', {
+        fileName: filename,
+        detected: securityCheck.virusTotal.detected,
+        detectionRatio: securityCheck.virusTotal.detectionRatio,
+        userId: user.id,
+      })
+    }
+
+    if (securityCheck.warnings?.length) {
+      logger.info('Chunk upload file security warnings', {
+        fileName: filename,
+        warnings: securityCheck.warnings,
+        userId: user.id,
+      })
     }
 
     const { urlSafeName, displayName } = await getUniqueFilename(

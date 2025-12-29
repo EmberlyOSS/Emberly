@@ -10,13 +10,13 @@ import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
 
 interface TwoFactorFormProps {
-  email: string
+  emailOrUsername: string
   password: string
   onCancel: () => void
 }
 
 export function TwoFactorForm({
-  email,
+  emailOrUsername,
   password,
   onCancel,
 }: TwoFactorFormProps) {
@@ -38,7 +38,7 @@ export function TwoFactorForm({
 
     try {
       const result = await signIn('credentials', {
-        email,
+        emailOrUsername,
         password,
         twoFactorCode: code,
         redirect: false,

@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { authOptions } from '@/packages/lib/auth'
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { prisma } from '@/packages/lib/database/prisma'
-import { sendTemplateEmail, VerifyEmailEmail } from '@/packages/lib/emails'
+import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
 
 const migrationSchema = z.object({
     email: z.string().email(),
@@ -137,12 +137,11 @@ export async function POST(req: Request) {
                 await sendTemplateEmail({
                     to: body.email,
                     subject: 'Verify your Emberly email address',
-                    template: VerifyEmailEmail,
+                    template: VerificationCodeEmail,
                     props: {
-                        verifyUrl: `${baseUrl}/auth/alpha-migration`,
-                        verificationCode,
-                        expiresMinutes: 60,
-                        userName: user.name || undefined,
+                        code: verificationCode,
+                        verificationUrl: `${baseUrl}/auth/alpha-migration`,
+                        expiresInMinutes: 60,
                     },
                 })
             } catch (err) {
