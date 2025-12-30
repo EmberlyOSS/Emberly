@@ -75,7 +75,7 @@ export async function GET(
     for (const repo of emberlyRepos.slice(0, 5)) { // Check top 5 repos
       try {
         const commitsResponse = await fetch(
-          `https://api.github.com/repos/EmberlyOSS/${repo.name}/commits?author=${githubAccount.providerUsername}&per_page=10`,
+          `https://api.github.com/repos/EmberlyOSS/${repo.name}/commits?author=${githubAccount.providerUsername}&per_page=5`,
           {
             headers: {
               Authorization: `token ${githubPAT}`,
@@ -89,33 +89,41 @@ export async function GET(
           
           for (const commit of commits) {
             // Fetch detailed commit info to get stats
-            const commitDetailResponse = await fetch(
-              `https://api.github.com/repos/EmberlyOSS/${repo.name}/commits/${commit.sha}`,
-              {
-                headers: {
-                  Authorization: `token ${githubPAT}`,
-                  Accept: 'application/vnd.github.v3+json',
-                },
+            try {
+              const commitDetailResponse = await fetch(
+                `https://api.github.com/repos/EmberlyOSS/${repo.name}/commits/${commit.sha}`,
+                {
+                  headers: {
+                    Authorization: `token ${githubPAT}`,
+                    Accept: 'application/vnd.github.v3+json',
+                  },
+                }
+              )
+
+              if (commitDetailResponse.ok) {
+                const commitDetail = await commitDetailResponse.json()
+                
+                const additions = commitDetail.stats?.additions || 0
+                const deletions = commitDetail.stats?.deletions || 0
+                const filesChanged = commitDetail.files?.length || 0
+
+                recentCommits.push({
+                  sha: commit.sha.substring(0, 7),
+                  message: commit.commit.message.split('\n')[0], // First line only
+                  date: commit.commit.author.date,
+                  url: commit.html_url,
+                  repo: repo.name,
+                  additions,
+                  deletions,
+                  filesChanged,
+                })
+
+                totalFilesChanged += filesChanged
+                totalAdditions += additions
+                totalDeletions += deletions
               }
-            )
-
-            if (commitDetailResponse.ok) {
-              const commitDetail = await commitDetailResponse.json()
-              
-              recentCommits.push({
-                sha: commit.sha.substring(0, 7),
-                message: commit.commit.message.split('\n')[0], // First line only
-                date: commit.commit.author.date,
-                url: commit.html_url,
-                repo: repo.name,
-                additions: commitDetail.stats?.additions || 0,
-                deletions: commitDetail.stats?.deletions || 0,
-                filesChanged: commitDetail.files?.length || 0,
-              })
-
-              totalFilesChanged += commitDetail.files?.length || 0
-              totalAdditions += commitDetail.stats?.additions || 0
-              totalDeletions += commitDetail.stats?.deletions || 0
+            } catch (commitError) {
+              console.error(`Error fetching commit ${commit.sha}:`, commitError)
             }
           }
         }

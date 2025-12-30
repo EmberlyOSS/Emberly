@@ -49,6 +49,7 @@ export const PUBLIC_PATHS = [
   '/api/urls',
   '/api/storage/type',
   '/api/partners',
+  '/api/users',
   '/auth/login',
   '/auth/alpha-migration',
   '/auth/register',
