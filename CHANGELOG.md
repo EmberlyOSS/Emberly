@@ -41,6 +41,14 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Stats calculation (additions, deletions, files changed) now properly accumulates even with partial failures.
 
 ### Fixed
+- **Authentication System Domain Configuration** - Resolved production OAuth redirects incorrectly using `https://localhost:3000`.
+  - Fixed all OAuth callback routes (GitHub and Discord) to use `NEXT_PUBLIC_BASE_URL` environment variable.
+  - Updated proxy middleware redirects (alpha migration, email verification, password breach, login, admin authorization) to respect configured base URL.
+  - Fixed auth library email notification URLs (new login alerts) to use correct production domain.
+  - Replaced 18 instances of `new URL('/path', request.url)` pattern which preserved incoming request's protocol/host.
+  - All auth redirects now use: `const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'`.
+  - Ensures OAuth success/error redirects, middleware security checks, and email links all use correct production domain.
+  - Root cause: Using `request.url` as base URL caused redirects to inherit the request's domain, including localhost in development.
 - **Static Asset Loading Issues** - Resolved CSS and JavaScript not loading for some users.
   - Updated middleware matcher to explicitly exclude all static asset types from authentication checks.
   - Added exclusions for: CSS files (`.css`), JavaScript (`.js`), font files (`.woff`, `.woff2`, `.ttf`, `.otf`).

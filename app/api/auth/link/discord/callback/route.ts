@@ -14,9 +14,10 @@ import { sendTemplateEmail, AccountChangeEmail } from '@/packages/lib/emails'
  */
 export async function GET(request: NextRequest) {
     try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
         const session = await getServerSession(authOptions)
         if (!session?.user?.id) {
-            return NextResponse.redirect(new URL('/auth/signin', request.url))
+            return NextResponse.redirect(new URL('/auth/signin', baseUrl))
         }
 
         const { searchParams } = new URL(request.url)
@@ -27,13 +28,13 @@ export async function GET(request: NextRequest) {
         if (error) {
             console.warn('[Discord OAuth callback] Error from Discord:', error)
             return NextResponse.redirect(
-                new URL(`/dashboard/profile?error=Discord authorization failed: ${error}`, request.url)
+                new URL(`/dashboard/profile?error=Discord authorization failed: ${error}`, baseUrl)
             )
         }
 
         if (!code) {
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Missing authorization code', request.url)
+                new URL('/dashboard/profile?error=Missing authorization code', baseUrl)
             )
         }
 
@@ -160,11 +161,11 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        return NextResponse.redirect(new URL('/dashboard/profile?success=Discord%20account%20linked', request.url))
+        return NextResponse.redirect(new URL('/dashboard/profile?success=Discord%20account%20linked', baseUrl))
     } catch (error) {
         console.error('[Discord OAuth callback]', error)
         return NextResponse.redirect(
-            new URL('/dashboard/profile?error=Failed to link Discord account', request.url)
+            new URL('/dashboard/profile?error=Failed to link Discord account', baseUrl)
         )
     }
 }

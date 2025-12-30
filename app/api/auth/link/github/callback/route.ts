@@ -14,9 +14,10 @@ import { sendTemplateEmail, AccountChangeEmail } from '@/packages/lib/emails'
  */
 export async function GET(request: NextRequest) {
     try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
         const session = await getServerSession(authOptions)
         if (!session?.user?.id) {
-            return NextResponse.redirect(new URL('/auth/signin', request.url))
+            return NextResponse.redirect(new URL('/auth/signin', baseUrl))
         }
 
         const { searchParams } = new URL(request.url)
@@ -27,13 +28,13 @@ export async function GET(request: NextRequest) {
         if (error) {
             console.warn('[GitHub OAuth callback] Error from GitHub:', error)
             return NextResponse.redirect(
-                new URL(`/dashboard/profile?error=GitHub authorization failed: ${error}`, request.url)
+                new URL(`/dashboard/profile?error=GitHub authorization failed: ${error}`, baseUrl)
             )
         }
 
         if (!code) {
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Missing authorization code', request.url)
+                new URL('/dashboard/profile?error=Missing authorization code', baseUrl)
             )
         }
 
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(
                 new URL(
                     `/dashboard/profile?error=Failed to exchange GitHub code: ${tokenData.error}`,
-                    request.url
+                    baseUrl
                 )
             )
         }
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
 
         if (!userInfo) {
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Failed to retrieve GitHub user info', request.url)
+                new URL('/dashboard/profile?error=Failed to retrieve GitHub user info', baseUrl)
             )
         }
 
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(
                 new URL(
                     `/dashboard/profile?error=This GitHub account is already linked to another user`,
-                    request.url
+                    baseUrl
                 )
             )
         }
@@ -152,11 +153,11 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        return NextResponse.redirect(new URL('/dashboard/profile?success=GitHub%20account%20linked', request.url))
+        return NextResponse.redirect(new URL('/dashboard/profile?success=GitHub%20account%20linked', baseUrl))
     } catch (error) {
         console.error('[GitHub OAuth callback]', error)
         return NextResponse.redirect(
-            new URL('/dashboard/profile?error=Failed to link GitHub account', request.url)
+            new URL('/dashboard/profile?error=Failed to link GitHub account', baseUrl)
         )
     }
 }

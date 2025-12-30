@@ -59,6 +59,7 @@ function getGeoInfo(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
 
   // Capture login context for auth tracking
   if (pathname === '/api/auth/callback/credentials' && request.method === 'POST') {
@@ -119,7 +120,7 @@ export async function proxy(request: NextRequest) {
     // - NextAuth routes (for logout, session refresh)
     // - Other API routes (they should handle auth themselves)
     if (needsMigration && !isAlphaMigrationPage && !isAlphaMigrationApi && !isNextAuthRoute && !isApiRoute) {
-      return NextResponse.redirect(new URL('/auth/alpha-migration', request.url))
+      return NextResponse.redirect(new URL('/auth/alpha-migration', baseUrl))
     }
   }
 
@@ -137,7 +138,7 @@ export async function proxy(request: NextRequest) {
 
     if (!isEmailVerified && !isVerifyEmailPage && !isVerifyEmailApi && !isAuthPage && !isNextAuthRoute && !isApiRoute) {
       console.log(`[Proxy] Unverified user ${token.email} blocked from ${pathname}`)
-      return NextResponse.redirect(new URL('/auth/verify-email', request.url))
+      return NextResponse.redirect(new URL('/auth/verify-email', baseUrl))
     }
   }
 
@@ -155,12 +156,12 @@ export async function proxy(request: NextRequest) {
     // If on dashboard root, redirect to profile security
     if (isDashboardRoot) {
       console.log(`[Proxy] User ${token.email} with password breach detected, redirecting from dashboard to profile security`)
-      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', request.url))
+      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', baseUrl))
     }
     // If on profile but not security tab, redirect to security tab
     if (isProfilePath && !request.nextUrl.searchParams.get('tab')) {
       console.log(`[Proxy] User ${token.email} with password breach detected, redirecting to security tab`)
-      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', request.url))
+      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', baseUrl))
     }
   }
 
@@ -189,7 +190,7 @@ export async function proxy(request: NextRequest) {
   const ensureAuthenticated = async () => {
     const t = await getAuthToken()
     if (!t) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+      return NextResponse.redirect(new URL('/auth/login', baseUrl))
     }
     return { token: t }
   }
@@ -200,7 +201,7 @@ export async function proxy(request: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const role = auth.token?.role
     if (role !== 'SUPERADMIN') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/dashboard', baseUrl))
     }
   }
 
@@ -211,7 +212,7 @@ export async function proxy(request: NextRequest) {
     const role = auth.token?.role
 
     if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/dashboard', baseUrl))
     }
   }
 

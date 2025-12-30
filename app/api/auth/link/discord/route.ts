@@ -9,9 +9,10 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function GET(request: NextRequest) {
     try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
         const session = await getServerSession(authOptions)
         if (!session?.user?.id) {
-            return NextResponse.redirect(new URL('/auth/login', request.url))
+            return NextResponse.redirect(new URL('/auth/login', baseUrl))
         }
 
         // Generate random state for CSRF protection
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
         return response
     } catch (error) {
         console.error('[GET /api/auth/link/discord]', error)
-        return NextResponse.redirect(new URL('/dashboard/profile?error=discord_link_failed', request.url))
+        return NextResponse.redirect(new URL('/dashboard/profile?error=discord_link_failed', baseUrl))
     }
 }
 

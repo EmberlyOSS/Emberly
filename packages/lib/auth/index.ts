@@ -317,10 +317,7 @@ export const authOptions: NextAuthOptions = {
         const city = storedContext.geo?.city
 
         const time = new Date().toISOString()
-        const manageUrl = `${process.env.APP_BASE_URL ||
-          process.env.NEXTAUTH_URL ||
-          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-          }/profile?tab=security`
+        const manageUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'}/profile?tab=security`
 
         const loginContext = {
           ip,
