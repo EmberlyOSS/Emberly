@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2025-12-29
+
+### Changed
+- **Environment Variable Consolidation** - Unified domain configuration to use existing `NEXT_PUBLIC_BASE_URL`.
+  - Updated OAuth routes (GitHub and Discord) to use `NEXT_PUBLIC_BASE_URL` instead of deprecated `NEXT_PUBLIC_APP_URL`.
+  - Changed fallback domain from `https://emberly.site` to `https://emberly.ca` across all authentication flows.
+  - Updated root layout metadata base URL to ensure proper Open Graph and Twitter card generation.
+  - Ensures consistent redirect URI configuration between OAuth initiation and callback handling.
+- **Security Section Responsive Design** - Enhanced mobile experience for login history and session management.
+  - Login history header now stacks vertically on mobile (`flex-col sm:flex-row`) with proper gap spacing.
+  - Action buttons (Refresh, Sign Out Everywhere) now stretch to full width on mobile (`flex-1 sm:flex-none`).
+  - Current session card padding reduced on mobile (`p-3 sm:p-4`) with responsive text sizing (`text-xs sm:text-sm`).
+  - Login entry cards feature smaller gaps on mobile (`gap-2 sm:gap-3`) and responsive padding (`p-1.5 sm:p-2`).
+  - Device icons and metadata icons use `flex-shrink-0` to prevent squishing on narrow screens.
+  - Added `break-all` for IP addresses and `break-words` for location text to prevent overflow.
+- **Recovery Codes UI Overhaul** - Converted to modal-based display with improved accessibility.
+  - Removed Card wrapper in favor of cleaner inline section layout matching other security components.
+  - Recovery codes now display in a Dialog modal instead of inline expansion for better focus and security.
+  - Modal features scrollable code list with `max-h-[50vh]` preventing viewport overflow on long lists.
+  - Statistics grid improved with responsive layout: 2 columns on mobile, 4 columns on desktop (`grid-cols-2 sm:grid-cols-4`).
+  - Text sizes scale appropriately: `text-xs sm:text-sm` for labels, `text-xl sm:text-2xl` for stats.
+  - Action buttons (View Codes, Regenerate Codes) stack vertically on mobile with full width.
+  - Modal action buttons (Download as File, Copy All Codes) use default size instead of small for better tap targets.
+  - Code display cards feature `break-all` on code text to handle long strings gracefully.
+  - Warning banners and important notices use responsive text sizing for readability.
+
 ## [1.3.0] - 2025-12-29
 
 ### Added

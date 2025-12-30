@@ -89,12 +89,12 @@ export function ProfilePerks() {
             {activePerks.map((perk, idx) => (
               <div
                 key={idx}
-                className="relative p-6 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm overflow-hidden group hover:border-primary/50 transition-colors"
+                className="relative p-4 sm:p-6 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm overflow-hidden group hover:border-primary/50 transition-colors"
               >
                 {/* Glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
-                <div className="relative flex items-start gap-4">
+                <div className="relative flex flex-col sm:flex-row items-start gap-4">
                   {/* Icon */}
                   <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl">
                     {perk.icon}
@@ -102,9 +102,9 @@ export function ProfilePerks() {
 
                   <div className="flex-1 space-y-3">
                     {/* Header */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h4 className="font-semibold text-base">{perk.name}</h4>
                           {perk.level && (
                             <Badge variant="outline" className="text-xs font-medium border-primary/30 bg-primary/5">

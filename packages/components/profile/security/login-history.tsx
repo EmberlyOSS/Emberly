@@ -165,25 +165,26 @@ export function LoginHistory() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <h3 className="text-lg font-semibold">Login History & Sessions</h3>
                     <p className="text-sm text-muted-foreground">
                         View your recent login activity and manage active sessions
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={fetchSessions}
                         disabled={isLoading}
+                        className="flex-1 sm:flex-none"
                     >
                         <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     </Button>
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" disabled={isRevoking}>
+                            <Button variant="destructive" size="sm" disabled={isRevoking} className="flex-1 sm:flex-none">
                                 <LogOut className="h-4 w-4 mr-2" />
                                 Sign Out Everywhere
                             </Button>
@@ -211,25 +212,25 @@ export function LoginHistory() {
 
             {/* Current Session Info */}
             {sessionInfo && sessionInfo.lastLoginAt && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                    <div className="flex items-center gap-2 mb-2">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <Shield className="h-4 w-4 text-primary" />
                         <span className="font-medium text-sm">Current Session</span>
                         <Badge variant="outline" className="ml-auto text-xs">
                             Active
                         </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
                         <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            <span>
+                            <Clock className="h-3 w-3 flex-shrink-0" />
+                            <span className="break-words">
                                 Last login: {formatDistanceToNow(new Date(sessionInfo.lastLoginAt), { addSuffix: true })}
                             </span>
                         </div>
                         {sessionInfo.lastLoginIp && (
                             <div className="flex items-center gap-2">
-                                <Globe className="h-3 w-3" />
-                                <span>IP: {sessionInfo.lastLoginIp}</span>
+                                <Globe className="h-3 w-3 flex-shrink-0" />
+                                <span className="break-all">IP: {sessionInfo.lastLoginIp}</span>
                             </div>
                         )}
                     </div>
@@ -265,13 +266,13 @@ export function LoginHistory() {
                                             : 'border-border/50 bg-background/50 hover:bg-muted/30'
                                             }`}
                                     >
-                                        <div className="flex items-start gap-3">
-                                            <div className={`p-2 rounded-lg ${isRecent ? 'bg-primary/10' : 'bg-muted/50'}`}>
+                                        <div className="flex items-start gap-2 sm:gap-3">
+                                            <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${isRecent ? 'bg-primary/10' : 'bg-muted/50'}`}>
                                                 <DeviceIcon userAgent={entry.userAgent} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-medium text-sm">
+                                                    <span className="font-medium text-sm break-words">
                                                         {displayText}
                                                     </span>
                                                     {isRecent && (
@@ -280,24 +281,24 @@ export function LoginHistory() {
                                                         </Badge>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
+                                                <div className="flex items-center gap-3 sm:gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
                                                     {entry.ip && hasDeviceInfo && (
                                                         <div className="flex items-center gap-1">
-                                                            <Globe className="h-3 w-3" />
-                                                            <span>{entry.ip}</span>
+                                                            <Globe className="h-3 w-3 flex-shrink-0" />
+                                                            <span className="break-all">{entry.ip}</span>
                                                         </div>
                                                     )}
                                                     {(entry.city || entry.country) && (
                                                         <div className="flex items-center gap-1">
-                                                            <MapPin className="h-3 w-3" />
-                                                            <span>
+                                                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                                                            <span className="break-words">
                                                                 {[entry.city, entry.country].filter(Boolean).join(', ')}
                                                             </span>
                                                         </div>
                                                     )}
                                                     <div className="flex items-center gap-1">
-                                                        <Clock className="h-3 w-3" />
-                                                        <span title={format(new Date(entry.createdAt), 'PPpp')}>
+                                                        <Clock className="h-3 w-3 flex-shrink-0" />
+                                                        <span title={format(new Date(entry.createdAt), 'PPpp')} className="break-words">
                                                             {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
                                                         </span>
                                                     </div>

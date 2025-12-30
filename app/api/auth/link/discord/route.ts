@@ -16,12 +16,13 @@ export async function GET(request: NextRequest) {
 
         // Generate random state for CSRF protection
         const state = Math.random().toString(36).substring(2, 15)
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://emberly.ca'
 
         // Store state in a short-lived cookie (5 minutes)
         const response = NextResponse.redirect(
             `https://discord.com/api/oauth2/authorize?${new URLSearchParams({
                 client_id: env.DISCORD_OAUTH_CLIENT_ID,
-                redirect_uri: new URL('/api/auth/link/discord/callback', request.url).toString(),
+                redirect_uri: `${baseUrl}/api/auth/link/discord/callback`,
                 response_type: 'code',
                 scope: 'identify',
                 state,
@@ -55,12 +56,13 @@ export async function POST(request: NextRequest) {
 
         // Generate random state for CSRF protection
         const state = Math.random().toString(36).substring(2, 15)
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://emberly.ca'
 
         // Store state in a short-lived cookie (5 minutes)
         const response = NextResponse.redirect(
             `https://discord.com/api/oauth2/authorize?${new URLSearchParams({
                 client_id: env.DISCORD_OAUTH_CLIENT_ID,
-                redirect_uri: new URL('/api/auth/link/discord/callback', request.url).toString(),
+                redirect_uri: `${baseUrl}/api/auth/link/discord/callback`,
                 response_type: 'code',
                 scope: 'identify',
                 state,

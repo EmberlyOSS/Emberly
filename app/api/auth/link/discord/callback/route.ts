@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Exchange code for access token
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://emberly.ca'
         const tokenResponse = await fetch('https://discord.com/api/v10/oauth2/token', {
             method: 'POST',
             headers: {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
                 client_secret: env.DISCORD_OAUTH_CLIENT_SECRET,
                 code,
                 grant_type: 'authorization_code',
-                redirect_uri: new URL('/api/auth/link/discord/callback', request.url).toString(),
+                redirect_uri: `${baseUrl}/api/auth/link/discord/callback`,
                 scope: 'identify',
             }).toString(),
         })

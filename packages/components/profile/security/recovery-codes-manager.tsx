@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/packages/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/packages/components/ui/card"
 import { useToast } from "@/packages/hooks/use-toast"
 import { Icons } from "@/packages/components/shared/icons"
 import {
@@ -16,6 +15,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/packages/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/packages/components/ui/dialog"
 
 interface RecoveryCodesStatus {
   total: number
@@ -193,51 +199,52 @@ Do not share these codes with anyone.`
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recovery Codes</CardTitle>
-          <CardDescription>Loading...</CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Recovery Codes</h3>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
     )
   }
 
   if (!status) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recovery Codes</CardTitle>
-          <CardDescription>No recovery codes found</CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Recovery Codes</h3>
+          <p className="text-sm text-muted-foreground">No recovery codes found</p>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recovery Codes</CardTitle>
-        <CardDescription>
-          One-time use codes to access your account if you lose your authenticator app
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+    <>
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Recovery Codes</h3>
+          <p className="text-sm text-muted-foreground">
+            One-time use codes to access your account if you lose your authenticator app
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Total Codes</p>
-            <p className="text-2xl font-semibold">{status.total}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Codes</p>
+            <p className="text-xl sm:text-2xl font-semibold">{status.total}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Remaining</p>
-            <p className="text-2xl font-semibold text-green-600">{status.remaining}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Remaining</p>
+            <p className="text-xl sm:text-2xl font-semibold text-green-600">{status.remaining}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Used</p>
-            <p className="text-2xl font-semibold text-orange-600">{status.used}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Used</p>
+            <p className="text-xl sm:text-2xl font-semibold text-orange-600">{status.used}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Generated</p>
-            <p className="text-sm">
+            <p className="text-xs sm:text-sm text-muted-foreground">Generated</p>
+            <p className="text-xs sm:text-sm">
               {status.generatedAt
                 ? new Date(status.generatedAt).toLocaleDateString()
                 : "Never"}
@@ -246,105 +253,24 @@ Do not share these codes with anyone.`
         </div>
 
         {status.remaining <= 3 && status.remaining > 0 && (
-          <div className="rounded-md bg-yellow-50 dark:bg-yellow-950 p-3 text-sm text-yellow-800 dark:text-yellow-200">
+          <div className="rounded-md bg-yellow-50 dark:bg-yellow-950 p-3 text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">
             ⚠️ You have only {status.remaining} codes remaining. Consider regenerating them soon.
           </div>
         )}
 
         {status.remaining === 0 && (
-          <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-800 dark:text-red-200">
+          <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-xs sm:text-sm text-red-800 dark:text-red-200">
             ❌ All recovery codes have been used. You must regenerate them to continue having backup access.
           </div>
         )}
 
-        {showCodes && newCodes.length > 0 && (
-          <div className="space-y-4 rounded-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-semibold text-primary">🔐 Your Recovery Codes</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Save these codes in a secure location. Each can be used once.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowCodes(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Hide
-              </Button>
-            </div>
-
-            <div className="rounded-md bg-background/80 backdrop-blur-sm p-4 space-y-2">
-              {newCodes.map((code, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between gap-3 p-3 rounded-md bg-background hover:bg-muted/50 transition-colors border"
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="text-xs font-medium text-muted-foreground w-6">
-                      {idx + 1}.
-                    </span>
-                    <code className="font-mono text-sm font-semibold tracking-wider">
-                      {code}
-                    </code>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyCode(code, idx)}
-                    className="h-8 w-8 p-0"
-                  >
-                    {copiedIndex === idx ? (
-                      <Icons.check className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <Icons.copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-md bg-yellow-50 dark:bg-yellow-950/50 p-3 text-sm text-yellow-800 dark:text-yellow-200 flex gap-2">
-              <span className="text-base">⚠️</span>
-              <div>
-                <p className="font-semibold">Important:</p>
-                <p className="text-xs mt-1">
-                  DO NOT share these codes with anyone. They provide direct access to your account if you lose your primary 2FA method.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={downloadCodes}
-                className="flex-1"
-              >
-                <Icons.download className="w-4 h-4 mr-2" />
-                Download as File
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={copyAllCodes}
-                className="flex-1"
-              >
-                <Icons.copy className="w-4 h-4 mr-2" />
-                Copy All Codes
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          {!showCodes && status && status.remaining > 0 && (
+        <div className="flex flex-col sm:flex-row gap-2">
+          {status && status.remaining > 0 && (
             <Button
               variant="secondary"
               onClick={fetchAndShowCodes}
               disabled={isLoading}
+              className="flex-1 sm:flex-none"
             >
               {isLoading ? (
                 <>
@@ -364,6 +290,7 @@ Do not share these codes with anyone.`
               <Button
                 variant="outline"
                 disabled={isRegenerating}
+                className="flex-1 sm:flex-none"
               >
                 {isRegenerating ? (
                   <>
@@ -394,7 +321,82 @@ Do not share these codes with anyone.`
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Modal for displaying recovery codes */}
+      <Dialog open={showCodes} onOpenChange={setShowCodes}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              🔐 Your Recovery Codes
+            </DialogTitle>
+            <DialogDescription>
+              Save these codes in a secure location. Each can be used once.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-md bg-background p-3 sm:p-4 space-y-2 border max-h-[50vh] overflow-y-auto">
+              {newCodes.map((code, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <span className="text-xs font-medium text-muted-foreground w-6 flex-shrink-0">
+                      {idx + 1}.
+                    </span>
+                    <code className="font-mono text-sm sm:text-base font-semibold tracking-wider break-all">
+                      {code}
+                    </code>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyCode(code, idx)}
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                  >
+                    {copiedIndex === idx ? (
+                      <Icons.check className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Icons.copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-md bg-yellow-50 dark:bg-yellow-950/50 p-3 text-xs sm:text-sm text-yellow-800 dark:text-yellow-200 flex gap-2">
+              <span className="text-base flex-shrink-0">⚠️</span>
+              <div>
+                <p className="font-semibold">Important:</p>
+                <p className="text-xs mt-1">
+                  DO NOT share these codes with anyone. They provide direct access to your account if you lose your primary 2FA method.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="default"
+                onClick={downloadCodes}
+                className="w-full sm:flex-1"
+              >
+                <Icons.download className="w-4 h-4 mr-2" />
+                Download as File
+              </Button>
+              <Button
+                variant="outline"
+                onClick={copyAllCodes}
+                className="w-full sm:flex-1"
+              >
+                <Icons.copy className="w-4 h-4 mr-2" />
+                Copy All Codes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

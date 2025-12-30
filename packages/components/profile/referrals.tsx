@@ -237,15 +237,16 @@ export function ProfileReferrals() {
           Share your unique referral code with friends. When they sign up using your link, you both receive $10 in billing credits!
         </p>
 
-        <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-lg">
-          <code className="flex-1 text-lg font-mono font-bold text-orange-600 dark:text-orange-400">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-lg">
+          <code className="flex-1 text-base sm:text-lg font-mono font-bold text-orange-600 dark:text-orange-400 break-all">
             {stats.referralCode}
           </code>
+          <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={copyToClipboard}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
             {copied ? (
               <>
@@ -263,20 +264,20 @@ export function ProfileReferrals() {
             variant="outline"
             size="sm"
             onClick={shareReferral}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
             <Share2 className="h-4 w-4" />
             Share
           </Button>
+          </div>
         </div>
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
           <div className="text-sm text-muted-foreground mb-1">Billing Credits</div>
-          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-            ${stats.totalCredits.toFixed(2)}
+          <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400 break-all">${stats.totalCredits.toFixed(2)}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {stats.totalCredits > 0 ? 'Applied to next purchase' : 'Earned from referrals'}
