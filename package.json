@@ -12,9 +12,12 @@
     "url": "https://github.com/EmberlyOSS/Website/issues"
   },
   "scripts": {
-    "dev": "next dev --turbopack",
-    "postinstall": "npx prisma generate",
     "build": "next build",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "dev": "next dev --turbopack",
     "start": "next start",
     "lint": "next lint",
     "format": "npx prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

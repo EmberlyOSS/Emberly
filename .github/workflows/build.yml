@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master, development ]
+    branches: [ master, dev ]
 
 jobs:
   build:
@@ -12,21 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: emberly_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -48,17 +33,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: bun x prisma generate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emberly_test
-
-      - name: Run Prisma Migrations
-        run: bun x prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emberly_test
 
       - name: Build
         run: bun run build
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emberly_test
           NEXTAUTH_SECRET: test-secret
           NEXTAUTH_URL: http://localhost:3000 
