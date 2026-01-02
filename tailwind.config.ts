@@ -21,7 +21,8 @@ export default {
             a: {
               color: 'hsl(var(--primary))',
               '&:hover': {
-                color: 'hsl(var(--primary-foreground))',
+                color: 'hsl(var(--primary))',
+                textDecoration: 'underline',
               },
             },
             h1: { color: 'hsl(var(--foreground))' },
@@ -37,7 +38,8 @@ export default {
             a: {
               color: 'hsl(var(--primary))',
               '&:hover': {
-                color: 'hsl(var(--primary-foreground))',
+                color: 'hsl(var(--primary))',
+                textDecoration: 'underline',
               },
             },
             h1: { color: 'hsl(var(--foreground))' },

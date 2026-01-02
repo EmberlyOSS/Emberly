@@ -55,6 +55,8 @@ interface PublicProfileProps {
     urlId: string
     vanityId: string | null
     perkRoles: string[]
+    role: string
+    alphaUser: boolean
     _count: {
       files: number
     }
@@ -79,9 +81,10 @@ interface PublicProfileProps {
     storageGB: number
     domainSlots: number
   }
+  leaderboardRank?: number | null
 }
 
-export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts, contributorInfo, boosterInfo }: PublicProfileProps) {
+export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts, contributorInfo, boosterInfo, leaderboardRank }: PublicProfileProps) {
   const displayName = user.name || 'Anonymous User'
   const memberSince = format(user.createdAt, 'MMMM yyyy')
   const [activeTab, setActiveTab] = useState('overview')
@@ -148,8 +151,17 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
 
               {/* Profile Info */}
               <div className="flex-1 min-w-0">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{displayName}</h1>
-                
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl md:text-4xl font-bold">{displayName}</h1>
+                  {leaderboardRank && (
+                    <Link href="/leaderboard" className="animate-in fade-in zoom-in duration-500">
+                      <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer gap-1.5 py-1 px-2.5 h-auto text-sm">
+                        <Trophy className="w-3.5 h-3.5" />
+                        Rank #{leaderboardRank}
+                      </Badge>
+                    </Link>
+                  )}
+                </div>                
                 <p className="text-muted-foreground flex items-center gap-2 mb-4">
                   <Calendar className="w-4 h-4" />
                   Member since {memberSince}

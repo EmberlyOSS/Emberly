@@ -85,6 +85,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
           providerUsername: true,
         },
       },
+      isProfilePublic: true,
     },
   })
 
@@ -114,8 +115,34 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
 
   // Get linked account usernames
   const linkedAccounts = {
-    github: user.linkedAccounts.find((a) => a.provider === 'github')?.providerUsername,
-    discord: user.linkedAccounts.find((a) => a.provider === 'discord')?.providerUsername,
+    github: user.linkedAccounts.find((a) => a.provider === 'github')?.providerUsername || undefined,
+    discord: user.linkedAccounts.find((a) => a.provider === 'discord')?.providerUsername || undefined,
+  }
+
+  // Calculate leaderboard rank if profile is public
+  let leaderboardRank: number | null = null
+  if (user.isProfilePublic) {
+    try {
+      const publicFileCount = user._count.files
+      // Count users with more public files
+      const rankResult = await prisma.$queryRaw`
+        SELECT COUNT(*) as rank_higher
+        FROM (
+          SELECT u.id, COUNT(f.id) as file_count
+          FROM "User" u
+          LEFT JOIN "File" f ON u.id = f."userId" AND f.visibility = 'PUBLIC'
+          WHERE u."isProfilePublic" = true
+          GROUP BY u.id
+        ) as user_counts
+        WHERE file_count > ${publicFileCount}
+      ` as any[]
+      
+      if (rankResult && rankResult[0]) {
+        leaderboardRank = Number(rankResult[0].rank_higher) + 1
+      }
+    } catch (error) {
+      console.error('Failed to calculate leaderboard rank:', error)
+    }
   }
 
   return (
@@ -124,6 +151,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       storageBonus={storageBonus} 
       domainBonus={domainBonus}
       linkedAccounts={linkedAccounts}
+      leaderboardRank={leaderboardRank}
       contributorInfo={contributorMilestone ? {
         linesOfCode: contributorLOC,
         tier: contributorMilestone.tier,

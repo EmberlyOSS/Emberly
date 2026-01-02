@@ -180,7 +180,7 @@ export function BaseNav() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
-                          className="h-9 px-4 rounded-xl font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
+                          className="h-9 px-4 rounded-xl font-medium transition-all duration-200 text-muted-foreground hover:text-primary hover:bg-white/10 dark:hover:bg-white/5"
                         >
                           {(() => {
                             const Icon = sectionIcon(sec.id)

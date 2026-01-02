@@ -17,6 +17,7 @@ interface BuildMetadataOptions {
   uploaderName: string
   filePath: string
   fileId?: string
+  enableRich?: boolean
 }
 
 export async function buildRichMetadata({
@@ -30,44 +31,52 @@ export async function buildRichMetadata({
   uploaderName,
   filePath,
   fileId,
+  enableRich = true,
 }: BuildMetadataOptions): Promise<Metadata> {
   // Validate required inputs
   if (!baseUrl || !fileUrlPath || !rawUrl || !fileName || !fileId) {
-    return buildMinimalMetadata(fileName || 'Emberly file')
+    return buildMinimalMetadata({ fileName: fileName || 'Emberly file', baseUrl })
   }
 
   let metadataBase: URL
   try {
     metadataBase = new URL(baseUrl)
   } catch {
-    return buildMinimalMetadata(fileName)
+    return buildMinimalMetadata({ fileName, baseUrl })
   }
 
   const classification = classifyMimeType(mimeType)
   const fileUrl = new URL(fileUrlPath, baseUrl).toString()
   const formattedSize = formatFileSize(size)
-  const uploadDate = uploadedAt.toISOString()
 
   const baseTitle = fileName
-  const baseDescription = getFileDescription({
-    size: formattedSize,
-    uploaderName,
-    uploadedAt,
-  })
+  // Only include rich description if enabled
+  const baseDescription = enableRich
+    ? getFileDescription({
+        size: formattedSize,
+        uploaderName,
+        uploadedAt,
+      })
+    : `${formattedSize} file shared via Emberly`
 
-  // Build thumbnail URL for images and videos
-  let thumbnailUrl: string | undefined
+  const uploadDate = uploadedAt.toISOString()
+
+  // Build thumbnail/preview URL
+  // For images, use the raw URL to show full quality image
+  // For videos, use the thumbnail endpoint/poster
+  let imageUrl: string | undefined
   try {
-    // For images and videos, use the thumbnail endpoint
-    if (classification.isImage || classification.isVideo) {
-      thumbnailUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
+    if (classification.isImage) {
+      imageUrl = rawUrl
+    } else if (classification.isVideo) {
+      imageUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
     } else {
       // For other file types, try to get a generic preview
-      thumbnailUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
+      imageUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
     }
   } catch (error) {
-    console.error('Failed to generate thumbnail URL:', error)
-    thumbnailUrl = new URL('/api/og', baseUrl).toString()
+    console.error('Failed to generate preview URL:', error)
+    imageUrl = new URL('/api/og', baseUrl).toString()
   }
 
   // Build video URL for Discord/social embeds
@@ -97,10 +106,20 @@ export async function buildRichMetadata({
       title: baseTitle,
       description: baseDescription,
       url: fileUrl,
-      siteName: 'Emberly',
+      // Only set siteName if Rich Embeds are enabled, OR if we want to enforce it.
+      // If disabled, user likely wants a cleaner look, but missing siteName can affect embed rendering.
+      // However, we'll respect the enableRich flag for branding.
+      siteName: enableRich ? 'Emberly' : undefined,
       locale: 'en_US',
       type: getOpenGraphType(classification),
-      images: thumbnailUrl ? getOpenGraphImages(classification, thumbnailUrl) : undefined,
+      images: imageUrl ? [
+        {
+          url: imageUrl,
+          width: classification.isVideo ? 1280 : undefined,
+          height: classification.isVideo ? 720 : undefined,
+          alt: classification.isImage ? 'Preview image' : 'File preview',
+        }
+      ] : undefined,
       videos: classification.isVideo && videoUrl ? [
         {
           url: videoUrl,
@@ -121,24 +140,13 @@ export async function buildRichMetadata({
       card: 'summary_large_image',
       title: baseTitle,
       description: baseDescription,
-      images: thumbnailUrl ? [thumbnailUrl] : undefined,
+      images: imageUrl ? [imageUrl] : undefined,
     },
     other: {
       'theme-color': '#F97316',
       'article:published_time': uploadDate,
-      'og:description': baseDescription,
       'al:ios:url': rawUrl,
       'al:android:url': rawUrl,
-      ...(classification.isVideo && videoUrl && {
-        'og:video': videoUrl,
-        'og:video:secure_url': videoUrl,
-        'og:video:type': mimeType || 'video/mp4',
-        'og:video:width': '1280',
-        'og:video:height': '720',
-      }),
-      ...(classification.isImage && {
-        'og:image:alt': 'Preview image',
-      }),
     },
   }
 
@@ -148,31 +156,38 @@ export async function buildRichMetadata({
 function getOpenGraphType(classification: ReturnType<typeof classifyMimeType>) {
   if (classification.isVideo) return 'video.other'
   if (classification.isMusic) return 'music.song'
-  if (classification.isImage || classification.isDocument || classification.isCode) {
-    return 'article'
-  }
+  // Use 'website' instead of 'article' for images and others to ensure better embedding
   return 'website'
 }
 
-function getOpenGraphImages(
-  classification: ReturnType<typeof classifyMimeType>,
-  thumbnailUrl: string
-) {
-  return [
-    {
-      url: thumbnailUrl,
-      width: 1280,
-      height: 720,
-      alt: classification.isImage ? 'Preview image' : 'File preview',
-      type: 'image/png',
-    },
-  ]
-}
 
-export function buildMinimalMetadata(fileName: string): Metadata {
+
+export function buildMinimalMetadata(options: { fileName: string; baseUrl?: string }): Metadata {
+  const { fileName, baseUrl } = options
   return {
     title: fileName,
-    description: '',
+    description: 'Shared via Emberly',
+    openGraph: {
+      title: fileName,
+      description: 'Shared via Emberly',
+      type: 'website',
+      siteName: 'Emberly',
+      images: baseUrl ? [{
+        url: new URL('/api/og', baseUrl).toString(),
+        width: 1200,
+        height: 630,
+        alt: 'Emberly',
+      }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: fileName,
+      description: 'Shared via Emberly',
+      images: baseUrl ? [new URL('/api/og', baseUrl).toString()] : undefined,
+    },
+    other: {
+      'theme-color': '#F97316',
+    },
   }
 }
 

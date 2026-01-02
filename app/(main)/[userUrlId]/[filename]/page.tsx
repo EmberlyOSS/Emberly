@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 
 import { ProtectedFile } from '@/packages/components/file/protected-file'
@@ -122,22 +123,18 @@ export async function generateMetadata({
   const isPrivate = file.visibility === 'PRIVATE' && !isOwner
   const isPasswordProtected = file.password && !isOwner
 
-  // Return minimal metadata for inaccessible or protected files
-  if (isPrivate || isPasswordProtected) {
-    return buildMinimalMetadata('Protected File')
-  }
-
-  // Respect user's enableRichEmbeds setting - return minimal metadata if disabled
-  if (file.user.enableRichEmbeds === false) {
-    return buildMinimalMetadata(file.name)
-  }
-
-  // Build rich metadata for accessible files with embeds enabled
+  // Build basic URLs
   const host = headersList.get('host') || 'localhost:3000'
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
   const baseUrl = `${protocol}://${host}`
   const rawUrl = `${baseUrl}${urlPath}/raw`
 
+  // Return minimal metadata for inaccessible or protected files
+  if (isPrivate || isPasswordProtected) {
+    return buildMinimalMetadata({ fileName: 'Protected File', baseUrl })
+  }
+
+  // Build rich metadata for accessible files, respecting user's enableRichEmbeds setting
   return buildRichMetadata({
     baseUrl,
     fileUrlPath: urlPath,
@@ -149,6 +146,7 @@ export async function generateMetadata({
     uploaderName: file.user.name || 'Anonymous',
     filePath: file.path,
     fileId: file.id,
+    enableRich: file.user.enableRichEmbeds !== false,
   })
 }
 
