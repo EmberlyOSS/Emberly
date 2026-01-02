@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { compare } from 'bcrypt'
+import { compare } from 'bcryptjs'
 import { z } from 'zod'
 
 import { prisma } from '@/packages/lib/database/prisma'
