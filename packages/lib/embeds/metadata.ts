@@ -63,13 +63,17 @@ export async function buildRichMetadata({
 
   // Build thumbnail/preview URL
   // For images, use the raw URL to show full quality image
-  // For videos, use the thumbnail endpoint/poster
+  // For videos: if rich embeds disabled, use raw video (Discord plays it inline)
+  //             if rich embeds enabled, use thumbnail (og:video tag will handle playback)
   let imageUrl: string | undefined
   try {
     if (classification.isImage) {
       imageUrl = rawUrl
     } else if (classification.isVideo) {
-      imageUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
+      // When rich embeds disabled, use raw video URL so Discord can play it directly
+      imageUrl = enableRich 
+        ? new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
+        : rawUrl
     } else {
       // For other file types, try to get a generic preview
       imageUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
@@ -120,7 +124,7 @@ export async function buildRichMetadata({
           alt: classification.isImage ? 'Preview image' : 'File preview',
         }
       ] : undefined,
-      videos: classification.isVideo && videoUrl ? [
+      videos: classification.isVideo && videoUrl && enableRich ? [
         {
           url: videoUrl,
           secureUrl: videoUrl,
@@ -129,7 +133,7 @@ export async function buildRichMetadata({
           height: 720,
         },
       ] : undefined,
-      audio: classification.isAudio ? [
+      audio: classification.isAudio && enableRich ? [
         {
           url: rawUrl,
           type: mimeType || 'audio/mpeg',

@@ -53,7 +53,8 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const config = await getConfig()
-  const hasCustomFont = config.settings.advanced.customCSS.includes('font-family')
+  const customCSS = config.settings.advanced?.customCSS || ''
+  const hasCustomFont = typeof customCSS === 'string' ? customCSS.includes('font-family') : false
 
   if (config.settings.appearance.favicon) {
     metadata.icons = {
@@ -79,7 +80,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" data-theme={userTheme ?? config.settings.appearance.systemThemes} suppressHydrationWarning>
+    <html lang="en" data-theme={userTheme ?? config.settings.appearance.theme} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -90,14 +91,14 @@ export default async function RootLayout({
       <body suppressHydrationWarning className={`${!hasCustomFont ? inter.variable + ' font-sans' : ''} min-h-screen flex flex-col`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme={config.settings.appearance.systemThemes}
+          defaultTheme={config.settings.appearance.systemThemes as string | undefined}
           enableSystem
           disableTransitionOnChange
         >
           <ThemeProviderWrapper
             initialUserTheme={userTheme}
             initialUserColors={userCustomColors}
-            systemTheme={config.settings.appearance.systemThemes}
+            systemTheme={config.settings.appearance.theme}
             systemColors={config.settings.appearance.customColors}
           >
             <Snowfall />

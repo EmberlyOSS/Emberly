@@ -143,6 +143,7 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
         input: '217.2 32.6% 17.5%',
         ring: '212.7 26.8% 83.9%',
       },
+      systemThemes: {},
     },
     advanced: {
       customCSS: '',
