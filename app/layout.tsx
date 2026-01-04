@@ -8,7 +8,7 @@ import { ThemeProviderWrapper } from '@/packages/components/providers/theme-prov
 import { SetupChecker } from '@/packages/components/setup-checker'
 import { ThemeInitializer } from '@/packages/components/theme/theme-initializer'
 import { ThemeProvider } from '@/packages/components/theme/theme-provider'
-import { ThemeEffectsWrapper } from '@/packages/components/theme/theme-effects-wrapper'
+import { ThemeEffectsWrapper, ThemeEffectsContainer } from '@/packages/components/theme/theme-effects-wrapper'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -106,7 +106,7 @@ export default async function RootLayout({
             systemColors={typeof config.settings.appearance.customColors === 'object' && config.settings.appearance.customColors ? config.settings.appearance.customColors : {}}
           >
             <Snowfall />
-            <div id="theme-effects-root" className="fixed inset-0 z-0 overflow-hidden pointer-events-none" style={{ width: '100vw', height: '100vh', top: 0, left: 0 }} suppressHydrationWarning />
+            <ThemeEffectsContainer />
             <QueryProvider>
               <AuthProvider>
                 <SetupChecker>

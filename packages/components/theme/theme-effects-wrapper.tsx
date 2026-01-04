@@ -9,6 +9,30 @@ import { GamingBackground } from '@/packages/components/theme/gaming-background'
 const CANVAS_EFFECTS = ['particles', 'gradient-shift', 'waves', 'glitch', 'grid', 'parallax', 'aurora', 'stars', 'matrix', 'scanlines']
 
 /**
+ * Client-only container for theme effects.
+ * This component renders nothing on the server and creates the container div
+ * only after hydration to avoid hydration mismatches caused by browser extensions.
+ */
+export const ThemeEffectsContainer: React.FC = () => {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Render nothing on server and initial client render
+  if (!mounted) return null
+
+  return (
+    <div 
+      id="theme-effects-root" 
+      className="fixed inset-0 z-0 overflow-hidden pointer-events-none" 
+      style={{ width: '100vw', height: '100vh', top: 0, left: 0 }} 
+    />
+  )
+}
+
+/**
  * Wrapper component that renders theme effects (particles, animations, etc.)
  * Uses the unified theme context for cleaner state management
  */

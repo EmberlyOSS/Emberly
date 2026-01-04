@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -14,9 +14,11 @@ import {
     Github,
     Mail,
     Palette,
+    Play,
     Shield,
     Sparkles,
     Type,
+    Video,
     X,
 } from 'lucide-react'
 
@@ -95,6 +97,21 @@ const USAGE_DONTS = [
     'Use on busy or clashing backgrounds',
 ]
 
+const PROMO_VIDEOS = [
+    {
+        title: 'Site Preview',
+        description: 'Quick overview of the Emberly interface and main features.',
+        src: '/videos/site-preview-ad.mp4',
+        duration: '~15s',
+    },
+    {
+        title: 'Upload Flow',
+        description: 'Demonstration of the seamless file upload experience.',
+        src: '/videos/uploading-ad.mp4',
+        duration: '~10s',
+    },
+]
+
 const CONTACT_POINTS = [
     {
         label: 'Press inquiries',
@@ -108,7 +125,7 @@ const CONTACT_POINTS = [
     },
 ]
 
-const KIT_DOWNLOAD = 'https://github.com/EmberlyOSS/Website/releases/latest'
+const KIT_DOWNLOAD = '/emberly-media-kit.zip'
 
 export default function MediaKitPage() {
     return (
@@ -159,6 +176,38 @@ export default function MediaKitPage() {
                                         </Button>
                                     </div>
                                     <AssetPreview variant={asset.preview as any} theme={asset.theme as any} />
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Promotional Videos */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Video className="h-5 w-5 text-primary" />
+                        <h2 className="text-xl font-semibold">Promotional Videos</h2>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        Short promotional clips for use in presentations, social media, and press coverage.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {PROMO_VIDEOS.map((video) => (
+                            <GlassCard key={video.title} className="group">
+                                <div className="p-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <h3 className="font-semibold">{video.title}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">{video.description}</p>
+                                            <p className="text-xs text-muted-foreground/70 mt-1">Duration: {video.duration}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" asChild>
+                                            <a href={video.src} download>
+                                                <Download className="h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                    </div>
+                                    <VideoPlayer src={video.src} />
                                 </div>
                             </GlassCard>
                         ))}
@@ -406,6 +455,40 @@ function getLuminance(hex: string): number {
     const rgb = hex.replace('#', '').match(/.{2}/g)?.map(x => parseInt(x, 16) / 255) || [0, 0, 0]
     const [r, g, b] = rgb.map(c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// Video player component that only renders on client to avoid hydration issues
+function VideoPlayer({ src }: { src: string }) {
+    const [mounted, setMounted] = useState(false)
+    const videoRef = useRef<HTMLVideoElement>(null)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    if (!mounted) {
+        return (
+            <div className="relative rounded-xl overflow-hidden bg-background/30 border border-border/50 aspect-video flex items-center justify-center">
+                <Play className="h-12 w-12 text-muted-foreground/50" />
+            </div>
+        )
+    }
+
+    return (
+        <div className="relative rounded-xl overflow-hidden bg-background/30 border border-border/50">
+            <video
+                ref={videoRef}
+                src={src}
+                className="w-full aspect-video object-cover"
+                controls
+                preload="metadata"
+                playsInline
+                muted
+            >
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    )
 }
 
 function ThemeColorPalette() {

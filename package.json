@@ -28,7 +28,8 @@
     "knip:files": "npx knip --files",
     "knip:prod": "npx knip --production",
     "knip:fix": "npx knip --fix",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "media-kit": "bun run scripts/generate-media-kit.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",

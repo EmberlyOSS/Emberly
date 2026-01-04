@@ -32,6 +32,7 @@ export const PUBLIC_PATHS = [
   '/partners',
   '/pricing',
   '/user',
+  '/leaderboard',
   '/opengraph-image',
   '/twitter-image',
   '/api/auth',
@@ -57,7 +58,9 @@ export const PUBLIC_PATHS = [
   '/auth/magic',
   '/auth/reset',
   '/setup',
-  '/api/setup'
+  '/api/setup',
+  '/videos',
+  '/status'
 ]
 
 export const SETUP_PATHS = ['/setup', '/api/setup']

@@ -45,38 +45,61 @@ export async function buildRichMetadata({
     return buildMinimalMetadata({ fileName, baseUrl })
   }
 
+  // When rich embeds are disabled, return minimal metadata for ALL file types
+  // This ensures images, videos, and other files don't show previews when disabled
+  if (!enableRich) {
+    const formattedSize = formatFileSize(size)
+    return {
+      title: fileName,
+      description: `${formattedSize} file shared via Emberly`,
+      metadataBase,
+      openGraph: {
+        title: fileName,
+        description: `${formattedSize} file shared via Emberly`,
+        url: new URL(fileUrlPath, baseUrl).toString(),
+        type: 'website',
+        locale: 'en_US',
+        // No images, videos, or audio - just basic link preview
+      },
+      twitter: {
+        card: 'summary',
+        title: fileName,
+        description: `${formattedSize} file shared via Emberly`,
+        // No images - plain URL card
+      },
+      other: {
+        'theme-color': '#F97316',
+      },
+    }
+  }
+
+  // Rich embeds are enabled - build full metadata
   const classification = classifyMimeType(mimeType)
   const fileUrl = new URL(fileUrlPath, baseUrl).toString()
   const formattedSize = formatFileSize(size)
 
   const baseTitle = fileName
-  // Only include rich description if enabled
-  const baseDescription = enableRich
-    ? getFileDescription({
-        size: formattedSize,
-        uploaderName,
-        uploadedAt,
-      })
-    : `${formattedSize} file shared via Emberly`
+  const baseDescription = getFileDescription({
+    size: formattedSize,
+    uploaderName,
+    uploadedAt,
+  })
 
   const uploadDate = uploadedAt.toISOString()
 
-  // Build thumbnail/preview URL
-  // For images, use the raw URL to show full quality image
-  // For videos: if rich embeds disabled, use raw video (Discord plays it inline)
-  //             if rich embeds enabled, use thumbnail (og:video tag will handle playback)
+  // Determine image URL based on file type
   let imageUrl: string | undefined
   try {
     if (classification.isImage) {
+      // Images: use the raw image URL directly for preview
       imageUrl = rawUrl
     } else if (classification.isVideo) {
-      // When rich embeds disabled, use raw video URL so Discord can play it directly
-      imageUrl = enableRich 
-        ? new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
-        : rawUrl
+      // Videos: use raw URL so Discord/Twitter can generate their own thumbnail
+      // This allows the video to be playable in the embed
+      imageUrl = rawUrl
     } else {
-      // For other file types, try to get a generic preview
-      imageUrl = new URL(`/api/files/${fileId}/thumbnail`, baseUrl).toString()
+      // For other file types, use the generic OG banner
+      imageUrl = new URL('/api/og', baseUrl).toString()
     }
   } catch (error) {
     console.error('Failed to generate preview URL:', error)
@@ -110,12 +133,11 @@ export async function buildRichMetadata({
       title: baseTitle,
       description: baseDescription,
       url: fileUrl,
-      // Only set siteName if Rich Embeds are enabled, OR if we want to enforce it.
-      // If disabled, user likely wants a cleaner look, but missing siteName can affect embed rendering.
-      // However, we'll respect the enableRich flag for branding.
-      siteName: enableRich ? 'Emberly' : undefined,
+      siteName: 'Emberly',
       locale: 'en_US',
       type: getOpenGraphType(classification),
+      // For videos, we need BOTH og:image (thumbnail) and og:video (playable)
+      // Discord uses og:image as fallback/thumbnail, then plays og:video
       images: imageUrl ? [
         {
           url: imageUrl,
@@ -124,7 +146,7 @@ export async function buildRichMetadata({
           alt: classification.isImage ? 'Preview image' : 'File preview',
         }
       ] : undefined,
-      videos: classification.isVideo && videoUrl && enableRich ? [
+      videos: classification.isVideo && videoUrl ? [
         {
           url: videoUrl,
           secureUrl: videoUrl,
@@ -133,7 +155,7 @@ export async function buildRichMetadata({
           height: 720,
         },
       ] : undefined,
-      audio: classification.isAudio && enableRich ? [
+      audio: classification.isAudio ? [
         {
           url: rawUrl,
           type: mimeType || 'audio/mpeg',
@@ -141,10 +163,20 @@ export async function buildRichMetadata({
       ] : undefined,
     },
     twitter: {
-      card: 'summary_large_image',
+      // Use player card for videos, summary_large_image for images
+      card: classification.isVideo ? 'player' : 'summary_large_image',
       title: baseTitle,
       description: baseDescription,
       images: imageUrl ? [imageUrl] : undefined,
+      // Twitter player card requires these for video
+      ...(classification.isVideo && videoUrl ? {
+        players: [{
+          playerUrl: videoUrl,
+          streamUrl: videoUrl,
+          width: 1280,
+          height: 720,
+        }],
+      } : {}),
     },
     other: {
       'theme-color': '#F97316',

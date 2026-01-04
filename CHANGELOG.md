@@ -24,6 +24,22 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Parent-child component hierarchy built dynamically from flat API responses using `group.id` references.
   - Auto-refresh capability with manual refresh button and last-updated timestamps.
   - Responsive design with mobile-optimized tab navigation.
+- **Media Kit Generator Script** - Automated media kit generation for press and promotional use.
+  - New `scripts/generate-media-kit.ts` script generates complete media kit zip file.
+  - Run with `bun run media-kit` to generate `/public/emberly-media-kit.zip`.
+  - Includes: logos (SVG, PNG), brand guidelines, color palette documentation, typography guide, promotional videos.
+  - Auto-generates README, BRAND_GUIDELINES.md, COLOR_PALETTE.md, and TYPOGRAPHY.md documentation.
+  - Copies all video assets from `/public/videos/` with technical specs and usage guidelines.
+  - Creates downloadable zip using PowerShell (Windows) or native zip (Unix).
+- **Promotional Videos in Media Kit** - Added video showcase section to press media kit page.
+  - New Promotional Videos section in `/press/media-kit` page between Logo Assets and Color Palette.
+  - Client-side `VideoPlayer` component with hydration-safe rendering to avoid SSR mismatches.
+  - Videos display with native HTML5 controls, download buttons, and duration indicators.
+  - Videos: `site-preview-ad.mp4` (interface overview), `uploading-ad.mp4` (upload flow demo).
+- **Community Documentation** - Added open source contribution and conduct guidelines.
+  - `CONTRIBUTING.md` with development setup, coding standards, commit conventions, and PR guidelines.
+  - `CODE_OF_CONDUCT.md` based on Contributor Covenant 2.1 with enforcement guidelines.
+  - Contact information updated to use correct domain (`hey@embrly.ca`, Discord invite link).
 
 ### Changed
 - **Environment Variable Consolidation** - Unified domain configuration to use existing `NEXT_PUBLIC_BASE_URL`.
@@ -31,6 +47,10 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Changed fallback domain from `https://emberly.site` to `https://emberly.ca` across all authentication flows.
   - Updated root layout metadata base URL to ensure proper Open Graph and Twitter card generation.
   - Ensures consistent redirect URI configuration between OAuth initiation and callback handling.
+- **GitHub Actions Build Workflow Simplified** - Removed unnecessary PostgreSQL service from CI.
+  - Build workflow no longer spins up PostgreSQL container since `prisma generate` doesn't require a database connection.
+  - Reduced CI complexity and build times by eliminating unused service dependency.
+  - Workflow now: checkout → setup Node/Bun → install dependencies → prisma generate → build.
 - **Security Section Responsive Design** - Enhanced mobile experience for login history and session management.
   - Login history header now stacks vertically on mobile (`flex-col sm:flex-row`) with proper gap spacing.
   - Action buttons (Refresh, Sign Out Everywhere) now stretch to full width on mobile (`flex-1 sm:flex-none`).
@@ -59,6 +79,14 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Color swatches show live theme values with proper hex code extraction from computed styles.
 
 ### Fixed
+- **Rich Embeds Metadata System** - Fixed inconsistent behavior where `enableRichEmbeds` setting was not respected for all file types.
+  - **Images now respect `enableRichEmbeds=false`**: Previously images always showed preview regardless of setting; now returns minimal metadata with no image preview.
+  - **Videos now respect `enableRichEmbeds=false`**: Previously videos still generated thumbnail/video metadata; now returns minimal metadata with no media.
+  - **Videos now work properly when `enableRichEmbeds=true`**: Changed from `/api/files/{id}/thumbnail` (which redirected to banner.png) to using `rawUrl` directly so Discord/Twitter can extract their own thumbnail and play the video inline.
+  - Early return pattern when `enableRich=false` ensures no `og:image`, `og:video`, or `og:audio` tags are generated for any file type.
+  - Twitter card type changed to `summary` (no image) when rich embeds disabled, `player` for videos when enabled, `summary_large_image` for images when enabled.
+  - Non-media files now use generic OG banner (`/api/og`) instead of file-specific thumbnail endpoint.
+  - Root cause: `buildRichMetadata()` was generating image/video URLs regardless of `enableRich` flag, and video thumbnails were redirecting to banner.png instead of allowing platforms to generate their own.
 - **Authentication System Domain Configuration** - Resolved production OAuth redirects incorrectly using `https://localhost:3000`.
   - Fixed all OAuth callback routes (GitHub and Discord) to use `NEXT_PUBLIC_BASE_URL` environment variable.
   - Updated proxy middleware redirects (alpha migration, email verification, password breach, login, admin authorization) to respect configured base URL.
@@ -73,6 +101,16 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Included `_next/webpack-hmr` exclusion for hot module replacement during development.
   - Prevents middleware from intercepting and potentially blocking critical static resources.
   - Root cause: Middleware regex was not comprehensive enough, causing some users to experience missing styles.
+- **Theme Effects Hydration Mismatch** - Fixed React hydration errors caused by browser extensions injecting elements.
+  - Created `ThemeEffectsContainer` client component that renders nothing on server and only creates the container div after hydration.
+  - Replaced static `<div id="theme-effects-root">` in layout with client-only `<ThemeEffectsContainer />`.
+  - Updated `Snowfall` component to track mount state and only render canvas after client hydration.
+  - Prevents browser extensions (like Dark Reader) from causing mismatches by injecting elements into server-rendered divs.
+  - Root cause: Server rendered empty div, but browser extensions injected `<link>` or `<style>` elements before React hydrated.
+- **Root Layout Theme Configuration** - Fixed `InvalidCharacterError` when theme config object was passed to HTML attribute.
+  - Added `typeof` guards to ensure only string values are passed to theme-related attributes.
+  - Prevents `[object Object]` from being passed when config returns an object instead of a string.
+  - Applies to `config.settings.appearance.theme` and `config.settings.appearance.systemThemes` values.
 
 ## [1.3.0] - 2025-12-29
 

@@ -5,9 +5,17 @@ import { useEffect, useRef, useState } from 'react'
 export default function Snowfall() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const rafRef = useRef<number | null>(null)
+    const [mounted, setMounted] = useState(false)
     const [enabled, setEnabled] = useState(false)
 
+    // Track mount state to avoid hydration mismatch
     useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    useEffect(() => {
+        if (!mounted) return
+
         const checkTheme = () => {
             const dataTheme = document.documentElement.getAttribute('data-theme') || ''
             const classTheme = (document.documentElement.className || '').toString()
@@ -22,7 +30,7 @@ export default function Snowfall() {
         obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
 
         return () => obs.disconnect()
-    }, [])
+    }, [mounted])
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -94,7 +102,9 @@ export default function Snowfall() {
         }
     }, [enabled])
 
-    if (!enabled) return null
+    // Always render nothing on server and initial client render to avoid hydration mismatch
+    // Only render canvas after mount and when enabled
+    if (!mounted || !enabled) return null
 
     return (
         <canvas
