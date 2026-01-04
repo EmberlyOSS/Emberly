@@ -54,7 +54,7 @@ const baseRoutes = [
 
 const extrasRoutes = [
   { href: '/pricing', label: 'Pricing', icon: CreditCard },
-  { href: 'https://status.emberly.site', label: 'Status', icon: ChartBar },
+  { href: '/status', label: 'Status', icon: ChartBar },
   { href: '/changelogs', label: 'Changelogs', icon: GitGraph },
   { href: '/st5', label: 'ST5', icon: Globe },
 ]

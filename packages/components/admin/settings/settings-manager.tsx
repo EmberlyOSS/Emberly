@@ -9,16 +9,33 @@ import CodeMirror from '@uiw/react-codemirror'
 import DOMPurify from 'dompurify'
 import { deepEqual } from 'fast-equals'
 import {
+	CheckCircle2,
 	Circle,
+	Cloud,
 	Code,
+	CreditCard,
+	Database,
 	ExternalLink,
 	FileCode,
 	Github,
+	Globe,
+	HardDrive,
 	Heart,
+	Image,
 	InfoIcon,
+	Palette,
+	RefreshCw,
+	RotateCcw,
 	Save,
+	Settings,
+	Settings2,
+	Shield,
+	Sliders,
+	Sparkles,
 	Upload,
+	Users,
 	XCircle,
+	Zap,
 } from 'lucide-react'
 
 import { Icons } from '@/components/shared/icons'
@@ -44,10 +61,108 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 
 import type { EmberlyConfig } from '@/lib/config'
 
 import { useToast } from '@/hooks/use-toast'
+
+// Reusable GlassCard component for consistent styling
+function GlassCard({ 
+	children, 
+	className = '',
+	gradient = true 
+}: { 
+	children: React.ReactNode
+	className?: string
+	gradient?: boolean
+}) {
+	return (
+		<div className={cn(
+			"relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden",
+			className
+		)}>
+			{gradient && (
+				<div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+			)}
+			<div className="relative">{children}</div>
+		</div>
+	)
+}
+
+// Settings section card with icon and better styling
+function SettingsSection({ 
+	icon: Icon, 
+	title, 
+	description, 
+	children,
+	badge,
+	className = ''
+}: { 
+	icon: React.ElementType
+	title: string
+	description: string
+	children: React.ReactNode
+	badge?: React.ReactNode
+	className?: string
+}) {
+	return (
+		<GlassCard className={className}>
+			<div className="p-6 space-y-6">
+				<div className="flex items-start gap-4">
+					<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+						<Icon className="h-5 w-5 text-primary" />
+					</div>
+					<div className="flex-1 min-w-0">
+						<div className="flex items-center gap-2">
+							<h3 className="text-lg font-semibold">{title}</h3>
+							{badge}
+						</div>
+						<p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+					</div>
+				</div>
+				<div className="space-y-5">
+					{children}
+				</div>
+			</div>
+		</GlassCard>
+	)
+}
+
+// Setting row component for consistent layout
+function SettingRow({ 
+	label, 
+	description, 
+	children,
+	changed = false 
+}: { 
+	label: string
+	description?: string
+	children: React.ReactNode
+	changed?: boolean
+}) {
+	return (
+		<div className="flex items-center justify-between gap-4 py-1">
+			<div className="space-y-0.5 flex-1 min-w-0">
+				<div className="flex items-center gap-2">
+					<Label className="text-sm font-medium">{label}</Label>
+					{changed && (
+						<span className="flex h-2 w-2">
+							<span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75" />
+							<span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+						</span>
+					)}
+				</div>
+				{description && (
+					<p className="text-xs text-muted-foreground">{description}</p>
+				)}
+			</div>
+			<div className="flex items-center gap-2 shrink-0">
+				{children}
+			</div>
+		</div>
+	)
+}
 
 interface ColorConfig {
 	background: string
@@ -77,84 +192,61 @@ type SettingValue<T extends keyof EmberlyConfig['settings']> = Partial<
 
 function SettingsSkeleton() {
 	return (
-		<div className="container mx-auto py-6 space-y-8">
-			<div className="space-y-2">
-				<Skeleton className="h-8 w-32" />
-				<Skeleton className="h-4 w-64" />
+		<div className="space-y-6">
+			{/* Header skeleton */}
+			<div className="relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 p-6">
+				<div className="flex items-center gap-4">
+					<Skeleton className="h-12 w-12 rounded-xl" />
+					<div className="space-y-2">
+						<Skeleton className="h-6 w-48" />
+						<Skeleton className="h-4 w-72" />
+					</div>
+				</div>
 			</div>
 
+			{/* Tabs skeleton */}
+			<div className="flex gap-2 p-1 bg-background/30 rounded-xl border border-border/30 w-fit">
+				<Skeleton className="h-10 w-32 rounded-lg" />
+				<Skeleton className="h-10 w-32 rounded-lg" />
+				<Skeleton className="h-10 w-32 rounded-lg" />
+			</div>
+
+			{/* Cards skeleton */}
 			<div className="space-y-4">
-				<div className="flex space-x-2">
-					<Skeleton className="h-9 w-20" />
-					<Skeleton className="h-9 w-20" />
-					<Skeleton className="h-9 w-20" />
-				</div>
-
-				<Card>
-					<CardHeader>
-						<Skeleton className="h-5 w-40" />
-						<Skeleton className="h-4 w-64" />
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="flex items-center justify-between">
-							<div className="space-y-2">
-								<Skeleton className="h-4 w-24" />
-								<Skeleton className="h-4 w-32" />
-							</div>
-							<Skeleton className="h-6 w-12" />
-						</div>
-						<div className="flex space-x-2">
-							<Skeleton className="h-9 w-24" />
-							<Skeleton className="h-9 w-24" />
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader>
-						<Skeleton className="h-5 w-40" />
-						<Skeleton className="h-4 w-64" />
-					</CardHeader>
-					<CardContent className="space-y-6">
-						<div className="flex items-center justify-between">
-							<div className="space-y-2">
-								<Skeleton className="h-4 w-32" />
-								<Skeleton className="h-4 w-48" />
-							</div>
-							<Skeleton className="h-6 w-12" />
-						</div>
-						<div className="flex items-center justify-between">
-							<div className="space-y-2">
-								<Skeleton className="h-4 w-24" />
-								<Skeleton className="h-4 w-40" />
-							</div>
-							<Skeleton className="h-6 w-12" />
-						</div>
-						<div className="space-y-2">
-							<Skeleton className="h-4 w-32" />
-							<div className="flex space-x-2">
-								<Skeleton className="h-10 w-full" />
-								<Skeleton className="h-10 w-[110px]" />
+				{[1, 2, 3].map((i) => (
+					<div key={i} className="rounded-2xl border border-border/50 bg-background/60 p-6 space-y-6">
+						<div className="flex items-start gap-4">
+							<Skeleton className="h-11 w-11 rounded-xl shrink-0" />
+							<div className="space-y-2 flex-1">
+								<Skeleton className="h-5 w-40" />
+								<Skeleton className="h-4 w-64" />
 							</div>
 						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader>
-						<Skeleton className="h-5 w-40" />
-						<Skeleton className="h-4 w-64" />
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-2">
-							<Skeleton className="h-4 w-32" />
-							<div className="flex space-x-2">
-								<Skeleton className="h-10 w-full" />
-								<Skeleton className="h-10 w-[110px]" />
+						<div className="space-y-5">
+							<div className="flex items-center justify-between py-1">
+								<div className="space-y-1.5">
+									<Skeleton className="h-4 w-32" />
+									<Skeleton className="h-3 w-48" />
+								</div>
+								<Skeleton className="h-6 w-12 rounded-full" />
+							</div>
+							<div className="flex items-center justify-between py-1">
+								<div className="space-y-1.5">
+									<Skeleton className="h-4 w-28" />
+									<Skeleton className="h-3 w-40" />
+								</div>
+								<Skeleton className="h-6 w-12 rounded-full" />
+							</div>
+							<div className="flex items-center justify-between py-1">
+								<div className="space-y-1.5">
+									<Skeleton className="h-4 w-36" />
+									<Skeleton className="h-3 w-52" />
+								</div>
+								<Skeleton className="h-10 w-24 rounded-lg" />
 							</div>
 						</div>
-					</CardContent>
-				</Card>
+					</div>
+				))}
 			</div>
 		</div>
 	)
@@ -480,866 +572,816 @@ export function SettingsManager() {
 		fieldPath: string[]
 	) => {
 		const isChanged = isFieldChanged(section, fieldPath)
-		return isChanged ? 'border-primary ring-1 ring-primary bg-primary/5' : ''
+		return isChanged ? 'border-primary/50 ring-1 ring-primary/30 bg-primary/5 transition-all' : 'transition-all'
 	}
 
 	const ChangeIndicator = () => (
-		<div className="flex items-center">
-			<Circle className="h-2 w-2 fill-primary text-primary animate-pulse" />
-		</div>
+		<span className="flex h-2 w-2">
+			<span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75" />
+			<span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+		</span>
 	)
 
+	const generalHasChanges = !deepEqual(savedConfig?.settings.general, workingConfig?.settings.general)
+	const appearanceHasChanges = !deepEqual(savedConfig?.settings.appearance, workingConfig?.settings.appearance)
+	const advancedHasChanges = !deepEqual(savedConfig?.settings.advanced, workingConfig?.settings.advanced)
+
 	return (
-		<div className="container space-y-6 pb-32">
-			<div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-				<div className="flex items-center gap-4 px-6 py-5 border-b border-border/50 bg-background/50">
-					<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-						<InfoIcon className="h-6 w-6 text-primary" />
-					</div>
-					<div>
-						<h1 className="text-2xl font-bold">Settings</h1>
-						<p className="text-muted-foreground">
-							Configure your Emberly instance settings and preferences
-						</p>
-					</div>
-				</div>
-			</div>
+		<div className="space-y-6 pb-32">
+			{/* Page Header - Removed as it's now in the parent page */}
 
-			<div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-				<div className="p-6">
-					<Tabs defaultValue="general" className="space-y-4">
-						<div className="overflow-x-auto">
-							<TabsList className="min-w-max px-2 bg-background/50 border border-border/50">
-								{/* tab triggers preserved */}
-								<TabsTrigger value="general" className="relative">
-									General
-									{!deepEqual(
-										savedConfig?.settings.general,
-										workingConfig?.settings.general
-									) && (
-											<span className="absolute -top-1 -right-1">
-												<Circle className="h-2 w-2 fill-primary text-primary animate-pulse" />
-											</span>
-										)}
-								</TabsTrigger>
-								<TabsTrigger value="appearance" className="relative">
-									Appearance
-									{!deepEqual(
-										savedConfig?.settings.appearance,
-										workingConfig?.settings.appearance
-									) && (
-											<span className="absolute -top-1 -right-1">
-												<Circle className="h-2 w-2 fill-primary text-primary animate-pulse" />
-											</span>
-										)}
-								</TabsTrigger>
-								<TabsTrigger value="advanced" className="relative">
-									Advanced
-									{!deepEqual(
-										savedConfig?.settings.advanced,
-										workingConfig?.settings.advanced
-									) && (
-											<span className="absolute -top-1 -right-1">
-												<Circle className="h-2 w-2 fill-primary text-primary animate-pulse" />
-											</span>
-										)}
-								</TabsTrigger>
-							</TabsList>
-						</div>
-
-						<TabsContent value="general" className="space-y-4">
-							<Card>
-								<CardHeader>
-									<CardTitle>Instance Information</CardTitle>
-									<CardDescription>
-										View and manage your Emberly instance details
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<div className="flex items-center justify-between">
-										<div>
-											<Label>Version</Label>
-											<p className="text-sm text-muted-foreground">
-												Current version: {pkg.version}
-												{updateInfo && (
-													<span className="ml-2 text-primary">
-														{updateInfo.hasUpdate
-															? `(Update available: ${updateInfo.latestVersion})`
-															: '(Up to date)'}
-													</span>
-												)}
-											</p>
-										</div>
-										<div className="flex items-center gap-2">
-											{updateInfo?.hasUpdate && (
-												<Button variant="outline" asChild>
-													<a
-														href={updateInfo.releaseUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="flex items-center gap-2"
-													>
-														<ExternalLink className="h-4 w-4" />
-														View Release
-													</a>
-												</Button>
-											)}
-											<Button onClick={checkForUpdates} disabled={isCheckingUpdate}>
-												{isCheckingUpdate ? (
-													<>
-														<Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-														Checking...
-													</>
-												) : (
-													'Check for Updates'
-												)}
-											</Button>
-										</div>
-									</div>
-
-									<div className="flex items-center space-x-2">
-										<Button variant="outline" size="sm" asChild>
-											<a
-												href="https://github.com/EmberlyOSS/Website"
-												target="_blank"
-												rel="noopener noreferrer"
-											>
-												<Github className="mr-2 h-4 w-4" />
-												View on GitHub
-											</a>
-										</Button>
-										<Button variant="outline" size="sm" asChild>
-											<a
-												href="https://ko-fi.com/codemeapixel"
-												target="_blank"
-												rel="noopener noreferrer"
-											>
-												<Heart className="mr-2 h-4 w-4" />
-												Sponsor
-											</a>
-										</Button>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>User Management</CardTitle>
-									<CardDescription>
-										Configure user registration and quotas
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-6">
-									<div className="flex items-center justify-between">
-										<div className="space-y-0.5">
-											<Label>Allow Registrations</Label>
-											<p className="text-sm text-muted-foreground">
-												Enable or disable new user registrations
-											</p>
-										</div>
-										<div className="flex items-center gap-2">
-											{isFieldChanged('general', ['registrations', 'enabled']) && (
-												<ChangeIndicator />
-											)}
-											<Switch
-												checked={workingConfig.settings.general.registrations.enabled}
-												onCheckedChange={(checked) =>
-													handleSettingChange('general', {
-														registrations: {
-															...workingConfig.settings.general.registrations,
-															enabled: checked,
-														},
-													})
-												}
-												className={getFieldClasses('general', ['registrations', 'enabled'])}
-											/>
-										</div>
-									</div>
-
-									{!workingConfig.settings.general.registrations.enabled && (
-										<div className="space-y-2">
-											<Label>Registration Disabled Message</Label>
-											<div className="flex items-center gap-2">
-												<Input
-													placeholder="Registrations are currently disabled"
-													value={
-														workingConfig.settings.general.registrations.disabledMessage || ''
-													}
-													onChange={(e) =>
-														handleSettingChange('general', {
-															registrations: {
-																...workingConfig.settings.general.registrations,
-																disabledMessage: e.target.value,
-															},
-														})
-													}
-													className={getFieldClasses('general', ['registrations', 'disabledMessage'])}
-												/>
-												{isFieldChanged('general', ['registrations', 'disabledMessage']) && (
-													<ChangeIndicator />
-												)}
-											</div>
-											<p className="text-sm text-muted-foreground">
-												This message will be shown to users on the login page when registrations are disabled
-											</p>
-										</div>
-									)}
-
-									<div className="flex items-center justify-between">
-										<div className="space-y-0.5">
-											<Label>User Quotas</Label>
-											<p className="text-sm text-muted-foreground">
-												Enable storage limits per user
-											</p>
-										</div>
-										<div className="flex items-center gap-2">
-											{isFieldChanged('general', ['storage', 'quotas', 'enabled']) && (
-												<ChangeIndicator />
-											)}
-											<Switch
-												checked={workingConfig.settings.general.storage.quotas.enabled}
-												onCheckedChange={(checked) =>
-													handleSettingChange('general', {
-														storage: {
-															...workingConfig.settings.general.storage,
-															quotas: {
-																...workingConfig.settings.general.storage.quotas,
-																enabled: checked,
-															},
-														},
-													})
-												}
-												className={getFieldClasses('general', ['storage', 'quotas', 'enabled'])}
-											/>
-										</div>
-									</div>
-
-									<div>
-										<Label>Data Quota per User</Label>
-										<div className="flex items-center space-x-2 mt-1.5">
-											<div className="flex items-center gap-2 flex-1">
-												<Input
-													type="number"
-													min="0"
-													step="1"
-													value={workingConfig.settings.general.storage.quotas.default.value}
-													onChange={(e) => handleStorageQuotaChange(e.target.value)}
-													placeholder="500"
-													className={getFieldClasses('general', ['storage', 'quotas', 'default', 'value'])}
-												/>
-												{isFieldChanged('general', ['storage', 'quotas', 'default', 'value']) && (
-													<ChangeIndicator />
-												)}
-											</div>
-											<div className="flex items-center gap-2">
-												<Select
-													value={workingConfig.settings.general.storage.quotas.default.unit}
-													onValueChange={(value) =>
-														handleSettingChange('general', {
-															storage: {
-																...workingConfig.settings.general.storage,
-																quotas: {
-																	...workingConfig.settings.general.storage.quotas,
-																	default: {
-																		...workingConfig.settings.general.storage.quotas.default,
-																		unit: value as 'MB' | 'GB',
-																	},
-																},
-															},
-														})
-													}
-												>
-													<SelectTrigger
-														className={`w-[110px] ${getFieldClasses('general', ['storage', 'quotas', 'default', 'unit'])}`}
-													>
-														<SelectValue placeholder="Unit" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="MB">MB</SelectItem>
-														<SelectItem value="GB">GB</SelectItem>
-													</SelectContent>
-												</Select>
-												{isFieldChanged('general', ['storage', 'quotas', 'default', 'unit']) && (
-													<ChangeIndicator />
-												)}
-											</div>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>Storage Settings</CardTitle>
-									<CardDescription>
-										Configure storage provider and limitations
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-6">
-									<div className="flex items-center justify-between">
-										<div className="space-y-0.5">
-											<Label>Background OCR Processing</Label>
-											<p className="text-sm text-muted-foreground">
-												Enable OCR to allow searching through text content in uploaded images.
-											</p>
-										</div>
-										<div className="flex items-center gap-2">
-											{isFieldChanged('general', ['ocr', 'enabled']) && <ChangeIndicator />}
-											<Switch
-												checked={workingConfig.settings.general.ocr.enabled}
-												onCheckedChange={(checked) =>
-													handleSettingChange('general', {
-														ocr: { enabled: checked },
-													})
-												}
-												className={getFieldClasses('general', ['ocr', 'enabled'])}
-											/>
-										</div>
-									</div>
-
-									<div className="space-y-2">
-										<Label>Storage Provider</Label>
-										<div className="flex items-center gap-2">
-											<Select
-												value={workingConfig.settings.general.storage.provider}
-												onValueChange={(value) =>
-													handleSettingChange('general', {
-														storage: {
-															...workingConfig.settings.general.storage,
-															provider: value as 'local' | 's3',
-														},
-													})
-												}
-											>
-												<SelectTrigger className={getFieldClasses('general', ['storage', 'provider'])}>
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="local">Local Storage</SelectItem>
-													<SelectItem value="s3">S3 Storage</SelectItem>
-												</SelectContent>
-											</Select>
-											{isFieldChanged('general', ['storage', 'provider']) && <ChangeIndicator />}
-										</div>
-									</div>
-
-									{workingConfig.settings.general.storage.provider === 's3' && (
-										<div className="space-y-4 border rounded-lg p-4">
-											<div className="space-y-2">
-												<Label>S3 Bucket</Label>
-												<div className="flex items-center gap-2">
-													<Input
-														value={workingConfig.settings.general.storage.s3.bucket}
-														onChange={(e) =>
-															handleSettingChange('general', {
-																storage: {
-																	...workingConfig.settings.general.storage,
-																	s3: {
-																		...workingConfig.settings.general.storage.s3,
-																		bucket: e.target.value,
-																	},
-																},
-															})
-														}
-														placeholder="my-bucket"
-														className={getFieldClasses('general', ['storage', 's3', 'bucket'])}
-													/>
-													{isFieldChanged('general', ['storage', 's3', 'bucket']) && <ChangeIndicator />}
-												</div>
-											</div>
-
-											<div className="space-y-2">
-												<Label>Region</Label>
-												<div className="flex items-center gap-2">
-													<Input
-														value={workingConfig.settings.general.storage.s3.region}
-														onChange={(e) =>
-															handleSettingChange('general', {
-																storage: {
-																	...workingConfig.settings.general.storage,
-																	s3: {
-																		...workingConfig.settings.general.storage.s3,
-																		region: e.target.value,
-																	},
-																},
-															})
-														}
-														placeholder="us-east-1"
-														className={getFieldClasses('general', ['storage', 's3', 'region'])}
-													/>
-													{isFieldChanged('general', ['storage', 's3', 'region']) && <ChangeIndicator />}
-												</div>
-											</div>
-
-											<div className="space-y-2">
-												<Label>Access Key ID</Label>
-												<div className="flex items-center gap-2">
-													<Input
-														type="password"
-														value={workingConfig.settings.general.storage.s3.accessKeyId}
-														onChange={(e) =>
-															handleSettingChange('general', {
-																storage: {
-																	...workingConfig.settings.general.storage,
-																	s3: {
-																		...workingConfig.settings.general.storage.s3,
-																		accessKeyId: e.target.value,
-																	},
-																},
-															})
-														}
-														placeholder="AKIAXXXXXXXXXXXXXXXX"
-														className={getFieldClasses('general', ['storage', 's3', 'accessKeyId'])}
-													/>
-													{isFieldChanged('general', ['storage', 's3', 'accessKeyId']) && <ChangeIndicator />}
-												</div>
-											</div>
-
-											<div className="space-y-2">
-												<Label>Secret Access Key</Label>
-												<div className="flex items-center gap-2">
-													<Input
-														type="password"
-														value={workingConfig.settings.general.storage.s3.secretAccessKey}
-														onChange={(e) =>
-															handleSettingChange('general', {
-																storage: {
-																	...workingConfig.settings.general.storage,
-																	s3: {
-																		...workingConfig.settings.general.storage.s3,
-																		secretAccessKey: e.target.value,
-																	},
-																},
-															})
-														}
-														placeholder="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-														className={getFieldClasses('general', ['storage', 's3', 'secretAccessKey'])}
-													/>
-													{isFieldChanged('general', ['storage', 's3', 'secretAccessKey']) && <ChangeIndicator />}
-												</div>
-											</div>
-
-											<div className="space-y-2">
-												<Label>Custom Endpoint (Optional)</Label>
-												<div className="flex items-center gap-2">
-													<Input
-														value={workingConfig.settings.general.storage.s3.endpoint || ''}
-														onChange={(e) =>
-															handleSettingChange('general', {
-																storage: {
-																	...workingConfig.settings.general.storage,
-																	s3: {
-																		...workingConfig.settings.general.storage.s3,
-																		endpoint: e.target.value,
-																	},
-																},
-															})
-														}
-														placeholder="https://s3.custom-domain.com"
-														className={getFieldClasses('general', ['storage', 's3', 'endpoint'])}
-													/>
-													{isFieldChanged('general', ['storage', 's3', 'endpoint']) && <ChangeIndicator />}
-												</div>
-												<p className="text-sm text-muted-foreground">
-													For S3-compatible services like MinIO or DigitalOcean Spaces
-												</p>
-											</div>
-
-											<div className="flex items-center space-x-2">
-												<div className="flex items-center gap-2">
-													<Switch
-														checked={workingConfig.settings.general.storage.s3.forcePathStyle}
-														onCheckedChange={(checked) =>
-															handleSettingChange('general', {
-																storage: {
-																	...workingConfig.settings.general.storage,
-																	s3: {
-																		...workingConfig.settings.general.storage.s3,
-																		forcePathStyle: checked,
-																	},
-																},
-															})
-														}
-														className={getFieldClasses('general', ['storage', 's3', 'forcePathStyle'])}
-													/>
-													{isFieldChanged('general', ['storage', 's3', 'forcePathStyle']) && (
-														<ChangeIndicator />
-													)}
-												</div>
-												<Label>Force Path Style</Label>
-											</div>
-											<p className="text-sm text-muted-foreground">
-												Enable this for S3-compatible services that require path-style URLs
-											</p>
-										</div>
-									)}
-
-									<div className="space-y-2">
-										<Label>Maximum Upload Size</Label>
-										<div className="flex space-x-2 items-center mt-1.5">
-											<div className="flex items-center gap-2 flex-1">
-												<Input
-													type="number"
-													min="1"
-													step="1"
-													value={workingConfig.settings.general.storage.maxUploadSize.value}
-													onChange={(e) => handleMaxUploadSizeChange(e.target.value)}
-													placeholder="10"
-													className={getFieldClasses('general', ['storage', 'maxUploadSize', 'value'])}
-												/>
-												{isFieldChanged('general', ['storage', 'maxUploadSize', 'value']) && (
-													<ChangeIndicator />
-												)}
-											</div>
-											<div className="flex items-center gap-2">
-												<Select
-													value={workingConfig.settings.general.storage.maxUploadSize.unit}
-													onValueChange={(value) =>
-														handleSettingChange('general', {
-															storage: {
-																...workingConfig.settings.general.storage,
-																maxUploadSize: {
-																	...workingConfig.settings.general.storage.maxUploadSize,
-																	unit: value as 'MB' | 'GB',
-																},
-															},
-														})
-													}
-												>
-													<SelectTrigger
-														className={`w-[110px] ${getFieldClasses('general', ['storage', 'maxUploadSize', 'unit'])}`}
-													>
-														<SelectValue placeholder="Unit" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="MB">MB</SelectItem>
-														<SelectItem value="GB">GB</SelectItem>
-													</SelectContent>
-												</Select>
-												{isFieldChanged('general', ['storage', 'maxUploadSize', 'unit']) && <ChangeIndicator />}
-											</div>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>Credits</CardTitle>
-									<CardDescription>Manage footer credits visibility</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<div className="flex items-center justify-between">
-										<div className="space-y-0.5">
-											<Label>Show Credits Footer</Label>
-											<p className="text-sm text-muted-foreground">
-												Display Emberly credits in the footer
-											</p>
-										</div>
-										<div className="flex items-center gap-2">
-											{isFieldChanged('general', ['credits', 'showFooter']) && <ChangeIndicator />}
-											<Switch
-												checked={workingConfig.settings.general.credits.showFooter}
-												onCheckedChange={(checked) =>
-													handleSettingChange('general', {
-														credits: { showFooter: checked },
-													})
-												}
-												className={getFieldClasses('general', ['credits', 'showFooter'])}
-											/>
-										</div>
-									</div>
-
-									<Alert>
-										<div className="flex items-center gap-2">
-											<InfoIcon className="h-4 w-4 flex-shrink-0" />
-											<AlertDescription className="mt-0">
-												If you disable credits, please consider sponsoring the project to support its development.
-											</AlertDescription>
-										</div>
-									</Alert>
-								</CardContent>
-							</Card>
-						</TabsContent>
-
-						<TabsContent value="appearance" className="space-y-4">
-							<Card>
-								<CardHeader className="flex flex-row items-center justify-between">
-									<div>
-										<CardTitle>Theme Colors</CardTitle>
-										<CardDescription>
-											Customize the colors of your Emberly instance
-										</CardDescription>
-									</div>
-									{!deepEqual(
-										savedConfig?.settings.appearance.customColors,
-										workingConfig?.settings.appearance.customColors
-									) && <ChangeIndicator />}
-								</CardHeader>
-								<CardContent>
-									<AppearancePanel
-										onSaveAsSystemTheme={async (themeId, colors) => {
-											const res = await fetch('/api/admin/themes/save', {
-												method: 'POST',
-												headers: { 'Content-Type': 'application/json' },
-												body: JSON.stringify({ themeId, colors }),
-											})
-											if (res.ok) {
-												const data = await res.json()
-												toast({ title: 'Success', description: data.message })
-												return true
-											} else {
-												toast({ title: 'Error', description: 'Failed to save system theme', variant: 'destructive' })
-												return false
-											}
-										}}
-									/>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader className="flex flex-row items-center justify-between">
-									<div>
-										<CardTitle>Favicon</CardTitle>
-										<CardDescription>Upload a custom favicon for your instance</CardDescription>
-									</div>
-									{hasFaviconChanged() && <ChangeIndicator />}
-								</CardHeader>
-								<CardContent>
-									<div className="mt-2">
-										<div className="flex items-center justify-center w-full">
-											<label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted relative">
-												{(workingConfig?.settings.appearance.favicon || faviconPreviewUrl) && (
-													<div className="absolute top-4 left-4">
-														<div className="flex items-center gap-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg">
-															<img
-																src={
-																	isSafeUrl(faviconPreviewUrl)
-																		? DOMPurify.sanitize(faviconPreviewUrl)
-																		: '/api/favicon'
-																}
-																alt="Favicon"
-																className="w-6 h-6"
-															/>
-															<span className="text-sm text-muted-foreground">
-																{faviconPreviewUrl ? 'New favicon (unsaved)' : 'Current favicon'}
-															</span>
-														</div>
-													</div>
-												)}
-												<div className="flex flex-col items-center justify-center pt-5 pb-6">
-													<Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-													<p className="text-sm text-muted-foreground">Upload favicon</p>
-													<p className="text-xs text-muted-foreground mt-1">PNG up to 1MB</p>
-												</div>
-												<input
-													type="file"
-													className="hidden"
-													accept="image/png"
-													onChange={async (e) => {
-														const file = e.target.files?.[0]
-														if (!file) return
-
-														if (file.size > 1024 * 1024) {
-															toast({
-																title: 'File too large',
-																description: 'Please upload a file smaller than 1MB',
-																variant: 'destructive',
-															})
-															return
-														}
-
-														if (file.type !== 'image/png') {
-															toast({
-																title: 'Invalid file type',
-																description: 'Please upload a PNG image file',
-																variant: 'destructive',
-															})
-															return
-														}
-
-														try {
-															if (faviconPreviewUrl) {
-																URL.revokeObjectURL(faviconPreviewUrl)
-															}
-
-															const previewUrl = URL.createObjectURL(file)
-															setFaviconPreviewUrl(previewUrl)
-
-															setPendingFaviconFile(file)
-
-															toast({
-																title: 'Favicon changed',
-																description: 'Save your changes to apply the new favicon',
-															})
-														} catch (error) {
-															console.error('Failed to handle favicon:', error)
-															toast({
-																title: 'Failed to update favicon',
-																description: 'Please try again',
-																variant: 'destructive',
-															})
-														}
-													}}
-												/>
-											</label>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						</TabsContent>
-
-						<TabsContent value="advanced" className="space-y-4">
-							<Card>
-								<CardHeader>
-									<CardTitle>Custom Styling</CardTitle>
-									<CardDescription>Add custom CSS to your instance</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<Label>Custom CSS</Label>
-												{isFieldChanged('advanced', ['customCSS']) && <ChangeIndicator />}
-											</div>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setCssEditorOpen(!cssEditorOpen)}
-											>
-												<Code className="mr-2 h-4 w-4" />
-												{cssEditorOpen ? 'Close Editor' : 'Open Editor'}
-											</Button>
-										</div>
-										{cssEditorOpen && (
-											<Card
-												className={`mt-4 ${isFieldChanged('advanced', ['customCSS']) ? 'border-primary' : ''}`}
-											>
-												<CardHeader className="flex flex-row items-center justify-between">
-													<div>
-														<CardTitle>Custom CSS Editor</CardTitle>
-														<CardDescription>
-															Add custom CSS to customize your instance
-														</CardDescription>
-													</div>
-													{isFieldChanged('advanced', ['customCSS']) && <ChangeIndicator />}
-												</CardHeader>
-												<CardContent>
-													<CodeMirror
-														value={workingConfig.settings.advanced.customCSS}
-														height="200px"
-														extensions={[css()]}
-														onChange={(value) => {
-															handleSettingChange('advanced', {
-																customCSS: value,
-															})
-														}}
-														theme="dark"
-														className="border rounded-md"
-													/>
-												</CardContent>
-											</Card>
-										)}
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>HTML Head Content</CardTitle>
-									<CardDescription>Add custom HTML to the head section</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<Label>Custom HTML</Label>
-												{isFieldChanged('advanced', ['customHead']) && <ChangeIndicator />}
-											</div>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setHtmlEditorOpen(!htmlEditorOpen)}
-											>
-												<FileCode className="mr-2 h-4 w-4" />
-												{htmlEditorOpen ? 'Close Editor' : 'Open Editor'}
-											</Button>
-										</div>
-										{htmlEditorOpen && (
-											<Card
-												className={`mt-4 ${isFieldChanged('advanced', ['customHead']) ? 'border-primary' : ''}`}
-											>
-												<CardHeader className="flex flex-row items-center justify-between">
-													<div>
-														<CardTitle>Custom HTML Editor</CardTitle>
-														<CardDescription>
-															Add custom HTML to the head of your instance
-														</CardDescription>
-													</div>
-													{isFieldChanged('advanced', ['customHead']) && <ChangeIndicator />}
-												</CardHeader>
-												<CardContent>
-													<CodeMirror
-														value={workingConfig.settings.advanced.customHead}
-														height="200px"
-														extensions={[html()]}
-														onChange={(value) => {
-															handleSettingChange('advanced', {
-																customHead: value,
-															})
-														}}
-														theme="dark"
-														className="border rounded-md"
-													/>
-												</CardContent>
-											</Card>
-										)}
-									</div>
-								</CardContent>
-							</Card>
-						</TabsContent>
-					</Tabs>
-				</div>
-			</div>
-
-			{hasChanges && (
-				<div className="fixed bottom-8 left-0 right-0 flex justify-center z-50">
-					<div className="flex items-center gap-2 px-4 py-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg">
-						<div className="flex items-center gap-2 mr-2">
-							<Circle className="h-3 w-3 fill-primary text-primary animate-pulse" />
-							<span className="text-sm font-medium">
-								{countChangedSettings()}{' '}
-								{countChangedSettings() === 1 ? 'section' : 'sections'} changed:{' '}
-								{getChangedSettingsGroups().join(', ')}
-							</span>
-						</div>
-						<Button
-							variant="outline"
-							onClick={discardChanges}
-							className="flex items-center rounded-full px-4"
-							size="sm"
+			{/* Main Content */}
+			<Tabs defaultValue="general" className="space-y-6">
+				{/* Improved Tab Navigation */}
+				<div className="overflow-x-auto -mx-2 px-2">
+					<TabsList className="inline-flex h-12 items-center justify-start gap-1 rounded-xl bg-background/50 backdrop-blur-sm p-1.5 border border-border/50 shadow-sm">
+						<TabsTrigger 
+							value="general" 
+							className="relative inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-border/50"
 						>
-							<XCircle className="mr-2 h-4 w-4" />
-							Discard
-						</Button>
-						<Button
-							onClick={saveChanges}
-							disabled={isSaving}
-							className="flex items-center rounded-full px-4"
-							size="sm"
-						>
-							{isSaving ? (
-								<>
-									<Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-									Saving...
-								</>
-							) : (
-								<>
-									<Save className="mr-2 h-4 w-4" />
-									Save changes
-								</>
+							<Sliders className="h-4 w-4" />
+							<span>General</span>
+							{generalHasChanges && (
+								<span className="absolute -top-1 -right-1 flex h-3 w-3">
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+									<span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+								</span>
 							)}
-						</Button>
+						</TabsTrigger>
+						<TabsTrigger 
+							value="appearance" 
+							className="relative inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-border/50"
+						>
+							<Palette className="h-4 w-4" />
+							<span>Appearance</span>
+							{appearanceHasChanges && (
+								<span className="absolute -top-1 -right-1 flex h-3 w-3">
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+									<span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+								</span>
+							)}
+						</TabsTrigger>
+						<TabsTrigger 
+							value="advanced" 
+							className="relative inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-border/50"
+						>
+							<Code className="h-4 w-4" />
+							<span>Advanced</span>
+							{advancedHasChanges && (
+								<span className="absolute -top-1 -right-1 flex h-3 w-3">
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+									<span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+								</span>
+							)}
+						</TabsTrigger>
+					</TabsList>
+				</div>
+
+				{/* General Settings Tab */}
+				<TabsContent value="general" className="space-y-5 mt-0">
+					{/* Instance Information */}
+					<SettingsSection
+						icon={InfoIcon}
+						title="Instance Information"
+						description="View and manage your Emberly instance details"
+						badge={
+							updateInfo?.hasUpdate && (
+								<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+									<Sparkles className="h-3 w-3" />
+									Update available
+								</span>
+							)
+						}
+					>
+						<SettingRow
+							label="Current Version"
+							description={`Emberly v${pkg.version}${updateInfo ? (updateInfo.hasUpdate ? ` → ${updateInfo.latestVersion}` : ' (Latest)') : ''}`}
+						>
+							<div className="flex items-center gap-2">
+								{updateInfo?.hasUpdate && (
+									<Button variant="outline" size="sm" asChild>
+										<a
+											href={updateInfo.releaseUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="flex items-center gap-2"
+										>
+											<ExternalLink className="h-4 w-4" />
+											View Release
+										</a>
+									</Button>
+								)}
+								<Button 
+									onClick={checkForUpdates} 
+									disabled={isCheckingUpdate}
+									variant={updateInfo?.hasUpdate ? "default" : "outline"}
+									size="sm"
+								>
+									{isCheckingUpdate ? (
+										<>
+											<Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+											Checking...
+										</>
+									) : (
+										<>
+											<RefreshCw className="mr-2 h-4 w-4" />
+											Check Updates
+										</>
+									)}
+								</Button>
+							</div>
+						</SettingRow>
+
+						<div className="flex items-center gap-2 pt-2">
+							<Button variant="outline" size="sm" asChild className="h-9">
+								<a
+									href="https://github.com/EmberlyOSS/Website"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<Github className="mr-2 h-4 w-4" />
+									GitHub
+								</a>
+							</Button>
+							<Button variant="outline" size="sm" asChild className="h-9">
+								<a
+									href="https://ko-fi.com/codemeapixel"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<Heart className="mr-2 h-4 w-4 text-red-500" />
+									Sponsor
+								</a>
+							</Button>
+						</div>
+					</SettingsSection>
+
+					{/* User Management */}
+					<SettingsSection
+						icon={Users}
+						title="User Management"
+						description="Configure user registration and quota settings"
+					>
+						<SettingRow
+							label="Allow Registrations"
+							description="Enable or disable new user registrations"
+							changed={isFieldChanged('general', ['registrations', 'enabled'])}
+						>
+							<Switch
+								checked={workingConfig.settings.general.registrations.enabled}
+								onCheckedChange={(checked) =>
+									handleSettingChange('general', {
+										registrations: {
+											...workingConfig.settings.general.registrations,
+											enabled: checked,
+										},
+									})
+								}
+								className={getFieldClasses('general', ['registrations', 'enabled'])}
+							/>
+						</SettingRow>
+
+						{!workingConfig.settings.general.registrations.enabled && (
+							<div className="space-y-2 pl-0.5">
+								<Label className="text-sm font-medium">Disabled Message</Label>
+								<Input
+									placeholder="Registrations are currently disabled"
+									value={workingConfig.settings.general.registrations.disabledMessage || ''}
+									onChange={(e) =>
+										handleSettingChange('general', {
+											registrations: {
+												...workingConfig.settings.general.registrations,
+												disabledMessage: e.target.value,
+											},
+										})
+									}
+									className={cn("max-w-md", getFieldClasses('general', ['registrations', 'disabledMessage']))}
+								/>
+								<p className="text-xs text-muted-foreground">
+									Shown to users when registrations are disabled
+								</p>
+							</div>
+						)}
+
+						<SettingRow
+							label="User Quotas"
+							description="Enable storage limits per user"
+							changed={isFieldChanged('general', ['storage', 'quotas', 'enabled'])}
+						>
+							<Switch
+								checked={workingConfig.settings.general.storage.quotas.enabled}
+								onCheckedChange={(checked) =>
+									handleSettingChange('general', {
+										storage: {
+											...workingConfig.settings.general.storage,
+											quotas: {
+												...workingConfig.settings.general.storage.quotas,
+												enabled: checked,
+											},
+										},
+									})
+								}
+								className={getFieldClasses('general', ['storage', 'quotas', 'enabled'])}
+							/>
+						</SettingRow>
+
+						<div className="space-y-2 pl-0.5">
+							<div className="flex items-center gap-2">
+								<Label className="text-sm font-medium">Default Storage Quota</Label>
+								{isFieldChanged('general', ['storage', 'quotas', 'default', 'value']) && <ChangeIndicator />}
+							</div>
+							<div className="flex items-center gap-2 max-w-xs">
+								<Input
+									type="number"
+									min="0"
+									step="1"
+									value={workingConfig.settings.general.storage.quotas.default.value}
+									onChange={(e) => handleStorageQuotaChange(e.target.value)}
+									placeholder="500"
+									className={cn("flex-1", getFieldClasses('general', ['storage', 'quotas', 'default', 'value']))}
+								/>
+								<Select
+									value={workingConfig.settings.general.storage.quotas.default.unit}
+									onValueChange={(value) =>
+										handleSettingChange('general', {
+											storage: {
+												...workingConfig.settings.general.storage,
+												quotas: {
+													...workingConfig.settings.general.storage.quotas,
+													default: {
+														...workingConfig.settings.general.storage.quotas.default,
+														unit: value as 'MB' | 'GB',
+													},
+												},
+											},
+										})
+									}
+								>
+									<SelectTrigger className={cn("w-20", getFieldClasses('general', ['storage', 'quotas', 'default', 'unit']))}>
+										<SelectValue placeholder="Unit" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="MB">MB</SelectItem>
+										<SelectItem value="GB">GB</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</SettingsSection>
+
+					{/* Storage Settings */}
+					<SettingsSection
+						icon={HardDrive}
+						title="Storage Settings"
+						description="Configure storage provider and file upload limits"
+					>
+						<SettingRow
+							label="Background OCR Processing"
+							description="Enable OCR to search text in uploaded images"
+							changed={isFieldChanged('general', ['ocr', 'enabled'])}
+						>
+							<Switch
+								checked={workingConfig.settings.general.ocr.enabled}
+								onCheckedChange={(checked) =>
+									handleSettingChange('general', {
+										ocr: { enabled: checked },
+									})
+								}
+								className={getFieldClasses('general', ['ocr', 'enabled'])}
+							/>
+						</SettingRow>
+
+						<div className="space-y-2 pl-0.5">
+							<div className="flex items-center gap-2">
+								<Label className="text-sm font-medium">Storage Provider</Label>
+								{isFieldChanged('general', ['storage', 'provider']) && <ChangeIndicator />}
+							</div>
+							<Select
+								value={workingConfig.settings.general.storage.provider}
+								onValueChange={(value) =>
+									handleSettingChange('general', {
+										storage: {
+											...workingConfig.settings.general.storage,
+											provider: value as 'local' | 's3',
+										},
+									})
+								}
+							>
+								<SelectTrigger className={cn("max-w-xs", getFieldClasses('general', ['storage', 'provider']))}>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="local">
+										<div className="flex items-center gap-2">
+											<HardDrive className="h-4 w-4" />
+											Local Storage
+										</div>
+									</SelectItem>
+									<SelectItem value="s3">
+										<div className="flex items-center gap-2">
+											<Cloud className="h-4 w-4" />
+											S3 Storage
+										</div>
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						{workingConfig.settings.general.storage.provider === 's3' && (
+							<GlassCard className="mt-4" gradient={false}>
+								<div className="p-4 space-y-4">
+									<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+										<Cloud className="h-4 w-4" />
+										S3 Configuration
+									</div>
+									
+									<div className="grid gap-4 sm:grid-cols-2">
+										<div className="space-y-2">
+											<Label className="text-sm">Bucket Name</Label>
+											<Input
+												value={workingConfig.settings.general.storage.s3.bucket}
+												onChange={(e) =>
+													handleSettingChange('general', {
+														storage: {
+															...workingConfig.settings.general.storage,
+															s3: {
+																...workingConfig.settings.general.storage.s3,
+																bucket: e.target.value,
+															},
+														},
+													})
+												}
+												placeholder="my-bucket"
+												className={getFieldClasses('general', ['storage', 's3', 'bucket'])}
+											/>
+										</div>
+										<div className="space-y-2">
+											<Label className="text-sm">Region</Label>
+											<Input
+												value={workingConfig.settings.general.storage.s3.region}
+												onChange={(e) =>
+													handleSettingChange('general', {
+														storage: {
+															...workingConfig.settings.general.storage,
+															s3: {
+																...workingConfig.settings.general.storage.s3,
+																region: e.target.value,
+															},
+														},
+													})
+												}
+												placeholder="us-east-1"
+												className={getFieldClasses('general', ['storage', 's3', 'region'])}
+											/>
+										</div>
+										<div className="space-y-2">
+											<Label className="text-sm">Access Key ID</Label>
+											<Input
+												type="password"
+												value={workingConfig.settings.general.storage.s3.accessKeyId}
+												onChange={(e) =>
+													handleSettingChange('general', {
+														storage: {
+															...workingConfig.settings.general.storage,
+															s3: {
+																...workingConfig.settings.general.storage.s3,
+																accessKeyId: e.target.value,
+															},
+														},
+													})
+												}
+												placeholder="AKIAXXXXXXXXXXXXXXXX"
+												className={getFieldClasses('general', ['storage', 's3', 'accessKeyId'])}
+											/>
+										</div>
+										<div className="space-y-2">
+											<Label className="text-sm">Secret Access Key</Label>
+											<Input
+												type="password"
+												value={workingConfig.settings.general.storage.s3.secretAccessKey}
+												onChange={(e) =>
+													handleSettingChange('general', {
+														storage: {
+															...workingConfig.settings.general.storage,
+															s3: {
+																...workingConfig.settings.general.storage.s3,
+																secretAccessKey: e.target.value,
+															},
+														},
+													})
+												}
+												placeholder="••••••••••••••••••••"
+												className={getFieldClasses('general', ['storage', 's3', 'secretAccessKey'])}
+											/>
+										</div>
+									</div>
+
+									<div className="space-y-2">
+										<Label className="text-sm">Custom Endpoint (Optional)</Label>
+										<Input
+											value={workingConfig.settings.general.storage.s3.endpoint || ''}
+											onChange={(e) =>
+												handleSettingChange('general', {
+													storage: {
+														...workingConfig.settings.general.storage,
+														s3: {
+															...workingConfig.settings.general.storage.s3,
+															endpoint: e.target.value,
+														},
+													},
+												})
+											}
+											placeholder="https://s3.custom-domain.com"
+											className={getFieldClasses('general', ['storage', 's3', 'endpoint'])}
+										/>
+										<p className="text-xs text-muted-foreground">
+											For S3-compatible services like MinIO or DigitalOcean Spaces
+										</p>
+									</div>
+
+									<SettingRow
+										label="Force Path Style"
+										description="Enable for S3-compatible services requiring path-style URLs"
+										changed={isFieldChanged('general', ['storage', 's3', 'forcePathStyle'])}
+									>
+										<Switch
+											checked={workingConfig.settings.general.storage.s3.forcePathStyle}
+											onCheckedChange={(checked) =>
+												handleSettingChange('general', {
+													storage: {
+														...workingConfig.settings.general.storage,
+														s3: {
+															...workingConfig.settings.general.storage.s3,
+															forcePathStyle: checked,
+														},
+													},
+												})
+											}
+											className={getFieldClasses('general', ['storage', 's3', 'forcePathStyle'])}
+										/>
+									</SettingRow>
+								</div>
+							</GlassCard>
+						)}
+
+						<div className="space-y-2 pl-0.5">
+							<div className="flex items-center gap-2">
+								<Label className="text-sm font-medium">Maximum Upload Size</Label>
+								{isFieldChanged('general', ['storage', 'maxUploadSize', 'value']) && <ChangeIndicator />}
+							</div>
+							<div className="flex items-center gap-2 max-w-xs">
+								<Input
+									type="number"
+									min="1"
+									step="1"
+									value={workingConfig.settings.general.storage.maxUploadSize.value}
+									onChange={(e) => handleMaxUploadSizeChange(e.target.value)}
+									placeholder="10"
+									className={cn("flex-1", getFieldClasses('general', ['storage', 'maxUploadSize', 'value']))}
+								/>
+								<Select
+									value={workingConfig.settings.general.storage.maxUploadSize.unit}
+									onValueChange={(value) =>
+										handleSettingChange('general', {
+											storage: {
+												...workingConfig.settings.general.storage,
+												maxUploadSize: {
+													...workingConfig.settings.general.storage.maxUploadSize,
+													unit: value as 'MB' | 'GB',
+												},
+											},
+										})
+									}
+								>
+									<SelectTrigger className={cn("w-20", getFieldClasses('general', ['storage', 'maxUploadSize', 'unit']))}>
+										<SelectValue placeholder="Unit" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="MB">MB</SelectItem>
+										<SelectItem value="GB">GB</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</SettingsSection>
+
+					{/* Credits */}
+					<SettingsSection
+						icon={Heart}
+						title="Credits & Attribution"
+						description="Manage footer credits visibility"
+					>
+						<SettingRow
+							label="Show Credits Footer"
+							description="Display Emberly credits in the footer"
+							changed={isFieldChanged('general', ['credits', 'showFooter'])}
+						>
+							<Switch
+								checked={workingConfig.settings.general.credits.showFooter}
+								onCheckedChange={(checked) =>
+									handleSettingChange('general', {
+										credits: { showFooter: checked },
+									})
+								}
+								className={getFieldClasses('general', ['credits', 'showFooter'])}
+							/>
+						</SettingRow>
+
+						{!workingConfig.settings.general.credits.showFooter && (
+							<Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400">
+								<Heart className="h-4 w-4" />
+								<AlertDescription>
+									If you disable credits, please consider{' '}
+									<a 
+										href="https://ko-fi.com/codemeapixel" 
+										target="_blank" 
+										rel="noopener noreferrer"
+										className="underline font-medium hover:no-underline"
+									>
+										sponsoring the project
+									</a>{' '}
+									to support its development.
+								</AlertDescription>
+							</Alert>
+						)}
+					</SettingsSection>
+				</TabsContent>
+
+				{/* Appearance Tab */}
+				<TabsContent value="appearance" className="space-y-5 mt-0">
+					{/* Theme Colors */}
+					<SettingsSection
+						icon={Palette}
+						title="Theme & Colors"
+						description="Customize the visual appearance of your Emberly instance"
+						badge={
+							appearanceHasChanges && (
+								<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+									Modified
+								</span>
+							)
+						}
+					>
+						<AppearancePanel
+							onSaveAsSystemTheme={async (themeId, colors) => {
+								const res = await fetch('/api/admin/themes/save', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ themeId, colors }),
+								})
+								if (res.ok) {
+									const data = await res.json()
+									toast({ title: 'Success', description: data.message })
+									return true
+								} else {
+									toast({ title: 'Error', description: 'Failed to save system theme', variant: 'destructive' })
+									return false
+								}
+							}}
+						/>
+					</SettingsSection>
+
+					{/* Favicon */}
+					<SettingsSection
+						icon={Image}
+						title="Favicon"
+						description="Upload a custom favicon for your instance"
+						badge={
+							hasFaviconChanged() && (
+								<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+									Unsaved
+								</span>
+							)
+						}
+					>
+						<div className="flex items-center justify-center w-full">
+							<label className="relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border/50 rounded-xl cursor-pointer hover:bg-muted/30 hover:border-primary/30 transition-all group">
+								{(workingConfig?.settings.appearance.favicon || faviconPreviewUrl) && (
+									<div className="absolute top-3 left-3">
+										<div className="flex items-center gap-2 px-3 py-1.5 bg-background/90 backdrop-blur-sm rounded-lg border border-border/50">
+											<img
+												src={
+													isSafeUrl(faviconPreviewUrl)
+														? DOMPurify.sanitize(faviconPreviewUrl)
+														: '/api/favicon'
+												}
+												alt="Favicon"
+												className="w-5 h-5"
+											/>
+											<span className="text-xs text-muted-foreground">
+												{faviconPreviewUrl ? 'Preview (unsaved)' : 'Current'}
+											</span>
+										</div>
+									</div>
+								)}
+								<div className="flex flex-col items-center justify-center pt-5 pb-6">
+									<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
+										<Upload className="h-5 w-5 text-primary" />
+									</div>
+									<p className="text-sm font-medium">Click to upload favicon</p>
+									<p className="text-xs text-muted-foreground mt-1">PNG up to 1MB</p>
+								</div>
+								<input
+									type="file"
+									className="hidden"
+									accept="image/png"
+									onChange={async (e) => {
+										const file = e.target.files?.[0]
+										if (!file) return
+
+										if (file.size > 1024 * 1024) {
+											toast({
+												title: 'File too large',
+												description: 'Please upload a file smaller than 1MB',
+												variant: 'destructive',
+											})
+											return
+										}
+
+										if (file.type !== 'image/png') {
+											toast({
+												title: 'Invalid file type',
+												description: 'Please upload a PNG image file',
+												variant: 'destructive',
+											})
+											return
+										}
+
+										try {
+											if (faviconPreviewUrl) {
+												URL.revokeObjectURL(faviconPreviewUrl)
+											}
+
+											const previewUrl = URL.createObjectURL(file)
+											setFaviconPreviewUrl(previewUrl)
+											setPendingFaviconFile(file)
+
+											toast({
+												title: 'Favicon changed',
+												description: 'Save your changes to apply the new favicon',
+											})
+										} catch (error) {
+											console.error('Failed to handle favicon:', error)
+											toast({
+												title: 'Failed to update favicon',
+												description: 'Please try again',
+												variant: 'destructive',
+											})
+										}
+									}}
+								/>
+							</label>
+						</div>
+					</SettingsSection>
+				</TabsContent>
+
+				{/* Advanced Tab */}
+				<TabsContent value="advanced" className="space-y-5 mt-0">
+					{/* Custom CSS */}
+					<SettingsSection
+						icon={Code}
+						title="Custom CSS"
+						description="Add custom CSS styles to your instance"
+						badge={
+							isFieldChanged('advanced', ['customCSS']) && (
+								<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+									Modified
+								</span>
+							)
+						}
+					>
+						<div className="space-y-3">
+							<div className="flex items-center justify-between">
+								<p className="text-sm text-muted-foreground">
+									Custom CSS will be injected into every page
+								</p>
+								<Button
+									variant={cssEditorOpen ? "default" : "outline"}
+									size="sm"
+									onClick={() => setCssEditorOpen(!cssEditorOpen)}
+								>
+									<Code className="mr-2 h-4 w-4" />
+									{cssEditorOpen ? 'Close' : 'Open Editor'}
+								</Button>
+							</div>
+							{cssEditorOpen && (
+								<GlassCard gradient={false} className="overflow-hidden">
+									<div className="p-1">
+										<CodeMirror
+											value={workingConfig.settings.advanced.customCSS}
+											height="250px"
+											extensions={[css()]}
+											onChange={(value) => {
+												handleSettingChange('advanced', {
+													customCSS: value,
+												})
+											}}
+											theme="dark"
+											className="rounded-lg overflow-hidden text-sm"
+										/>
+									</div>
+								</GlassCard>
+							)}
+						</div>
+					</SettingsSection>
+
+					{/* Custom HTML */}
+					<SettingsSection
+						icon={FileCode}
+						title="HTML Head Content"
+						description="Add custom HTML to the head section of every page"
+						badge={
+							isFieldChanged('advanced', ['customHead']) && (
+								<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+									Modified
+								</span>
+							)
+						}
+					>
+						<div className="space-y-3">
+							<div className="flex items-center justify-between">
+								<p className="text-sm text-muted-foreground">
+									Add scripts, meta tags, or other HTML elements
+								</p>
+								<Button
+									variant={htmlEditorOpen ? "default" : "outline"}
+									size="sm"
+									onClick={() => setHtmlEditorOpen(!htmlEditorOpen)}
+								>
+									<FileCode className="mr-2 h-4 w-4" />
+									{htmlEditorOpen ? 'Close' : 'Open Editor'}
+								</Button>
+							</div>
+							{htmlEditorOpen && (
+								<GlassCard gradient={false} className="overflow-hidden">
+									<div className="p-1">
+										<CodeMirror
+											value={workingConfig.settings.advanced.customHead}
+											height="250px"
+											extensions={[html()]}
+											onChange={(value) => {
+												handleSettingChange('advanced', {
+													customHead: value,
+												})
+											}}
+											theme="dark"
+											className="rounded-lg overflow-hidden text-sm"
+										/>
+									</div>
+								</GlassCard>
+							)}
+						</div>
+					</SettingsSection>
+				</TabsContent>
+			</Tabs>
+
+			{/* Floating Save Bar */}
+			{hasChanges && (
+				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+					<div className="flex items-center gap-3 px-5 py-3 bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl shadow-black/20">
+						<div className="flex items-center gap-3 pr-3 border-r border-border/50">
+							<div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+								<span className="flex h-2.5 w-2.5">
+									<span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-primary opacity-75" />
+									<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+								</span>
+							</div>
+							<div className="text-sm">
+								<span className="font-semibold">{countChangedSettings()}</span>
+								<span className="text-muted-foreground ml-1">
+									{countChangedSettings() === 1 ? 'section' : 'sections'} modified
+								</span>
+							</div>
+						</div>
+						<div className="flex items-center gap-2">
+							<Button
+								variant="ghost"
+								onClick={discardChanges}
+								className="h-9 px-4 rounded-xl hover:bg-destructive/10 hover:text-destructive"
+								size="sm"
+							>
+								<RotateCcw className="mr-2 h-4 w-4" />
+								Discard
+							</Button>
+							<Button
+								onClick={saveChanges}
+								disabled={isSaving}
+								className="h-9 px-5 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+								size="sm"
+							>
+								{isSaving ? (
+									<>
+										<Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+										Saving...
+									</>
+								) : (
+									<>
+										<CheckCircle2 className="mr-2 h-4 w-4" />
+										Save Changes
+									</>
+								)}
+							</Button>
+						</div>
 					</div>
 				</div>
 			)}

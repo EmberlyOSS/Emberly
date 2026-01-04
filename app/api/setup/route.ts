@@ -95,7 +95,7 @@ export async function POST(req: Request) {
         general: {
           setup: {
             completed: true,
-            completedAt: new Date(),
+            completedAt: new Date().toISOString(),
           },
           storage: {
             provider: validatedData.storage.provider,

@@ -22,7 +22,35 @@ export default function MarkdownRenderer({ children }: { children: string }) {
               <code className={className} {...props}>{children}</code>
             </pre>
           )
-        }
+        },
+        // Wrap tables in a scrollable container for mobile responsiveness
+        table: ({ children, ...props }) => (
+          <div className="overflow-x-auto -mx-2 px-2 my-4">
+            <table className="min-w-full border-collapse" {...props}>
+              {children}
+            </table>
+          </div>
+        ),
+        thead: ({ children, ...props }) => (
+          <thead className="bg-white/5 dark:bg-black/10" {...props}>
+            {children}
+          </thead>
+        ),
+        th: ({ children, ...props }) => (
+          <th className="px-3 py-2 text-left text-sm font-semibold border-b border-white/10 dark:border-white/5 whitespace-nowrap" {...props}>
+            {children}
+          </th>
+        ),
+        td: ({ children, ...props }) => (
+          <td className="px-3 py-2 text-sm border-b border-white/10 dark:border-white/5" {...props}>
+            {children}
+          </td>
+        ),
+        tr: ({ children, ...props }) => (
+          <tr className="hover:bg-white/5 dark:hover:bg-white/[0.02] transition-colors" {...props}>
+            {children}
+          </tr>
+        ),
       }}
     >
       {children}

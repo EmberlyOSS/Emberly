@@ -217,7 +217,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const botResponse = handleBotRequest(request)
+  const botResponse = await handleBotRequest(request)
   if (botResponse) return botResponse
 
   // Allow unauthenticated access to email verification and resend pages

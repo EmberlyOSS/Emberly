@@ -13,13 +13,29 @@ export const configSchema = z.object({
     general: z.object({
       setup: z.object({
         completed: z.boolean().optional().default(false),
-        completedAt: z
-          .union([z.date(), z.string()])
-          .nullable()
-          .optional()
-          .transform((val) =>
-            val ? (val instanceof Date ? val : new Date(val)) : null
-          ),
+        // Store as ISO string for JSON compatibility, not Date object
+        completedAt: z.any().nullable().optional().default(null).transform((val) => {
+          if (!val) return null
+          // If it's already a valid ISO string, keep it
+          if (typeof val === 'string') {
+            const d = new Date(val)
+            return isNaN(d.getTime()) ? null : val
+          }
+          // If it's a Date object, convert to ISO string
+          if (val instanceof Date) {
+            return isNaN(val.getTime()) ? null : val.toISOString()
+          }
+          // Handle JSON-parsed objects with a valid date property
+          if (typeof val === 'object' && val !== null) {
+            try {
+              const d = new Date(val)
+              return isNaN(d.getTime()) ? null : d.toISOString()
+            } catch {
+              return null
+            }
+          }
+          return null
+        }),
       }).passthrough().optional().default({ completed: false, completedAt: null }),
       registrations: z.object({
         enabled: z.boolean().optional().default(true),
@@ -63,6 +79,7 @@ export const configSchema = z.object({
       enableBackgroundEffect: z.boolean().optional().default(false),
       favicon: z.string().nullable().optional().default(null),
       customColors: z.record(z.string()).optional().default({}),
+      systemThemes: z.record(z.any()).optional().default({}),
     }).passthrough().optional().default({}),
     advanced: z.object({
       customCSS: z.string().optional().default(''),
@@ -284,6 +301,10 @@ export async function updateConfig(
             ...currentConfig.settings.appearance.customColors,
             ...(newConfig.settings?.appearance?.customColors || {}),
           },
+          systemThemes: {
+            ...currentConfig.settings.appearance.systemThemes,
+            ...(newConfig.settings?.appearance?.systemThemes || {}),
+          },
         },
         advanced: {
           ...currentConfig.settings.advanced,
@@ -319,7 +340,19 @@ export async function updateConfig(
     logger.info('Configuration updated successfully')
     return validatedConfig
   } catch (error) {
-    logger.warn('Could not save config to database', { error })
+    // Log the actual error for debugging - use console.error for immediate visibility
+    console.error('[CONFIG ERROR] Could not save config to database:', error)
+    if (error instanceof Error) {
+      console.error('[CONFIG ERROR] Message:', error.message)
+      console.error('[CONFIG ERROR] Stack:', error.stack)
+    }
+    // Check if it's a Zod validation error
+    if (error && typeof error === 'object' && 'issues' in error) {
+      console.error('[CONFIG ERROR] Zod issues:', JSON.stringify((error as any).issues, null, 2))
+    }
+    logger.error('Could not save config to database', { 
+      error: error instanceof Error ? error.message : String(error),
+    })
     return newConfig as EmberlyConfig
   }
 }

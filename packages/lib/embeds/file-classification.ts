@@ -21,6 +21,42 @@ const DOCUMENT_MIME_TYPES = new Set([
   'application/vnd.apple.numbers',
 ])
 
+const MUSIC_MIME_TYPES = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/aac',
+  'audio/flac',
+  'audio/x-flac',
+  'audio/ogg',
+  'audio/opus',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/webm',
+])
+
+const IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+  'image/tiff',
+  'image/x-icon',
+  'image/vnd.microsoft.icon',
+  'image/apng',
+  'image/avif',
+  'image/heic',
+  'image/heif',
+])
+
+// Convert arrays to Sets for O(1) lookup instead of O(n)
+const VIDEO_MIME_TYPES = new Set(VIDEO_FILE_TYPES)
+const AUDIO_MIME_TYPES = new Set(AUDIO_FILE_TYPES)
+const TEXT_MIME_TYPES = new Set(TEXT_FILE_TYPES)
+
 export interface FileClassification {
   isImage: boolean
   isVideo: boolean
@@ -32,26 +68,20 @@ export interface FileClassification {
 }
 
 export function isImage(mimeType: string): boolean {
-  return mimeType.startsWith('image/')
+  return IMAGE_MIME_TYPES.has(mimeType)
 }
 
 export function isVideo(mimeType: string): boolean {
-  return VIDEO_FILE_TYPES.some((type) => mimeType.startsWith(type))
+  return VIDEO_MIME_TYPES.has(mimeType)
 }
 
 export function isAudio(mimeType: string): boolean {
-  return (
-    mimeType.startsWith('audio/') ||
-    AUDIO_FILE_TYPES.some((type) => mimeType.startsWith(type))
-  )
+  return AUDIO_MIME_TYPES.has(mimeType)
 }
 
 export function isDocument(mimeType: string): boolean {
-  if (DOCUMENT_MIME_TYPES.has(mimeType)) {
-    return true
-  }
-
   return (
+    DOCUMENT_MIME_TYPES.has(mimeType) ||
     mimeType.startsWith('application/vnd.openxmlformats-officedocument') ||
     mimeType.includes('spreadsheet') ||
     mimeType.includes('presentation') ||
@@ -65,29 +95,14 @@ export function isCode(mimeType: string): boolean {
 
 export function isText(mimeType: string): boolean {
   return (
-    TEXT_FILE_TYPES.includes(mimeType) ||
+    TEXT_MIME_TYPES.has(mimeType) ||
     mimeType.startsWith('text/') ||
     mimeType === 'application/json'
   )
 }
 
 export function isMusic(mimeType: string): boolean {
-  // Music-specific MIME types
-  const musicMimeTypes = new Set([
-    'audio/mpeg',
-    'audio/mp3',
-    'audio/mp4',
-    'audio/aac',
-    'audio/flac',
-    'audio/x-flac',
-    'audio/ogg',
-    'audio/opus',
-    'audio/wav',
-    'audio/x-wav',
-    'audio/webm',
-  ])
-
-  return musicMimeTypes.has(mimeType)
+  return MUSIC_MIME_TYPES.has(mimeType)
 }
 
 export function classifyMimeType(mimeType: string | undefined | null): FileClassification {

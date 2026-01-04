@@ -42,6 +42,26 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Contact information updated to use correct domain (`hey@embrly.ca`, Discord invite link).
 
 ### Changed
+- **Profile Dashboard Tab Navigation** - Migrated from select menu to proper icon-based tabs.
+  - Replaced Select dropdown with horizontal TabsList component for better UX.
+  - Added icons to all 10 profile tabs: Profile (User), Billing (CreditCard), Uploads (Upload), Security (Shield), Perks (Gift), Referrals (Users), Notifications (Bell), Appearance (Palette), Testimonials (MessageSquare), Data (Database).
+  - Gradient glow effect behind tab container for visual depth.
+  - Responsive design: icons only on mobile (`hidden sm:inline` for labels), full labels on larger screens.
+  - Active tab styling with primary color highlight, subtle border, and shadow.
+  - Glassmorphism tab container with backdrop blur and semi-transparent background.
+- **Referrals Section Responsive Design** - Improved mobile experience for referral code creation.
+  - Form input and "Create Code" button now stack vertically on mobile (`flex-col sm:flex-row`).
+  - Button stretches to full width on mobile for better tap targets.
+  - Code requirements text uses `break-words` to prevent overflow on narrow screens.
+  - "How Billing Credits Work" sections have responsive padding (`p-3 sm:p-4`) and list margins (`ml-3 sm:ml-4`).
+  - List items use `break-words` class for long text handling.
+- **Markdown Table Rendering** - Added horizontal scrolling and improved table styling.
+  - Tables wrapped in scrollable container with `overflow-x-auto` for mobile responsiveness.
+  - Custom table header styling with subtle background color (`bg-white/5 dark:bg-black/10`).
+  - Table headers use `whitespace-nowrap` to prevent awkward text breaking.
+  - Consistent padding and border styling on all table cells.
+  - Hover effect on table rows for better interactivity (`hover:bg-white/5`).
+  - Negative margin with padding (`-mx-2 px-2`) allows tables to use full width while maintaining scroll container.
 - **Environment Variable Consolidation** - Unified domain configuration to use existing `NEXT_PUBLIC_BASE_URL`.
   - Updated OAuth routes (GitHub and Discord) to use `NEXT_PUBLIC_BASE_URL` instead of deprecated `NEXT_PUBLIC_APP_URL`.
   - Changed fallback domain from `https://emberly.site` to `https://emberly.ca` across all authentication flows.
@@ -81,12 +101,12 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 ### Fixed
 - **Rich Embeds Metadata System** - Fixed inconsistent behavior where `enableRichEmbeds` setting was not respected for all file types.
   - **Images now respect `enableRichEmbeds=false`**: Previously images always showed preview regardless of setting; now returns minimal metadata with no image preview.
-  - **Videos now respect `enableRichEmbeds=false`**: Previously videos still generated thumbnail/video metadata; now returns minimal metadata with no media.
-  - **Videos now work properly when `enableRichEmbeds=true`**: Changed from `/api/files/{id}/thumbnail` (which redirected to banner.png) to using `rawUrl` directly so Discord/Twitter can extract their own thumbnail and play the video inline.
-  - Early return pattern when `enableRich=false` ensures no `og:image`, `og:video`, or `og:audio` tags are generated for any file type.
-  - Twitter card type changed to `summary` (no image) when rich embeds disabled, `player` for videos when enabled, `summary_large_image` for images when enabled.
-  - Non-media files now use generic OG banner (`/api/og`) instead of file-specific thumbnail endpoint.
-  - Root cause: `buildRichMetadata()` was generating image/video URLs regardless of `enableRich` flag, and video thumbnails were redirecting to banner.png instead of allowing platforms to generate their own.
+  - **Videos now respect `enableRichEmbeds=false`**: Previously videos still generated video metadata; now returns minimal metadata with no media.
+  - **Middleware now checks user settings**: Updated `bot-handler.ts` to query user's `enableRichEmbeds` setting from database before redirecting bot requests.
+  - **No embed metadata when disabled**: When rich embeds are disabled, `buildMinimalMetadata()` returns pure metadata with NO `openGraph` or `twitter` card data, ensuring Discord/Twitter show plain links without any embed cards.
+  - **Videos work properly when enabled**: When `enableRichEmbeds=true`, videos use raw URL directly so Discord/Twitter can extract their own thumbnail and play the video inline.
+  - Bot request handling: For non-video files with rich embeds disabled, middleware redirects to `/raw` so bots get the file directly; for videos, redirects to `/raw` only when embeds disabled.
+  - Root cause: Middleware was unconditionally redirecting image bot requests to `/raw` before metadata evaluation, and metadata builders were still generating embed tags even when disabled.
 - **Authentication System Domain Configuration** - Resolved production OAuth redirects incorrectly using `https://localhost:3000`.
   - Fixed all OAuth callback routes (GitHub and Discord) to use `NEXT_PUBLIC_BASE_URL` environment variable.
   - Updated proxy middleware redirects (alpha migration, email verification, password breach, login, admin authorization) to respect configured base URL.

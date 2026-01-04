@@ -38,7 +38,7 @@ export function MagicLinkEmail({
             <Section className="mb-8">
               <Row>
                 <Column align="left">
-                  <Link href="https://emberly.dev" className="inline-block">
+                  <Link href="https://emberly.ca" className="inline-block">
                     <Text className="m-0 text-xl font-bold text-orange-600">
                       Emberly
                     </Text>

@@ -173,7 +173,7 @@ export function ProfileReferrals() {
           </p>
 
           <form onSubmit={handleCreateCode} className="space-y-3">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 placeholder="e.g., yourname, john-doe, jsmith123"
@@ -187,7 +187,7 @@ export function ProfileReferrals() {
               <Button
                 type="submit"
                 disabled={submitting || !customCode.trim()}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
               >
                 {submitting ? (
                   <>
@@ -201,8 +201,8 @@ export function ProfileReferrals() {
             </div>
 
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>• 3-30 characters (letters, numbers, dashes, underscores)</p>
-              <p>• Example: my-name or username123</p>
+              <p className="break-words">• 3-30 characters (letters, numbers, dashes, underscores)</p>
+              <p className="break-words">• Example: my-name or username123</p>
             </div>
 
             {codeError && (
@@ -213,14 +213,14 @@ export function ProfileReferrals() {
           </form>
         </div>
 
-        <div className="p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10">
+        <div className="p-3 sm:p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10">
           <div className="text-sm space-y-2">
             <div className="font-semibold text-blue-600 dark:text-blue-400">How Billing Credits Work</div>
-            <ul className="space-y-1 text-muted-foreground text-xs ml-4 list-disc">
-              <li>Credits are automatically applied to your next purchase</li>
-              <li>They reduce the amount you owe on subscriptions or add-ons</li>
-              <li>Credits are applied at checkout before payment</li>
-              <li>Any remaining balance is charged to your payment method</li>
+            <ul className="space-y-1.5 text-muted-foreground text-xs ml-3 sm:ml-4 list-disc">
+              <li className="break-words">Credits are automatically applied to your next purchase</li>
+              <li className="break-words">They reduce the amount you owe on subscriptions or add-ons</li>
+              <li className="break-words">Credits are applied at checkout before payment</li>
+              <li className="break-words">Any remaining balance is charged to your payment method</li>
             </ul>
           </div>
         </div>
@@ -305,14 +305,14 @@ export function ProfileReferrals() {
       </div>
 
       {/* How it Works Section */}
-      <div className="p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10">
+      <div className="p-3 sm:p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10">
         <div className="text-sm space-y-2">
           <div className="font-semibold text-blue-600 dark:text-blue-400">How Billing Credits Work</div>
-          <ul className="space-y-1 text-muted-foreground text-xs ml-4 list-disc">
-            <li>Credits are automatically applied to your next purchase</li>
-            <li>They reduce the amount you owe on subscriptions or add-ons</li>
-            <li>Credits are applied at checkout before payment</li>
-            <li>Any remaining balance is charged to your payment method</li>
+          <ul className="space-y-1.5 text-muted-foreground text-xs ml-3 sm:ml-4 list-disc">
+            <li className="break-words">Credits are automatically applied to your next purchase</li>
+            <li className="break-words">They reduce the amount you owe on subscriptions or add-ons</li>
+            <li className="break-words">Credits are applied at checkout before payment</li>
+            <li className="break-words">Any remaining balance is charged to your payment method</li>
           </ul>
         </div>
       </div>

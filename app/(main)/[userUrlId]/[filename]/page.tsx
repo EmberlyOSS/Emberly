@@ -131,10 +131,16 @@ export async function generateMetadata({
 
   // Return minimal metadata for inaccessible or protected files
   if (isPrivate || isPasswordProtected) {
-    return buildMinimalMetadata({ fileName: 'Protected File', baseUrl })
+    return buildMinimalMetadata('Protected File')
   }
 
-  // Build rich metadata for accessible files, respecting user's enableRichEmbeds setting
+  // When rich embeds are disabled, point crawlers to the raw file URL
+  // This makes Discord/Twitter embed the raw file directly (like sharing /raw URL)
+  if (file.user.enableRichEmbeds === false) {
+    return buildMinimalMetadata(file.name, rawUrl)
+  }
+
+  // Build rich metadata for accessible files with rich embeds enabled
   return buildRichMetadata({
     baseUrl,
     fileUrlPath: urlPath,
@@ -144,9 +150,6 @@ export async function generateMetadata({
     size: file.size,
     uploadedAt: file.uploadedAt,
     uploaderName: file.user.name || 'Anonymous',
-    filePath: file.path,
-    fileId: file.id,
-    enableRich: file.user.enableRichEmbeds !== false,
   })
 }
 

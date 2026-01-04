@@ -10,14 +10,19 @@ import { Button } from '@/packages/components/ui/button'
 import { format } from 'date-fns'
 import { Separator } from '@/packages/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/packages/components/ui/select'
 import { useToast } from '@/packages/hooks/use-toast'
+import {
+  User as UserIcon,
+  CreditCard,
+  Upload,
+  Shield,
+  Gift,
+  Users,
+  Bell,
+  Palette,
+  MessageSquare,
+  Database,
+} from 'lucide-react'
 
 import { ProfileAccount } from './account'
 import { ProfileDomains } from '../dashboard/domains'
@@ -36,16 +41,16 @@ import { BillingCreditsSection } from './billing-credits'
 import { ProfilePerks } from './perks'
 
 const profileTabs = [
-  { value: 'profile', label: 'Profile' },
-  { value: 'billing', label: 'Billing' },
-  { value: 'uploads', label: 'Uploads' },
-  { value: 'security', label: 'Security' },
-  { value: 'perks', label: 'Perks' },
-  { value: 'referrals', label: 'Referrals' },
-  { value: 'notifications', label: 'Notifications' },
-  { value: 'appearance', label: 'Appearance' },
-  { value: 'testimonials', label: 'Testimonials' },
-  { value: 'data', label: 'Data' },
+  { value: 'profile', label: 'Profile', icon: UserIcon },
+  { value: 'billing', label: 'Billing', icon: CreditCard },
+  { value: 'uploads', label: 'Uploads', icon: Upload },
+  { value: 'security', label: 'Security', icon: Shield },
+  { value: 'perks', label: 'Perks', icon: Gift },
+  { value: 'referrals', label: 'Referrals', icon: Users },
+  { value: 'notifications', label: 'Notifications', icon: Bell },
+  { value: 'appearance', label: 'Appearance', icon: Palette },
+  { value: 'testimonials', label: 'Testimonials', icon: MessageSquare },
+  { value: 'data', label: 'Data', icon: Database },
 ]
 
 // Glass card wrapper component for consistent styling
@@ -147,19 +152,23 @@ export function ProfileClient({
 
   return (
     <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Select value={selectedTab} onValueChange={handleTabChange}>
-          <SelectTrigger id="profile-select" className="w-48 bg-white/5 dark:bg-black/5 backdrop-blur-sm border border-white/10 dark:border-white/5">
-            <SelectValue placeholder="Select a section" />
-          </SelectTrigger>
-          <SelectContent className="bg-white/95 dark:bg-black/90 border border-white/10 dark:border-white/5 backdrop-blur-sm">
-            {profileTabs.map((tab) => (
-              <SelectItem key={tab.value} value={tab.value}>
-                {tab.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-xl blur-xl" />
+        <TabsList className="relative w-full h-auto flex-wrap justify-start gap-1 p-1.5 bg-white/5 dark:bg-black/20 backdrop-blur-sm border border-white/10 dark:border-white/5 rounded-xl">
+          {profileTabs.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-primary/20 transition-all duration-200 hover:bg-white/5"
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
       </div>
 
       <TabsContent value="profile" className="space-y-6">
