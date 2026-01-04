@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
-## [1.4.0] - 2026-01-01
+## [1.4.0] - 2026-01-04
 
 ### Added
 - **Public User API Access** - Added `/api/users` to public paths for contribution stats visibility.
