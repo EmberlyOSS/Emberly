@@ -3,7 +3,7 @@ import { ImageResponse } from 'next/og'
 import { prisma } from '@/packages/lib/database/prisma'
 import { classifyMimeType } from '@/packages/lib/embeds/file-classification'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 export const alt = 'File shared via Emberly'
 export const size = {
   width: 1200,

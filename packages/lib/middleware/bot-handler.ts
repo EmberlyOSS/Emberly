@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { prisma } from '@/packages/lib/database/prisma'
 import { FILE_URL_PATTERN, VIDEO_EXTENSIONS } from './constants'
 
 export function isBotRequest(userAgent: string): boolean {
@@ -39,19 +38,19 @@ export async function handleBotRequest(request: NextRequest): Promise<NextRespon
   const [, userUrlId, filename] = pathMatch
   const urlPath = `/${userUrlId}/${filename}`
 
-  // Check user's enableRichEmbeds setting
+  // Check user's enableRichEmbeds setting via internal API
+  // This is necessary because middleware runs on Edge runtime and can't use Prisma directly
   let enableRichEmbeds = true // default to true
   try {
-    const file = await prisma.file.findUnique({
-      where: { urlPath },
-      select: {
-        user: {
-          select: { enableRichEmbeds: true },
-        },
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
+    const response = await fetch(`${baseUrl}/api/internal/file-settings?urlPath=${encodeURIComponent(urlPath)}`, {
+      headers: {
+        'x-internal-request': 'true',
       },
     })
-    if (file?.user) {
-      enableRichEmbeds = file.user.enableRichEmbeds !== false
+    if (response.ok) {
+      const data = await response.json()
+      enableRichEmbeds = data.enableRichEmbeds !== false
     }
   } catch {
     // If lookup fails, default to allowing rich embeds

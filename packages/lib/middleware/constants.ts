@@ -43,6 +43,7 @@ export const PUBLIC_PATHS = [
   '/api/changelogs',
   '/api/status',
   '/api/st5',
+  '/api/internal',
   '/api/setup/check',
   '/api/testimonials',
   '/api/health',
