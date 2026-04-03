@@ -17,7 +17,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "bun run scripts/seed-plans.ts",
+    "db:seed": "scripts/seed-plans.ts",
     "dev": "next dev --turbopack",
     "start": "next start",
     "format": "npx prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
