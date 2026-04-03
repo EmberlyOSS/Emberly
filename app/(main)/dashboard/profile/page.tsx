@@ -52,7 +52,13 @@ export default async function ProfilePage() {
       stripeCustomerId: true,
       passwordBreachDetectedAt: true,
       subscriptions: {
-        select: { id: true, productId: true, status: true, currentPeriodEnd: true },
+        select: {
+          id: true,
+          productId: true,
+          status: true,
+          currentPeriodEnd: true,
+          product: { select: { name: true } },
+        },
         take: 1,
         orderBy: { createdAt: 'desc' },
       },
@@ -64,6 +70,24 @@ export default async function ProfilePage() {
 
   if (!user) {
     redirect('/auth/login')
+  }
+
+  // If no subscription in DB but user has a Stripe customer, try a one-time sync.
+  // This auto-heals missed webhooks without requiring manual intervention.
+  let subscriptions = user.subscriptions
+  if (subscriptions.length === 0 && user.stripeCustomerId) {
+    try {
+      const { syncUserSubscriptionsFromStripe } = await import('@/packages/lib/stripe/billing')
+      await syncUserSubscriptionsFromStripe(user.id, user.stripeCustomerId)
+      subscriptions = await prisma.subscription.findMany({
+        where: { userId: user.id },
+        select: { id: true, productId: true, status: true, currentPeriodEnd: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      })
+    } catch (e) {
+      console.warn('[ProfilePage] Stripe subscription sync failed:', e)
+    }
   }
 
   const config = await getConfig()
@@ -151,13 +175,14 @@ export default async function ProfilePage() {
               isProfilePublic: user.isProfilePublic,
               showLinkedAccounts: user.showLinkedAccounts,
               stripeCustomerId: user.stripeCustomerId ?? null,
-              subscription: user.subscriptions?.[0]
+              subscription: subscriptions?.[0]
                 ? {
-                  id: user.subscriptions[0].id,
-                  productId: user.subscriptions[0].productId,
-                  status: user.subscriptions[0].status,
-                  currentPeriodEnd: user.subscriptions[0].currentPeriodEnd
-                    ? user.subscriptions[0].currentPeriodEnd.toISOString()
+                  id: subscriptions[0].id,
+                  productId: subscriptions[0].productId,
+                  productName: (subscriptions[0] as any).product?.name ?? null,
+                  status: subscriptions[0].status,
+                  currentPeriodEnd: subscriptions[0].currentPeriodEnd
+                    ? subscriptions[0].currentPeriodEnd.toISOString()
                     : null,
                 }
                 : null,

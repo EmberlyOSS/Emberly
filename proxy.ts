@@ -82,7 +82,7 @@ export async function proxy(request: NextRequest) {
 
         if (res.ok) {
           const data = await res.json()
-          if (data.found && data.profileSlug && data.isProfilePublic) {
+          if (data.found && data.profileSlug) {
             return NextResponse.rewrite(new URL(`/user/${data.profileSlug}`, request.url))
           }
         }

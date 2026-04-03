@@ -12,10 +12,22 @@ export interface User {
   role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId: string
   storageUsed: number
+  storageQuotaMB: number | null
+  isVerified: boolean
   bannedAt: string | null
   banReason: string | null
   banType: string | null
   banExpiresAt: string | null
+  subscriptions: Array<{
+    status: string
+    product: {
+      name: string
+      slug: string
+      storageQuotaGB: number | null
+      uploadSizeCapMB: number | null
+      customDomainsLimit: number | null
+    }
+  }>
   _count: {
     files: number
     shortenedUrls: number
@@ -274,6 +286,40 @@ export function useUserManagement(options: UseUserManagementOptions = {}) {
     [toast]
   )
 
+  const verifyUser = useCallback(
+    async (userId: string, verified: boolean) => {
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/verify`, {
+          method: verified ? 'POST' : 'DELETE',
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Failed to update verification')
+        }
+
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === userId ? { ...user, isVerified: verified } : user
+          )
+        )
+
+        toast({
+          title: 'Success',
+          description: verified ? 'User verified successfully' : 'User verification removed',
+        })
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to update verification',
+          variant: 'destructive',
+        })
+        throw error
+      }
+    },
+    [toast]
+  )
+
   return {
     users,
     isLoading,
@@ -284,5 +330,6 @@ export function useUserManagement(options: UseUserManagementOptions = {}) {
     updateUser,
     deleteUser,
     removeUserAvatar,
+    verifyUser,
   }
 }

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ url: checkout.url })
     } catch (err) {
-        return handleApiError(err, 'Checkout session creation failed')
+        return handleApiError(err, 'Checkout session creation failed', { details: true })
     }
 }
 

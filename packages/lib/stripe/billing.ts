@@ -236,3 +236,61 @@ export async function upsertSubscriptionRecord(opts: UpsertSubscriptionOptions):
 
     logger.info(`[Billing] Subscription record upserted`, { stripeSubscriptionId, status })
 }
+
+/**
+ * Fetches all active Stripe subscriptions for a customer and syncs them into
+ * the local database.  Safe to call repeatedly — all operations are idempotent.
+ * Handles the Stripe Clover API where current_period_end lives on the item.
+ */
+export async function syncUserSubscriptionsFromStripe(
+    userId: string,
+    stripeCustomerId: string,
+): Promise<void> {
+    const stripeKey = process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY
+    if (!stripeKey) return
+
+    const stripe = getStripeClient()
+
+    const subs = await stripe.subscriptions.list({
+        customer: stripeCustomerId,
+        status: 'active',
+        limit: 20,
+        // Can only expand 4 levels deep in a list: data.items.data.price
+        // (data.items.data.price.product would be 5 levels — not allowed)
+        expand: ['data.items.data.price'],
+    })
+
+    for (const sub of subs.data) {
+        const firstItem = sub.items.data[0]
+        const price = firstItem?.price
+        // price.product is a string ID (not expanded) — look it up in our DB
+        const stripeProductId = (price?.product as any as string) ?? null
+
+        // Clover API: current_period_end moved to item level
+        const rawPeriodEnd =
+            (sub as any).current_period_end ?? (firstItem as any)?.current_period_end
+        const currentPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : null
+
+        // Map Stripe product ID → internal DB product
+        const dbProduct = stripeProductId
+            ? await prisma.product.findFirst({ where: { stripeProductId } })
+            : null
+
+        if (!dbProduct) {
+            logger.warn(`[sync] No DB product matched for Stripe product "${stripeProductId}" — skipping sub ${sub.id}`)
+            continue
+        }
+
+        await upsertSubscriptionRecord({
+            userId,
+            productId: dbProduct.id,
+            stripeSubscriptionId: sub.id,
+            status: sub.status,
+            currentPeriodEnd,
+            cancelAtPeriodEnd: sub.cancel_at_period_end,
+            metadata: (sub.metadata as Record<string, string>) || {},
+        })
+    }
+
+    logger.info(`[sync] Synced ${subs.data.length} Stripe subscription(s) for user ${userId}`)
+}

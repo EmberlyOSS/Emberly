@@ -1,9 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
 import { Skeleton } from '@/packages/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
 import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -33,7 +34,16 @@ import {
   CheckCircle,
   MapPin,
   Clock,
+  BarChart2,
+  Code2,
+  GitMerge,
+  Package,
+  Users,
+  Layers,
+  Award,
 } from 'lucide-react'
+import { SiDiscord, SiGithub as SiGithubIcon } from 'react-icons/si'
+import { SkillIcon } from './skill-icons'
 import { ReportUserDialog } from './report-user-dialog'
 
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -61,6 +71,46 @@ const availabilityStyle: Record<string, string> = {
   OPEN: 'text-green-600 border-green-500/30 bg-green-500/10',
   LIMITED: 'text-yellow-600 border-yellow-500/30 bg-yellow-500/10',
   CLOSED: 'text-muted-foreground',
+}
+
+function SkillLevelBar({ level }: { level: string }) {
+  const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT']
+  const rank = levels.indexOf(level)
+  const colorMap: Record<string, string> = {
+    BEGINNER: 'bg-blue-500',
+    INTERMEDIATE: 'bg-green-500',
+    ADVANCED: 'bg-orange-500',
+    EXPERT: 'bg-purple-500',
+  }
+  return (
+    <div className="flex items-center gap-0.5" title={NEXIUM_SKILL_LEVEL_LABELS[level as keyof typeof NEXIUM_SKILL_LEVEL_LABELS]}>
+      {levels.map((_, i) => (
+        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i <= rank ? colorMap[level] : 'bg-muted-foreground/20'}`} />
+      ))}
+    </div>
+  )
+}
+
+const signalTypeIcons: Record<string, React.ReactNode> = {
+  GITHUB_REPO: <SiGithubIcon className="w-3.5 h-3.5" />,
+  DEPLOYED_APP: <Globe className="w-3.5 h-3.5" />,
+  OPEN_SOURCE_CONTRIBUTION: <GitMerge className="w-3.5 h-3.5" />,
+  SHIPPED_PRODUCT: <Package className="w-3.5 h-3.5" />,
+  COMMUNITY_IMPACT: <Users className="w-3.5 h-3.5" />,
+  ASSET_PACK: <Layers className="w-3.5 h-3.5" />,
+  CERTIFICATION: <Award className="w-3.5 h-3.5" />,
+  OTHER: <FileText className="w-3.5 h-3.5" />,
+}
+
+const signalTypeColors: Record<string, string> = {
+  GITHUB_REPO: 'bg-zinc-500/15 text-zinc-400',
+  DEPLOYED_APP: 'bg-blue-500/15 text-blue-400',
+  OPEN_SOURCE_CONTRIBUTION: 'bg-emerald-500/15 text-emerald-400',
+  SHIPPED_PRODUCT: 'bg-orange-500/15 text-orange-400',
+  COMMUNITY_IMPACT: 'bg-pink-500/15 text-pink-400',
+  ASSET_PACK: 'bg-purple-500/15 text-purple-400',
+  CERTIFICATION: 'bg-amber-500/15 text-amber-400',
+  OTHER: 'bg-muted/50 text-muted-foreground',
 }
 
 interface PublicProfileProps {
@@ -128,9 +178,16 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
   const hasDiscordBooster = user.perkRoles.some((p) => p.startsWith('DISCORD_BOOSTER'))
   const hasAffiliate = user.perkRoles.includes(PERK_ROLES.AFFILIATE)
 
-  // Auto-load contributions
+  const hasGitHub = !!(linkedAccounts?.github || user.github)
+  const hasNexium = !!nexiumProfile
+
+  const [activeTab, setActiveTab] = useState('overview')
+  const [contribsLoaded, setContribsLoaded] = useState(false)
+
+  // Lazy-load contributions only when the tab is first opened
   useEffect(() => {
-    if (linkedAccounts?.github) {
+    if (activeTab === 'contributions' && !contribsLoaded && hasGitHub) {
+      setContribsLoaded(true)
       setLoadingContribs(true)
       fetch(`/api/users/${user.id}/contributions`)
         .then(r => r.json())
@@ -138,7 +195,7 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
         .catch(console.error)
         .finally(() => setLoadingContribs(false))
     }
-  }, [user.id, linkedAccounts])
+  }, [activeTab, contribsLoaded, hasGitHub, user.id])
 
   // Auto-load public files
   useEffect(() => {
@@ -151,31 +208,65 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
   }, [user.id])
 
   // Collect all badges
-  const badges: Array<{ label: string; icon: React.ReactNode; className: string }> = []
+  const badges: Array<{ label: string; icon: React.ReactNode; className: string; gradient?: string }> = []
+
+  const CONTRIBUTOR_TIER_STYLES: Record<string, { className: string; gradient: string }> = {
+    Bronze:   { className: 'text-amber-700 dark:text-amber-500 border-amber-600/40',   gradient: 'from-amber-800/30 via-amber-700/20 to-amber-600/10' },
+    Silver:   { className: 'text-slate-400 dark:text-slate-300 border-slate-400/40',   gradient: 'from-slate-500/30 via-slate-400/20 to-slate-300/10' },
+    Gold:     { className: 'text-yellow-500 dark:text-yellow-400 border-yellow-500/40', gradient: 'from-yellow-600/30 via-yellow-500/20 to-yellow-300/10' },
+    Platinum: { className: 'text-cyan-400 dark:text-cyan-300 border-cyan-400/40',      gradient: 'from-cyan-500/30 via-cyan-400/20 to-cyan-300/10' },
+    Diamond:  { className: 'text-sky-300 dark:text-sky-200 border-sky-400/50',         gradient: 'from-sky-500/40 via-indigo-400/25 to-violet-400/15' },
+  }
+
+  const BOOSTER_TIER_STYLES: Record<string, { className: string; gradient: string }> = {
+    Bronze:   { className: 'text-amber-700 dark:text-amber-500 border-amber-600/40',   gradient: 'from-amber-800/30 via-amber-700/20 to-amber-600/10' },
+    Silver:   { className: 'text-slate-400 dark:text-slate-300 border-slate-400/40',   gradient: 'from-slate-500/30 via-slate-400/20 to-slate-300/10' },
+    Gold:     { className: 'text-yellow-500 dark:text-yellow-400 border-yellow-500/40', gradient: 'from-yellow-600/30 via-yellow-500/20 to-yellow-300/10' },
+    Platinum: { className: 'text-fuchsia-400 dark:text-fuchsia-300 border-fuchsia-400/40', gradient: 'from-fuchsia-600/30 via-purple-500/20 to-pink-400/10' },
+    Diamond:  { className: 'text-purple-300 dark:text-purple-200 border-purple-400/50',    gradient: 'from-purple-600/40 via-fuchsia-500/25 to-pink-400/15' },
+  }
 
   if (hasContributor && contributorInfo) {
-    badges.push({ label: `${contributorInfo.icon} ${contributorInfo.tier} Contributor`, icon: <Github className="w-3 h-3" />, className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' })
+    const style = CONTRIBUTOR_TIER_STYLES[contributorInfo.tier] ?? CONTRIBUTOR_TIER_STYLES.Bronze
+    badges.push({
+      label: `${contributorInfo.tier} Contributor`,
+      icon: <SiGithubIcon className="w-3 h-3" />,
+      className: style.className,
+      gradient: style.gradient,
+    })
   }
   if (hasDiscordBooster && boosterInfo) {
-    badges.push({ label: `${boosterInfo.icon} ${boosterInfo.tier} Booster`, icon: <Zap className="w-3 h-3" />, className: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30' })
+    const style = BOOSTER_TIER_STYLES[boosterInfo.tier] ?? BOOSTER_TIER_STYLES.Bronze
+    badges.push({
+      label: `${boosterInfo.tier} Booster`,
+      icon: <SiDiscord className="w-3 h-3" />,
+      className: style.className,
+      gradient: style.gradient,
+    })
   }
   if (hasAffiliate) {
-    badges.push({ label: 'Affiliate', icon: <Star className="w-3 h-3" />, className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30' })
+    badges.push({ label: 'Affiliate', icon: <Star className="w-3 h-3" />, className: 'text-blue-500 dark:text-blue-400 border-blue-500/40', gradient: 'from-blue-600/25 via-blue-500/15 to-blue-400/5' })
   }
   if (user.role === 'SUPERADMIN') {
-    badges.push({ label: 'Super Admin', icon: <Shield className="w-3 h-3" />, className: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30' })
+    badges.push({ label: 'Super Admin', icon: <Shield className="w-3 h-3" />, className: 'text-red-500 dark:text-red-400 border-red-500/40', gradient: 'from-red-600/25 via-red-500/15 to-orange-400/5' })
   } else if (user.role === 'ADMIN') {
-    badges.push({ label: 'Admin', icon: <Shield className="w-3 h-3" />, className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30' })
+    badges.push({ label: 'Admin', icon: <Shield className="w-3 h-3" />, className: 'text-orange-500 dark:text-orange-400 border-orange-500/40', gradient: 'from-orange-600/25 via-orange-500/15 to-amber-400/5' })
   }
   if (user.alphaUser) {
-    badges.push({ label: 'Alpha Member', icon: <Sparkles className="w-3 h-3" />, className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30' })
+    badges.push({ label: 'Alpha Member', icon: <Sparkles className="w-3 h-3" />, className: 'text-amber-400 dark:text-amber-300 border-amber-400/40', gradient: 'from-amber-500/25 via-yellow-400/15 to-amber-300/5' })
   }
+
+  // Determine which tabs to show
+  const showContributions = hasGitHub
+  const showFiles = user._count.files > 0 || loadingFiles
+
+  const defaultTab = 'overview'
 
   return (
     <HomeShell>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
 
-        {/* ── Hero Card ─────────────────────────────────────────────── */}
+        {/* â”€â”€ Hero Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <GlassCard>
           {user.banner && (
             <div className="relative w-full h-36 md:h-52">
@@ -191,13 +282,7 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
                 {user.image ? (
                   <div className="rounded-2xl border-4 border-background shadow-xl overflow-hidden w-28 h-28 md:w-36 md:h-36">
                     <div className="relative w-full h-full">
-                      <Image
-                        src={user.image}
-                        alt={displayName}
-                        fill
-                        className="object-cover"
-                        priority
-                      />
+                      <Image src={user.image} alt={displayName} fill className="object-cover" priority />
                       {user.avatarDecoration && (
                         <Image src={user.avatarDecoration} alt="" fill className="object-cover pointer-events-none" />
                       )}
@@ -229,7 +314,6 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
                 </div>
 
                 {user.fullName && <p className="text-sm text-muted-foreground">{user.fullName}</p>}
-
                 {nexiumProfile?.title && (
                   <p className="text-sm font-medium text-foreground/70 mt-0.5">{nexiumProfile.title}</p>
                 )}
@@ -254,9 +338,6 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
 
                 {user.bio && <p className="text-sm text-foreground/80 mt-3 leading-relaxed">{user.bio}</p>}
                 {nexiumProfile?.headline && !user.bio && <p className="text-sm text-foreground/80 mt-3 leading-relaxed">{nexiumProfile.headline}</p>}
-                {nexiumProfile?.headline && user.bio && nexiumProfile.headline !== user.bio && (
-                  <p className="text-xs text-muted-foreground mt-1">{nexiumProfile.headline}</p>
-                )}
               </div>
 
               {canReport && (
@@ -266,7 +347,7 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
               )}
             </div>
 
-            {/* Social links + Looking For */}
+            {/* Social links */}
             <div className="mt-4 flex flex-wrap gap-2 items-center">
               {user.website && (
                 <a href={user.website} target="_blank" rel="noopener noreferrer"
@@ -289,10 +370,9 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
               )}
               {(linkedAccounts?.discord || user.discord) && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 bg-background/50 text-xs">
-                  <MessageCircle className="w-3.5 h-3.5" /> {linkedAccounts?.discord || user.discord}
+                  <SiDiscord className="w-3.5 h-3.5" style={{ color: '#5865F2' }} /> {linkedAccounts?.discord || user.discord}
                 </span>
               )}
-
               {nexiumProfile && nexiumProfile.lookingFor.length > 0 && (
                 <>
                   <span className="w-px h-5 bg-border/50 mx-1 hidden sm:block" />
@@ -305,11 +385,12 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
 
             {/* Badges */}
             {badges.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-4">
+              <div className="flex flex-wrap gap-2 mt-4">
                 {badges.map((b) => (
-                  <Badge key={b.label} variant="outline" className={`gap-1 text-xs ${b.className}`}>
-                    {b.icon} {b.label}
-                  </Badge>
+                  <div key={b.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium bg-gradient-to-r ${b.gradient ?? ''} ${b.className}`}>
+                    {b.icon}
+                    <span>{b.label}</span>
+                  </div>
                 ))}
               </div>
             )}
@@ -322,7 +403,7 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
           </div>
         </GlassCard>
 
-        {/* ── Stats Row ─────────────────────────────────────────────── */}
+        {/* â”€â”€ Stats Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <GlassCard>
             <div className="p-4 text-center">
@@ -356,159 +437,225 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
           )}
         </div>
 
-        {/* ── Skills ────────────────────────────────────────────────── */}
-        {nexiumProfile && nexiumProfile.skills.length > 0 && (
-          <GlassCard>
-            <div className="p-5">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Skills</h2>
-              <div className="flex flex-wrap gap-2">
-                {nexiumProfile.skills.map((skill) => (
-                  <div key={skill.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/50 bg-background/50 text-sm">
-                    <span className="font-medium">{skill.name}</span>
-                    <Badge variant="outline" className={`text-[10px] py-0 px-1.5 ${skillLevelStyle[skill.level] ?? ''}`}>
-                      {NEXIUM_SKILL_LEVEL_LABELS[skill.level as keyof typeof NEXIUM_SKILL_LEVEL_LABELS]}
-                    </Badge>
-                    {skill.yearsExperience != null && (
-                      <span className="text-[10px] text-muted-foreground">{skill.yearsExperience}y</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </GlassCard>
-        )}
-
-        {/* ── Signals / Proof of Skill ──────────────────────────────── */}
-        {nexiumProfile && nexiumProfile.signals.length > 0 && (
-          <GlassCard>
-            <div className="p-5">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Proof of Skill</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {nexiumProfile.signals.map((signal) => (
-                  <div key={signal.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/30 bg-background/30">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] font-medium text-primary/80 uppercase tracking-wider">
-                          {NEXIUM_SIGNAL_TYPE_LABELS[signal.type as keyof typeof NEXIUM_SIGNAL_TYPE_LABELS]}
-                        </span>
-                        {signal.verified && (
-                          <Badge variant="outline" className="text-[10px] gap-0.5 py-0 px-1.5 text-green-600 border-green-500/30 bg-green-500/10">
-                            <CheckCircle className="w-2.5 h-2.5" /> Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium truncate">{signal.title}</p>
-                      {signal.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{signal.description}</p>
-                      )}
-                    </div>
-                    {signal.url && (
-                      <Button size="sm" variant="ghost" asChild className="shrink-0 h-7 px-2">
-                        <a href={signal.url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </GlassCard>
-        )}
-
-        {/* ── GitHub Contributions ───────────────────────────────────── */}
-        {linkedAccounts?.github && (
-          <>
-            {loadingContribs && !contributions && (
-              <GlassCard>
-                <div className="p-5 space-y-3">
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-              </GlassCard>
+        {/* â”€â”€ Tabbed Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <Tabs defaultValue={defaultTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full sm:w-auto inline-flex gap-1 glass-subtle p-1 rounded-xl h-auto">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2 text-sm"
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="files"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2 text-sm"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Files
+              {user._count.files > 0 && (
+                <span className="text-xs bg-muted/80 data-[state=active]:bg-primary-foreground/20 px-1.5 py-0.5 rounded-full">
+                  {user._count.files}
+                </span>
+              )}
+            </TabsTrigger>
+            {showContributions && (
+              <TabsTrigger
+                value="contributions"
+                className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2 text-sm"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                Contributions
+              </TabsTrigger>
             )}
+          </TabsList>
 
-            {contributions && contributions.linesOfCode > 0 && (
+          {/* â”€â”€ Overview Tab â”€â”€ */}
+          <TabsContent value="overview" className="mt-4 space-y-4">
+            {/* Skills */}
+            {hasNexium && nexiumProfile!.skills.length > 0 && (
               <GlassCard>
                 <div className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contributions</h2>
-                    {contributions.stats && (
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="text-emerald-600 dark:text-emerald-400">+{contributions.stats.totalAdditions.toLocaleString()}</span>
-                        <span className="text-red-500">-{contributions.stats.totalDeletions.toLocaleString()}</span>
-                        <span>{contributions.stats.totalRepos} repo{contributions.stats.totalRepos !== 1 ? 's' : ''}</span>
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Skills</h2>
+                  <div className="space-y-4">
+                    {Object.entries(
+                      nexiumProfile!.skills.reduce<Record<string, typeof nexiumProfile.skills>>((acc, s) => {
+                        const cat = s.category || 'General'
+                        acc[cat] = [...(acc[cat] ?? []), s]
+                        return acc
+                      }, {})
+                    ).map(([cat, catSkills]) => (
+                      <div key={cat}>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2">{cat}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {catSkills.map((skill) => (
+                            <div key={skill.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/50 bg-background/40 hover:bg-background/60 transition-colors">
+                              <SkillIcon name={skill.name} className="w-3.5 h-3.5 shrink-0" />
+                              <span className="text-sm font-medium">{skill.name}</span>
+                              <SkillLevelBar level={skill.level} />
+                              {skill.yearsExperience != null && (
+                                <span className="text-[10px] text-muted-foreground border-l border-border/50 pl-1.5">{skill.yearsExperience}y</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    ))}
                   </div>
-
-                  {contributions.repos && contributions.repos.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {contributions.repos.map((repo: any) => (
-                        <a key={repo.url} href={repo.url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 bg-background/50 text-xs hover:border-primary/30 transition-colors group">
-                          <Github className="w-3 h-3" />
-                          <span className="font-medium group-hover:text-primary transition-colors">{repo.name}</span>
-                          {repo.language && <span className="text-muted-foreground">· {repo.language}</span>}
-                          {repo.stars > 0 && <span className="text-muted-foreground flex items-center gap-0.5"><Star className="w-2.5 h-2.5" />{repo.stars}</span>}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-
-                  {contributions.recentCommits && contributions.recentCommits.length > 0 && (
-                    <div className="space-y-1">
-                      {contributions.recentCommits.slice(0, 5).map((commit: any) => (
-                        <a key={commit.sha} href={commit.url} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors group">
-                          <code className="text-[10px] font-mono text-muted-foreground shrink-0 group-hover:text-primary transition-colors">{commit.sha}</code>
-                          <span className="text-sm truncate flex-1 group-hover:text-primary transition-colors">{commit.message}</span>
-                          <span className="text-[10px] text-muted-foreground shrink-0">{commit.repo}</span>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 shrink-0">+{commit.additions}</span>
-                          <span className="text-[10px] text-red-500 shrink-0">-{commit.deletions}</span>
-                        </a>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </GlassCard>
             )}
-          </>
-        )}
 
-        {/* ── Public Files ──────────────────────────────────────────── */}
-        {loadingFiles && files.length === 0 && (
-          <GlassCard>
-            <div className="p-5 space-y-3">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </GlassCard>
-        )}
+            {/* Proof of Skill / Signals */}
+            {hasNexium && nexiumProfile!.signals.length > 0 && (
+              <GlassCard>
+                <div className="p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Proof of Skill</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {nexiumProfile!.signals.map((signal) => (
+                      <div key={signal.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/30 bg-background/30 hover:bg-background/50 transition-colors">
+                        <div className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-lg ${signalTypeColors[signal.type] ?? 'bg-muted/50 text-muted-foreground'}`}>
+                          {signalTypeIcons[signal.type] ?? <FileText className="w-3.5 h-3.5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              {NEXIUM_SIGNAL_TYPE_LABELS[signal.type as keyof typeof NEXIUM_SIGNAL_TYPE_LABELS]}
+                            </span>
+                            {signal.verified && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-green-600 dark:text-green-400">
+                                <CheckCircle className="w-2.5 h-2.5" /> Verified
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold leading-tight">{signal.title}</p>
+                          {signal.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{signal.description}</p>
+                          )}
+                        </div>
+                        {signal.url && (
+                          <a href={signal.url} target="_blank" rel="noopener noreferrer"
+                            className="shrink-0 mt-0.5 flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/40 transition-colors">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </GlassCard>
+            )}
 
-        {files.length > 0 && (
-          <GlassCard>
-            <div className="p-5">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Public Files <span className="text-muted-foreground/50">({files.length})</span>
-              </h2>
-              <div className="space-y-1">
-                {files.slice(0, 10).map((file) => (
-                  <a key={file.id} href={`https://embrly.ca/${file.url}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors group">
-                    <FileText className="w-4 h-4 text-primary/60 shrink-0 group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium truncate flex-1 group-hover:text-primary transition-colors">{file.name}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{file.views.toLocaleString()}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5"><Download className="w-2.5 h-2.5" />{file.downloads.toLocaleString()}</span>
-                  </a>
-                ))}
+            {/* Empty overview state */}
+            {!hasNexium && (
+              <GlassCard>
+                <div className="p-8 text-center text-muted-foreground">
+                  <p className="text-sm">No additional profile info available.</p>
+                </div>
+              </GlassCard>
+            )}
+          </TabsContent>
+
+          {/* â”€â”€ Files Tab â”€â”€ */}
+          <TabsContent value="files" className="mt-4">
+            <GlassCard>
+              <div className="p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                  Public Files <span className="text-muted-foreground/50">({files.length})</span>
+                </h2>
+
+                {loadingFiles && files.length === 0 ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                    ))}
+                  </div>
+                ) : files.length > 0 ? (
+                  <div className="space-y-1">
+                    {files.slice(0, 20).map((file) => (
+                      <a key={file.id} href={`https://embrly.ca/${file.url}`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors group">
+                        <FileText className="w-4 h-4 text-primary/60 shrink-0 group-hover:text-primary transition-colors" />
+                        <span className="text-sm font-medium truncate flex-1 group-hover:text-primary transition-colors">{file.name}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{file.views.toLocaleString()}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5"><Download className="w-2.5 h-2.5" />{file.downloads.toLocaleString()}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">No public files yet.</p>
+                )}
               </div>
-            </div>
-          </GlassCard>
-        )}
+            </GlassCard>
+          </TabsContent>
+
+          {/* â”€â”€ Contributions Tab â”€â”€ */}
+          {showContributions && (
+            <TabsContent value="contributions" className="mt-4 space-y-4">
+              {loadingContribs && !contributions ? (
+                <GlassCard>
+                  <div className="p-5 space-y-3">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                </GlassCard>
+              ) : contributions && contributions.linesOfCode > 0 ? (
+                <GlassCard>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contributions</h2>
+                      {contributions.stats && (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="text-emerald-600 dark:text-emerald-400">+{contributions.stats.totalAdditions.toLocaleString()}</span>
+                          <span className="text-red-500">-{contributions.stats.totalDeletions.toLocaleString()}</span>
+                          <span>{contributions.stats.totalRepos} repo{contributions.stats.totalRepos !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {contributions.repos && contributions.repos.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {contributions.repos.map((repo: any) => (
+                          <a key={repo.url} href={repo.url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 bg-background/50 text-xs hover:border-primary/30 transition-colors group">
+                            <Github className="w-3 h-3" />
+                            <span className="font-medium group-hover:text-primary transition-colors">{repo.name}</span>
+                            {repo.language && <span className="text-muted-foreground">Â· {repo.language}</span>}
+                            {repo.stars > 0 && <span className="text-muted-foreground flex items-center gap-0.5"><Star className="w-2.5 h-2.5" />{repo.stars}</span>}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    {contributions.recentCommits && contributions.recentCommits.length > 0 && (
+                      <div className="space-y-1">
+                        {contributions.recentCommits.slice(0, 8).map((commit: any) => (
+                          <a key={commit.sha} href={commit.url} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors group">
+                            <code className="text-[10px] font-mono text-muted-foreground shrink-0 group-hover:text-primary transition-colors">{commit.sha}</code>
+                            <span className="text-sm truncate flex-1 group-hover:text-primary transition-colors">{commit.message}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{commit.repo}</span>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 shrink-0">+{commit.additions}</span>
+                            <span className="text-[10px] text-red-500 shrink-0">-{commit.deletions}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+              ) : (
+                <GlassCard>
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Github className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm">No contribution data available.</p>
+                  </div>
+                </GlassCard>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
 
       {canReport && (

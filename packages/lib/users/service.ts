@@ -26,11 +26,30 @@ export const USER_ADMIN_SELECT = {
   role: true,
   urlId: true,
   storageUsed: true,
+  storageQuotaMB: true,
   emailNotificationsEnabled: true,
+  isVerified: true,
   bannedAt: true,
   banReason: true,
   banType: true,
   banExpiresAt: true,
+  subscriptions: {
+    where: { status: 'active' },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+    select: {
+      status: true,
+      product: {
+        select: {
+          name: true,
+          slug: true,
+          storageQuotaGB: true,
+          uploadSizeCapMB: true,
+          customDomainsLimit: true,
+        },
+      },
+    },
+  },
   _count: {
     select: {
       files: true,

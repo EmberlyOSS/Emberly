@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Button } from '@/packages/components/ui/button'
+import { formatFileSize } from '@/packages/lib/utils/formatting'
 
 export default function RecentUploads({ recentUploads, onRefresh, plan, onExport }: { recentUploads?: any[]; onRefresh: () => void; plan?: string; onExport: () => void }) {
     return (
@@ -14,7 +15,7 @@ export default function RecentUploads({ recentUploads, onRefresh, plan, onExport
                 {(recentUploads || []).map((f: any) => (
                     <div key={f.id} className="flex items-center justify-between text-sm">
                         <div className="truncate max-w-[60%]">{f.name}</div>
-                        <div className="text-xs text-muted-foreground">{Math.round(f.size)} bytes • {new Date(f.uploadedAt).toLocaleDateString()}</div>
+                        <div className="text-xs text-muted-foreground">{formatFileSize(f.size)} • {new Date(f.uploadedAt).toLocaleDateString()}</div>
                     </div>
                 ))}
             </div>

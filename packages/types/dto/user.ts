@@ -32,6 +32,8 @@ export const UpdateUserSchema = z.object({
   storageQuotaMB: z.number().min(0, 'Storage quota must be at least 0 MB').nullable().optional(),
   grantStorageGB: z.number().min(0, 'Grant storage must be at least 0 GB').optional(),
   grantCustomDomains: z.number().min(0, 'Grant custom domains must be at least 0').optional(),
+  planSlug: z.string().optional(),
+  planProductId: z.string().optional(),
 })
 
 // Legacy schema for backwards compatibility

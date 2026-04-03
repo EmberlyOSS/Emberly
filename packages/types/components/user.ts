@@ -31,6 +31,7 @@ export interface User {
   subscription?: {
     id: string
     productId: string
+    productName?: string | null
     status: string
     currentPeriodEnd?: string | null
   } | null

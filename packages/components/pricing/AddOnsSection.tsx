@@ -10,7 +10,7 @@ type AddOn = {
     name: string
     description: string
     priceId: string
-    billingPeriod: 'monthly' | 'one-time'
+    billingPeriod: 'monthly' | 'yearly' | 'one-time'
     pricePerUnit: number | null
     features: string[]
 }

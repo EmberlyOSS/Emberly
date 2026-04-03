@@ -8,6 +8,7 @@ import Image from 'next/image'
 import {
   Archive,
   Ban,
+  BadgeCheck,
   ChevronLeft,
   ChevronRight,
   Edit2,
@@ -32,6 +33,7 @@ import {
   Users,
   UserX,
   Video,
+  Zap,
 } from 'lucide-react'
 
 import {
@@ -63,6 +65,7 @@ import {
 } from '@/packages/components/ui/dropdown-menu'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
+import { Progress } from '@/packages/components/ui/progress'
 import { Textarea } from '@/packages/components/ui/textarea'
 import {
   Pagination,
@@ -109,10 +112,22 @@ interface User {
   role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId: string
   storageUsed: number
+  storageQuotaMB: number | null
+  isVerified: boolean
   bannedAt: string | null
   banReason: string | null
   banType: string | null
   banExpiresAt: string | null
+  subscriptions: Array<{
+    status: string
+    product: {
+      name: string
+      slug: string
+      storageQuotaGB: number | null
+      uploadSizeCapMB: number | null
+      customDomainsLimit: number | null
+    }
+  }>
   _count: {
     files: number
     shortenedUrls: number
@@ -173,9 +188,10 @@ function UserTableSkeleton() {
           <TableRow className="hover:bg-transparent border-border/50">
             <TableHead>User</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead>Plan</TableHead>
             <TableHead>URL ID</TableHead>
             <TableHead>Files</TableHead>
-            <TableHead>Storage Used</TableHead>
+            <TableHead>Storage</TableHead>
             <TableHead>URLs</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -194,6 +210,9 @@ function UserTableSkeleton() {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-5 w-[70px] rounded-full" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-5 w-[60px] rounded-full" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-5 w-[50px] rounded" />
@@ -349,6 +368,7 @@ export function UserList() {
     updateUser,
     deleteUser,
     removeUserAvatar,
+    verifyUser,
   } = useUserManagement()
 
   const { data: session } = useSession()
@@ -396,6 +416,18 @@ export function UserList() {
   const [flagTarget, setFlagTarget] = useState<{ type: 'file' | 'url'; id: string; name: string; flagged: boolean } | null>(null)
   const [flagReason, setFlagReason] = useState('')
   const [isFlagging, setIsFlagging] = useState(false)
+
+  // Available plans from DB for the plan-change dropdown
+  const [availablePlans, setAvailablePlans] = useState<Array<{ id: string; slug: string; name: string }>>([])
+
+  useEffect(() => {
+    fetch('/api/products/catalog')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d?.data?.plans) setAvailablePlans(d.data.plans)
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchUserFiles = useCallback(
     async (userId: string, page: number) => {
@@ -520,6 +552,7 @@ export function UserList() {
       password: '',
       role: user.role,
       urlId: user.urlId,
+      planSlug: user.subscriptions?.[0]?.product?.slug,
     })
     setIsDialogOpen(true)
   }
@@ -778,6 +811,14 @@ export function UserList() {
     }
   }
 
+  const handleVerifyUser = async (user: User) => {
+    try {
+      await verifyUser(user.id, !user.isVerified)
+    } catch {
+      // toast already shown in hook
+    }
+  }
+
   const handleOpenFlag = (type: 'file' | 'url', id: string, name: string, flagged: boolean) => {
     setFlagTarget({ type, id, name, flagged })
     setFlagReason('')
@@ -861,9 +902,10 @@ export function UserList() {
             <TableRow className="hover:bg-transparent border-border/50">
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>URL ID</TableHead>
               <TableHead>Files</TableHead>
-              <TableHead>Storage Used</TableHead>
+              <TableHead>Storage</TableHead>
               <TableHead>URLs</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -871,7 +913,7 @@ export function UserList() {
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32">
+                <TableCell colSpan={8} className="h-32">
                   <div className="flex flex-col items-center justify-center text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
                       <Users className="h-6 w-6 text-primary" />
@@ -896,7 +938,12 @@ export function UserList() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="space-y-0.5">
-                        <p className="font-medium leading-none">{user.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium leading-none">{user.name}</p>
+                          {user.isVerified && (
+                            <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {user.email}
                         </p>
@@ -915,6 +962,16 @@ export function UserList() {
                     </div>
                   </TableCell>
                   <TableCell>
+                    {user.subscriptions?.[0]?.product ? (
+                      <Badge variant="secondary" className="gap-1 text-xs bg-primary/10 text-primary border-0">
+                        <Zap className="h-3 w-3" />
+                        {user.subscriptions[0].product.name}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs bg-muted/50 border-0">Free</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <code className="relative rounded-md bg-muted/50 px-2 py-1 font-mono text-xs">
                       {user.urlId}
                     </code>
@@ -923,7 +980,20 @@ export function UserList() {
                     <span className="text-sm">{user._count.files}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{formatFileSize(user.storageUsed)}</span>
+                    <div className="space-y-1 min-w-[100px]">
+                      <span className="text-sm">{formatFileSize(user.storageUsed)}</span>
+                      {(() => {
+                        const quotaGB = user.subscriptions?.[0]?.product?.storageQuotaGB
+                        const quotaMB = user.storageQuotaMB ?? (quotaGB != null ? quotaGB * 1024 : 10240)
+                        const pct = quotaMB > 0 ? Math.min((user.storageUsed / quotaMB) * 100, 100) : 0
+                        return (
+                          <Progress
+                            value={pct}
+                            className={`h-1 ${pct > 90 ? '[&>div]:bg-red-500' : pct > 75 ? '[&>div]:bg-orange-500' : ''}`}
+                          />
+                        )
+                      })()}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">{user._count.shortenedUrls}</span>
@@ -1022,6 +1092,22 @@ export function UserList() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => handleVerifyUser(user)}
+                              className={`h-8 w-8 ${user.isVerified ? 'text-blue-500 hover:text-blue-500 hover:bg-blue-500/10' : 'text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10'}`}
+                            >
+                              <BadgeCheck className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{user.isVerified ? 'Remove Verification' : 'Verify User'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => {
                                 setUserToDelete(user)
                                 setIsDeleteDialogOpen(true)
@@ -1046,7 +1132,7 @@ export function UserList() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="glass border-white/[0.08] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingUser ? 'Edit User' : 'New User'}</DialogTitle>
             <DialogDescription>
@@ -1208,6 +1294,13 @@ export function UserList() {
 
                       <div className="space-y-2">
                         <Label htmlFor="plan">Plan</Label>
+                        {editingUser?.subscriptions?.[0]?.product && (
+                          <p className="text-xs text-muted-foreground">
+                            Current: <span className="font-medium text-foreground">{editingUser.subscriptions[0].product.name}</span>
+                            {' · '}
+                            {editingUser.subscriptions[0].product.storageQuotaGB == null ? '∞' : `${editingUser.subscriptions[0].product.storageQuotaGB} GB`} storage
+                          </p>
+                        )}
                         <Select
                           value={(formData.planSlug as string) || 'keep'}
                           onValueChange={(value: string) =>
@@ -1219,9 +1312,11 @@ export function UserList() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="keep">Keep current</SelectItem>
-                            <SelectItem value="free">Free</SelectItem>
-                            <SelectItem value="starter">Starter</SelectItem>
-                            <SelectItem value="pro">Pro</SelectItem>
+                            {availablePlans.map((plan) => (
+                              <SelectItem key={plan.slug} value={plan.slug}>
+                                {plan.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>

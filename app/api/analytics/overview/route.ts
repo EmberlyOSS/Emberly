@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { planKeyForProduct, hasAnalytics, hasAdvancedAnalytics } from '@/packages/lib/plans'
+import { getEffectiveQuotaMB, getPlanLimits } from '@/packages/lib/storage/quota'
 
 export async function GET(req: Request) {
   try {
@@ -51,8 +52,11 @@ export async function GET(req: Request) {
     const totalViews = totalsAgg._sum?.views ?? 0
     const totalDownloads = totalsAgg._sum?.downloads ?? 0
 
-    // compute allowed features for the viewer (plan-based gating)
+    // compute allowed features and quota info for the viewer (plan-based gating)
     const allowed = { topFiles: false, topUrls: false, exportCSV: false }
+    let quotaInfo: { quotaMB: number; usedMB: number; remainingMB: number; percentageUsed: number } | null = null
+    let planInfo: { planName: string; uploadSizeCapMB: number | null; customDomainsLimit: number | null; storageQuotaGB: number | null } | null = null
+
     if (user) {
       const subs = await prisma.subscription.findMany({ where: { userId: user?.id, status: 'active' }, include: { product: true } })
       if (subs.length > 0) {
@@ -60,6 +64,30 @@ export async function GET(req: Request) {
         allowed.topFiles = hasAnalytics(bestPlan)
         allowed.topUrls = hasAnalytics(bestPlan)
         allowed.exportCSV = hasAdvancedAnalytics(bestPlan)
+      }
+
+      // Fetch quota and plan limit info (non-critical)
+      if (userId) {
+        try {
+          const [quota, limits] = await Promise.all([
+            getEffectiveQuotaMB(userId),
+            getPlanLimits(userId),
+          ])
+          quotaInfo = {
+            quotaMB: quota.quotaMB,
+            usedMB: quota.usedMB,
+            remainingMB: quota.remainingMB,
+            percentageUsed: quota.percentageUsed,
+          }
+          planInfo = {
+            planName: limits.planName,
+            uploadSizeCapMB: limits.uploadSizeCapMB,
+            customDomainsLimit: limits.customDomainsLimit,
+            storageQuotaGB: limits.storageQuotaGB,
+          }
+        } catch (e) {
+          // non-critical — continue without quota info
+        }
       }
     }
 
@@ -77,11 +105,14 @@ export async function GET(req: Request) {
         verifiedDomains: verifiedDomainsCount,
       },
       uploadsPerDay,
-      topUrls,
-      topFiles,
+      // Only include gated data when the plan allows it
+      topUrls: allowed.topUrls ? topUrls : [],
+      topFiles: allowed.topFiles ? topFiles : [],
       recentUploads,
       topStorageFiles,
       allowed,
+      quotaInfo,
+      planInfo,
     })
   } catch (err) {
     console.error('analytics/overview error', err)

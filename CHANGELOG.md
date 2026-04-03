@@ -4,7 +4,47 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
-## [2.0.0] - 2026-03-29
+## [2.1.0] - 2026-04-03
+
+### Added
+- **Brand Icon System (`skill-icons.tsx`)** — New shared utility in `packages/components/profile/` mapping 100+ skill name patterns to brand icons.
+  - Uses **react-icons/si** (Simple Icons SVG) for modern tech: React, Next.js, TypeScript, Docker, Kubernetes, Terraform, GraphQL, Tailwind CSS, Svelte, Angular, Kotlin, Flutter, Rust, Go, and more.
+  - Uses **devicons CSS font** for supplemental coverage: Python, Node.js, PHP, Ruby, Java, Swift, Dart, PostgreSQL, MySQL, MongoDB, Redis, GitHub, Firebase, AWS, HTML5, CSS3, Sass, Linux, Ubuntu, Debian, jQuery, npm, Laravel, Django, Meteor, Heroku, Jenkins, Travis CI, and more.
+  - `getSkillIcon(name)` returns matched icon entry (type-discriminated `si` | `di`).
+  - `SkillIcon` component renders either an SVG icon or a devicons `<i>` glyph with correct brand color.
+  - Consumed by both `public-profile.tsx` and `nexium-dashboard.tsx`.
+- **Skill Level Bar** — New `SkillLevelBar` component replacing verbose badge text with 4 colored dots (blue/green/orange/purple by level).
+  - Used in both public profile Talent tab and Nexium dashboard Skills panel.
+- **Skills Category Grouping** — Skills are now grouped by category with a subtle category header in both the public profile and dashboard Nexium panels.
+- **Signal Type Icon Chips** — Each signal type now renders a colored icon chip (zinc/blue/emerald/orange/pink/purple/amber) for quick visual identification.
+  - GitHub repo signals use the `SiGithub` brand icon.
+  - All signal cards redesigned with bolder title, small uppercase type label, and cleaner layout.
+- **Per-Tier Contributor & Booster Badges** — Emberly perk role badges completely redesigned with custom gradient pill styling per tier.
+  - **Contributor:** Bronze (amber), Silver (slate/zinc), Gold (yellow), Platinum (cyan/teal), Diamond (sky→violet gradient).
+  - **Booster:** Bronze (amber), Silver (slate/zinc), Gold (yellow), Platinum (fuchsia), Diamond (purple→pink gradient).
+  - Each badge includes a tier icon and a gradient border, replacing the generic flat `<Badge>` component.
+- **Discord Social Link Icon** — Profile Discord social link now renders the official `SiDiscord` brand icon (`#5865F2`) instead of the generic `MessageCircle` lucide icon.
+- **Admin User Verify** — New admin action to manually verify a user's account.
+  - `POST /api/admin/users/[id]/verify` — sets `isVerified: true` on the target user.
+  - `isVerified` field added to `USER_ADMIN_SELECT` constant so it's always returned in admin user queries.
+  - Verify button added to the admin user list with confirmation and toast feedback.
+
+### Changed
+- **Public Profile Redesign** — `public-profile.tsx` fully rewritten with a tabbed layout.
+  - Tabs: Overview, Files, URLs, Contributions, Talent — only rendered if the user has relevant content.
+  - Contributions tab lazy-loads on first click (not on page mount) to avoid blocking the initial render.
+- **Contributions API Performance** — `GET /api/users/[id]/contributions` parallelized with `Promise.allSettled`.
+  - All repo commit fetches now run concurrently instead of sequentially.
+  - All commit detail fetches run concurrently in a second parallel batch.
+  - Eliminates the previous O(repos × commits) serial round-trips.
+
+### Fixed
+- **`/u/[shortCode]` Username Lookup** — Short URL redirect now correctly resolves by username/vanity ID instead of raw user ID.
+- **Proxy Custom Domain Root Rewrite** — Fixed incorrect rewrite target when a visitor hits `/` on a verified custom domain; now correctly rewrites to `/user/[profileSlug]`.
+- **Private Profile Handling** — Profile page now correctly returns a 404-style "private" state instead of partially rendering when `profileVisibility` is set to private.
+- **Duplicate Declaration Crash** — Removed stale duplicate code block appended after the `public-profile.tsx` rewrite that caused five symbols to be declared twice, breaking the build.
+
+
 
 ### Added
 - **Royal Purple Theme** - Signature preset Emberly theme with rich purple color palette.

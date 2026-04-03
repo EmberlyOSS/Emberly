@@ -84,13 +84,15 @@ export async function POST(req: Request) {
       const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(uploadedFile.size)
       
-      // Check plan upload size cap
-      const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
-      if (uploadedFile.size > maxUploadBytes) {
-        return apiError(
-          `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
-          HTTP_STATUS.PAYLOAD_TOO_LARGE
-        )
+      // Check plan upload size cap (null = unlimited for Ember/Enterprise)
+      if (planLimits.uploadSizeCapMB !== null) {
+        const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
+        if (uploadedFile.size > maxUploadBytes) {
+          return apiError(
+            `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+            HTTP_STATUS.PAYLOAD_TOO_LARGE
+          )
+        }
       }
       
       // Check storage quota
