@@ -8,90 +8,118 @@ datasource db {
 }
 
 model User {
-  id                    String    @id @default(cuid())
-  name                  String?
-  email                 String?   @unique
-  emailVerified         DateTime?
-  image                 String?
-  theme                 String?
-  customColors          Json?     // Theme color customizations
-  twoFactorEnabled      Boolean   @default(false)
-  twoFactorSecret       String?
-  preferredUploadDomain String?
-  password              String?
-  passwordResetToken    String?
-  passwordResetExpires  DateTime?
+  id                       String    @id @default(cuid())
+  name                     String?
+  email                    String?   @unique
+  emailVerified            DateTime?
+  image                    String?
+  banner                   String? // User's banner image (uploaded or from Discord)
+  avatarDecoration         String? // Discord avatar decoration asset URL
+  isVerified               Boolean   @default(false)
+  theme                    String?
+  customColors             Json? // Theme color customizations
+  twoFactorEnabled         Boolean   @default(false)
+  twoFactorSecret          String?
+  preferredUploadDomain    String?
+  password                 String?
+  passwordResetToken       String?
+  passwordResetExpires     DateTime?
   passwordBreachDetectedAt DateTime?
-  magicLinkToken        String?
-  magicLinkExpires      DateTime?
-  lastLoginAt           DateTime?
-  lastLoginIp           String?
-  lastLoginUserAgent    String?
-  verificationCodes     String[]  @default([])
-  role                  UserRole  @default(USER)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  storageUsed           Float     @default(0)
-  sessionVersion        Int       @default(1)
-  vanityId              String?   @unique
-  urlId                 String    @unique
-  uploadToken           String    @unique
-  randomizeFileUrls     Boolean   @default(false)
-  enableRichEmbeds      Boolean   @default(true)
-  storageQuotaMB        Int?
+  magicLinkToken           String?
+  magicLinkExpires         DateTime?
+  lastLoginAt              DateTime?
+  lastLoginIp              String?
+  lastLoginUserAgent       String?
+  verificationCodes        String[]  @default([])
+  role                     UserRole  @default(USER)
+  bannedAt                 DateTime?
+  banReason                String?
+  banExpiresAt             DateTime? // null = permanent ban
+  banType                  String? // 'temporary' | 'permanent'
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  storageUsed              Float     @default(0)
+  sessionVersion           Int       @default(1)
+  vanityId                 String?   @unique
+  urlId                    String    @unique
+  uploadToken              String    @unique
+  randomizeFileUrls        Boolean   @default(false)
+  enableRichEmbeds         Boolean   @default(true)
+  storageQuotaMB           Int?
 
   alphaUser Boolean @default(false)
 
   // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, AFFILIATE, etc)
-  perkRoles         String[]  @default([])
-  lastPerkCheckAt   DateTime?
+  perkRoles       String[]  @default([])
+  lastPerkCheckAt DateTime?
 
   // Referral/Affiliate system
-  referralCode      String?   @unique
-  referrerUserId    String?
-  referrer          User?     @relation("ReferralChildren", fields: [referrerUserId], references: [id], onDelete: SetNull)
-  referrals         User[]    @relation("ReferralChildren")
-  referralCredits   Float     @default(0) // Billing credits earned from referrals (in dollars)
-  referralStats     Json      @default("{\"count\": 0, \"credited\": 0, \"lastCreditedAt\": null}") // Track referral metrics
+  referralCode    String? @unique
+  referrerUserId  String?
+  referrer        User?   @relation("ReferralChildren", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  referrals       User[]  @relation("ReferralChildren")
+  referralCredits Float   @default(0) // Billing credits earned from referrals (in dollars)
+  referralStats   Json    @default("{\"count\": 0, \"credited\": 0, \"lastCreditedAt\": null}") // Track referral metrics
 
   // Email notification preferences
   emailNotificationsEnabled Boolean @default(true)
   emailPreferences          Json    @default("{\"security\": true, \"account\": true, \"billing\": true, \"marketing\": false, \"productUpdates\": true}")
 
+  // Discord webhook notification preferences
+  discordWebhookUrl           String?
+  discordNotificationsEnabled Boolean @default(false)
+  discordPreferences          Json    @default("{\"security\": true, \"account\": false, \"billing\": true, \"marketing\": false, \"productUpdates\": false}")
+
   // Public profile fields
-  bio                       String?
-  website                   String?
-  twitter                   String?
-  github                    String?
-  discord                   String?
-  isProfilePublic           Boolean   @default(true)
-  profileBio                String?
-  profileVisibility         String    @default("PUBLIC") // PUBLIC or PRIVATE
+  fullName           String?
+  bio                String?
+  website            String?
+  twitter            String?
+  github             String?
+  discord            String?
+  isProfilePublic    Boolean @default(true)
+  showLinkedAccounts Boolean @default(false)
+  profileBio         String?
+  profileVisibility  String  @default("PUBLIC") // PUBLIC or PRIVATE
 
   files                       File[]
   shortenedUrls               ShortenedUrl[]
-  stripeCustomerId            String?              @unique
-  defaultFileExpiration       FileExpiration       @default(DISABLED)
-  defaultFileExpirationAction ExpiryAction         @default(DELETE)
+  stripeCustomerId            String?          @unique
+  defaultFileExpiration       FileExpiration   @default(DISABLED)
+  defaultFileExpirationAction ExpiryAction     @default(DELETE)
   blogPosts                   BlogPost[]
-  docPages                    DocPage[]
   customDomains               CustomDomain[]
   subscriptions               Subscription[]
   oneOffPurchases             OneOffPurchase[]
-  st5Comments                 St5Comment[]
-  st5CommentReplies           St5CommentReply[]
-  st5CommentReactions         St5CommentReaction[]
+
   testimonials                Testimonial[]
   legalPages                  LegalPage[]
   fileCollaborations          FileCollaborator[]
-  editSuggestions             FileEditSuggestion[] @relation("SuggestionAuthor")
-  reviewedSuggestions         FileEditSuggestion[] @relation("SuggestionReviewer")
+  editSuggestions             FileEditSuggestion[]    @relation("SuggestionAuthor")
+  reviewedSuggestions         FileEditSuggestion[]    @relation("SuggestionReviewer")
   loginHistory                LoginHistory[]
   linkedAccounts              LinkedAccount[]
   twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
   passwordHistory             PasswordHistory[]
   creditTransactions          CreditTransaction[]
-  creditTransactionsAsRelated CreditTransaction[] @relation("CreditTransactions")
+  creditTransactionsAsRelated CreditTransaction[]     @relation("CreditTransactions")
+
+  // Nexium
+  nexiumProfile          NexiumProfile?
+  nexiumOpportunities    NexiumOpportunity[] @relation("NexiumOpportunityPoster")
+  ownedSquads            NexiumSquad[]       @relation("NexiumSquadOwner")
+  nexiumSquadMemberships NexiumSquadMember[]
+  bansReceived           UserBan[]           @relation("BannedUser")
+  bansIssued             UserBan[]           @relation("BanIssuer")
+  reportsReceived        UserReport[]        @relation("ReportedUser")
+  reportsMade            UserReport[]        @relation("Reporter")
+  squadReportsMade       SquadReport[]       @relation("SquadReporter")
+  contentReportsMade     ContentReport[]     @relation("ContentReporter")
+  contentReportsResolved ContentReport[]     @relation("ContentReportResolver")
+  filesFlagged           File[]              @relation("FileFlaggedBy")
+  urlsFlagged            ShortenedUrl[]      @relation("UrlFlaggedBy")
+  applications           Application[]
+  applicationReplies     ApplicationReply[]
 
   @@index([role])
   @@index([createdAt])
@@ -100,32 +128,39 @@ model User {
 }
 
 model File {
-  id               String                 @id @default(cuid())
+  id               String               @id @default(cuid())
   name             String
-  urlPath          String                 @unique
+  urlPath          String               @unique
   mimeType         String
   size             Float
-  visibility       FileVisibility         @default(PUBLIC)
-  uploadedAt       DateTime               @default(now())
-  updatedAt        DateTime               @default(now()) @updatedAt
+  visibility       FileVisibility       @default(PUBLIC)
+  uploadedAt       DateTime             @default(now())
+  updatedAt        DateTime             @default(now()) @updatedAt
   userId           String
   path             String
-  isOcrProcessed   Boolean                @default(false)
+  isOcrProcessed   Boolean              @default(false)
   ocrText          String?
   password         String?
-  isPaste          Boolean                @default(false)
+  isPaste          Boolean              @default(false)
   ocrConfidence    Float?
-  views            Int                    @default(0)
-  downloads        Int                    @default(0)
+  views            Int                  @default(0)
+  downloads        Int                  @default(0)
   // Collaboration settings
-  allowSuggestions Boolean                @default(false)
-  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allowSuggestions Boolean              @default(false)
+  // Admin flagging
+  flagged          Boolean              @default(false)
+  flaggedAt        DateTime?
+  flaggedById      String?
+  flagReason       String?
+  flaggedBy        User?                @relation("FileFlaggedBy", fields: [flaggedById], references: [id], onDelete: SetNull)
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   editSuggestions  FileEditSuggestion[]
   collaborators    FileCollaborator[]
-  st5Attachments   St5CommentAttachment[]
+  contentReports   ContentReport[]
 
   @@index([visibility, uploadedAt]) // Recent public files
   @@index([isOcrProcessed]) // Worker queue filtering
+  @@index([flagged])
 }
 
 // Collaborators who can edit a file
@@ -181,7 +216,14 @@ model ShortenedUrl {
   clicks    Int      @default(0)
   createdAt DateTime @default(now())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Admin flagging
+  flagged     Boolean  @default(false)
+  flaggedAt   DateTime?
+  flaggedById String?
+  flagReason  String?
+  flaggedBy   User?    @relation("UrlFlaggedBy", fields: [flaggedById], references: [id], onDelete: SetNull)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentReports ContentReport[]
 }
 
 model Config {
@@ -261,25 +303,6 @@ model BlogPost {
   updatedAt   DateTime   @updatedAt
 }
 
-model DocPage {
-  id          String      @id @default(cuid())
-  category    DocCategory
-  slug        String
-  title       String
-  content     String
-  excerpt     String?
-  status      DocStatus   @default(DRAFT)
-  publishedAt DateTime?
-  sortOrder   Int?
-  authorId    String?
-  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@unique([category, slug])
-  @@index([category, status, publishedAt])
-}
-
 model LegalPage {
   id          String      @id @default(cuid())
   slug        String      @unique
@@ -301,7 +324,8 @@ model LegalPage {
 model CustomDomain {
   id             String    @id @default(cuid())
   domain         String    @unique
-  userId         String
+  userId         String? // null when owned by a squad
+  squadId        String? // null when owned by a user
   verified       Boolean   @default(false)
   cfHostnameId   String?
   cfStatus       String?
@@ -312,9 +336,11 @@ model CustomDomain {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  squad NexiumSquad? @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([squadId])
 }
 
 model Partner {
@@ -363,16 +389,17 @@ model Product {
   features             String[] @default([])
   active               Boolean  @default(true)
   popular              Boolean  @default(false)
-  
-  // Plan-specific limits (only used when type="plan")
-  storageQuotaGB       Int?     // Total storage allocation in GB (e.g., 10, 25, 75, 200)
-  customDomainsLimit   Int?     // Number of custom domains allowed
-  uploadSizeCapMB      Int?     // Maximum single file upload size in MB
-  
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
 
-  plans Subscription[]
+  // Plan-specific limits (only used when type="plan")
+  storageQuotaGB     Int? // Total storage allocation in GB (e.g., 10, 25, 75, 200)
+  customDomainsLimit Int? // Number of custom domains allowed
+  uploadSizeCapMB    Int? // Maximum single file upload size in MB
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plans      Subscription[]
+  squadPlans NexiumSquadSubscription[]
 }
 
 model Subscription {
@@ -413,17 +440,17 @@ model OneOffPurchase {
 
 // Credit transaction log for tracking referral credits earned and applied to purchases
 model CreditTransaction {
-  id              String   @id @default(cuid())
-  userId          String
-  type            String   // "earned_referral", "applied_checkout", "applied_purchase", "manual_adjustment"
-  amountCents     Int      // Positive for credits earned, negative for credits applied
-  description     String?  // e.g. "Referral from user@example.com", "Applied to checkout", "Applied to storage purchase"
-  relatedUserId   String?  // User ID if this is a referral transaction
-  relatedOrderId  String?  // Stripe session ID, payment intent ID, etc
-  metadata        Json?
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  type           String // "earned_referral", "applied_checkout", "applied_purchase", "manual_adjustment"
+  amountCents    Int // Positive for credits earned, negative for credits applied
+  description    String? // e.g. "Referral from user@example.com", "Applied to checkout", "Applied to storage purchase"
+  relatedUserId  String? // User ID if this is a referral transaction
+  relatedOrderId String? // Stripe session ID, payment intent ID, etc
+  metadata       Json?
+  createdAt      DateTime @default(now())
 
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   relatedUser User? @relation("CreditTransactions", fields: [relatedUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
@@ -452,94 +479,33 @@ model LoginHistory {
   @@index([createdAt])
 }
 
-// Fan comments for the ST5 hub
-model St5Comment {
-  id        String   @id @default(cuid())
-  userId    String
-  content   String
-  isHidden  Boolean  @default(false)
-  isSpoiler Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  attachments St5CommentAttachment[]
-  replies     St5CommentReply[]
-  reactions   St5CommentReaction[]
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-model St5CommentReply {
-  id        String   @id @default(cuid())
-  commentId String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-
-  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-
-  @@index([commentId])
-  @@index([userId])
-}
-
-model St5CommentReaction {
-  id        String   @id @default(cuid())
-  commentId String
-  userId    String
-  type      String
-  createdAt DateTime @default(now())
-
-  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-
-  @@unique([commentId, userId])
-  @@index([commentId])
-  @@index([userId])
-}
-
-model St5CommentAttachment {
-  id        String   @id @default(cuid())
-  commentId String
-  fileId    String
-  createdAt DateTime @default(now())
-
-  comment St5Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  file    File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
-
-  @@index([commentId])
-  @@index([fileId])
-}
-
 model LinkedAccount {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider      String   // "github" or "discord"
-  providerUserId String  // GitHub login or Discord user ID
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider         String // "github" or "discord"
+  providerUserId   String // GitHub login or Discord user ID
   providerUsername String? // GitHub login or Discord username
-  providerData  Json?    // Additional provider-specific data (avatar, etc)
-  accessToken   String?  // OAuth access token (encrypted in practice)
-  refreshToken  String?  // OAuth refresh token (encrypted in practice)
-  linkedAt      DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  providerData     Json? // Additional provider-specific data (avatar, etc)
+  accessToken      String? // OAuth access token (encrypted in practice)
+  refreshToken     String? // OAuth refresh token (encrypted in practice)
+  linkedAt         DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([userId, provider])
   @@index([provider, providerUserId])
 }
 
 model TwoFactorRecoveryCode {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  code      String   // Format: "XXXX-XXXX" (8 chars + dash)
-  used      Boolean  @default(false)
+  code      String // Format: "XXXX-XXXX" (8 chars + dash)
+  used      Boolean   @default(false)
   usedAt    DateTime?
-  createdAt DateTime @default(now())
-  batchId   String   // To track which batch of codes this belongs to (for regeneration)
+  createdAt DateTime  @default(now())
+  batchId   String // To track which batch of codes this belongs to (for regeneration)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, code])
   @@index([userId, batchId])
@@ -549,12 +515,343 @@ model TwoFactorRecoveryCode {
 model PasswordHistory {
   id        String   @id @default(cuid())
   userId    String
-  password  String   // Encrypted password hash (same as User.password)
+  password  String // Encrypted password hash (same as User.password)
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+model NexiumProfile {
+  id           String             @id @default(cuid())
+  userId       String             @unique
+  title        String? // "Full-Stack Developer", "Creative Director"
+  headline     String? // Short pitch (≤200 chars)
+  availability NexiumAvailability @default(OPEN)
+  lookingFor   String[]           @default([]) // FULL_TIME | PART_TIME | CONTRACT | COLLAB | BOUNTY
+  timezone     String?
+  location     String?
+  activeHours  String? // e.g. "9am–5pm UTC+8" or "Evenings & weekends"
+  isVisible    Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills       NexiumSkill[]
+  signals      NexiumSignal[]
+  applications NexiumApplication[]
+
+  @@index([availability, isVisible])
+  @@index([userId])
+}
+
+model NexiumSkill {
+  id              String           @id @default(cuid())
+  profileId       String
+  name            String
+  level           NexiumSkillLevel @default(INTERMEDIATE)
+  yearsExperience Int?
+  category        String? // "Frontend", "Backend", "DevOps", "Design", "Community"
+  sortOrder       Int              @default(0)
+
+  profile NexiumProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([name])
+}
+
+model NexiumSignal {
+  id          String           @id @default(cuid())
+  profileId   String
+  type        NexiumSignalType
+  title       String
+  description String?
+  url         String?
+  imageUrl    String?
+  skills      String[]         @default([]) // skill tag references
+  verified    Boolean          @default(false)
+  verifiedAt  DateTime?
+  metadata    Json? // type-specific data (stars, forks, contributionCount, deploy URL, etc.)
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  profile NexiumProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([type])
+  @@index([verified])
+}
+
+model NexiumOpportunity {
+  id             String                  @id @default(cuid())
+  postedByUserId String
+  title          String
+  description    String
+  type           NexiumOpportunityType
+  status         NexiumOpportunityStatus @default(OPEN)
+  budgetMin      Int? // cents
+  budgetMax      Int? // cents
+  currency       String                  @default("USD")
+  remote         Boolean                 @default(true)
+  location       String?
+  requiredSkills String[]                @default([])
+  tags           String[]                @default([])
+  teamSize       Int?
+  timeCommitment String? // "10-20 hrs/week"
+  deadline       DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  postedBy     User                @relation("NexiumOpportunityPoster", fields: [postedByUserId], references: [id], onDelete: Cascade)
+  applications NexiumApplication[]
+
+  @@index([status, createdAt])
+  @@index([type, status])
+  @@index([postedByUserId])
+}
+
+model NexiumApplication {
+  id            String                  @id @default(cuid())
+  opportunityId String
+  profileId     String
+  message       String
+  status        NexiumApplicationStatus @default(PENDING)
+  appliedAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  opportunity NexiumOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  profile     NexiumProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, profileId])
+  @@index([opportunityId])
+  @@index([profileId])
+  @@index([status])
+}
+
+model NexiumSquad {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  ownerUserId String
+  status      NexiumSquadStatus @default(FORMING)
+  skills      String[]          @default([])
+  maxSize     Int               @default(5)
+  isPublic    Boolean           @default(true)
+  isVerified  Boolean           @default(false)
+
+  // Resource & billing (mirrors User-level infrastructure)
+  storageUsed      Float   @default(0)
+  storageQuotaMB   Int? // null = use plan default
+  uploadToken      String? @unique // programmatic upload access
+  stripeCustomerId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner         User                      @relation("NexiumSquadOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members       NexiumSquadMember[]
+  subscriptions NexiumSquadSubscription[]
+  apiKeys       NexiumSquadApiKey[]
+  customDomains CustomDomain[]
+  reports       SquadReport[]
+
+  @@index([status, isPublic])
+  @@index([ownerUserId])
+}
+
+model NexiumSquadMember {
+  id       String          @id @default(cuid())
+  squadId  String
+  userId   String
+  role     NexiumSquadRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  squad NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, userId])
+  @@index([squadId])
+  @@index([userId])
+}
+
+// Squad billing — same plan products as users, scoped per squad
+model NexiumSquadSubscription {
+  id                   String    @id @default(cuid())
+  squadId              String
+  productId            String
+  stripeSubscriptionId String?   @unique
+  status               String    @default("active")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  metadata             Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  squad   NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([squadId])
+  @@index([productId])
+  @@index([status, currentPeriodEnd])
+}
+
+// Named API keys for squad programmatic access (e.g. CI/CD, integrations)
+model NexiumSquadApiKey {
+  id         String    @id @default(cuid())
+  squadId    String
+  name       String // Human label, e.g. "CI/CD Key"
+  keyHash    String    @unique // SHA-256 hash — full key shown once on creation
+  prefix     String // First 12 chars for display, e.g. "nsk_abc12345"
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  squad NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([squadId])
+  @@index([keyHash])
+}
+
+model UserBan {
+  id         String    @id @default(cuid())
+  userId     String
+  issuedById String
+  reason     String
+  type       String    @default("permanent") // 'temporary' | 'permanent'
+  expiresAt  DateTime?
+  liftedAt   DateTime?
+  liftedById String?
+  liftReason String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user     User @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  issuedBy User @relation("BanIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model UserReport {
+  id             String         @id @default(cuid())
+  reportedUserId String
+  reporterUserId String
+  category       ReportCategory
+  reason         String
+  details        String?
+  status         ReportStatus   @default(PENDING)
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  reportedUser User @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reporterUser User @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([reportedUserId, reporterUserId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SquadReport {
+  id             String         @id @default(cuid())
+  squadId        String
+  reporterUserId String
+  category       ReportCategory
+  reason         String
+  details        String?
+  status         ReportStatus   @default(PENDING)
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  squad        NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  reporterUser User        @relation("SquadReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, reporterUserId])
+  @@index([squadId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ContentReport {
+  id             String            @id @default(cuid())
+  contentType    ContentReportType
+  fileId         String?
+  urlId          String?
+  reporterUserId String
+  category       ReportCategory
+  reason         String
+  details        String?
+  status         ReportStatus      @default(PENDING)
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  file         File?         @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  url          ShortenedUrl? @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  reporterUser User          @relation("ContentReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  resolvedBy   User?         @relation("ContentReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([fileId])
+  @@index([urlId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Application {
+  id     String            @id @default(cuid())
+  userId String
+  type   ApplicationType
+  status ApplicationStatus @default(PENDING)
+
+  // Common fields
+  answers Json // Flexible answers object (form responses)
+  notes   String? // Internal admin notes
+
+  // Review fields
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies ApplicationReply[]
+
+  @@index([userId])
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+model ApplicationReply {
+  id            String   @id @default(cuid())
+  applicationId String
+  userId        String
+  content       String
+  isStaffReply  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([userId])
+}
+
+enum ContentReportType {
+  FILE
+  URL
 }
 
 
@@ -590,23 +887,6 @@ enum ExpiryAction {
   SET_PRIVATE
 }
 
-enum DocCategory {
-  API
-  MAIN
-  USERS
-  HOSTING
-  INTEGRATIONS
-  SECURITY
-  TROUBLESHOOTING
-  ADMINS
-}
-
-enum DocStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 enum LegalStatus {
   DRAFT
   PUBLISHED
@@ -617,4 +897,96 @@ enum PostStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum NexiumAvailability {
+  OPEN
+  LIMITED
+  CLOSED
+}
+
+enum NexiumSkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum NexiumSignalType {
+  GITHUB_REPO
+  DEPLOYED_APP
+  OPEN_SOURCE_CONTRIBUTION
+  SHIPPED_PRODUCT
+  COMMUNITY_IMPACT
+  ASSET_PACK
+  CERTIFICATION
+  OTHER
+}
+
+enum NexiumOpportunityType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  COLLAB
+  BOUNTY
+}
+
+enum NexiumOpportunityStatus {
+  DRAFT
+  OPEN
+  FILLED
+  CLOSED
+}
+
+enum NexiumApplicationStatus {
+  PENDING
+  VIEWED
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum NexiumSquadStatus {
+  FORMING
+  ACTIVE
+  COMPLETED
+  DISBANDED
+}
+
+enum NexiumSquadRole {
+  OWNER
+  MEMBER
+  OBSERVER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportCategory {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  IMPERSONATION
+  ABUSE
+  OTHER
+}
+
+enum ApplicationType {
+  STAFF
+  PARTNER
+  VERIFICATION
+  BAN_APPEAL
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+  WITHDRAWN
 }

@@ -1,28 +1,15 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
-
-type PlanKey = 'free' | 'glow' | 'flare' | 'blaze' | 'enterprise'
-
-function planKeyForProduct(product: { id?: string | null; slug?: string | null; stripeProductId?: string | null } | null): PlanKey {
-    if (!product) return 'free'
-    const p = (product.slug || product.stripeProductId || '').toLowerCase()
-    if (p.includes('flare') || p.includes('pro')) return 'flare'
-    if (p.includes('blaze') || p.includes('team') || p.includes('scale')) return 'blaze'
-    if (p.includes('enterprise') || p.includes('inferno')) return 'enterprise'
-    if (p.includes('glow') || p.includes('starter')) return 'glow'
-    if (p.includes('free') || p.includes('spark')) return 'free'
-    return 'glow'
-}
+import { planKeyForProduct, hasAnalytics, hasAdvancedAnalytics } from '@/packages/lib/plans'
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
-        if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
-        const user = await prisma.user.findUnique({ where: { id: session.user.id } })
-        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+        if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
         // find latest subscription (if any) and its product
         const subscription = await prisma.subscription.findFirst({
@@ -53,7 +40,7 @@ export async function GET(req: Request) {
         })
 
         // fileSums._sum.size may be null
-        const storageUsed = (fileSums as any)?._sum?.size ?? user.storageUsed ?? 0
+        const storageUsed = (fileSums as any)?._sum?.size ?? dbUser.storageUsed ?? 0
 
         // Additional aggregates: total views and downloads across all files
         const viewsAgg = await prisma.file.aggregate({ where: { userId: user.id }, _sum: { views: true } })
@@ -61,7 +48,7 @@ export async function GET(req: Request) {
         const totalViews = (viewsAgg as any)?._sum?.views ?? 0
         const totalDownloads = (downloadsAgg as any)?._sum?.downloads ?? 0
 
-        const response: any = {
+        const result: any = {
             plan,
             basic: {
                 totalFiles,
@@ -74,22 +61,22 @@ export async function GET(req: Request) {
                 verifiedDomains,
             },
             allowed: {
-                topFiles: plan === 'glow' || plan === 'flare' || plan === 'blaze' || plan === 'enterprise',
-                topUrls: plan === 'glow' || plan === 'flare' || plan === 'blaze' || plan === 'enterprise',
+                topFiles: hasAnalytics(plan),
+                topUrls: hasAnalytics(plan),
                 recentUploads: true, // available to all
-                detailedList: plan === 'flare' || plan === 'blaze' || plan === 'enterprise',
+                detailedList: hasAdvancedAnalytics(plan),
             },
         }
 
         // Add optional lists depending on plan
-        if (response.allowed.recentUploads) {
+        if (result.allowed.recentUploads) {
             const recentUploads = await prisma.file.findMany({
                 where: { userId: user.id },
                 orderBy: { uploadedAt: 'desc' },
                 take: 5,
                 select: { id: true, name: true, size: true, uploadedAt: true, views: true, downloads: true },
             })
-            response.recentUploads = recentUploads
+            result.recentUploads = recentUploads
         }
 
         // uploads per day (last 14 days)
@@ -113,20 +100,20 @@ export async function GET(req: Request) {
                 counts[k] = (counts[k] || 0) + 1
             })
 
-            response.uploadsPerDay = Object.keys(counts).map((k) => ({ date: k, count: counts[k] }))
+            result.uploadsPerDay = Object.keys(counts).map((k) => ({ date: k, count: counts[k] }))
         } catch (e) {
             // ignore timeseries failure
-            response.uploadsPerDay = []
+            result.uploadsPerDay = []
         }
 
-        if (response.allowed.topFiles) {
+        if (result.allowed.topFiles) {
             const topFiles = await prisma.file.findMany({
                 where: { userId: user.id },
                 orderBy: { views: 'desc' },
                 take: 5,
                 select: { id: true, name: true, size: true, uploadedAt: true, views: true, downloads: true },
             })
-            response.topFiles = topFiles
+            result.topFiles = topFiles
         }
 
         // top files by storage (largest files)
@@ -137,22 +124,22 @@ export async function GET(req: Request) {
                 take: 5,
                 select: { id: true, name: true, size: true, uploadedAt: true, views: true, downloads: true },
             })
-            response.topStorageFiles = topStorageFiles
+            result.topStorageFiles = topStorageFiles
         } catch (e) {
             // ignore
         }
 
-        if (response.allowed.topUrls) {
+        if (result.allowed.topUrls) {
             const topUrls = await prisma.shortenedUrl.findMany({ where: { userId: user.id }, orderBy: { clicks: 'desc' }, take: 5 })
-            response.topUrls = topUrls
+            result.topUrls = topUrls
         }
 
-        if (response.allowed.detailedList) {
+        if (result.allowed.detailedList) {
             const files = await prisma.file.findMany({ where: { userId: user.id }, orderBy: { uploadedAt: 'desc' }, take: 100, select: { id: true, name: true, size: true, uploadedAt: true, views: true, downloads: true } })
-            response.files = files
+            result.files = files
         }
 
-        return NextResponse.json(response)
+        return NextResponse.json(result)
     } catch (err) {
         console.error('analytics summary error', err)
         return NextResponse.json({ error: 'Internal' }, { status: 500 })

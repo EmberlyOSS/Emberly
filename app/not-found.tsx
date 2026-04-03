@@ -20,9 +20,8 @@ import { BaseNav } from '@/packages/components/layout/base-nav'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -38,9 +37,9 @@ const SUGGESTED_PAGES = [
     },
     {
         icon: BookOpen,
-        title: 'Documentation',
-        description: 'Guides and API references',
-        href: '/docs',
+        title: 'Blog',
+        description: 'Read the latest updates',
+        href: '/blog',
         color: 'text-blue-500',
         bg: 'bg-blue-500/10',
     },
@@ -116,7 +115,7 @@ export default function NotFound() {
                                 </div>
 
                                 {/* Fun Message */}
-                                <div className="mt-8 p-4 rounded-xl bg-background/30 border border-border/50">
+                                <div className="mt-8 p-4 rounded-xl bg-muted/30 border border-border/30">
                                     <div className="flex items-start gap-3">
                                         <Sparkles className="h-5 w-5 text-primary mt-0.5" />
                                         <div>

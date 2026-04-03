@@ -6,6 +6,7 @@ import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB } from '@/packages/lib/utils'
 
 const logger = loggers.files
 
@@ -227,7 +228,8 @@ export async function PATCH(
             // Apply the suggestion to the file
             const storageProvider = await getStorageProvider()
             const buffer = Buffer.from(suggestion.content, 'utf-8')
-            const newSize = buffer.length
+            // Store size in MB (consistent with upload API)
+            const newSizeMB = bytesToMB(buffer.length)
 
             await storageProvider.uploadFile(
                 buffer,
@@ -235,14 +237,15 @@ export async function PATCH(
                 suggestion.file.mimeType
             )
 
-            const sizeDifference = newSize - suggestion.file.size
+            // Both newSizeMB and suggestion.file.size are in MB
+            const sizeDifference = newSizeMB - suggestion.file.size
 
             await prisma.$transaction(async (tx) => {
-                // Update file size
+                // Update file size in MB
                 await tx.file.update({
                     where: { id: suggestion.file.id },
                     data: {
-                        size: newSize,
+                        size: newSizeMB,
                         updatedAt: new Date(),
                     },
                 })

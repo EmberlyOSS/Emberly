@@ -304,7 +304,7 @@ export function AdminEmailManager() {
         <div className="space-y-6">
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded-xl border border-border/50 bg-background/30 p-4">
+                <div className="glass-subtle p-4">
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-muted-foreground">Total Users</span>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -317,7 +317,7 @@ export function AdminEmailManager() {
                     </p>
                 </div>
 
-                <div className="rounded-xl border border-border/50 bg-background/30 p-4">
+                <div className="glass-subtle p-4">
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-muted-foreground">Emails Sent</span>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-chart-2/10">
@@ -328,7 +328,7 @@ export function AdminEmailManager() {
                     <p className="text-xs text-muted-foreground">All time</p>
                 </div>
 
-                <div className="rounded-xl border border-border/50 bg-background/30 p-4">
+                <div className="glass-subtle p-4">
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-muted-foreground">Pending</span>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-chart-4/10">
@@ -339,7 +339,7 @@ export function AdminEmailManager() {
                     <p className="text-xs text-muted-foreground">In queue</p>
                 </div>
 
-                <div className="rounded-xl border border-border/50 bg-background/30 p-4">
+                <div className="glass-subtle p-4">
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-muted-foreground">Failed</span>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
@@ -352,9 +352,9 @@ export function AdminEmailManager() {
             </div>
 
             {/* Tabs Content */}
-            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+            <div className="glass-subtle overflow-hidden">
                 <Tabs defaultValue="compose" className="w-full">
-                    <div className="border-b border-border/50 px-4 py-2 bg-background/50">
+                    <div className="border-b border-border/40 px-4 py-2 bg-muted/20">
                         <TabsList className="bg-transparent gap-2">
                             <TabsTrigger value="compose" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2">
                                 <Mail className="h-4 w-4" />
@@ -830,11 +830,11 @@ export function AdminEmailManager() {
                                                                             )}
 
                                                                             <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                                <div className="p-2 rounded border border-border/50 bg-background/50">
+                                                                                <div className="p-2 rounded bg-background/80 border border-border/50">
                                                                                     <p className="text-muted-foreground">Template</p>
                                                                                     <code className="font-mono text-foreground">{log.template}</code>
                                                                                 </div>
-                                                                                <div className="p-2 rounded border border-border/50 bg-background/50">
+                                                                                <div className="p-2 rounded bg-background/80 border border-border/50">
                                                                                     <p className="text-muted-foreground">Event Type</p>
                                                                                     <code className="font-mono text-foreground">{log.type || 'unknown'}</code>
                                                                                 </div>

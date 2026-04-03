@@ -184,7 +184,7 @@ export function CollaboratorManager({ fileId, isOwner }: CollaboratorManagerProp
                 <Button
                     variant="outline"
                     size="sm"
-                    className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+                    className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
                 >
                     <Users className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Collaborators</span>
@@ -208,7 +208,7 @@ export function CollaboratorManager({ fileId, isOwner }: CollaboratorManagerProp
 
                 <div className="space-y-4">
                     {/* Public Suggestions Toggle */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50">
+                    <div className="flex items-center justify-between p-3 glass-subtle">
                         <div className="space-y-0.5">
                             <Label className="text-sm font-medium flex items-center gap-2">
                                 <Settings2 className="h-4 w-4" />
@@ -226,7 +226,7 @@ export function CollaboratorManager({ fileId, isOwner }: CollaboratorManagerProp
 
                     {/* Add Collaborator */}
                     {isAddingOpen ? (
-                        <div className="space-y-3 p-3 rounded-lg border border-border/50 bg-background/50">
+                        <div className="space-y-3 p-3 glass-subtle">
                             <div className="space-y-2">
                                 <Label htmlFor="userEmail">Email or Username</Label>
                                 <Input
@@ -312,7 +312,7 @@ export function CollaboratorManager({ fileId, isOwner }: CollaboratorManagerProp
                                 {collaborators.map((collab) => (
                                     <div
                                         key={collab.id}
-                                        className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/30"
+                                        className="flex items-center justify-between p-2 rounded-lg bg-background/80 border border-border/50"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
@@ -329,7 +329,7 @@ export function CollaboratorManager({ fileId, isOwner }: CollaboratorManagerProp
                                                     {collab.user.name || collab.user.urlId}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground truncate">
-                                                    {collab.user.email || `@${collab.user.urlId}`}
+                                                    {collab.user.email || `@${collab.user.name}`}
                                                 </p>
                                             </div>
                                         </div>

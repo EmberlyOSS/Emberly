@@ -132,12 +132,27 @@ async function fetchAPI<T>(
  */
 export const getStatusSummary = cache(async (): Promise<StatusSummary | null> => {
     const raw = await fetchPublic<StatusSummary>('/summary.json')
-    
+
     if (!raw) return null
-    
-    // Normalize the response to ensure arrays exist
+
+    // Instatus returns page.status as 'UP' | 'HASISSUES' | 'UNDERMAINTENANCE'.
+    // Ensure the value is one of our known StatusType values, defaulting to UNKNOWN.
+    const RAW_STATUS_VALUES: StatusSummary['page']['status'][] = [
+        'UP', 'HASISSUES', 'UNDERMAINTENANCE', 'DOWN', 'DEGRADED', 'UNKNOWN',
+    ]
+    const rawStatus = raw.page?.status as string | undefined
+    const normalizedStatus: StatusSummary['page']['status'] =
+        rawStatus && RAW_STATUS_VALUES.includes(rawStatus as any)
+            ? (rawStatus as StatusSummary['page']['status'])
+            : 'UNKNOWN'
+
     return {
-        page: raw.page ?? { name: 'Emberly', url: 'https://status.emberly.site', status: 'UNKNOWN' },
+        page: {
+            ...(raw.page ?? {}),
+            name: raw.page?.name ?? 'Emberly',
+            url: raw.page?.url ?? 'https://status.emberly.site',
+            status: normalizedStatus,
+        },
         activeIncidents: raw.activeIncidents ?? [],
         activeMaintenances: raw.activeMaintenances ?? [],
     }

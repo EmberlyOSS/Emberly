@@ -1,18 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import {
   AlertTriangle,
-  ArrowRight,
-  BookOpen,
   Bug,
   CheckCircle,
   ChevronDown,
   ChevronUp,
   ClipboardCopy,
-  Home,
   LayoutDashboard,
   MessageCircle,
   RefreshCcw,
@@ -26,33 +23,11 @@ import { Badge } from '@/packages/components/ui/badge'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      <div className="relative">{children}</div>
+    <div className={`glass-card overflow-hidden ${className}`}>
+      {children}
     </div>
   )
 }
-
-const QUICK_LINKS = [
-  {
-    icon: Home,
-    title: 'Home',
-    description: 'Start fresh',
-    href: '/',
-  },
-  {
-    icon: LayoutDashboard,
-    title: 'Dashboard',
-    description: 'Your files',
-    href: '/dashboard',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Discord',
-    description: 'Get help',
-    href: '/discord',
-  },
-]
 
 export default function Error({
   error,
@@ -67,6 +42,20 @@ export default function Error({
   const message = error?.message || 'An unexpected error occurred'
   const stack = String((error as any)?.stack || '')
   const isDev = process.env.NODE_ENV === 'development'
+
+  useEffect(() => {
+    fetch('/api/errors/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: error.message || 'Unknown error',
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        stack: error.stack?.slice(0, 2000),
+        type: 'client',
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined,
+      }),
+    }).catch(() => {}) // Never throw from error handler
+  }, [error]) // Only run when error changes
 
   const handleCopy = async () => {
     const errorInfo = `Error: ${message}\n\nDigest: ${error?.digest || 'N/A'}\n\n${isDev ? `Stack:\n${stack}` : ''}`
@@ -92,7 +81,7 @@ export default function Error({
       </header>
 
       <main className="flex-1 w-full pt-28 relative z-10">
-        <div className="max-w-4xl mx-auto py-8 px-4 md:px-6 space-y-6">
+        <div className="max-w-7xl mx-auto py-8 px-4 md:px-6 space-y-6">
           {/* Main Error Card */}
           <GlassCard>
             <div className="p-8 md:p-10">
@@ -148,7 +137,7 @@ export default function Error({
               </div>
 
               {/* Error Details Accordion */}
-              <div className="mt-8 pt-6 border-t border-border/50">
+              <div className="mt-8 pt-6 border-t border-border/40">
                 <button
                   onClick={() => setShowDetails(!showDetails)}
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -164,7 +153,7 @@ export default function Error({
                 {showDetails && (
                   <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
                     {/* Error Message */}
-                    <div className="p-4 rounded-xl bg-background/30 border border-border/50">
+                    <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Error Message
@@ -193,7 +182,7 @@ export default function Error({
 
                     {/* Stack Trace (Dev only) */}
                     {isDev && stack && (
-                      <div className="p-4 rounded-xl bg-background/30 border border-border/50">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Stack Trace
                         </span>
@@ -207,30 +196,6 @@ export default function Error({
               </div>
             </div>
           </GlassCard>
-
-          {/* Quick Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {QUICK_LINKS.map((link) => (
-              <GlassCard key={link.href} className="group hover:border-primary/30 transition-colors">
-                <Link href={link.href} className="block p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10">
-                      <link.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm group-hover:text-primary transition-colors">
-                        {link.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {link.description}
-                      </div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </div>
-                </Link>
-              </GlassCard>
-            ))}
-          </div>
 
           {/* Report Issue */}
           <GlassCard>

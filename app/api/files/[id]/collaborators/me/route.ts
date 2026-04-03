@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
 // Get current user's collaborator status for a file
@@ -12,11 +11,8 @@ export async function GET(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
@@ -24,7 +20,7 @@ export async function GET(
                 userId: true,
                 allowSuggestions: true,
                 collaborators: {
-                    where: { userId: session.user.id },
+                    where: { userId: user.id },
                     select: { role: true },
                 },
             },
@@ -38,7 +34,7 @@ export async function GET(
         const collaborator = file.collaborators[0]
 
         return NextResponse.json({
-            isOwner: file.userId === session.user.id,
+            isOwner: file.userId === user.id,
             role: collaborator?.role || null,
             allowSuggestions: file.allowSuggestions,
         })

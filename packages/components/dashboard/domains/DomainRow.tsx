@@ -207,7 +207,7 @@ export default function DomainRow({
 
                 <div className="space-y-3">
                   {/* Required CNAME */}
-                  <div className="rounded-lg bg-background/50 border border-border/50 p-3">
+                  <div className="glass-subtle p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">CNAME</Badge>
@@ -252,7 +252,7 @@ export default function DomainRow({
 
                   {/* Ownership Verification TXT */}
                   {d.cfMeta?.ownership_verification && (
-                    <div className="rounded-lg bg-background/50 border border-border/50 p-3">
+                    <div className="glass-subtle p-3">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">TXT</Badge>
@@ -319,7 +319,7 @@ export default function DomainRow({
                     d.cfMeta.validation_records.map((r: any, i: number) => (
                       <div
                         key={i}
-                        className="rounded-lg bg-background/50 border border-border/50 p-3"
+                        className="glass-subtle p-3"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { checkFileAccess } from '@/packages/lib/files/access'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -27,15 +27,15 @@ export async function GET(
     const providedPassword = url.searchParams.get('password')
     const isDownloadRequest = url.searchParams.get('download') === 'true'
 
+    // urlPath here is already assembled from the path segments
     let file = await prisma.file.findUnique({
       where: { urlPath },
       include: { user: { select: { enableRichEmbeds: true } } },
     })
 
     if (!file && urlPath.includes(' ')) {
-      const urlSafePath = urlPath.replace(/ /g, '-')
       file = await prisma.file.findUnique({
-        where: { urlPath: urlSafePath },
+        where: { urlPath: urlPath.replace(/ /g, '-') },
         include: { user: { select: { enableRichEmbeds: true } } },
       })
     }
@@ -44,23 +44,8 @@ export async function GET(
       return new Response(null, { status: 404 })
     }
 
-    const isOwner = session?.user?.id === file.userId
-    const isPrivate = file.visibility === 'PRIVATE' && !isOwner
-
-    if (isPrivate) {
-      return new Response(null, { status: 404 })
-    }
-
-    if (file.password && !isOwner) {
-      if (!providedPassword) {
-        return new Response(null, { status: 401 })
-      }
-
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
-        return new Response(null, { status: 401 })
-      }
-    }
+    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
+    if (deny) return deny
 
     if (isDownloadRequest) {
       await prisma.file.update({

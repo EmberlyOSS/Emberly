@@ -122,7 +122,7 @@ export default function PartnerForm({ partner, onSaved, onCancel }: Props) {
                     />
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/30 p-4">
+                <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/80 p-4">
                     <div className="space-y-0.5">
                         <Label htmlFor="active" className="text-sm font-medium">Active Status</Label>
                         <p className="text-xs text-muted-foreground">Show this partner on the website</p>

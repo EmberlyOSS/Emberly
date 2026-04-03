@@ -81,7 +81,7 @@ export function URLForm({ onUrlAdded }: URLFormProps) {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required
-            className="flex-1 bg-background/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-colors"
+            className="flex-1 bg-background/80 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-colors"
           />
           <Button
             type="submit"

@@ -310,14 +310,13 @@ export function FileGrid() {
   return (
     <div className="space-y-6">
       {/* Header Card */}
-      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-        <div className="relative">
+      <div className="glass-card">
+        <div>
           {/* Title and View Toggle */}
           <div className="p-6 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold">
+                <h1 className="text-3xl font-bold tracking-tight">
                   {viewMode === 'shared' ? 'Shared with Me' : 'Your Files'}
                 </h1>
                 <p className="text-muted-foreground mt-1">

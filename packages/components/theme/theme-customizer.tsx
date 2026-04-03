@@ -746,7 +746,7 @@ function SimpleThemeCustomizer({
 
           return (
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid grid-cols-5 w-full bg-white/10 dark:bg-black/20 p-1 rounded-lg">
+              <TabsList className="grid grid-cols-5 w-full bg-background/80 p-1 rounded-lg">
                 {sortCategories(Object.keys(themesByCategory) as any[]).map((category) => (
                   <TabsTrigger key={category} value={category} className="text-xs sm:text-sm">
                     <span className="mr-1">{getCategoryIcon(category)}</span>
@@ -762,7 +762,7 @@ function SimpleThemeCustomizer({
                       <button
                         key={preset.name}
                         onClick={() => applyPresetTheme(preset)}
-                        className="relative overflow-hidden rounded-md border bg-card/60 p-4 text-left transition hover:border-primary/70 hover:shadow-md"
+                        className="relative overflow-hidden rounded-md border bg-background/80 p-4 text-left transition hover:border-primary/70 hover:shadow-md"
                       >
                         <div
                           className="absolute inset-0 opacity-60"
@@ -865,4 +865,3 @@ export function ThemeCustomizer({
     />
   )
 }
-

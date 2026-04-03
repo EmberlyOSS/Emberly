@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Github, Trash2, Link as LinkIcon } from 'lucide-react'
+import { Github, Trash2, Link as LinkIcon, ImageIcon } from 'lucide-react'
 import { Button } from '@/packages/components/ui/button'
 import { useToast } from '@/packages/hooks/use-toast'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,9 +28,12 @@ export function LinkedAccounts() {
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUnlinking, setIsUnlinking] = useState<string | null>(null)
+  const [isSettingAvatar, setIsSettingAvatar] = useState<string | null>(null)
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false)
   const [providerToUnlink, setProviderToUnlink] = useState<string | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
+  const { update: updateSession } = useSession()
 
   useEffect(() => {
     fetchLinkedAccounts()
@@ -58,6 +63,27 @@ export function LinkedAccounts() {
       window.location.href = '/api/auth/link/github'
     } else if (provider === 'discord') {
       window.location.href = '/api/auth/link/discord'
+    }
+  }
+
+  const handleUseAsAvatar = async (provider: 'github' | 'discord') => {
+    setIsSettingAvatar(provider)
+    try {
+      const res = await fetch('/api/profile/avatar/linked', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to set avatar')
+      const newImage = json.data?.image ?? json.image
+      await updateSession({ user: { image: newImage } })
+      router.refresh()
+      toast({ title: `${provider === 'github' ? 'GitHub' : 'Discord'} avatar applied` })
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsSettingAvatar(null)
     }
   }
 
@@ -108,8 +134,8 @@ export function LinkedAccounts() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 animate-pulse h-24" />
-        <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 animate-pulse h-24" />
+        <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 animate-pulse h-24" />
+        <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 animate-pulse h-24" />
       </div>
     )
   }
@@ -117,7 +143,7 @@ export function LinkedAccounts() {
   return (
     <div className="space-y-6">
       {/* GitHub Account */}
-      <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 hover:bg-white/10 dark:hover:bg-black/10 transition-colors">
+      <div className="p-4 rounded-lg bg-background/80 backdrop-blur-lg border border-border/50 hover:bg-background/90 transition-colors">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-foreground/10">
@@ -141,18 +167,30 @@ export function LinkedAccounts() {
               )}
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-2 flex-wrap">
             {isGithubLinked ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => openUnlinkDialog('github')}
-                disabled={isUnlinking === 'github'}
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Unlink
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUseAsAvatar('github')}
+                  disabled={isSettingAvatar !== null}
+                  className="gap-2 text-xs"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  {isSettingAvatar === 'github' ? 'Applying…' : 'Use as avatar'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openUnlinkDialog('github')}
+                  disabled={isUnlinking === 'github'}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Unlink
+                </Button>
+              </>
             ) : (
               <Button
                 size="sm"
@@ -168,7 +206,7 @@ export function LinkedAccounts() {
       </div>
 
       {/* Discord Account */}
-      <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 hover:bg-white/10 dark:hover:bg-black/10 transition-colors">
+      <div className="p-4 rounded-lg bg-background/80 backdrop-blur-lg border border-border/50 hover:bg-background/90 transition-colors">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-[#5865F2]/10">
@@ -198,18 +236,30 @@ export function LinkedAccounts() {
               )}
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-2 flex-wrap">
             {isDiscordLinked ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => openUnlinkDialog('discord')}
-                disabled={isUnlinking === 'discord'}
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Unlink
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUseAsAvatar('discord')}
+                  disabled={isSettingAvatar !== null}
+                  className="gap-2 text-xs"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  {isSettingAvatar === 'discord' ? 'Applying…' : 'Use as avatar'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openUnlinkDialog('discord')}
+                  disabled={isUnlinking === 'discord'}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Unlink
+                </Button>
+              </>
             ) : (
               <Button
                 size="sm"

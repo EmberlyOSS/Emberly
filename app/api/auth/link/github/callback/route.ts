@@ -128,6 +128,12 @@ export async function GET(request: NextRequest) {
             },
         })
 
+        // Auto-populate the user's github social link if not already set
+        await prisma.user.update({
+            where: { id: session.user.id },
+            data: { github: userInfo.login },
+        })
+
         // Verify contributor status with the access token
         await verifyContributorStatus(
             session.user.id,

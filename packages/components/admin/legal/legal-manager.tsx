@@ -15,8 +15,8 @@ export function LegalManager() {
 
     return (
         <div className="container space-y-6">
-            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-                <div className="flex items-center gap-4 px-6 py-5 border-b border-border/50 bg-background/50">
+            <div className="glass-subtle overflow-hidden">
+                <div className="flex items-center gap-4 px-6 py-5 border-b border-border/40 bg-muted/20">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                         <Scale className="h-6 w-6 text-primary" />
                     </div>
@@ -27,8 +27,8 @@ export function LegalManager() {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50">
+            <div className="glass-subtle overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-muted/20">
                     <h3 className="text-lg font-semibold">Legal Documents</h3>
                     <Button onClick={() => setEditingId('')} className="gap-2">
                         <Plus className="h-4 w-4" />

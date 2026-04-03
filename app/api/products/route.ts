@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
+import { syncProductToStripe } from '@/packages/lib/stripe/sync'
 
 export async function GET() {
     const { response } = await requireAdmin()
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
         features,
         active = true,
         popular = false,
+        storageQuotaGB,
+        uploadSizeCapMB,
+        customDomainsLimit,
     } = body || {}
 
     if (!name || !slug) {
@@ -52,9 +56,25 @@ export async function POST(req: Request) {
                 features: Array.isArray(features) ? features.map(String) : [],
                 active: Boolean(active),
                 popular: Boolean(popular),
+                storageQuotaGB: storageQuotaGB != null ? Number(storageQuotaGB) : null,
+                uploadSizeCapMB: uploadSizeCapMB != null ? Number(uploadSizeCapMB) : null,
+                customDomainsLimit: customDomainsLimit != null ? Number(customDomainsLimit) : null,
             },
         })
-        return NextResponse.json(product, { status: 201 })
+
+        // Sync to Stripe and write back any newly-created IDs
+        const stripeIds = await syncProductToStripe(product)
+        const hasNewIds =
+            stripeIds.stripeProductId !== product.stripeProductId ||
+            stripeIds.stripePriceMonthlyId !== product.stripePriceMonthlyId ||
+            stripeIds.stripePriceYearlyId !== product.stripePriceYearlyId ||
+            stripeIds.stripePriceOneTimeId !== product.stripePriceOneTimeId
+
+        const final = hasNewIds
+            ? await prisma.product.update({ where: { id: product.id }, data: stripeIds })
+            : product
+
+        return NextResponse.json(final, { status: 201 })
     } catch (err: any) {
         console.error('product create failed', err)
         return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })

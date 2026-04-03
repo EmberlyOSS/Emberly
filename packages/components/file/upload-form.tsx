@@ -109,14 +109,14 @@ export function UploadForm({
         {...getRootProps()}
         className={`relative overflow-hidden p-8 border-2 border-dashed transition-all duration-300 ${isDragActive
           ? 'border-primary bg-primary/10 scale-[1.01] shadow-lg shadow-primary/20'
-          : 'border-white/20 dark:border-white/10 bg-white/5 dark:bg-black/5 hover:border-primary/50 hover:bg-white/10 dark:hover:bg-black/10'
+          : 'border-border/50 bg-background/80 hover:border-primary/50 hover:bg-background/90'
           }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center justify-center text-center">
           <div className={`p-4 rounded-2xl mb-4 transition-colors ${isDragActive
             ? 'bg-primary/20 text-primary'
-            : 'bg-white/10 dark:bg-black/10 text-muted-foreground'
+            : 'bg-background/80 text-muted-foreground'
             }`}>
             <UploadIcon className="w-10 h-10" />
           </div>
@@ -138,7 +138,7 @@ export function UploadForm({
             {files.map((file: FileWithPreview, index) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/10 dark:border-white/5 transition-all hover:bg-white/15 dark:hover:bg-black/15"
+                className="flex items-center gap-4 p-4 glass-subtle transition-all hover:bg-muted/40"
               >
                 {file.preview ? (
                   <Image
@@ -225,7 +225,7 @@ export function UploadForm({
               setVisibility(value)
             }
           >
-            <SelectTrigger className="h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20">
+            <SelectTrigger className="h-11 bg-background/80 border-border/50 focus:border-primary/50 focus:ring-primary/20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -242,7 +242,7 @@ export function UploadForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Leave empty for no password"
-            className="h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20"
+            className="h-11 bg-background/80 border-border/50 focus:border-primary/50 focus:ring-primary/20"
           />
         </div>
 
@@ -251,7 +251,7 @@ export function UploadForm({
           <Button
             type="button"
             variant="outline"
-            className="w-full justify-start text-left font-normal h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 hover:bg-white/10 dark:hover:bg-black/10 hover:border-primary/30"
+            className="w-full justify-start text-left font-normal h-11 bg-background/80 border-border/50 hover:bg-background/90 hover:border-primary/30"
             onClick={() => setIsExpiryModalOpen(true)}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />

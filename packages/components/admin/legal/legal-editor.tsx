@@ -5,7 +5,7 @@ import { Eye, EyeOff, Save, Scale, X } from 'lucide-react'
 
 import { markdown } from '@codemirror/lang-markdown'
 import CodeMirror from '@uiw/react-codemirror'
-import MarkdownRenderer from '@/packages/components/docs/MarkdownRenderer'
+import MarkdownRenderer from '@/packages/components/shared/MarkdownRenderer'
 
 import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
@@ -135,9 +135,9 @@ export function LegalEditor({ legalId, onSaved, onCancel }: Props) {
     }
 
     return (
-        <form onSubmit={handleSave} className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+        <form onSubmit={handleSave} className="glass-subtle overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-muted/20">
                 <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                         <Scale className="h-4 w-4 text-primary" />
@@ -216,7 +216,7 @@ export function LegalEditor({ legalId, onSaved, onCancel }: Props) {
                 <div className={`grid gap-4 ${showPreview ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
                     <div className="space-y-2">
                         <Label className="text-sm font-medium">Content (Markdown)</Label>
-                        <div className="rounded-lg border border-border/50 overflow-hidden bg-background/50">
+                        <div className="glass-subtle overflow-hidden">
                             <CodeMirror
                                 value={content}
                                 height="320px"
@@ -231,7 +231,7 @@ export function LegalEditor({ legalId, onSaved, onCancel }: Props) {
                     {showPreview && (
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">Preview</Label>
-                            <div className="rounded-lg border border-border/50 bg-background/50 p-4 h-[320px] overflow-auto prose prose-sm max-w-none dark:prose-invert">
+                            <div className="glass-subtle p-4 h-[320px] overflow-auto prose prose-sm max-w-none dark:prose-invert">
                                 <MarkdownRenderer>{content || '*Nothing to preview*'}</MarkdownRenderer>
                             </div>
                         </div>

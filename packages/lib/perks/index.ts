@@ -15,6 +15,75 @@ import {
   type PerkRole,
 } from './constants'
 
+export type PerkDisplayItem = {
+  type: 'contributor' | 'discord_booster' | 'affiliate' | 'unknown'
+  label: string
+  tier: string | null
+  icon: string
+  storageGB: number
+  domainSlots: number
+  progress?: { current: number; next: number; label: string }
+}
+
+/**
+ * Parse perk roles into structured display data.
+ * Eliminates the need for API routes to manually parse perk role strings.
+ */
+export function getPerkDisplayInfo(perkRoles: string[]): PerkDisplayItem[] {
+  return perkRoles
+    .filter(r => r !== 'CONTRIBUTOR:FIRST_TIME')
+    .map((role): PerkDisplayItem | null => {
+      if (role.startsWith('CONTRIBUTOR:')) {
+        let loc = parseInt(role.split(':')[1] || '0')
+        if (loc > 0 && loc < 100) loc = loc * 1000
+        const milestone = getContributorMilestone(loc)
+        const next = getNextContributorMilestone(loc)
+        return {
+          type: 'contributor',
+          label: `GitHub Contributor`,
+          tier: milestone?.tier || null,
+          icon: milestone?.icon || '🏷️',
+          storageGB: milestone?.storageGB || 0,
+          domainSlots: milestone?.domainSlots || 0,
+          progress: next
+            ? { current: loc, next: next.loc, label: `${loc.toLocaleString()} / ${next.loc.toLocaleString()} LOC` }
+            : undefined,
+        }
+      }
+
+      if (role.startsWith('DISCORD_BOOSTER:')) {
+        const months = parseInt(role.split(':')[1] || '0')
+        const milestone = getDiscordBoosterMilestone(months)
+        const next = getNextDiscordBoosterMilestone(months)
+        return {
+          type: 'discord_booster',
+          label: `Discord Booster`,
+          tier: milestone?.tier || null,
+          icon: milestone?.icon || '🚀',
+          storageGB: milestone?.storageGB || 0,
+          domainSlots: milestone?.domainSlots || 0,
+          progress: next
+            ? { current: months, next: next.months, label: `${months} / ${next.months} months` }
+            : undefined,
+        }
+      }
+
+      if (role === PERK_ROLES.AFFILIATE) {
+        return {
+          type: 'affiliate',
+          label: 'Affiliate',
+          tier: null,
+          icon: '🤝',
+          storageGB: 0,
+          domainSlots: 0,
+        }
+      }
+
+      return null
+    })
+    .filter((item): item is PerkDisplayItem => item !== null)
+}
+
 /**
  * Calculate total storage bonus in GB for a user based on their perk roles
  */
@@ -152,7 +221,7 @@ export async function hasPermission(userId: string, perkRole: PerkRole): Promise
 export async function hasEarnedOneTimePerk(userId: string, perkRole: 'DISCORD_BOOSTER' | 'CONTRIBUTOR'): Promise<boolean> {
   const perks = await getUserPerks(userId)
   if (perkRole === 'DISCORD_BOOSTER') {
-    return perks.includes(PERK_ROLES.DISCORD_BOOSTER)
+    return perks.some(p => p.startsWith('DISCORD_BOOSTER'))
   }
   if (perkRole === 'CONTRIBUTOR') {
     return perks.some(p => p.startsWith('CONTRIBUTOR'))

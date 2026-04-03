@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { getServerSession } from 'next-auth'
-
-import { authOptions } from '@/packages/lib/auth'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -13,12 +11,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    const { id } = await params
+    const { response } = await requireAdmin()
+    if (response) return response
 
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
+    const { id } = await params
 
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -52,6 +48,8 @@ export async function GET(
         targetUrl: true,
         clicks: true,
         createdAt: true,
+        flagged: true,
+        flagReason: true,
       },
     })
 

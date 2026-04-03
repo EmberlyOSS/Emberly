@@ -14,8 +14,8 @@ export function BlogManager() {
   const [refreshKey, setRefreshKey] = useState(0)
   return (
     <div className="container space-y-6">
-      <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50">
+      <div className="glass-subtle overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-muted/20">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
               <FileText className="h-5 w-5 text-primary" />

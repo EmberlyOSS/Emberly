@@ -29,7 +29,7 @@ export type LegalRecord = {
 
 function LegalTableSkeleton() {
     return (
-        <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+        <div className="glass-subtle overflow-hidden">
             <Table>
                 <TableHeader>
                     <TableRow className="border-border/50 hover:bg-transparent">
@@ -131,7 +131,7 @@ export function LegalList({ onEdit }: { onEdit?: (id: string) => void }) {
     if (loading) return <LegalTableSkeleton />
     if (!loading && pages.length === 0) {
         return (
-            <div className="rounded-xl border border-border/50 border-dashed bg-background/30 p-12 text-center">
+            <div className="glass-subtle border-dashed p-12 text-center">
                 <div className="flex justify-center mb-4">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                         <Scale className="h-7 w-7 text-primary" />
@@ -146,7 +146,7 @@ export function LegalList({ onEdit }: { onEdit?: (id: string) => void }) {
     }
 
     return (
-        <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+        <div className="glass-subtle overflow-hidden">
             <Table>
                 <TableHeader>
                     <TableRow className="border-border/50 hover:bg-transparent">

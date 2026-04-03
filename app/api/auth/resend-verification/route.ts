@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 
-import { randomBytes } from 'crypto'
 import { z } from 'zod'
 
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
+import { generateSecureToken, generateShortCode, parseVerificationCodes } from '@/packages/lib/auth/service'
 
 const resendSchema = z.object({
     email: z.string().email(),
@@ -50,16 +50,15 @@ export async function POST(req: Request) {
         }
 
         // Generate new verification token and short code
-        const verificationToken = randomBytes(32).toString('hex')
-        const shortCode = Math.floor(100000 + Math.random() * 900000).toString() // 6-digit code
-        const verificationExpires = Date.now() + 60 * 60 * 1000 // 1 hour
+        const { token: verificationToken, expiresAt: expiresDate } = generateSecureToken(60 * 60 * 1000)
+        const shortCode = generateShortCode()
 
         // Create verification code data
         const verificationCodeData = JSON.stringify({
             code: verificationToken,
-            shortCode: shortCode,
+            shortCode,
             context: 'email-verification',
-            expiresAt: verificationExpires,
+            expiresAt: expiresDate.getTime(),
         })
 
         // Get existing codes, filter out old email-verification ones, add new
@@ -68,15 +67,10 @@ export async function POST(req: Request) {
             select: { verificationCodes: true },
         })
 
-        const existingCodes = (existingUser?.verificationCodes || [])
-            .map((c) => {
-                try {
-                    return JSON.parse(c)
-                } catch {
-                    return null
-                }
-            })
-            .filter((c) => c && c.context !== 'email-verification')
+        const existingCodes = parseVerificationCodes<{ context: string }>(
+            existingUser?.verificationCodes ?? []
+        )
+            .filter((c) => c.context !== 'email-verification')
             .map((c) => JSON.stringify(c))
 
         await prisma.user.update({

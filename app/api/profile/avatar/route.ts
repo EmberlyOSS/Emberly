@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
@@ -13,10 +12,8 @@ const logger = loggers.users
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, response } = await requireAuth(req)
+    if (response) return response
 
     const formData = await req.formData()
     const file = formData.get('file') as File
@@ -35,10 +32,10 @@ export async function POST(req: Request) {
     const quotasEnabled = config.settings.general.storage.quotas.enabled
     const defaultQuota = config.settings.general.storage.quotas.default
 
-    if ((session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
+    if ((user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
       const { canUploadSize } = await import('@/packages/lib/storage/quota')
       const fileSizeMB = bytesToMB(file.size)
-      const uploadCheck = await canUploadSize(session.user.id, fileSizeMB)
+      const uploadCheck = await canUploadSize(user.id, fileSizeMB)
 
       if (!uploadCheck.allowed) {
         return NextResponse.json(
@@ -51,8 +48,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: { image: true },
     })
 
@@ -60,7 +57,7 @@ export async function POST(req: Request) {
     const processedImage = Buffer.from(bytes)
 
     const storageProvider = await getStorageProvider()
-    const avatarFilename = `${session.user.id}.jpg`
+    const avatarFilename = `${user.id}.jpg`
     const avatarPath = join('uploads', 'avatars', avatarFilename)
     // capture host headers (if present) and store as metadata on the object
     const incomingHeaders = req.headers
@@ -71,17 +68,17 @@ export async function POST(req: Request) {
     if (emberly) meta['x-emberly-host'] = emberly
     let publicPath = `/api/avatars/${avatarFilename}`
 
-    if (user?.image?.startsWith('/api/avatars/')) {
+    if (dbUser?.image?.startsWith('/api/avatars/')) {
       try {
-        const oldFilename = user.image.split('/').pop()
+        const oldFilename = dbUser.image.split('/').pop()
         if (oldFilename) {
           const oldPath = join('uploads', 'avatars', oldFilename)
           await storageProvider.deleteFile(oldPath)
         }
       } catch (error) {
         logger.error('Failed to delete old avatar', error as Error, {
-          userId: session.user.id,
-          oldPath: user.image,
+          userId: user.id,
+          oldPath: dbUser.image,
         })
       }
     }
@@ -98,7 +95,7 @@ export async function POST(req: Request) {
     }
 
     const updated = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: {
         image: publicPath,
       },
@@ -106,7 +103,7 @@ export async function POST(req: Request) {
     })
 
     logger.info('Avatar uploaded', {
-      userId: session.user.id,
+      userId: user.id,
       avatar: publicPath,
       dbImage: updated.image,
     })

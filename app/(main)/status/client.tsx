@@ -77,7 +77,7 @@ export default function StatusPageClient({
 
             {/* Tabbed Content: Components, Incidents, Maintenances */}
             <Tabs defaultValue="components" className="w-full">
-                <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex h-auto md:h-10 gap-1 bg-background/60 backdrop-blur-xl border border-border/50 p-1 rounded-xl">
+                <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex h-auto md:h-10 gap-1 glass-subtle p-1 rounded-xl">
                     <TabsTrigger
                         value="components"
                         className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2"

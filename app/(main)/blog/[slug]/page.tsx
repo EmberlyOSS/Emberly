@@ -6,8 +6,8 @@ import { format, formatDistanceToNow } from 'date-fns'
 import GithubSlugger from 'github-slugger'
 import { ArrowLeft, Calendar, User, Clock, Share2 } from 'lucide-react'
 
-import BlogToc, { BlogHeading } from '@/packages/components/docs/BlogToc'
-import MarkdownRenderer from '@/packages/components/docs/MarkdownRenderer'
+import BlogToc, { BlogHeading } from '@/packages/components/shared/BlogToc'
+import MarkdownRenderer from '@/packages/components/shared/MarkdownRenderer'
 import PageShell from '@/packages/components/layout/PageShell'
 import { Button } from '@/packages/components/ui/button'
 import { getPostBySlug } from '@/packages/lib/blog'
@@ -94,9 +94,8 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
           {/* Main article content */}
           <article className="space-y-8">
             {/* Article header card */}
-            <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-              <div className="relative p-6">
+            <div className="glass-subtle overflow-hidden">
+              <div className="p-6">
                 {/* Author and meta */}
                 <div className="flex flex-wrap items-center gap-4">
                   {/* Author */}
@@ -121,7 +120,7 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
                   </div>
 
                   {/* Divider */}
-                  <div className="hidden sm:block h-10 w-px bg-white/10" />
+                  <div className="hidden sm:block h-10 w-px bg-muted/50" />
 
                   {/* Date and read time */}
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -144,19 +143,17 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
             </div>
 
             {/* Article body */}
-            <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-              <div className="relative p-6 sm:p-8">
-                <div className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-li:text-muted-foreground prose-blockquote:border-primary/50 prose-blockquote:text-muted-foreground prose-hr:border-white/10">
+            <div className="glass-subtle overflow-hidden">
+              <div className="p-6 sm:p-8">
+                <div className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/50 prose-li:text-muted-foreground prose-blockquote:border-primary/50 prose-blockquote:text-muted-foreground prose-hr:border-border/50">
                   <MarkdownRenderer>{post.content}</MarkdownRenderer>
                 </div>
               </div>
             </div>
 
             {/* Footer actions */}
-            <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
-              <div className="relative p-6">
+            <div className="glass-subtle overflow-hidden">
+              <div className="p-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
                     <p className="font-medium">Enjoyed this article?</p>
@@ -164,7 +161,7 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
                   </div>
                   <div className="flex items-center gap-3">
                     <Link href="/blog">
-                      <Button variant="outline" className="bg-white/5 dark:bg-white/[0.02] border-white/10 dark:border-white/5 hover:bg-white/10">
+                      <Button variant="outline">
                         More posts
                       </Button>
                     </Link>

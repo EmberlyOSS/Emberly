@@ -5,7 +5,7 @@ import React from 'react'
 export default function SummaryCards({ basic }: { basic: any }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+            <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
                 <div>
                     <h3 className="text-base font-medium">Files</h3>
                     <p className="text-sm text-muted-foreground">Overview of your uploaded files</p>
@@ -17,7 +17,7 @@ export default function SummaryCards({ basic }: { basic: any }) {
                 </div>
             </div>
 
-            <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+            <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
                 <div>
                     <h3 className="text-base font-medium">Short URLs</h3>
                     <p className="text-sm text-muted-foreground">Track your link clicks</p>
@@ -28,7 +28,7 @@ export default function SummaryCards({ basic }: { basic: any }) {
                 </div>
             </div>
 
-            <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+            <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
                 <div>
                     <h3 className="text-base font-medium">Domains</h3>
                     <p className="text-sm text-muted-foreground">Custom domains attached to your account</p>

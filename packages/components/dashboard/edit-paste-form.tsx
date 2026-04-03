@@ -199,7 +199,7 @@ export function EditPasteForm({ file, initialContent }: EditPasteFormProps) {
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {/* File Info */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-border/50">
+            <div className="flex items-center justify-between p-4 rounded-lg glass-subtle">
                 <div className="flex items-center gap-3">
                     <FileCode className="h-5 w-5 text-muted-foreground" />
                     <div>
@@ -251,7 +251,7 @@ export function EditPasteForm({ file, initialContent }: EditPasteFormProps) {
                         onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}
                         className="w-full"
                     >
-                        <TabsList className="w-full justify-start bg-background/50 border border-border/50">
+                        <TabsList className="w-full justify-start glass-subtle">
                             <TabsTrigger value="edit" className="flex items-center gap-2">
                                 <FileCode className="h-4 w-4" />
                                 Edit
@@ -262,7 +262,7 @@ export function EditPasteForm({ file, initialContent }: EditPasteFormProps) {
                             </TabsTrigger>
                         </TabsList>
                         <TabsContent value="edit" className="mt-2">
-                            <div className="rounded-lg border border-border/50 overflow-hidden">
+                            <div className="glass-subtle overflow-hidden">
                                 <CodeMirror
                                     value={content}
                                     onChange={setContent}
@@ -289,7 +289,7 @@ export function EditPasteForm({ file, initialContent }: EditPasteFormProps) {
                             </div>
                         </TabsContent>
                         <TabsContent value="preview" className="mt-2">
-                            <div className="rounded-lg border border-border/50 bg-background/50 p-6 min-h-[500px] max-h-[500px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
+                            <div className="glass-subtle p-6 min-h-[500px] max-h-[500px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
                                 {content ? (
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
@@ -306,7 +306,7 @@ export function EditPasteForm({ file, initialContent }: EditPasteFormProps) {
                         </TabsContent>
                     </Tabs>
                 ) : (
-                    <div className="rounded-lg border border-border/50 overflow-hidden">
+                    <div className="glass-subtle overflow-hidden">
                         <CodeMirror
                             value={content}
                             onChange={setContent}
@@ -335,7 +335,7 @@ export function EditPasteForm({ file, initialContent }: EditPasteFormProps) {
             </div>
 
             {/* Collaboration Settings */}
-            <div className="rounded-lg border border-border/50 bg-background/30 p-4 space-y-4">
+            <div className="glass-subtle p-4 space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     Collaboration Settings

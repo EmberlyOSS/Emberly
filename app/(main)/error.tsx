@@ -5,18 +5,14 @@ import { useState } from 'react'
 
 import {
   AlertTriangle,
-  ArrowRight,
-  BookOpen,
   Bug,
   CheckCircle,
   ChevronDown,
   ChevronUp,
   ClipboardCopy,
-  Home,
   LayoutDashboard,
   MessageCircle,
   RefreshCcw,
-  Settings,
 } from 'lucide-react'
 
 import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
@@ -27,33 +23,11 @@ import { Badge } from '@/packages/components/ui/badge'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      <div className="relative">{children}</div>
+    <div className={`glass-card overflow-hidden ${className}`}>
+      {children}
     </div>
   )
 }
-
-const QUICK_LINKS = [
-  {
-    icon: LayoutDashboard,
-    title: 'Dashboard',
-    description: 'Your files',
-    href: '/dashboard',
-  },
-  {
-    icon: Settings,
-    title: 'Settings',
-    description: 'Account',
-    href: '/dashboard/settings',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Discord',
-    description: 'Get help',
-    href: '/discord',
-  },
-]
 
 export default function Error({
   error,
@@ -84,8 +58,7 @@ export default function Error({
 
       <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="relative bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl shadow-lg shadow-black/10">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-2xl pointer-events-none" />
+          <div className="relative glass-elevated rounded-2xl gradient-border-animated transition-all duration-300">
             <div className="relative">
               <DashboardNav />
             </div>
@@ -94,7 +67,7 @@ export default function Error({
       </header>
 
       <main className="flex-1 w-full pt-28 relative z-10">
-        <div className="max-w-4xl mx-auto py-8 px-4 md:px-6 space-y-6">
+        <div className="max-w-7xl mx-auto py-8 px-4 md:px-6 space-y-6">
           {/* Main Error Card */}
           <GlassCard>
             <div className="p-8 md:p-10">
@@ -150,7 +123,7 @@ export default function Error({
               </div>
 
               {/* Error Details Accordion */}
-              <div className="mt-8 pt-6 border-t border-border/50">
+              <div className="mt-8 pt-6 border-t border-border/40">
                 <button
                   onClick={() => setShowDetails(!showDetails)}
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -166,7 +139,7 @@ export default function Error({
                 {showDetails && (
                   <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
                     {/* Error Message */}
-                    <div className="p-4 rounded-xl bg-background/30 border border-border/50">
+                    <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Error Message
@@ -195,7 +168,7 @@ export default function Error({
 
                     {/* Stack Trace (Dev only) */}
                     {isDev && stack && (
-                      <div className="p-4 rounded-xl bg-background/30 border border-border/50">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Stack Trace
                         </span>
@@ -209,30 +182,6 @@ export default function Error({
               </div>
             </div>
           </GlassCard>
-
-          {/* Quick Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {QUICK_LINKS.map((link) => (
-              <GlassCard key={link.href} className="group hover:border-primary/30 transition-colors">
-                <Link href={link.href} className="block p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10">
-                      <link.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm group-hover:text-primary transition-colors">
-                        {link.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {link.description}
-                      </div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </div>
-                </Link>
-              </GlassCard>
-            ))}
-          </div>
 
           {/* Report Issue */}
           <GlassCard>

@@ -4,8 +4,8 @@ import { getRedisClient, isRedisConnected, redisKeys } from './redis'
 
 const logger = loggers.events.getChildLogger('config-cache')
 
-// Config cache TTL: 30 seconds in dev, 5 minutes in production
-const CONFIG_TTL_SECONDS = process.env.NODE_ENV === 'production' ? 5 * 60 : 30
+// Config cache TTL: 5 seconds in dev, 5 minutes in production
+const CONFIG_TTL_SECONDS = process.env.NODE_ENV === 'production' ? 5 * 60 : 5
 
 // Setup status cache TTL: same as config
 const SETUP_TTL_SECONDS = CONFIG_TTL_SECONDS

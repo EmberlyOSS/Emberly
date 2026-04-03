@@ -13,7 +13,7 @@ import PartnerForm from './partner-form'
 
 function PartnerTableSkeleton() {
     return (
-        <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+        <div className="glass-subtle overflow-hidden">
             <Table>
                 <TableHeader>
                     <TableRow className="border-border/50 hover:bg-transparent">
@@ -123,7 +123,7 @@ export function PartnerList() {
                             New Partner
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto bg-background/95 backdrop-blur-xl border-border/50">
+                    <DialogContent className="max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>{editing ? 'Edit Partner' : 'New Partner'}</DialogTitle>
                         </DialogHeader>
@@ -135,7 +135,7 @@ export function PartnerList() {
             {loading ? (
                 <PartnerTableSkeleton />
             ) : partners.length === 0 ? (
-                <div className="rounded-xl border border-border/50 border-dashed bg-background/30 p-12 text-center">
+                <div className="rounded-xl border border-border/50 border-dashed bg-background/80 p-12 text-center">
                     <div className="flex justify-center mb-4">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                             <Users className="h-7 w-7 text-primary" />
@@ -151,7 +151,7 @@ export function PartnerList() {
                     </Button>
                 </div>
             ) : (
-                <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+                <div className="glass-subtle overflow-hidden">
                     <Table>
                         <TableHeader>
                             <TableRow className="border-border/50 hover:bg-transparent">

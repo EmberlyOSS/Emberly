@@ -7,13 +7,16 @@ import Image from 'next/image'
 
 import {
   Archive,
+  Ban,
   ChevronLeft,
   ChevronRight,
   Edit2,
   Eye,
   EyeOff,
+  ExternalLink,
   File,
   FileText,
+  Flag,
   FolderOpen,
   Image as ImageIcon,
   Link2,
@@ -21,7 +24,10 @@ import {
   MoreVertical,
   Music,
   Plus,
+  Search,
   Shield,
+  ShieldCheck,
+  ShieldOff,
   Trash2,
   Users,
   UserX,
@@ -57,6 +63,7 @@ import {
 } from '@/packages/components/ui/dropdown-menu'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
+import { Textarea } from '@/packages/components/ui/textarea'
 import {
   Pagination,
   PaginationContent,
@@ -102,6 +109,10 @@ interface User {
   role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId: string
   storageUsed: number
+  bannedAt: string | null
+  banReason: string | null
+  banType: string | null
+  banExpiresAt: string | null
   _count: {
     files: number
     shortenedUrls: number
@@ -117,6 +128,8 @@ interface File {
   password?: string | null
   uploadedAt: string
   urlPath: string
+  flagged?: boolean
+  flagReason?: string | null
 }
 
 interface ShortenedUrl {
@@ -125,6 +138,8 @@ interface ShortenedUrl {
   targetUrl: string
   clicks: number
   createdAt: string
+  flagged?: boolean
+  flagReason?: string | null
 }
 
 interface PaginationData {
@@ -152,7 +167,7 @@ interface UrlResponse {
 
 function UserTableSkeleton() {
   return (
-    <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+    <div className="glass-subtle overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border/50">
@@ -371,6 +386,16 @@ export function UserList() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isFileDeleteDialogOpen, setIsFileDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isBanDialogOpen, setIsBanDialogOpen] = useState(false)
+  const [banTarget, setBanTarget] = useState<User | null>(null)
+  const [banReason, setBanReason] = useState('')
+  const [banType, setBanType] = useState<'temporary' | 'permanent'>('permanent')
+  const [banExpiry, setBanExpiry] = useState('')
+  const [isBanning, setIsBanning] = useState(false)
+  const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false)
+  const [flagTarget, setFlagTarget] = useState<{ type: 'file' | 'url'; id: string; name: string; flagged: boolean } | null>(null)
+  const [flagReason, setFlagReason] = useState('')
+  const [isFlagging, setIsFlagging] = useState(false)
 
   const fetchUserFiles = useCallback(
     async (userId: string, page: number) => {
@@ -492,6 +517,7 @@ export function UserList() {
     setFormData({
       name: user.name,
       email: user.email,
+      password: '',
       role: user.role,
       urlId: user.urlId,
     })
@@ -702,6 +728,100 @@ export function UserList() {
     }
   }
 
+  const handleOpenBan = (user: User) => {
+    setBanTarget(user)
+    setBanReason('')
+    setBanType('permanent')
+    setBanExpiry('')
+    setIsBanDialogOpen(true)
+  }
+
+  const handleBanUser = async () => {
+    if (!banTarget || banReason.length < 10) return
+    setIsBanning(true)
+    try {
+      const body: Record<string, unknown> = { reason: banReason, type: banType }
+      if (banType === 'temporary' && banExpiry) {
+        body.expiresAt = new Date(banExpiry).toISOString()
+      }
+      const res = await fetch(`/api/admin/users/${banTarget.id}/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to ban user')
+      }
+      toast({ title: 'User Banned', description: `${banTarget.name} has been banned.` })
+      setIsBanDialogOpen(false)
+      setBanTarget(null)
+      fetchUsers(currentPage)
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to ban user', variant: 'destructive' })
+    } finally {
+      setIsBanning(false)
+    }
+  }
+
+  const handleUnbanUser = async (user: User) => {
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/ban`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to unban user')
+      }
+      toast({ title: 'User Unbanned', description: `${user.name} has been unbanned.` })
+      fetchUsers(currentPage)
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to unban user', variant: 'destructive' })
+    }
+  }
+
+  const handleOpenFlag = (type: 'file' | 'url', id: string, name: string, flagged: boolean) => {
+    setFlagTarget({ type, id, name, flagged })
+    setFlagReason('')
+    setIsFlagDialogOpen(true)
+  }
+
+  const handleFlagContent = async () => {
+    if (!flagTarget) return
+    if (!flagTarget.flagged && flagReason.length < 3) return
+    setIsFlagging(true)
+    try {
+      const res = await fetch('/api/admin/content/flag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentType: flagTarget.type,
+          contentId: flagTarget.id,
+          reason: flagTarget.flagged ? 'Unflagged by admin' : flagReason,
+          flagged: !flagTarget.flagged,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to flag content')
+      }
+      toast({
+        title: flagTarget.flagged ? 'Content Unflagged' : 'Content Flagged',
+        description: flagTarget.flagged
+          ? `${flagTarget.name} is now visible again.`
+          : `${flagTarget.name} has been flagged and hidden from public view.`,
+      })
+      setIsFlagDialogOpen(false)
+      setFlagTarget(null)
+      if (viewingUser) {
+        fetchUserFiles(viewingUser.id, filePage)
+        fetchUserUrls(viewingUser.id, urlPage)
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to flag content', variant: 'destructive' })
+    } finally {
+      setIsFlagging(false)
+    }
+  }
+
   if (isLoading) {
     return <UserTableSkeleton />
   }
@@ -735,7 +855,7 @@ export function UserList() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+      <div className="glass-subtle overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-border/50">
@@ -784,7 +904,15 @@ export function UserList() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {getRoleBadge(user.role)}
+                    <div className="flex items-center gap-1.5">
+                      {getRoleBadge(user.role)}
+                      {user.bannedAt && (
+                        <Badge className="bg-destructive/20 text-destructive hover:bg-destructive/30 border-0 gap-1">
+                          <Ban className="h-3 w-3" />
+                          Banned
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <code className="relative rounded-md bg-muted/50 px-2 py-1 font-mono text-xs">
@@ -801,7 +929,7 @@ export function UserList() {
                     <span className="text-sm">{user._count.shortenedUrls}</span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -851,6 +979,42 @@ export function UserList() {
                               <p>Remove Avatar</p>
                             </TooltipContent>
                           </Tooltip>
+                        )}
+
+                        {user.role !== 'SUPERADMIN' && user.role !== 'ADMIN' && (
+                          user.bannedAt ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleUnbanUser(user)}
+                                  className="h-8 w-8 text-emerald-500 hover:text-emerald-500 hover:bg-emerald-500/10"
+                                >
+                                  <ShieldCheck className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Unban User</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenBan(user)}
+                                  className="h-8 w-8 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Ban User</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )
                         )}
 
                         <Tooltip>
@@ -1078,49 +1242,59 @@ export function UserList() {
       </Dialog>
 
       <Dialog open={isViewingFiles} onOpenChange={setIsViewingFiles}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>{viewingUser?.name}&apos;s Content</DialogTitle>
-            <DialogDescription>
-              View and manage user&apos;s files and shortened URLs
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 glass">
+          {/* Header */}
+          <div className="flex items-center gap-3 p-6 pb-4 border-b border-border/50">
+            <Avatar className="h-10 w-10 border border-border/50">
+              <AvatarImage src={viewingUser?.image || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {viewingUser?.name?.split(' ').map((n) => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg font-semibold truncate">{viewingUser?.name}&apos;s Content</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                {filePagination?.total || 0} files · {urlPagination?.total || 0} URLs · {viewingUser ? formatFileSize(viewingUser.storageUsed) : '0 B'} used
+              </DialogDescription>
+            </div>
+          </div>
 
-          <Tabs defaultValue="files" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="files">
-                Files ({filePagination?.total || 0})
-              </TabsTrigger>
-              <TabsTrigger value="urls">
-                URLs ({urlPagination?.total || 0})
-              </TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="files" className="flex-1 flex flex-col min-h-0">
+            <div className="px-6 pt-4">
+              <TabsList className="h-9 items-center gap-1 p-1 rounded-xl bg-muted/50">
+                <TabsTrigger value="files" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-1.5 text-sm gap-1.5">
+                  <File className="h-3.5 w-3.5" />
+                  Files
+                  <Badge variant="secondary" className="bg-muted/50 text-xs ml-1 px-1.5 py-0">{filePagination?.total || 0}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="urls" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-1.5 text-sm gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" />
+                  URLs
+                  <Badge variant="secondary" className="bg-muted/50 text-xs ml-1 px-1.5 py-0">{urlPagination?.total || 0}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-            <TabsContent value="files">
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1">
+            <TabsContent value="files" className="flex-1 flex flex-col min-h-0 mt-0 px-6 pb-6">
+              <div className="space-y-3 flex-1 flex flex-col min-h-0">
+                {/* Search & filters */}
+                <div className="flex gap-2 pt-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search files..."
                       value={fileFilters.search}
-                      onChange={(e) =>
-                        handleFileFilterChange({ search: e.target.value })
-                      }
-                      className="w-full"
+                      onChange={(e) => handleFileFilterChange({ search: e.target.value })}
+                      className="pl-9 bg-background/50 border-border/50"
                     />
                   </div>
                   <Select
                     value={fileFilters.visibility || 'all'}
                     onValueChange={(value) =>
-                      handleFileFilterChange({
-                        visibility:
-                          value === 'all'
-                            ? null
-                            : (value as 'PUBLIC' | 'PRIVATE'),
-                      })
+                      handleFileFilterChange({ visibility: value === 'all' ? null : (value as 'PUBLIC' | 'PRIVATE') })
                     }
                   >
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-[130px] bg-background/50 border-border/50">
                       <SelectValue placeholder="Visibility" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1131,126 +1305,143 @@ export function UserList() {
                   </Select>
                   <Select
                     value={fileFilters.type || 'all'}
-                    onValueChange={(value) =>
-                      handleFileFilterChange({
-                        type: value === 'all' ? '' : value,
-                      })
-                    }
+                    onValueChange={(value) => handleFileFilterChange({ type: value === 'all' ? '' : value })}
                   >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="File Type" />
+                    <SelectTrigger className="w-[130px] bg-background/50 border-border/50">
+                      <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="image/">Images</SelectItem>
+                      <SelectItem value="video/">Videos</SelectItem>
                       <SelectItem value="text/">Text</SelectItem>
                       <SelectItem value="application/">Documents</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-border/50">
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Visibility</TableHead>
-                        <TableHead>Uploaded</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {userFiles.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-24">
-                            <div className="flex flex-col items-center justify-center text-center">
-                              <FolderOpen className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                              <p className="text-sm text-muted-foreground">No files found</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        userFiles.map((file: File) => (
-                          <TableRow key={file.id} className="border-border/50 group">
-                            <TableCell className="w-[50px]">
-                              <div className="flex items-center justify-center">
-                                {getFilePreview(file)}
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-medium max-w-[300px]">
-                              <div className="flex items-center justify-between gap-2">
-                                <a
-                                  href={sanitizeUrl(file.urlPath)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="hover:underline flex items-center gap-2 truncate hover:text-primary transition-colors"
-                                >
-                                  {file.name}
-                                </a>
-                                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          setSelectedFile(file)
-                                          setIsFileSettingsOpen(true)
-                                        }}
-                                      >
-                                        <Lock className="h-4 w-4 mr-2" />
-                                        Settings
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() => {
-                                          setSelectedFile(file)
-                                          setIsFileDeleteDialogOpen(true)
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[200px]">
-                              <span
-                                className="truncate block text-sm text-muted-foreground"
-                                title={file.mimeType}
+                {/* File grid */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  {userFiles.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="p-3 rounded-xl bg-muted/50 mb-3">
+                        <FolderOpen className="h-8 w-8 text-muted-foreground/50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">No files found</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {userFiles.map((file: File) => (
+                        <div
+                          key={file.id}
+                          className={cn(
+                            'group relative flex items-center gap-3 p-3 rounded-xl transition-all',
+                            'glass-subtle glass-hover',
+                            file.flagged && 'ring-1 ring-destructive/50 bg-destructive/5'
+                          )}
+                        >
+                          {/* Preview */}
+                          <div className="shrink-0">
+                            {getFilePreview(file)}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={sanitizeUrl(file.urlPath)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-medium truncate hover:text-primary transition-colors"
                               >
-                                {file.mimeType}
-                              </span>
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap text-sm">
-                              {formatFileSize(file.size)}
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap">
-                              {file.password ? (
-                                <Badge className="bg-chart-4/20 text-chart-4 hover:bg-chart-4/30 border-0">Protected</Badge>
-                              ) : file.visibility === 'PRIVATE' ? (
-                                <Badge variant="secondary" className="bg-muted/50">Private</Badge>
-                              ) : (
-                                <Badge className="bg-chart-2/20 text-chart-2 hover:bg-chart-2/30 border-0">Public</Badge>
+                                {file.name}
+                              </a>
+                              {file.flagged && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Flag className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Flagged: {file.flagReason || 'No reason'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                              {new Date(file.uploadedAt).toLocaleDateString()}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+                              <span className="text-xs text-muted-foreground/40">·</span>
+                              <span className="text-xs text-muted-foreground">{new Date(file.uploadedAt).toLocaleDateString()}</span>
+                              <span className="text-xs text-muted-foreground/40">·</span>
+                              {file.password ? (
+                                <Badge className="bg-chart-4/20 text-chart-4 border-0 text-[10px] px-1.5 py-0 h-4">Protected</Badge>
+                              ) : file.visibility === 'PRIVATE' ? (
+                                <Badge variant="secondary" className="bg-muted/50 text-[10px] px-1.5 py-0 h-4">Private</Badge>
+                              ) : (
+                                <Badge className="bg-chart-2/20 text-chart-2 border-0 text-[10px] px-1.5 py-0 h-4">Public</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="shrink-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => window.open(sanitizeUrl(file.urlPath), '_blank')}
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Open</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn('h-7 w-7', file.flagged ? 'text-destructive hover:text-destructive' : 'hover:text-amber-500')}
+                                    onClick={() => handleOpenFlag('file', file.id, file.name, !!file.flagged)}
+                                  >
+                                    {file.flagged ? <ShieldOff className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{file.flagged ? 'Unflag' : 'Flag'}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreVertical className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => { setSelectedFile(file); setIsFileSettingsOpen(true) }}>
+                                  <Lock className="h-4 w-4 mr-2" />
+                                  Settings
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => { setSelectedFile(file); setIsFileDeleteDialogOpen(true) }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
+                {/* Pagination */}
                 {filePagination && filePagination.pages > 1 && (
                   <Pagination>
                     <PaginationContent>
@@ -1258,46 +1449,29 @@ export function UserList() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            e.preventDefault()
-                            if (viewingUser) {
-                              fetchUserFiles(viewingUser.id, filePage - 1)
-                            }
-                          }}
+                          className="h-8 w-8"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.preventDefault(); viewingUser && fetchUserFiles(viewingUser.id, filePage - 1) }}
                           disabled={filePage === 1}
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
                       </PaginationItem>
-                      {getPaginationRange(filePage, filePagination.pages).map(
-                        (p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink
-                              onClick={(
-                                e: React.MouseEvent<HTMLAnchorElement>
-                              ) => {
-                                e.preventDefault()
-                                if (viewingUser) {
-                                  fetchUserFiles(viewingUser.id, p)
-                                }
-                              }}
-                              isActive={p === filePage}
-                            >
-                              {p}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      )}
+                      {getPaginationRange(filePage, filePagination.pages).map((p) => (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            onClick={(e: React.MouseEvent<HTMLAnchorElement>) => { e.preventDefault(); viewingUser && fetchUserFiles(viewingUser.id, p) }}
+                            isActive={p === filePage}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
                       <PaginationItem>
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            e.preventDefault()
-                            if (viewingUser) {
-                              fetchUserFiles(viewingUser.id, filePage + 1)
-                            }
-                          }}
+                          className="h-8 w-8"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.preventDefault(); viewingUser && fetchUserFiles(viewingUser.id, filePage + 1) }}
                           disabled={filePage === filePagination.pages}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -1309,92 +1483,124 @@ export function UserList() {
               </div>
             </TabsContent>
 
-            <TabsContent value="urls">
-              <div className="space-y-4">
-                <Input
-                  placeholder="Search URLs..."
-                  value={urlSearch}
-                  onChange={(e) => handleUrlSearchChange(e.target.value)}
-                  className="w-full bg-background/50 border-border/50"
-                />
-
-                <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-border/50">
-                        <TableHead>Short URL</TableHead>
-                        <TableHead>Target URL</TableHead>
-                        <TableHead>Clicks</TableHead>
-                        <TableHead>Created</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {userUrls.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="h-24">
-                            <div className="flex flex-col items-center justify-center text-center">
-                              <Link2 className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                              <p className="text-sm text-muted-foreground">No URLs found</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        userUrls.map((url) => (
-                          <TableRow key={url.id} className="border-border/50 group">
-                            <TableCell className="font-medium">
-                              <div className="flex items-center justify-between">
-                                <a
-                                  href={`/u/${url.shortCode}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="hover:underline flex items-center gap-2 hover:text-primary transition-colors"
-                                >
-                                  <Link2 className="h-4 w-4" />
-                                  <code className="text-sm">{url.shortCode}</code>
-                                </a>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() => handleDeleteUrl(url.id)}
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[300px] truncate">
-                              <a
-                                href={url.targetUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:underline text-sm text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                {url.targetUrl}
-                              </a>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="bg-muted/50">{url.clicks}</Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {new Date(url.createdAt).toLocaleDateString()}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+            <TabsContent value="urls" className="flex-1 flex flex-col min-h-0 mt-0 px-6 pb-6">
+              <div className="space-y-3 flex-1 flex flex-col min-h-0">
+                {/* Search */}
+                <div className="relative pt-3">
+                  <Search className="absolute left-3 top-1/2 mt-1.5 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search URLs..."
+                    value={urlSearch}
+                    onChange={(e) => handleUrlSearchChange(e.target.value)}
+                    className="pl-9 bg-background/50 border-border/50"
+                  />
                 </div>
 
+                {/* URL list */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  {userUrls.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="p-3 rounded-xl bg-muted/50 mb-3">
+                        <Link2 className="h-8 w-8 text-muted-foreground/50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">No URLs found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {userUrls.map((url) => (
+                        <div
+                          key={url.id}
+                          className={cn(
+                            'group flex items-center gap-3 p-3 rounded-xl transition-all',
+                            'glass-subtle glass-hover',
+                            url.flagged && 'ring-1 ring-destructive/50 bg-destructive/5'
+                          )}
+                        >
+                          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                            <Link2 className="h-4 w-4 text-primary" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={`/u/${url.shortCode}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-medium font-mono hover:text-primary transition-colors"
+                              >
+                                /u/{url.shortCode}
+                              </a>
+                              {url.flagged && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Flag className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Flagged: {url.flagReason || 'No reason'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              <Badge variant="secondary" className="bg-muted/50 text-[10px] px-1.5 py-0 h-4 ml-1">{url.clicks} clicks</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{url.targetUrl}</p>
+                            <span className="text-xs text-muted-foreground/60">{new Date(url.createdAt).toLocaleDateString()}</span>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => window.open(`/u/${url.shortCode}`, '_blank')}
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Open</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn('h-7 w-7', url.flagged ? 'text-destructive hover:text-destructive' : 'hover:text-amber-500')}
+                                    onClick={() => handleOpenFlag('url', url.id, url.shortCode, !!url.flagged)}
+                                  >
+                                    {url.flagged ? <ShieldOff className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{url.flagged ? 'Unflag' : 'Flag'}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreVertical className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteUrl(url.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pagination */}
                 {urlPagination && urlPagination.pages > 1 && (
                   <Pagination>
                     <PaginationContent>
@@ -1402,46 +1608,29 @@ export function UserList() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            e.preventDefault()
-                            if (viewingUser) {
-                              fetchUserUrls(viewingUser.id, urlPage - 1)
-                            }
-                          }}
+                          className="h-8 w-8"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.preventDefault(); viewingUser && fetchUserUrls(viewingUser.id, urlPage - 1) }}
                           disabled={urlPage === 1}
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
                       </PaginationItem>
-                      {getPaginationRange(urlPage, urlPagination.pages).map(
-                        (p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink
-                              onClick={(
-                                e: React.MouseEvent<HTMLAnchorElement>
-                              ) => {
-                                e.preventDefault()
-                                if (viewingUser) {
-                                  fetchUserUrls(viewingUser.id, p)
-                                }
-                              }}
-                              isActive={p === urlPage}
-                            >
-                              {p}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      )}
+                      {getPaginationRange(urlPage, urlPagination.pages).map((p) => (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            onClick={(e: React.MouseEvent<HTMLAnchorElement>) => { e.preventDefault(); viewingUser && fetchUserUrls(viewingUser.id, p) }}
+                            isActive={p === urlPage}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
                       <PaginationItem>
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            e.preventDefault()
-                            if (viewingUser) {
-                              fetchUserUrls(viewingUser.id, urlPage + 1)
-                            }
-                          }}
+                          className="h-8 w-8"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.preventDefault(); viewingUser && fetchUserUrls(viewingUser.id, urlPage + 1) }}
                           disabled={urlPage === urlPagination.pages}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -1538,6 +1727,107 @@ export function UserList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Ban User Dialog */}
+      <Dialog open={isBanDialogOpen} onOpenChange={setIsBanDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ban User</DialogTitle>
+            <DialogDescription>
+              Ban {banTarget?.name} from the platform. They will be immediately logged out.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ban-reason">Reason</Label>
+              <Textarea
+                id="ban-reason"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder="Explain why this user is being banned (min 10 characters)..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ban-type">Type</Label>
+              <Select
+                value={banType}
+                onValueChange={(v: 'temporary' | 'permanent') => setBanType(v)}
+              >
+                <SelectTrigger id="ban-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="permanent">Permanent</SelectItem>
+                  <SelectItem value="temporary">Temporary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {banType === 'temporary' && (
+              <div className="space-y-2">
+                <Label htmlFor="ban-expiry">Expires At</Label>
+                <Input
+                  id="ban-expiry"
+                  type="datetime-local"
+                  value={banExpiry}
+                  onChange={(e) => setBanExpiry(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBanDialogOpen(false)} disabled={isBanning}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleBanUser}
+              disabled={isBanning || banReason.length < 10 || (banType === 'temporary' && !banExpiry)}
+            >
+              {isBanning ? 'Banning...' : 'Ban User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Flag Content Dialog */}
+      <Dialog open={isFlagDialogOpen} onOpenChange={setIsFlagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{flagTarget?.flagged ? 'Unflag Content' : 'Flag Content'}</DialogTitle>
+            <DialogDescription>
+              {flagTarget?.flagged
+                ? `Remove the flag from "${flagTarget?.name}"? It will be visible to the public again.`
+                : `Flag "${flagTarget?.name}"? It will be hidden from everyone except the owner and admins.`}
+            </DialogDescription>
+          </DialogHeader>
+          {!flagTarget?.flagged && (
+            <div className="space-y-2 py-2">
+              <Label htmlFor="flag-reason">Reason</Label>
+              <Textarea
+                id="flag-reason"
+                value={flagReason}
+                onChange={(e) => setFlagReason(e.target.value)}
+                placeholder="Why is this content being flagged? (min 3 characters)"
+                rows={3}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFlagDialogOpen(false)} disabled={isFlagging}>
+              Cancel
+            </Button>
+            <Button
+              className={flagTarget?.flagged ? '' : 'bg-amber-500 text-white hover:bg-amber-600'}
+              onClick={handleFlagContent}
+              disabled={isFlagging || (!flagTarget?.flagged && flagReason.length < 3)}
+            >
+              {isFlagging ? 'Processing...' : flagTarget?.flagged ? 'Remove Flag' : 'Flag Content'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {pagination && pagination.pages > 1 && (
         <div className="flex justify-center">

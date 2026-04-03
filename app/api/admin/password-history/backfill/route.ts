@@ -1,7 +1,5 @@
-import { NextResponse } from 'next/server'
-import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
-import { UserRole } from '@/prisma/generated/prisma/client'
 import {
   backfillPasswordHistory,
   backfillUserPasswordHistory,
@@ -17,15 +15,10 @@ import {
  * Requires admin role
  */
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
-    const { user, response } = await requireAuth(req)
+    const { response } = await requireAdmin()
     if (response) return response
-
-    // Check admin role
-    if (user.role !== UserRole.Admin) {
-      return apiError('Forbidden: Admin access required', HTTP_STATUS.FORBIDDEN)
-    }
 
     // Get statistics
     const stats = await getPasswordHistoryCoverageStats()
@@ -42,13 +35,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, response } = await requireAuth(req)
+    const { response } = await requireAdmin()
     if (response) return response
-
-    // Check admin role
-    if (user.role !== UserRole.Admin) {
-      return apiError('Forbidden: Admin access required', HTTP_STATUS.FORBIDDEN)
-    }
 
     const json = await req.json()
     const { action, limit, userId } = json

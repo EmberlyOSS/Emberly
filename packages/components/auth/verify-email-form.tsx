@@ -171,7 +171,7 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
       )}
 
       {/* Footer Links */}
-      <div className="flex flex-col space-y-3 pt-4 border-t border-white/10">
+      <div className="flex flex-col space-y-3 pt-4 border-t border-border/50">
         <p className="text-xs text-muted-foreground text-center">
           {status === 'success' ? (
             'You will be redirected shortly'

@@ -36,8 +36,6 @@ export interface ThemeContextValue extends ThemeState {
   previewHue: (hue: number) => void
   /** Commit the preview as the user's saved theme */
   saveTheme: () => Promise<boolean>
-  /** Save current theme as the system default (admin only) */
-  saveAsSystemTheme: () => Promise<boolean>
   /** Cancel preview and revert to original theme */
   cancelPreview: () => void
   /** Toggle effects on/off */
@@ -58,14 +56,12 @@ export interface ThemeProviderProps {
   initialUserTheme?: string | null
   /** Initial custom colors from server */
   initialUserColors?: Record<string, string> | null
-  /** System default theme from config */
+  /** System default theme from config (used for unauthorized/no-theme users) */
   systemTheme?: string
   /** System custom colors from config */
   systemColors?: Record<string, string>
   /** Callback to persist user theme to database */
   onSaveUserTheme?: (themeId: string, colors: Record<string, string>) => Promise<boolean>
-  /** Callback to persist system theme (admin only) */
-  onSaveSystemTheme?: (themeId: string, colors: Record<string, string>) => Promise<boolean>
 }
 
 /**
@@ -178,8 +174,9 @@ function applyEffectClasses(metadata: ThemeMetadata | null, effectsEnabled: bool
 
 /**
  * Generate hue-based colors
+ * Exported so other components (e.g. AppearancePanel) can compute the same colors
  */
-function generateHueColors(hue: number): Record<string, string> {
+export function generateHueColors(hue: number): Record<string, string> {
   const BASE_COLORS: Record<string, string> = {
     background: '222.2 84% 4.9%',
     foreground: '210 40% 98%',
@@ -224,7 +221,6 @@ export function EmberlyThemeProvider({
   systemTheme = 'default-dark',
   systemColors = {},
   onSaveUserTheme,
-  onSaveSystemTheme,
 }: ThemeProviderProps) {
   // Determine initial theme based on priority: user > system > hardcoded default
   const getInitialTheme = useCallback((): { themeId: string; source: ThemeSource; colors: Record<string, string> } => {
@@ -236,7 +232,7 @@ export function EmberlyThemeProvider({
         colors: initialUserColors || {},
       }
     }
-    // Priority 2: System theme from config (always use it, even if it's 'default-dark')
+    // Priority 2: System theme from config (always use it, even if it's not explicitly set)
     if (systemTheme) {
       return {
         themeId: systemTheme,
@@ -273,6 +269,23 @@ export function EmberlyThemeProvider({
     setEffectsEnabledState(enabled)
     document.documentElement.setAttribute('data-effects-disabled', (!enabled).toString())
   }, [])
+
+  // Sync theme when initialUserTheme changes (e.g., after login/logout)
+  useEffect(() => {
+    if (initialUserTheme) {
+      // User logged in - use their theme
+      setThemeId(initialUserTheme)
+      setCustomColors(initialUserColors || {})
+      setSource('user')
+      setIsPreview(false)
+    } else {
+      // User logged out - revert to system theme
+      setThemeId(systemTheme || 'default-dark')
+      setCustomColors(systemColors || {})
+      setSource(systemTheme ? 'system' : 'default')
+      setIsPreview(false)
+    }
+  }, [initialUserTheme, initialUserColors, systemTheme, systemColors])
   
   // Apply theme visuals when state changes
   useEffect(() => {
@@ -324,26 +337,6 @@ export function EmberlyThemeProvider({
     }
   }, [themeId, customColors, onSaveUserTheme])
   
-  // Save as system theme (admin only)
-  const saveAsSystemTheme = useCallback(async (): Promise<boolean> => {
-    if (!onSaveSystemTheme) {
-      console.warn('[Theme] No onSaveSystemTheme callback provided')
-      return false
-    }
-    
-    try {
-      const success = await onSaveSystemTheme(themeId, customColors)
-      if (success) {
-        setIsPreview(false)
-        originalThemeRef.current = null
-      }
-      return success
-    } catch (error) {
-      console.error('[Theme] Failed to save system theme:', error)
-      return false
-    }
-  }, [themeId, customColors, onSaveSystemTheme])
-  
   // Cancel preview and revert
   const cancelPreview = useCallback(() => {
     if (originalThemeRef.current) {
@@ -393,7 +386,6 @@ export function EmberlyThemeProvider({
     previewTheme,
     previewHue,
     saveTheme,
-    saveAsSystemTheme,
     cancelPreview,
     setEffectsEnabled,
     isValidTheme,

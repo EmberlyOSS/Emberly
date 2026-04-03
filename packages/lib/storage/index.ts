@@ -52,3 +52,37 @@ export async function getStorageProvider(): Promise<StorageProvider> {
 export function invalidateStorageProvider(): void {
   storageProvider = null
 }
+
+// ---------------------------------------------------------------------------
+// Convenience URL helpers — avoids repeating getStorageProvider() + getFileUrl()
+// in every route that only needs a URL.
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a public (or presigned) URL for a stored file.
+ * Delegates to the active provider's `getFileUrl` implementation.
+ */
+export async function getFileUrl(
+  path: string,
+  expiresIn?: number,
+  hostOverride?: string
+): Promise<string> {
+  const provider = await getStorageProvider()
+  return provider.getFileUrl(path, expiresIn, hostOverride)
+}
+
+/**
+ * Build a download URL (with `Content-Disposition: attachment`) for a stored file.
+ * Falls back to `getFileUrl` when the provider doesn't implement `getDownloadUrl`.
+ */
+export async function getDownloadUrl(
+  path: string,
+  filename?: string,
+  hostOverride?: string
+): Promise<string> {
+  const provider = await getStorageProvider()
+  if (provider.getDownloadUrl) {
+    return provider.getDownloadUrl(path, filename, hostOverride)
+  }
+  return provider.getFileUrl(path, undefined, hostOverride)
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { getStripeClient } from '@/packages/lib/stripe/client'
 
 /**
  * GET /api/profile/billing-history
@@ -61,10 +62,8 @@ export async function GET(req: Request) {
         let stripeBalance = 0
         if (user?.stripeCustomerId) {
             try {
-                const Stripe = (await import('stripe')).default
-                const stripeSecret = process.env.STRIPE_SECRET
-                if (stripeSecret) {
-                    const stripe = new Stripe(stripeSecret, { apiVersion: '2025-11-17.clover' as any })
+                if (process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY) {
+                    const stripe = getStripeClient()
                     const customer = await stripe.customers.retrieve(user.stripeCustomerId)
                     stripeBalance = ((customer as any).balance || 0) / 100 // Convert cents to dollars
                 }

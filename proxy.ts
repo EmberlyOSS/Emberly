@@ -3,9 +3,8 @@ import type { NextRequest } from 'next/server'
 
 import { getToken } from 'next-auth/jwt'
 
-import { checkAuthentication } from './packages/lib/middleware/auth-checker'
 import { handleBotRequest } from './packages/lib/middleware/bot-handler'
-import { ADMIN_PATHS, PUBLIC_PATHS, SUPERADMIN_PATHS } from './packages/lib/middleware/constants'
+import { PROTECTED_PAGE_PATHS, SUPERADMIN_PATHS } from './packages/lib/middleware/constants'
 import { hasPermission, Permission } from './packages/lib/permissions'
 
 // Global store for login context (IP, UserAgent, Geo)
@@ -61,6 +60,38 @@ function getGeoInfo(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
+
+  // ── Custom Domain Routing ──────────────────────────────────────────────
+  // If the incoming host differs from the main domain, check if it's a
+  // verified custom domain. If the visitor is on the root path ("/"),
+  // rewrite to the domain owner's public profile. All other paths
+  // (file views, short URLs, etc.) pass through normally.
+  const incomingHost = request.headers.get('host')?.replace(/:\d+$/, '')
+  const mainHost = new URL(baseUrl).hostname
+
+  if (incomingHost && incomingHost !== mainHost && incomingHost !== 'localhost') {
+    // Only rewrite the root path — everything else (files, short URLs, assets) passes through
+    if (pathname === '/') {
+      try {
+        const lookupUrl = new URL('/api/internal/domain-lookup', request.url)
+        lookupUrl.searchParams.set('hostname', incomingHost)
+
+        const res = await fetch(lookupUrl.toString(), {
+          headers: { 'x-internal-request': 'true' },
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          if (data.found && data.profileSlug && data.isProfilePublic) {
+            return NextResponse.rewrite(new URL(`/user/${data.profileSlug}`, request.url))
+          }
+        }
+      } catch (e) {
+        // Lookup failed — fall through to normal routing
+        console.error('[Proxy] Custom domain lookup failed:', e)
+      }
+    }
+  }
 
   // Capture login context for auth tracking
   if (pathname === '/api/auth/callback/credentials' && request.method === 'POST') {
@@ -166,24 +197,24 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Continue with normal routing
+  // Pass through raw/direct file paths and short URL redirects
   if (
     pathname.endsWith('/raw') ||
-    pathname.endsWith('/direct')
+    pathname.endsWith('/direct') ||
+    pathname.startsWith('/u/')
   ) {
     return NextResponse.next()
   }
 
-  if (pathname.startsWith('/u/')) {
+  // API routes manage their own authentication — skip middleware auth checks
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next()
   }
 
+  // Auth, setup, and email verification flows are always public
   if (
-    PUBLIC_PATHS.some((path: string) =>
-      path === '/'
-        ? pathname === '/' // only allow exact root match
-        : pathname.startsWith(path)
-    )
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/setup')
   ) {
     return NextResponse.next()
   }
@@ -196,52 +227,35 @@ export async function proxy(request: NextRequest) {
     return { token: t }
   }
 
-  const isSuperAdminRoute = SUPERADMIN_PATHS.some((path) => pathname.startsWith(path))
-  if (isSuperAdminRoute) {
+  // All /admin/* routes require at minimum ADMIN access.
+  // Specific superadmin-only paths require elevated permissions.
+  if (pathname.startsWith('/admin/') || pathname === '/admin') {
     const auth = await ensureAuthenticated()
     if (auth instanceof NextResponse) return auth
     const role = auth.token?.role
-    if (!hasPermission(role as any, Permission.PERFORM_SUPERADMIN_ACTIONS)) {
+
+    const isSuperAdminRoute = SUPERADMIN_PATHS.some((path) => pathname.startsWith(path))
+    if (isSuperAdminRoute) {
+      if (!hasPermission(role as any, Permission.PERFORM_SUPERADMIN_ACTIONS)) {
+        return NextResponse.redirect(new URL('/dashboard', baseUrl))
+      }
+    } else if (!hasPermission(role as any, Permission.ACCESS_ADMIN_PANEL)) {
       return NextResponse.redirect(new URL('/dashboard', baseUrl))
     }
   }
 
-  const isAdminRoute = ADMIN_PATHS.some((path) => pathname.startsWith(path))
-  if (isAdminRoute) {
-    const auth = await ensureAuthenticated()
-    if (auth instanceof NextResponse) return auth
-    const role = auth.token?.role
-
-    if (!hasPermission(role as any, Permission.ACCESS_ADMIN_PANEL)) {
-      return NextResponse.redirect(new URL('/dashboard', baseUrl))
+  // Protected pages require a valid session
+  if (PROTECTED_PAGE_PATHS.some((p) => pathname.startsWith(p))) {
+    const t = await getAuthToken()
+    if (!t) {
+      return NextResponse.redirect(new URL('/auth/login', baseUrl))
     }
   }
 
   const botResponse = await handleBotRequest(request)
   if (botResponse) return botResponse
 
-  // Allow unauthenticated access to email verification and resend pages
-  // (users registering need to access these without a token yet)
-  const isEmailVerificationFlow = 
-    pathname === '/auth/verify-email' ||
-    pathname === '/auth/resend-verification' ||
-    pathname === '/api/auth/verify-email' ||
-    pathname === '/api/auth/resend-verification'
-  
-  if (isEmailVerificationFlow) {
-    return NextResponse.next()
-  }
-
-  if (
-    request.nextUrl.pathname.startsWith('/setup') ||
-    request.nextUrl.pathname.startsWith('/api/setup')
-  ) {
-    return NextResponse.next()
-  }
-
-  const authResponse = await checkAuthentication(request)
-  if (authResponse) return authResponse
-
+  // Everything else is public (marketing pages, user profiles, file viewer, etc.)
   return NextResponse.next()
 }
 

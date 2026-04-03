@@ -23,9 +23,12 @@ export interface QuotaInfo {
 }
 
 export interface PlanLimits {
-    storageQuotaGB: number
-    uploadSizeCapMB: number
-    customDomainsLimit: number
+    /** null = unlimited (Ember / Enterprise) */
+    storageQuotaGB: number | null
+    /** null = unlimited (Ember / Enterprise) */
+    uploadSizeCapMB: number | null
+    /** null = unlimited (Ember / Enterprise) */
+    customDomainsLimit: number | null
     planName: string
 }
 
@@ -50,9 +53,10 @@ export async function getPlanLimits(userId: string): Promise<PlanLimits> {
 
     if (subscription && subscription.product) {
         return {
-            storageQuotaGB: subscription.product.storageQuotaGB || 10, // Default to Spark (10GB)
-            uploadSizeCapMB: subscription.product.uploadSizeCapMB || 500, // Default to Spark (500MB)
-            customDomainsLimit: subscription.product.customDomainsLimit || 3, // Default to Spark (3 domains)
+            // null means unlimited — preserved as-is for Ember/Enterprise plans
+            storageQuotaGB: subscription.product.storageQuotaGB ?? null,
+            uploadSizeCapMB: subscription.product.uploadSizeCapMB ?? null,
+            customDomainsLimit: subscription.product.customDomainsLimit ?? null,
             planName: subscription.product.name,
         }
     }
@@ -77,8 +81,24 @@ export async function getUserDomainCount(userId: string): Promise<number> {
 }
 
 /**
+ * Get the number of purchased domain slots for a user.
+ */
+export async function getPurchasedDomainSlots(userId: string): Promise<number> {
+    const result = await prisma.oneOffPurchase.aggregate({
+        where: {
+            userId,
+            type: 'custom_domain',
+        },
+        _sum: {
+            quantity: true,
+        },
+    })
+    return result._sum?.quantity || 0
+}
+
+/**
  * Check if user can add more custom domains.
- * Takes perk bonuses into account.
+ * Takes perk bonuses and purchased slots into account.
  */
 export async function canAddCustomDomain(userId: string): Promise<boolean> {
     const user = await prisma.user.findUnique({
@@ -87,9 +107,12 @@ export async function canAddCustomDomain(userId: string): Promise<boolean> {
     })
 
     const limits = await getPlanLimits(userId)
+    // null = unlimited plan
+    if (limits.customDomainsLimit === null) return true
     const currentCount = await getUserDomainCount(userId)
     const domainBonus = calculateDomainSlotBonus(user?.perkRoles || [])
-    const totalLimit = limits.customDomainsLimit + domainBonus
+    const purchasedSlots = await getPurchasedDomainSlots(userId)
+    const totalLimit = limits.customDomainsLimit + domainBonus + purchasedSlots
     
     return currentCount < totalLimit
 }
@@ -145,7 +168,12 @@ export async function getEffectiveQuotaMB(userId: string, defaultQuotaMB?: numbe
     // Priority: admin override > plan quota + perks > default quota
     let baseQuotaMB = user.storageQuotaMB
     if (!baseQuotaMB) {
-        baseQuotaMB = (planLimits.storageQuotaGB + perkStorageBonusGB) * 1024
+        if (planLimits.storageQuotaGB === null) {
+            // Unlimited plan — use a 100 TB sentinel so arithmetic still works
+            baseQuotaMB = 100 * 1024 * 1024
+        } else {
+            baseQuotaMB = (planLimits.storageQuotaGB + perkStorageBonusGB) * 1024
+        }
     }
     if (!baseQuotaMB && defaultQuotaMB) {
         baseQuotaMB = defaultQuotaMB
@@ -177,8 +205,8 @@ export async function canUploadSize(
 ): Promise<{ allowed: boolean; reason?: string }> {
     const planLimits = await getPlanLimits(userId)
     
-    // Check upload size cap
-    if (fileSizeMB > planLimits.uploadSizeCapMB) {
+    // Check upload size cap (null = unlimited)
+    if (planLimits.uploadSizeCapMB !== null && fileSizeMB > planLimits.uploadSizeCapMB) {
         return {
             allowed: false,
             reason: `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan or purchase larger file size add-on.`,

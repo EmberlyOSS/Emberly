@@ -2,24 +2,14 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, WelcomeEmail } from '@/packages/lib/emails'
+import { emitAuditEvent } from '@/packages/lib/events/audit-helper'
+import { parseVerificationCodes } from '@/packages/lib/auth/service'
 
 interface VerificationCode {
     code: string
     shortCode?: string
     context: string
     expiresAt: number
-}
-
-function parseVerificationCodes(codes: string[]): VerificationCode[] {
-    return codes
-        .map((c) => {
-            try {
-                return JSON.parse(c) as VerificationCode
-            } catch {
-                return null
-            }
-        })
-        .filter((c): c is VerificationCode => c !== null)
 }
 
 async function verifyToken(token: string) {
@@ -37,11 +27,11 @@ async function verifyToken(token: string) {
         },
     })
 
-    let matchedUser: { id: string; email: string; name: string | null; verificationCodes: string[] } | null = null
+    let matchedUser: { id: string; email: string | null; name: string | null; verificationCodes: string[] } | null = null
     let matchedCode: VerificationCode | null = null
 
     for (const user of users) {
-        const codes = parseVerificationCodes(user.verificationCodes)
+        const codes = parseVerificationCodes<VerificationCode>(user.verificationCodes)
         // Check both the full token (for URL clicks) and short code (for manual entry)
         const validCode = codes.find(
             (c) =>
@@ -61,7 +51,7 @@ async function verifyToken(token: string) {
     }
 
     // Remove the used verification code and mark email as verified
-    const remainingCodes = parseVerificationCodes(matchedUser.verificationCodes)
+    const remainingCodes = parseVerificationCodes<VerificationCode>(matchedUser.verificationCodes)
         .filter((c) => !(c.context === 'email-verification' && c.code === matchedCode!.code))
         .map((c) => JSON.stringify(c))
 
@@ -78,9 +68,18 @@ async function verifyToken(token: string) {
         },
     })
 
+    if (verifiedUser.email) {
+        // Emit audit event (fire-and-forget)
+        void emitAuditEvent('account.email-verified', {
+            userId: verifiedUser.id,
+            email: verifiedUser.email,
+        })
+    }
+
     // Send welcome email after successful verification
     void (async () => {
         try {
+            if (!verifiedUser.email) return
             const dashboardUrl = `${process.env.APP_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard`
             
             await sendTemplateEmail({
@@ -88,8 +87,8 @@ async function verifyToken(token: string) {
                 subject: 'Welcome to Emberly!',
                 template: WelcomeEmail,
                 props: {
-                    userName: verifiedUser.name || undefined,
-                    dashboardUrl,
+                    name: verifiedUser.name || undefined,
+                    verificationUrl: dashboardUrl,
                 },
             })
             

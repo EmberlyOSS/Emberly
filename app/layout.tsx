@@ -82,6 +82,9 @@ export default async function RootLayout({
   const defaultTheme = typeof config.settings.appearance.theme === 'string'
     ? config.settings.appearance.theme
     : 'default-dark'
+  const systemColors = typeof config.settings.appearance.customColors === 'object' && config.settings.appearance.customColors
+    ? config.settings.appearance.customColors
+    : {}
 
   return (
     <html lang="en" data-theme={userTheme ?? defaultTheme} suppressHydrationWarning>
@@ -89,21 +92,27 @@ export default async function RootLayout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script async src="https://ackee.bytebrush.dev/tracker.js" data-ackee-server="https://ackee.bytebrush.dev" data-ackee-domain-id="fee82036-9b66-4760-976e-af630cc35974"></script>
-        <ThemeInitializer userTheme={userTheme} userCustomColors={userCustomColors} />
+        <ThemeInitializer 
+          userTheme={userTheme} 
+          userCustomColors={userCustomColors}
+          systemTheme={defaultTheme}
+          systemColors={systemColors}
+        />
         <CustomHead />
       </head>
       <body suppressHydrationWarning className={`${!hasCustomFont ? inter.variable + ' font-sans' : ''} min-h-screen flex flex-col`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme={typeof config.settings.appearance.systemThemes === 'string' ? config.settings.appearance.systemThemes : undefined}
-          enableSystem
+          enableSystem={false}
+          enableColorSchemeQuery={false}
+          storageKey=""
           disableTransitionOnChange
         >
           <ThemeProviderWrapper
             initialUserTheme={userTheme}
             initialUserColors={userCustomColors}
-            systemTheme={typeof config.settings.appearance.theme === 'string' ? config.settings.appearance.theme : 'default-dark'}
-            systemColors={typeof config.settings.appearance.customColors === 'object' && config.settings.appearance.customColors ? config.settings.appearance.customColors : {}}
+            systemTheme={defaultTheme}
+            systemColors={systemColors}
           >
             <Snowfall />
             <ThemeEffectsContainer />

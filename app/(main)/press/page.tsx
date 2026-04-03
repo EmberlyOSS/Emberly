@@ -25,9 +25,8 @@ import HomeShell from '@/packages/components/layout/home-shell'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -142,13 +141,13 @@ export default function PressPage() {
                                             <h3 className="text-lg font-semibold mb-4">Quick Facts</h3>
                                             <div className="grid grid-cols-2 gap-4">
                                                 {QUICK_FACTS.map((fact) => (
-                                                    <div key={fact.label} className="text-center p-3 rounded-xl bg-background/30">
+                                                    <div key={fact.label} className="text-center p-3 rounded-xl bg-muted/30">
                                                         <div className="text-2xl font-bold text-primary">{fact.value}</div>
                                                         <div className="text-xs text-muted-foreground mt-1">{fact.label}</div>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="mt-6 p-4 rounded-xl bg-background/30">
+                                            <div className="mt-6 p-4 rounded-xl bg-muted/30">
                                                 <Quote className="h-5 w-5 text-primary/50 mb-2" />
                                                 <p className="text-sm text-muted-foreground italic">
                                                     "A lightweight, developer first file sharing platform focused on
@@ -175,7 +174,7 @@ export default function PressPage() {
                                 <p className="mt-2 text-sm text-muted-foreground flex-1">
                                     {resource.description}
                                 </p>
-                                <div className="mt-4 pt-4 border-t border-border/50">
+                                <div className="mt-4 pt-4 border-t border-border/40">
                                     <Button
                                         variant="ghost"
                                         className="w-full justify-between group-hover:bg-background/50"
@@ -252,7 +251,7 @@ export default function PressPage() {
                                         key={contact.label}
                                         href={contact.href}
                                         target={contact.href.startsWith('http') ? '_blank' : undefined}
-                                        className="flex items-center gap-3 p-3 rounded-xl bg-background/30 hover:bg-background/50 transition-colors group"
+                                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/40 transition-colors group"
                                     >
                                         <div className="p-2 rounded-lg bg-primary/10">
                                             <contact.icon className="h-4 w-4 text-primary" />
@@ -267,7 +266,7 @@ export default function PressPage() {
                                     </a>
                                 ))}
                             </div>
-                            <div className="mt-6 pt-4 border-t border-border/50">
+                            <div className="mt-6 pt-4 border-t border-border/40">
                                 <p className="text-xs text-muted-foreground">
                                     Response time: Usually within 1-2 business days
                                 </p>
@@ -288,7 +287,7 @@ export default function PressPage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-6">
-                                <div className="p-6 rounded-2xl bg-gradient-to-br from-background via-muted/50 to-background border border-border/50">
+                                <div className="p-6 rounded-2xl bg-gradient-to-br from-background via-muted/50 to-background border border-border/40">
                                     <Image
                                         src="/icon.svg"
                                         alt="Emberly Logo"
@@ -296,7 +295,7 @@ export default function PressPage() {
                                         height={64}
                                     />
                                 </div>
-                                <div className="p-6 rounded-2xl bg-gradient-to-br from-card via-accent/20 to-card border border-border/50">
+                                <div className="p-6 rounded-2xl bg-gradient-to-br from-card via-accent/20 to-card border border-border/40">
                                     <Image
                                         src="/icon.svg"
                                         alt="Emberly Logo Alt"

@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
-        // ensure we know the user's role - some session setups omit role, so lookup by email if necessary
-        let isAdmin = (session.user as any).role === 'ADMIN'
-        if (!isAdmin && session.user?.email) {
-            const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { role: true } })
-            if (u && u.role === 'ADMIN') isAdmin = true
-        }
+        // ensure we know the user's role
+        const isAdmin = user.role === 'ADMIN'
         if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
         // aggregate downloads per user from files (include all users so scoring is accurate)
@@ -73,12 +66,7 @@ export async function GET() {
         // prepare totals and me info for everyone (admins also get these)
         const totalUsers = items.length
 
-        // Resolve current user id from session (if present)
-        let currentUserId: string | undefined = (session.user as any).id
-        if (!currentUserId && session.user?.email) {
-            const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
-            if (u) currentUserId = u.id
-        }
+        const currentUserId: string | undefined = user.id
 
         const meEntry = items.find((it) => it.userId === currentUserId) || { userId: currentUserId || 'unknown', downloads: 0, clicks: 0, filesCount: 0, primaryScore: 0, compositeScore: 0 }
         // rank based on compositeScore (the ranking users see)

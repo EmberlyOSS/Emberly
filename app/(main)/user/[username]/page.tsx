@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
+import { getServerSession } from 'next-auth'
 import { PublicProfile } from '@/packages/components/profile/public-profile'
 import { calculateStorageBonusGB, calculateDomainSlotBonus, getContributorMilestone, getDiscordBoosterMilestone } from '@/packages/lib/perks'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+import { authOptions } from '@/packages/lib/auth'
 
 interface PublicProfilePageProps {
   params: Promise<{
@@ -51,6 +53,10 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
 export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
   const { username } = await params
 
+  const [session] = await Promise.all([
+    getServerSession(authOptions),
+  ])
+
   const user = await prisma.user.findFirst({
     where: {
       OR: [
@@ -63,9 +69,16 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     select: {
       id: true,
       name: true,
+      fullName: true,
       image: true,
+      banner: true,
+      avatarDecoration: true,
+      isVerified: true,
       bio: true,
       website: true,
+      twitter: true,
+      github: true,
+      discord: true,
       createdAt: true,
       perkRoles: true,
       urlId: true,
@@ -145,6 +158,40 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     }
   }
 
+  // Fetch Nexium profile if the user has one
+  const nexiumProfile = await prisma.nexiumProfile
+    .findUnique({
+      where: { userId: user.id },
+      select: {
+        title: true,
+        headline: true,
+        availability: true,
+        lookingFor: true,
+        location: true,
+        timezone: true,
+        activeHours: true,
+        isVisible: true,
+        user: {
+          select: {
+            name: true,
+            fullName: true,
+            urlId: true,
+            vanityId: true,
+          },
+        },
+        skills: {
+          select: { id: true, name: true, level: true, category: true, yearsExperience: true },
+          orderBy: { sortOrder: 'asc' },
+        },
+        signals: {
+          select: { id: true, type: true, title: true, url: true, description: true, verified: true },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    })
+    .then((p) => (p?.isVisible ? p : null))
+    .catch(() => null)
+
   return (
     <PublicProfile 
       user={user} 
@@ -152,6 +199,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       domainBonus={domainBonus}
       linkedAccounts={linkedAccounts}
       leaderboardRank={leaderboardRank}
+      currentUserId={session?.user?.id ?? null}
       contributorInfo={contributorMilestone ? {
         linesOfCode: contributorLOC,
         tier: contributorMilestone.tier,
@@ -166,6 +214,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
         storageGB: boosterMilestone.storageGB,
         domainSlots: boosterMilestone.domainSlots,
       } : undefined}
+      nexiumProfile={nexiumProfile}
     />
   )
 }

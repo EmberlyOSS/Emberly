@@ -27,30 +27,20 @@ export default async function PageShell({ title, subtitle, children, bodyVariant
 
     return (
         <DashboardWrapper nav="base" showFooter={config.settings.general.credits.showFooter} maxUploadSize={maxSizeBytes}>
-            <div className="container space-y-16 -mt-8">
+            <div className="container space-y-8 -mt-8">
                 {hasTitle && hasSubtitle ? (
-                    <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-                        <div className="relative p-8">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <h1 className="text-3xl font-bold">{title}</h1>
-                                    <p className="text-muted-foreground mt-2">{subtitle}</p>
-                                </div>
-                            </div>
+                    <div className="glass-card">
+                        <div className="p-8">
+                            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                            <p className="text-muted-foreground mt-1">{subtitle}</p>
                         </div>
                     </div>
                 ) : null}
 
-                {bodyVariant === 'card' ? (
-                    <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-                        <div className="relative p-8">
-                            {children}
-                        </div>
-                    </div>
+                {bodyVariant === 'plain' ? (
+                    <div className={hasTitle ? '' : 'relative -mt-8'}>{children}</div>
                 ) : (
-                    <div className="relative -mt-16">{children}</div>
+                    <div>{children}</div>
                 )}
             </div>
         </DashboardWrapper>

@@ -1,12 +1,19 @@
+import Stripe from 'stripe'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/packages/lib/database/prisma'
+import { auditPaymentFailed, auditRefundIssued } from '@/packages/lib/events/audit-helper'
+import { events } from '@/packages/lib/events'
+import { loggers } from '@/packages/lib/logger'
+import { upsertSubscriptionRecord } from '@/packages/lib/stripe/billing'
+import { getStripeClient } from '@/packages/lib/stripe/client'
+
+const logger = loggers.api
 
 export async function POST(req: Request) {
-    const stripeSecret = process.env.STRIPE_SECRET
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK
 
-    if (!stripeSecret || !webhookSecret) {
-        console.warn('Stripe or webhook secret not configured')
+    if ((!process.env.STRIPE_SECRET && !process.env.STRIPE_SECRET_KEY) || !webhookSecret) {
+        logger.warn('Stripe secret or webhook secret not configured')
         return NextResponse.json({ ok: true })
     }
 
@@ -14,8 +21,7 @@ export async function POST(req: Request) {
     const raw = Buffer.from(buf)
 
     try {
-        const Stripe = (await import('stripe')).default
-        const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' })
+        const stripe = getStripeClient()
         const signature = req.headers.get('stripe-signature') || ''
 
         const event = stripe.webhooks.constructEvent(raw, signature, webhookSecret)
@@ -44,23 +50,38 @@ export async function POST(req: Request) {
 
                     if (user) {
                         // upsert subscription
-                        await prisma.subscription.create({
-                            data: {
-                                userId: user.id,
-                                productId: product || 'unknown',
-                                stripeSubscriptionId: subId,
-                                status: stripeSub.status,
-                                currentPeriodEnd: currentPeriodEnd,
-                                metadata: stripeSub.metadata || {},
-                            },
+                        await upsertSubscriptionRecord({
+                            userId: user.id,
+                            productId: product || 'unknown',
+                            stripeSubscriptionId: subId,
+                            status: stripeSub.status,
+                            currentPeriodEnd,
+                            metadata: stripeSub.metadata || {},
                         })
                         // ensure user's stripeCustomerId is set
                         if (!user.stripeCustomerId && typeof customer === 'string') {
                             await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer } })
                         }
 
-                        // Log subscription creation as event (not a credit transaction, just an event)
-                        console.log(`[Webhook] Subscription created for user ${user.id}: ${subId}`)
+                        // Resolve product name for notification
+                        const dbProduct = product ? await prisma.product.findFirst({ where: { stripeProductId: product } }) : null
+                        const planName = dbProduct?.name || 'Unknown Plan'
+                        const interval = stripeSub.items.data[0]?.price?.recurring?.interval === 'year' ? 'year' : 'month'
+                        const amountCents = stripeSub.items.data[0]?.price?.unit_amount || 0
+
+                        // Emit billing event - admin Discord notification is handled by event system
+                        await events.emit('billing.subscription-created', {
+                            userId: user.id,
+                            email: user.email || '',
+                            subscriptionId: subId,
+                            planId: product || 'unknown',
+                            planName,
+                            interval: interval as 'month' | 'year',
+                            amount: amountCents / 100,
+                            currency: stripeSub.currency || 'usd',
+                        })
+
+                        logger.info(`[Webhook] Subscription created for user ${user.id}: ${subId}`)
                     }
                 } else {
                     // one-off payment via checkout.session (mode=payment)
@@ -103,14 +124,32 @@ export async function POST(req: Request) {
                         }
 
                         // apply side-effects for specific one-off purchases
-                        if ((metadata?.type || 'one_off') === 'extra_storage') {
-                            const qty = metadata?.quantity ? parseInt(metadata.quantity) : 1
+                        const purchaseType = metadata?.type || 'one_off'
+                        const qty = metadata?.quantity ? parseInt(metadata.quantity) : 1
+
+                        if (purchaseType === 'extra_storage') {
                             // qty is in GB; convert to MB
                             const addMB = qty * 1024
                             const current = user.storageQuotaMB ?? 0
                             await prisma.user.update({ where: { id: user.id }, data: { storageQuotaMB: current + addMB } })
-                            console.log(`[Webhook] Added ${qty}GB storage to user ${user.id}`)
+                            logger.info(`[Webhook] Added ${qty}GB storage to user ${user.id}`)
                         }
+
+                        // Domain slot purchases are tracked via OneOffPurchase records
+                        // The domain limit check in quota.ts counts these records automatically
+                        if (purchaseType === 'custom_domain') {
+                            logger.info(`[Webhook] Added ${qty} domain slot(s) to user ${user.id}`)
+                        }
+
+                        // Emit payment event - admin Discord notification is handled by event system
+                        await events.emit('billing.payment-succeeded', {
+                            userId: user.id,
+                            email: user.email || '',
+                            paymentId: session.payment_intent || session.id,
+                            amount: (session.amount_total || 0) / 100,
+                            currency: session.currency || 'usd',
+                            receiptUrl: undefined,
+                        })
                     }
                 }
                 break
@@ -127,26 +166,30 @@ export async function POST(req: Request) {
                     const user = await prisma.user.findFirst({ where: { stripeCustomerId: customer } })
                     if (user) {
                         // update or create subscription
-                        await prisma.subscription.upsert({
-                            where: { stripeSubscriptionId: subscriptionId },
-                            create: {
-                                userId: user.id,
-                                productId: product || 'unknown',
-                                stripeSubscriptionId: subscriptionId,
-                                status: stripeSub.status,
-                                currentPeriodEnd: currentPeriodEnd,
-                                metadata: stripeSub.metadata || {},
-                            },
-                            update: {
-                                status: stripeSub.status,
-                                currentPeriodEnd: currentPeriodEnd,
-                                metadata: stripeSub.metadata || {},
-                            },
+                        await upsertSubscriptionRecord({
+                            userId: user.id,
+                            productId: product || 'unknown',
+                            stripeSubscriptionId: subscriptionId,
+                            status: stripeSub.status,
+                            currentPeriodEnd,
+                            metadata: stripeSub.metadata || {},
                         })
 
                         // Log invoice payment
                         const amountPaid = invoice.amount_paid || 0
-                        console.log(`[Webhook] Invoice paid for user ${user.id}: $${amountPaid / 100}`)
+
+                        // Emit billing event
+                        await events.emit('billing.payment-succeeded', {
+                            userId: user.id,
+                            email: user.email || '',
+                            paymentId: invoice.payment_intent || invoice.id,
+                            amount: amountPaid / 100,
+                            currency: invoice.currency || 'usd',
+                            invoiceId: invoice.id,
+                            receiptUrl: invoice.hosted_invoice_url || undefined,
+                        })
+
+                        logger.info(`[Webhook] Invoice paid for user ${user.id}: $${amountPaid / 100}`)
                     }
                 }
                 break
@@ -156,8 +199,156 @@ export async function POST(req: Request) {
                 const subscriptionId = invoice.subscription
                 if (subscriptionId) {
                     await prisma.subscription.updateMany({ where: { stripeSubscriptionId: subscriptionId }, data: { status: 'past_due' } })
-                    console.log(`[Webhook] Payment failed for subscription ${subscriptionId}`)
+
+                    // Find user to emit failure event
+                    const failedSub = await prisma.subscription.findFirst({
+                        where: { stripeSubscriptionId: subscriptionId },
+                        include: { user: { select: { id: true, email: true } } },
+                    })
+
+                    if (failedSub?.user) {
+                        await events.emit('billing.payment-failed', {
+                            userId: failedSub.user.id,
+                            email: failedSub.user.email || '',
+                            amount: (invoice.amount_due || 0) / 100,
+                            currency: invoice.currency || 'usd',
+                            failureReason: invoice.last_finalization_error?.message || 'Payment failed',
+                            nextRetryAt: invoice.next_payment_attempt
+                                ? new Date(invoice.next_payment_attempt * 1000)
+                                : undefined,
+                        })
+                    }
+
+                    logger.warn(`[Webhook] Payment failed for subscription ${subscriptionId}`)
                 }
+                break
+            }
+            case 'customer.subscription.updated': {
+                const subscription = event.data.object as any
+                const stripeSubId = subscription.id as string
+                const customerId = subscription.customer as string
+                const currentPeriodEnd = subscription.current_period_end
+                    ? new Date(subscription.current_period_end * 1000)
+                    : null
+
+                const user = await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
+                if (user) {
+                    const stripeSub = await stripe.subscriptions.retrieve(stripeSubId, {
+                        expand: ['items.data.price.product'],
+                    })
+                    const stripeProductId = (stripeSub.items.data[0]?.price?.product as any)?.id || null
+                    const mappedProduct = stripeProductId
+                        ? await prisma.product.findFirst({ where: { stripeProductId } })
+                        : null
+
+                    const existing = await prisma.subscription.findFirst({
+                        where: { stripeSubscriptionId: stripeSubId },
+                    })
+
+                    const resolvedProductId = existing?.productId || mappedProduct?.id
+                    if (!resolvedProductId) {
+                        logger.warn(`[Webhook] Unable to map product for subscription ${stripeSubId}`)
+                        break
+                    }
+
+                    await upsertSubscriptionRecord({
+                        userId: user.id,
+                        productId: resolvedProductId,
+                        stripeSubscriptionId: stripeSubId,
+                        status: subscription.status,
+                        currentPeriodEnd,
+                        cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+                        metadata: subscription.metadata || {},
+                    })
+
+                    const newPlanId = resolvedProductId
+                    await events.emit('billing.subscription-updated', {
+                        userId: user.id,
+                        email: user.email || '',
+                        subscriptionId: stripeSubId,
+                        oldPlanId: existing?.productId,
+                        newPlanId,
+                        newPlanName: newPlanId,
+                        changeType: 'interval-change',
+                    })
+                }
+
+                break
+            }
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object as any
+                const stripeSubId = subscription.id as string
+
+                const existing = await prisma.subscription.findFirst({
+                    where: { stripeSubscriptionId: stripeSubId },
+                    include: {
+                        user: { select: { id: true, email: true } },
+                    },
+                })
+
+                if (existing) {
+                    await prisma.subscription.update({
+                        where: { id: existing.id },
+                        data: {
+                            status: 'cancelled',
+                            cancelAtPeriodEnd: false,
+                            currentPeriodEnd: subscription.current_period_end
+                                ? new Date(subscription.current_period_end * 1000)
+                                : existing.currentPeriodEnd,
+                        },
+                    })
+
+                    await events.emit('billing.subscription-cancelled', {
+                        userId: existing.user.id,
+                        email: existing.user.email || '',
+                        subscriptionId: stripeSubId,
+                        planId: existing.productId,
+                        cancelledBy: 'system',
+                        reason: 'Subscription deleted in Stripe',
+                        effectiveAt: new Date(),
+                    })
+                }
+
+                break
+            }
+            case 'charge.failed': {
+                const charge = event.data.object as Stripe.Charge
+                const customerId = typeof charge.customer === 'string' ? charge.customer : null
+                if (customerId) {
+                    const user = await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
+                    if (user) {
+                        auditPaymentFailed(
+                            user.id,
+                            user.email || '',
+                            (charge.amount || 0) / 100,
+                            charge.currency,
+                            charge.failure_message || 'Charge failed',
+                            charge.id
+                        )
+                    }
+                }
+                logger.warn(`[Webhook] Charge failed: ${charge.id}`)
+                break
+            }
+            case 'charge.refunded': {
+                const charge = event.data.object as Stripe.Charge
+                const customerId = typeof charge.customer === 'string' ? charge.customer : null
+                if (customerId) {
+                    const user = await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
+                    const refund = charge.refunds?.data[0]
+                    if (user && refund) {
+                        auditRefundIssued(
+                            user.id,
+                            user.email || '',
+                            refund.id,
+                            charge.id,
+                            refund.amount / 100,
+                            refund.currency,
+                            refund.reason ?? undefined
+                        )
+                    }
+                }
+                logger.info(`[Webhook] Charge refunded: ${charge.id}`)
                 break
             }
             default:
@@ -166,7 +357,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ received: true })
     } catch (err) {
-        console.error('webhook error', err)
+        logger.error('[Webhook] Verification or processing error', err instanceof Error ? err : new Error(String(err)))
         return NextResponse.json({ error: 'webhook verification failed' }, { status: 400 })
     }
 }

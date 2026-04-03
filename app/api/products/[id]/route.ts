@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
+import { syncProductToStripe, archiveStripeProduct } from '@/packages/lib/stripe/sync'
 
 export async function GET(
     _: Request,
@@ -39,6 +40,9 @@ export async function PATCH(
         type,
         active,
         popular,
+        storageQuotaGB,
+        uploadSizeCapMB,
+        customDomainsLimit,
         id: bodyId,
     } = body || {}
 
@@ -69,9 +73,25 @@ export async function PATCH(
                 type: type !== undefined ? String(type) : undefined,
                 active: active !== undefined ? Boolean(active) : undefined,
                 popular: popular !== undefined ? Boolean(popular) : undefined,
+                storageQuotaGB: storageQuotaGB !== undefined ? (storageQuotaGB != null ? Number(storageQuotaGB) : null) : undefined,
+                uploadSizeCapMB: uploadSizeCapMB !== undefined ? (uploadSizeCapMB != null ? Number(uploadSizeCapMB) : null) : undefined,
+                customDomainsLimit: customDomainsLimit !== undefined ? (customDomainsLimit != null ? Number(customDomainsLimit) : null) : undefined,
             },
         })
-        return NextResponse.json(updated)
+
+        // Sync to Stripe and write back any newly-created IDs
+        const stripeIds = await syncProductToStripe(updated)
+        const hasNewIds =
+            stripeIds.stripeProductId !== updated.stripeProductId ||
+            stripeIds.stripePriceMonthlyId !== updated.stripePriceMonthlyId ||
+            stripeIds.stripePriceYearlyId !== updated.stripePriceYearlyId ||
+            stripeIds.stripePriceOneTimeId !== updated.stripePriceOneTimeId
+
+        const final = hasNewIds
+            ? await prisma.product.update({ where: { id: updated.id }, data: stripeIds })
+            : updated
+
+        return NextResponse.json(final)
     } catch (err: any) {
         console.error('product update failed', err)
         return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
@@ -87,6 +107,10 @@ export async function DELETE(
 
     try {
         const { id } = await params
+        const product = await prisma.product.findUnique({ where: { id } })
+        if (product?.stripeProductId) {
+            await archiveStripeProduct(product.stripeProductId)
+        }
         await prisma.product.delete({ where: { id } })
         return NextResponse.json({ ok: true })
     } catch (err: any) {

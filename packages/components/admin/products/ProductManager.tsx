@@ -3,46 +3,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 
-import { ExternalLink, Package, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, FileCode, Package, RefreshCw, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
-import { Input } from '@/packages/components/ui/input'
-import { Label } from '@/packages/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/packages/components/ui/select'
 import { Switch } from '@/packages/components/ui/switch'
-import { Textarea } from '@/packages/components/ui/textarea'
 import { useToast } from '@/packages/hooks/use-toast'
-import { cn } from '@/packages/lib/utils'
 
-const emptyForm = {
-  id: null as string | null,
-  name: '',
-  slug: '',
-  description: '',
-  type: 'plan',
-  stripeProductId: '',
-  stripePriceMonthlyId: '',
-  stripePriceYearlyId: '',
-  stripePriceOneTimeId: '',
-  defaultPriceCents: '',
-  billingInterval: 'month',
-  features: '' as string,
-  active: true,
-  popular: false,
-}
+const SEED_SCRIPT_URL = 'https://github.com/EmberlyOSS/Website/blob/dev/scripts/seed-plans.ts'
 
 export default function AdminProductManager() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ ...emptyForm })
+  const [syncing, setSyncing] = useState<string | null>(null)
+  const [toggling, setToggling] = useState<string | null>(null)
   const { toast } = useToast()
 
   const fetchProducts = async () => {
@@ -63,88 +37,58 @@ export default function AdminProductManager() {
     fetchProducts()
   }, [])
 
-  const resetForm = () => {
-    setForm({ ...emptyForm })
-  }
-
-  const startEdit = (p: any) => {
-    setForm({
-      id: p.id,
-      name: p.name || '',
-      slug: p.slug || '',
-      description: p.description || '',
-      type: p.type || 'plan',
-      stripeProductId: p.stripeProductId || '',
-      stripePriceMonthlyId: p.stripePriceMonthlyId || '',
-      stripePriceYearlyId: p.stripePriceYearlyId || '',
-      stripePriceOneTimeId: p.stripePriceOneTimeId || '',
-      defaultPriceCents: p.defaultPriceCents != null ? String(p.defaultPriceCents) : '',
-      billingInterval: p.billingInterval || 'month',
-      features: Array.isArray(p.features) ? p.features.join('\n') : '',
-      active: !!p.active,
-      popular: !!p.popular,
-    })
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-
+  const handleToggle = async (id: string, field: 'active' | 'popular', value: boolean) => {
+    setToggling(`${id}:${field}`)
+    // Optimistic update
+    setProducts((prev) => prev.map((p) => p.id === id ? { ...p, [field]: value } : p))
     try {
-      const payload: any = {
-        name: form.name,
-        slug: form.slug,
-        description: form.description || null,
-        type: form.type || 'plan',
-        stripeProductId: form.stripeProductId || null,
-        stripePriceMonthlyId: form.stripePriceMonthlyId || null,
-        stripePriceYearlyId: form.stripePriceYearlyId || null,
-        stripePriceOneTimeId: form.stripePriceOneTimeId || null,
-        defaultPriceCents: form.defaultPriceCents === '' ? null : Number(form.defaultPriceCents),
-        billingInterval: form.billingInterval || null,
-        features: form.features
-          ? form.features
-            .split(/\r?\n/)
-            .map((f) => f.trim())
-            .filter(Boolean)
-          : [],
-        active: form.active,
-        popular: form.popular,
-      }
-
-      const res = await fetch(form.id ? `/api/products/${form.id}` : '/api/products', {
-        method: form.id ? 'PATCH' : 'POST',
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ [field]: value }),
       })
-
-      if (!res.ok) throw new Error('Save failed')
-      await fetchProducts()
-      toast({ title: form.id ? 'Product updated' : 'Product created', description: form.name })
-      resetForm()
+      if (!res.ok) throw new Error('Update failed')
     } catch (err: any) {
-      toast({ title: 'Save failed', description: err.message || 'Please try again.', variant: 'destructive' })
+      // Revert on failure
+      setProducts((prev) => prev.map((p) => p.id === id ? { ...p, [field]: !value } : p))
+      toast({ title: 'Update failed', description: err.message || 'Please try again.', variant: 'destructive' })
     } finally {
-      setSaving(false)
+      setToggling(null)
+    }
+  }
+
+  const handleSync = async (id: string, name: string) => {
+    setSyncing(id)
+    try {
+      const res = await fetch(`/api/admin/products/${id}/sync`, { method: 'POST' })
+      if (!res.ok) throw new Error('Sync failed')
+      const data = await res.json()
+      await fetchProducts()
+      toast({
+        title: data.synced ? 'Synced to Stripe' : 'Already up to date',
+        description: name,
+      })
+    } catch (err: any) {
+      toast({ title: 'Sync failed', description: err.message || 'Please try again.', variant: 'destructive' })
+    } finally {
+      setSyncing(null)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this product?')) return
-    setSaving(true)
+    if (!confirm('Delete this product? This cannot be undone.')) return
+    setToggling(`${id}:delete`)
     try {
-      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Delete failed')
-      await fetchProducts()
+      setProducts((prev) => prev.filter((p) => p.id !== id))
       toast({ title: 'Product deleted' })
     } catch (err: any) {
       toast({ title: 'Delete failed', description: err.message || 'Please try again.', variant: 'destructive' })
     } finally {
-      setSaving(false)
+      setToggling(null)
     }
   }
-
-  const formTitle = form.id ? 'Edit product' : 'Create product'
 
   const sortedProducts = useMemo(() => {
     return [...products].sort((a, b) => Number(b.active) - Number(a.active))
@@ -152,117 +96,18 @@ export default function AdminProductManager() {
 
   return (
     <div className="space-y-6 w-full">
-      {/* Product Form */}
-      <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <Package className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <span className="font-medium">{formTitle}</span>
-              <p className="text-xs text-muted-foreground">Manage Stripe-linked products</p>
-            </div>
-          </div>
-          {form.id ? (
-            <Button variant="ghost" size="sm" onClick={resetForm}>Cancel edit</Button>
-          ) : null}
+      {/* Header notice */}
+      <div className="glass-subtle rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <FileCode className="h-4 w-4 shrink-0 text-primary" />
+          <span>Products are defined in <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">scripts/seed-plans.ts</code>. To add or change a plan, edit that file and run <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">bun run db:seed</code> — it upserts the DB and syncs Stripe in one step. Use the <strong className="text-foreground font-medium">Sync</strong> button below to push an individual product to Stripe without re-seeding (e.g. if a price ID is missing).</span>
         </div>
-
-        <form className="p-4 space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={100} className="bg-background/50 border-border/50" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input id="slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="bg-background/50 border-border/50 font-mono text-sm" />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
-                <SelectTrigger className="bg-background/50 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="plan">Plan</SelectItem>
-                  <SelectItem value="addon">Add-on</SelectItem>
-                  <SelectItem value="one-time">One-time</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="billingInterval">Billing Interval</Label>
-              <Select value={form.billingInterval} onValueChange={(value) => setForm({ ...form, billingInterval: value })}>
-                <SelectTrigger className="bg-background/50 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="month">Monthly</SelectItem>
-                  <SelectItem value="year">Yearly</SelectItem>
-                  <SelectItem value="one-time">One-time</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-background/50 border-border/50" />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="stripeProductId">Stripe Product ID</Label>
-              <Input id="stripeProductId" value={form.stripeProductId} onChange={(e) => setForm({ ...form, stripeProductId: e.target.value })} placeholder="prod_xxx" className="bg-background/50 border-border/50 font-mono text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="defaultPriceCents">Default Price (cents)</Label>
-              <Input id="defaultPriceCents" type="number" inputMode="numeric" value={form.defaultPriceCents} onChange={(e) => setForm({ ...form, defaultPriceCents: e.target.value })} className="bg-background/50 border-border/50" />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="stripePriceMonthlyId">Monthly Price ID</Label>
-              <Input id="stripePriceMonthlyId" value={form.stripePriceMonthlyId} onChange={(e) => setForm({ ...form, stripePriceMonthlyId: e.target.value })} placeholder="price_xxx" className="bg-background/50 border-border/50 font-mono text-xs" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stripePriceYearlyId">Yearly Price ID</Label>
-              <Input id="stripePriceYearlyId" value={form.stripePriceYearlyId} onChange={(e) => setForm({ ...form, stripePriceYearlyId: e.target.value })} placeholder="price_xxx" className="bg-background/50 border-border/50 font-mono text-xs" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stripePriceOneTimeId">One-time Price ID</Label>
-              <Input id="stripePriceOneTimeId" value={form.stripePriceOneTimeId} onChange={(e) => setForm({ ...form, stripePriceOneTimeId: e.target.value })} placeholder="price_xxx" className="bg-background/50 border-border/50 font-mono text-xs" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="features">Features (one per line)</Label>
-            <Textarea id="features" value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} placeholder="Custom domains&#10;Analytics&#10;Priority support" className="bg-background/50 border-border/50 font-mono text-sm" rows={4} />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-6 pt-2">
-            <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 px-4 py-3">
-              <Switch id="active" checked={form.active} onCheckedChange={(checked) => setForm({ ...form, active: checked })} />
-              <Label htmlFor="active" className="cursor-pointer">Active</Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 px-4 py-3">
-              <Switch id="popular" checked={form.popular} onCheckedChange={(checked) => setForm({ ...form, popular: checked })} />
-              <Label htmlFor="popular" className="cursor-pointer">Popular badge</Label>
-            </div>
-            <div className="ml-auto">
-              <Button type="submit" disabled={saving} className="gap-2">
-                <Plus className="h-4 w-4" />
-                {form.id ? 'Update Product' : 'Create Product'}
-              </Button>
-            </div>
-          </div>
-        </form>
+        <Button asChild variant="outline" size="sm" className="gap-2 shrink-0">
+          <Link href={SEED_SCRIPT_URL} target="_blank">
+            <ExternalLink className="h-3 w-3" />
+            Edit on GitHub
+          </Link>
+        </Button>
       </div>
 
       {/* Product List */}
@@ -273,7 +118,7 @@ export default function AdminProductManager() {
               <Package className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Existing Products</h2>
+              <h2 className="text-lg font-semibold">Products</h2>
               <p className="text-sm text-muted-foreground">{sortedProducts.length} product{sortedProducts.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
@@ -281,11 +126,11 @@ export default function AdminProductManager() {
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-border/50 bg-background/30 p-8 text-center text-muted-foreground">
+          <div className="glass-subtle p-8 text-center text-muted-foreground">
             Loading products...
           </div>
         ) : sortedProducts.length === 0 ? (
-          <div className="rounded-xl border border-border/50 border-dashed bg-background/30 p-12 text-center">
+          <div className="glass-subtle border-dashed p-12 text-center">
             <div className="flex justify-center mb-4">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                 <Package className="h-7 w-7 text-primary" />
@@ -293,13 +138,19 @@ export default function AdminProductManager() {
             </div>
             <h3 className="text-lg font-medium mb-2">No products yet</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              Create your first product to start selling plans and add-ons.
+              Add plans to <code className="font-mono text-xs">scripts/seed-plans.ts</code> and run <code className="font-mono text-xs">bun run db:seed</code>.
             </p>
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link href={SEED_SCRIPT_URL} target="_blank">
+                <ExternalLink className="h-3 w-3" />
+                Edit seed script
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
             {sortedProducts.map((p) => (
-              <div key={p.id} className="rounded-xl border border-border/50 bg-background/30 p-4 group hover:border-primary/30 transition-colors">
+              <div key={p.id} className="glass-subtle p-4 group glass-hover transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-2 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -314,6 +165,9 @@ export default function AdminProductManager() {
                       <span>Stripe: <span className="font-mono">{p.stripeProductId || '—'}</span></span>
                       <span>Billing: {p.billingInterval || 'n/a'}</span>
                       <span>Price: {p.defaultPriceCents != null ? `$${(p.defaultPriceCents / 100).toFixed(2)}` : 'n/a'}</span>
+                      {p.storageQuotaGB != null && <span>Storage: {p.storageQuotaGB} GB</span>}
+                      {p.uploadSizeCapMB != null && <span>Upload cap: {p.uploadSizeCapMB >= 1024 ? `${p.uploadSizeCapMB / 1024} GB` : `${p.uploadSizeCapMB} MB`}</span>}
+                      {p.customDomainsLimit != null && <span>Domains: {p.customDomainsLimit}</span>}
                     </div>
                     {Array.isArray(p.features) && p.features.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
@@ -325,8 +179,29 @@ export default function AdminProductManager() {
                         )}
                       </div>
                     )}
+                    {/* Inline toggles */}
+                    <div className="flex items-center gap-4 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground">
+                        <Switch
+                          checked={!!p.active}
+                          onCheckedChange={(v) => handleToggle(p.id, 'active', v)}
+                          disabled={toggling === `${p.id}:active`}
+                          className="scale-75"
+                        />
+                        Active
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground">
+                        <Switch
+                          checked={!!p.popular}
+                          onCheckedChange={(v) => handleToggle(p.id, 'popular', v)}
+                          disabled={toggling === `${p.id}:popular`}
+                          className="scale-75"
+                        />
+                        Popular
+                      </label>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex flex-col gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     {p.stripeProductId && (
                       <Button asChild variant="ghost" size="sm" className="gap-2 h-8">
                         <Link href={`https://dashboard.stripe.com/products/${p.stripeProductId}`} target="_blank">
@@ -335,8 +210,29 @@ export default function AdminProductManager() {
                         </Link>
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => startEdit(p)} className="h-8">Edit</Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id)} disabled={saving} className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSync(p.id, p.name)}
+                      disabled={syncing === p.id}
+                      className="gap-2 h-8"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                      Sync
+                    </Button>
+                    <Button asChild variant="ghost" size="sm" className="gap-2 h-8">
+                      <Link href={SEED_SCRIPT_URL} target="_blank">
+                        <FileCode className="h-3 w-3" />
+                        Edit
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(p.id)}
+                      disabled={toggling === `${p.id}:delete`}
+                      className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

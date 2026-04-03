@@ -50,6 +50,15 @@ export const AUDITABLE_EVENTS: EventType[] = [
     'billing.payment-succeeded',
     'billing.payment-failed',
     'billing.refund-issued',
+    // Nexium events
+    'nexium.profile-created',
+    'nexium.profile-updated',
+    'nexium.profile-deleted',
+    'nexium.skill-added',
+    'nexium.skills-replaced',
+    'nexium.signal-added',
+    'nexium.opportunity-created',
+    'nexium.squad-created',
 ]
 
 /**

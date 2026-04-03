@@ -29,9 +29,8 @@ import HomeShell from '@/packages/components/layout/home-shell'
 // Reusable GlassCard component
 function GlassCard({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
     return (
-        <div id={id} className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div id={id} className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -237,7 +236,7 @@ export default function MediaKitPage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {TYPOGRAPHY.map((type) => (
-                                <div key={type.name} className="p-4 rounded-xl bg-background/30 border border-border/50">
+                                <div key={type.name} className="p-4 glass-subtle">
                                     <div className="text-2xl font-bold mb-2" style={{ fontFamily: type.family }}>
                                         Aa
                                     </div>
@@ -249,7 +248,7 @@ export default function MediaKitPage() {
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-6 p-4 rounded-xl bg-background/30 border border-border/50">
+                        <div className="mt-6 p-4 glass-subtle">
                             <p className="text-sm text-muted-foreground">
                                 <strong className="text-foreground">Note:</strong> Inter is available for free from{' '}
                                 <a href="https://fonts.google.com/specimen/Inter" target="_blank" rel="noreferrer" className="text-primary hover:underline">
@@ -388,7 +387,7 @@ type AssetPreviewProps = {
 }
 
 function AssetPreview({ variant, theme }: AssetPreviewProps) {
-    const baseClasses = 'flex h-40 w-full items-center justify-center rounded-xl border border-border/50'
+    const baseClasses = 'flex h-40 w-full items-center justify-center rounded-xl border border-border/30'
 
     // Use theme-aware backgrounds that adapt to the active theme
     const background =
@@ -468,14 +467,14 @@ function VideoPlayer({ src }: { src: string }) {
 
     if (!mounted) {
         return (
-            <div className="relative rounded-xl overflow-hidden bg-background/30 border border-border/50 aspect-video flex items-center justify-center">
+            <div className="relative rounded-xl overflow-hidden bg-muted/30 border border-border/30 aspect-video flex items-center justify-center">
                 <Play className="h-12 w-12 text-muted-foreground/50" />
             </div>
         )
     }
 
     return (
-        <div className="relative rounded-xl overflow-hidden bg-background/30 border border-border/50">
+        <div className="relative rounded-xl overflow-hidden bg-muted/30 border border-border/30">
             <video
                 ref={videoRef}
                 src={src}
@@ -550,7 +549,7 @@ function ThemeColorPalette() {
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                 {THEME_COLORS.map(color => (
-                    <div key={color.name} className="rounded-xl border border-border/50 bg-background/30 overflow-hidden animate-pulse">
+                    <div key={color.name} className="glass-subtle overflow-hidden animate-pulse">
                         <div className="h-24 bg-muted" />
                         <div className="p-3 space-y-2">
                             <div className="h-4 bg-muted rounded w-16" />
@@ -569,7 +568,7 @@ function ThemeColorPalette() {
                 return (
                     <div
                         key={color.name}
-                        className="group rounded-xl border border-border/50 bg-background/30 overflow-hidden"
+                        className="group glass-subtle overflow-hidden"
                     >
                         <div
                             className="h-24 flex items-end justify-start p-3"

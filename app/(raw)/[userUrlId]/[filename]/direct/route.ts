@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 
-import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
-import { prisma } from '@/packages/lib/database/prisma'
+import { checkFileAccess } from '@/packages/lib/files/access'
+import { buildRawUrl, findFileByUrlPath } from '@/packages/lib/files/lookup'
 import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
 
 export async function GET(
@@ -18,31 +18,14 @@ export async function GET(
     const url = new URL(req.url)
     const providedPassword = url.searchParams.get('password')
 
-    const file = await prisma.file.findUnique({
-      where: { urlPath },
-    })
+    const file = await findFileByUrlPath(userUrlId, filename)
 
     if (!file) {
       return new Response(null, { status: 404 })
     }
 
-    const isOwner = session?.user?.id === file.userId
-    const isPrivate = file.visibility === 'PRIVATE' && !session?.user
-
-    if (isPrivate) {
-      return new Response(null, { status: 404 })
-    }
-
-    if (file.password && !isOwner) {
-      if (!providedPassword) {
-        return new Response(null, { status: 401 })
-      }
-
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
-        return new Response(null, { status: 401 })
-      }
-    }
+    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
+    if (deny) return deny
 
     const isVideo = file.mimeType.startsWith('video/')
     if (!isVideo) {
@@ -52,8 +35,7 @@ export async function GET(
     const storageProvider = await getStorageProvider()
 
     if (!(storageProvider instanceof S3StorageProvider)) {
-      const rawUrl = `${urlPath}/raw${providedPassword ? `?password=${providedPassword}` : ''}`
-      return NextResponse.json({ url: rawUrl })
+      return NextResponse.json({ url: buildRawUrl(urlPath, providedPassword) })
     }
 
     const directUrl = await storageProvider.getFileUrl(file.path)

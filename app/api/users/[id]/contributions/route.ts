@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/packages/lib/database/prisma'
+import { getCommitDetail, getOrgRepos, getRepoCommits } from '@/packages/lib/github'
 import { getContributorLinesOfCode } from '@/packages/lib/perks/github'
 
 export async function GET(
@@ -38,93 +39,61 @@ export async function GET(
 
     const githubAccount = user.linkedAccounts[0]
     
-    // Use GitHub PAT for public profile viewing (not user's token)
-    const githubPAT = process.env.GITHUB_PAT
-    if (!githubPAT || !githubAccount.providerUsername) {
+    if (!githubAccount.providerUsername) {
       return NextResponse.json({ linesOfCode: 0, repos: [] }, { status: 200 })
     }
 
     // Get contribution stats
     const linesOfCode = await getContributorLinesOfCode(
       githubAccount.providerUsername,
-      githubPAT
+      ''
     )
 
-    // Fetch recent repos they contributed to
-    const reposResponse = await fetch(
-      `https://api.github.com/users/${githubAccount.providerUsername}/repos?sort=updated&per_page=10`,
-      {
-        headers: {
-          Authorization: `token ${githubPAT}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    )
+    // Fetch EmberlyOSS org repos and find ones the user contributed to
+    const orgRepos = await getOrgRepos('EmberlyOSS')
 
-    const repos = reposResponse.ok ? await reposResponse.json() : []
-    const emberlyRepos = repos.filter((r: any) => 
-      r.owner?.login === 'EmberlyOSS'
-    )
-
-    // Fetch recent commits from EmberlyOSS repos
-    const recentCommits: any[] = []
+    const recentCommits: Array<{
+      sha: string; message: string; date: string; url: string
+      repo: string; additions: number; deletions: number; filesChanged: number
+    }> = []
     let totalFilesChanged = 0
     let totalAdditions = 0
     let totalDeletions = 0
+    const contributedRepos: typeof orgRepos = []
 
-    for (const repo of emberlyRepos.slice(0, 5)) { // Check top 5 repos
+    for (const repo of orgRepos) {
       try {
-        const commitsResponse = await fetch(
-          `https://api.github.com/repos/EmberlyOSS/${repo.name}/commits?author=${githubAccount.providerUsername}&per_page=5`,
-          {
-            headers: {
-              Authorization: `token ${githubPAT}`,
-              Accept: 'application/vnd.github.v3+json',
-            },
-          }
-        )
+        const commits = await getRepoCommits('EmberlyOSS', repo.name, githubAccount.providerUsername, 5)
 
-        if (commitsResponse.ok) {
-          const commits = await commitsResponse.json()
-          
-          for (const commit of commits) {
-            // Fetch detailed commit info to get stats
-            try {
-              const commitDetailResponse = await fetch(
-                `https://api.github.com/repos/EmberlyOSS/${repo.name}/commits/${commit.sha}`,
-                {
-                  headers: {
-                    Authorization: `token ${githubPAT}`,
-                    Accept: 'application/vnd.github.v3+json',
-                  },
-                }
-              )
+        if (commits.length === 0) continue
+        contributedRepos.push(repo)
 
-              if (commitDetailResponse.ok) {
-                const commitDetail = await commitDetailResponse.json()
-                
-                const additions = commitDetail.stats?.additions || 0
-                const deletions = commitDetail.stats?.deletions || 0
-                const filesChanged = commitDetail.files?.length || 0
+        for (const commit of commits) {
+          try {
+            const commitDetail = await getCommitDetail('EmberlyOSS', repo.name, commit.sha)
 
-                recentCommits.push({
-                  sha: commit.sha.substring(0, 7),
-                  message: commit.commit.message.split('\n')[0], // First line only
-                  date: commit.commit.author.date,
-                  url: commit.html_url,
-                  repo: repo.name,
-                  additions,
-                  deletions,
-                  filesChanged,
-                })
+            if (commitDetail) {
+              const additions = commitDetail.stats?.additions || 0
+              const deletions = commitDetail.stats?.deletions || 0
+              const filesChanged = commitDetail.files?.length || 0
 
-                totalFilesChanged += filesChanged
-                totalAdditions += additions
-                totalDeletions += deletions
-              }
-            } catch (commitError) {
-              console.error(`Error fetching commit ${commit.sha}:`, commitError)
+              recentCommits.push({
+                sha: commit.sha.substring(0, 7),
+                message: commit.commit.message.split('\n')[0],
+                date: commit.commit.author.date,
+                url: commit.html_url,
+                repo: repo.name,
+                additions,
+                deletions,
+                filesChanged,
+              })
+
+              totalFilesChanged += filesChanged
+              totalAdditions += additions
+              totalDeletions += deletions
             }
+          } catch (commitError) {
+            console.error(`Error fetching commit ${commit.sha}:`, commitError)
           }
         }
       } catch (error) {
@@ -138,7 +107,7 @@ export async function GET(
 
     return NextResponse.json({
       linesOfCode,
-      repos: emberlyRepos.map((r: any) => ({
+      repos: contributedRepos.map((r) => ({
         name: r.name,
         url: r.html_url,
         description: r.description,
@@ -150,7 +119,7 @@ export async function GET(
         totalFilesChanged,
         totalAdditions,
         totalDeletions,
-        totalRepos: emberlyRepos.length,
+        totalRepos: contributedRepos.length,
       },
     })
   } catch (error) {

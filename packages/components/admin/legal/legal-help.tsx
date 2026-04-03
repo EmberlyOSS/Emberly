@@ -4,8 +4,8 @@ import { HelpCircle } from 'lucide-react'
 
 export default function LegalHelp() {
     return (
-        <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-background/50">
+        <div className="glass-subtle overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-muted/20">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-chart-1/10">
                     <HelpCircle className="h-4 w-4 text-chart-1" />
                 </div>

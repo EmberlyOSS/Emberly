@@ -4,7 +4,7 @@ import React from 'react'
 
 export default function LargestFilesCard({ files }: { files?: any[] }) {
     return (
-        <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+        <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
             <div>
                 <h3 className="text-base font-medium">Largest files</h3>
                 <p className="text-sm text-muted-foreground">Top files by storage used</p>

@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
+import { NextResponse } from 'next/server'
 
 import { compare } from 'bcryptjs'
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -16,11 +15,11 @@ function encodeFilename(filename: string): string {
 }
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthenticatedUser(request)
     const { id: fileId } = await params
     const url = new URL(request.url)
     const providedPassword = url.searchParams.get('password')
@@ -43,7 +42,7 @@ export async function GET(
       return new Response(null, { status: 404 })
     }
 
-    const isOwner = session?.user?.id === file.userId
+    const isOwner = user.id === file.userId
     const isPrivate = file.visibility === 'PRIVATE' && !isOwner
 
     if (isPrivate) {
@@ -124,7 +123,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthenticatedUser(request)
     const { id: fileId } = await params
 
     let providedPassword: string | null = null
@@ -151,7 +150,7 @@ export async function POST(
       return new Response(null, { status: 404 })
     }
 
-    const isOwner = session?.user?.id === file.userId
+    const isOwner = user.id === file.userId
     const isPrivate = file.visibility === 'PRIVATE' && !isOwner
 
     if (isPrivate) {

@@ -4,7 +4,7 @@ import React from 'react'
 
 export default function TopUrlsCard({ topUrls, allowed }: { topUrls?: any[]; allowed?: boolean }) {
     return (
-        <div className="relative rounded-md border border-white/6 bg-secondary/50 p-4">
+        <div className="relative rounded-md border border-border/30 bg-secondary/50 p-4">
             <div>
                 <h3 className="text-base font-medium">Top short links</h3>
                 <p className="text-sm text-muted-foreground">Most clicked short links</p>

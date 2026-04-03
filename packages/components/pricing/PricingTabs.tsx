@@ -2,20 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Gift, Heart } from 'lucide-react'
+import { Gift, Heart, HelpCircle, Package, Shield, User, Users, Zap } from 'lucide-react'
 
 import AddOnsSection from '@/packages/components/pricing/AddOnsSection'
 import FaqSection from '@/packages/components/pricing/FaqSection'
 import PlanSection from '@/packages/components/pricing/PlanSection'
 import { Button } from '@/packages/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
+import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -50,11 +50,15 @@ type Props = {
     plans: Plan[]
     activePlanKey: PlanKey
     addOns: AddOn[]
+    discoveryPlans: Plan[]
+    discoveryActivePlanKey: PlanKey
 }
 
 const tabSlugs: Record<string, string> = {
     plans: 'plans',
-    addons: 'add-ons',
+    discovery: 'discovery',
+    'user-addons': 'user-add-ons',
+    'squad-addons': 'squad-add-ons',
     faq: 'faq',
     donations: 'donations',
 }
@@ -62,9 +66,9 @@ const tabSlugs: Record<string, string> = {
 const slugToTab = Object.entries(tabSlugs).reduce<Record<string, string>>((acc, [tab, slug]) => {
     acc[slug] = tab
     return acc
-}, {})
+}, { 'add-ons': 'user-addons' } as Record<string, string>) // backwards compat for old #add-ons hash
 
-export default function PricingTabs({ plans, activePlanKey, addOns }: Props) {
+export default function PricingTabs({ plans, activePlanKey, addOns, discoveryPlans, discoveryActivePlanKey }: Props) {
     const [tabValue, setTabValue] = useState<string>('plans')
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
@@ -100,29 +104,29 @@ export default function PricingTabs({ plans, activePlanKey, addOns }: Props) {
             {
                 name: 'Stripe',
                 description: 'Quick and secure one-time donations via Stripe.',
-                href: 'https://donate.stripe.com/bJe3cv6cHc9j9encEHf3a00',
+                href: 'https://donate.stripe.com/3cI14ngRXcif5uAfif4ZG00',
                 cta: 'Donate now',
                 icon: Heart,
             },
             {
                 name: 'PayPal',
                 description: 'Use PayPal balance or bank for a quick tip.',
-                href: '#',
-                cta: 'COMING SOON',
+                href: 'https://paypal.me/codemeapixel',
+                cta: 'Donate now',
                 icon: Gift,
             },
             {
                 name: 'GitHub Sponsors',
                 description: 'Back Emberly on GitHub to support ongoing OSS work.',
-                href: '#',
-                cta: 'COMING SOON',
+                href: 'https://github.com/sponsors/EmberlyOSS',
+                cta: 'Sponsor now',
                 icon: Gift,
             },
             {
                 name: 'Ko-fi',
                 description: 'Send a one-time coffee to keep the lights on.',
-                href: '#',
-                cta: 'COMING SOON',
+                href: 'https://ko-fi.com/codemeapixel',
+                cta: 'Donate now',
                 icon: Gift,
             },
         ]
@@ -145,7 +149,7 @@ export default function PricingTabs({ plans, activePlanKey, addOns }: Props) {
                             return (
                                 <div
                                     key={option.name}
-                                    className="rounded-xl border border-border/50 bg-background/50 p-5 flex flex-col"
+                                    className="glass-subtle p-5 flex flex-col"
                                 >
                                     <div className="flex items-start gap-3 mb-4">
                                         <div className="p-2 rounded-lg bg-primary/10">
@@ -177,35 +181,55 @@ export default function PricingTabs({ plans, activePlanKey, addOns }: Props) {
     return (
         <Tabs value={tabValue} onValueChange={handleTabChange} className="mt-8">
             {/* Tabs Header with consistent styling */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-1.5 rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50">
-                <TabsList className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 h-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-1.5 rounded-2xl glass">
+                <ScrollIndicator className="w-full sm:w-auto">
+                <TabsList className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 h-auto min-w-max">
                     <TabsTrigger 
                         value="plans" 
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
                     >
+                        <Zap className="h-3.5 w-3.5" />
                         Plans
                     </TabsTrigger>
                     <TabsTrigger 
-                        value="addons"
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                        value="discovery"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
                     >
-                        Add-ons
+                        <Shield className="h-3.5 w-3.5" />
+                        Discovery
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="user-addons"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+                    >
+                        <User className="h-3.5 w-3.5" />
+                        User Add-ons
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="squad-addons"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+                    >
+                        <Users className="h-3.5 w-3.5" />
+                        Squad Add-ons
                     </TabsTrigger>
                     <TabsTrigger 
                         value="donations"
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
                     >
+                        <Heart className="h-3.5 w-3.5" />
                         Donations
                     </TabsTrigger>
                     <TabsTrigger 
                         value="faq"
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
                     >
+                        <HelpCircle className="h-3.5 w-3.5" />
                         FAQ
                     </TabsTrigger>
                 </TabsList>
+                </ScrollIndicator>
 
-                {tabValue === 'plans' && (
+                {(tabValue === 'plans' || tabValue === 'discovery') && (
                     <div className="flex items-center gap-3">
                         <span className="text-sm text-muted-foreground">Billing:</span>
                         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
@@ -218,10 +242,13 @@ export default function PricingTabs({ plans, activePlanKey, addOns }: Props) {
                             </button>
                             <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${billingCycle === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                                 onClick={() => setBillingCycle('yearly')}
                             >
                                 Yearly
+                                <span className={`text-xs font-semibold rounded-full px-1.5 py-0.5 transition-colors ${billingCycle === 'yearly' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/15 text-primary'}`}>
+                                    50% off
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -232,8 +259,16 @@ export default function PricingTabs({ plans, activePlanKey, addOns }: Props) {
                 <PlanSection plans={plans} activePlanKey={activePlanKey} billingCycle={billingCycle} />
             </TabsContent>
 
-            <TabsContent value="addons">
-                <AddOnsSection addOns={addOns} />
+            <TabsContent value="discovery">
+                <PlanSection plans={discoveryPlans} activePlanKey={discoveryActivePlanKey} billingCycle={billingCycle} />
+            </TabsContent>
+
+            <TabsContent value="user-addons">
+                <AddOnsSection addOns={addOns} scope="user" />
+            </TabsContent>
+
+            <TabsContent value="squad-addons">
+                <AddOnsSection addOns={addOns} scope="squad" />
             </TabsContent>
 
             <TabsContent value="faq">

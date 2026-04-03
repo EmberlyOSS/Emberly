@@ -1,15 +1,16 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 
 import DOMPurify from 'dompurify'
-import { Copy, Download, ExternalLink, Link, Pencil, ScanText, Send } from 'lucide-react'
+import { Copy, Download, ExternalLink, Flag, Link, Pencil, ScanText, Send } from 'lucide-react'
 import NextLink from 'next/link'
 import { useSession } from 'next-auth/react'
 
 import { CollaboratorManager } from '@/packages/components/file/collaborator-manager'
 import { SuggestionManager } from '@/packages/components/file/suggestion-manager'
 import { OcrDialog } from '@/packages/components/shared/ocr-dialog'
+import { ReportContentDialog } from '@/packages/components/shared/report-content-dialog'
 import { Button } from '@/packages/components/ui/button'
 
 import { writeToClipboard } from '@/packages/lib/utils/clipboard'
@@ -49,6 +50,7 @@ export function FileActions({
 }: FileActionsProps) {
   const { toast } = useToast()
   const { data: session } = useSession()
+  const [isReportOpen, setIsReportOpen] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [ocrText, setOcrText] = useState<string | null>(null)
   const [ocrError, setOcrError] = useState<string | null>(null)
@@ -208,7 +210,7 @@ export function FileActions({
         variant="outline"
         size="sm"
         onClick={copyUrl}
-        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+        className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
       >
         <Link className="h-4 w-4 sm:mr-2" />
         <span className="hidden sm:inline">Copy URL</span>
@@ -217,7 +219,7 @@ export function FileActions({
         variant="outline"
         size="sm"
         onClick={download}
-        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+        className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
       >
         <Download className="h-4 w-4 sm:mr-2" />
         <span className="hidden sm:inline">Download</span>
@@ -226,7 +228,7 @@ export function FileActions({
         variant="outline"
         size="sm"
         onClick={openRaw}
-        className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+        className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
       >
         <ExternalLink className="h-4 w-4 sm:mr-2" />
         <span className="hidden sm:inline">Raw</span>
@@ -237,7 +239,7 @@ export function FileActions({
           size="sm"
           onClick={handleOcr}
           disabled={isLoadingOcr}
-          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+          className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
         >
           <ScanText className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">OCR</span>
@@ -248,7 +250,7 @@ export function FileActions({
           variant="outline"
           size="sm"
           onClick={handleCopyText}
-          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+          className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
         >
           <Copy className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Copy</span>
@@ -259,7 +261,7 @@ export function FileActions({
           variant="outline"
           size="sm"
           asChild
-          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+          className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
         >
           <NextLink href={`/dashboard/paste/${fileId}/edit`}>
             <Pencil className="h-4 w-4 sm:mr-2" />
@@ -272,7 +274,7 @@ export function FileActions({
           variant="outline"
           size="sm"
           asChild
-          className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+          className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
         >
           <NextLink href={`/dashboard/paste/${fileId}/suggest`}>
             <Send className="h-4 w-4 sm:mr-2" />
@@ -289,6 +291,19 @@ export function FileActions({
         </>
       )}
 
+      {/* Report button for non-owners */}
+      {!isOwner && session?.user && fileId && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsReportOpen(true)}
+          className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3 text-destructive hover:text-destructive"
+        >
+          <Flag className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Report</span>
+        </Button>
+      )}
+
       <OcrDialog
         isOpen={isOcrDialogOpen}
         onOpenChange={setIsOcrDialogOpen}
@@ -297,6 +312,16 @@ export function FileActions({
         text={ocrText}
         confidence={ocrConfidence}
       />
+
+      {!isOwner && fileId && (
+        <ReportContentDialog
+          contentType="FILE"
+          contentId={fileId}
+          contentName={name}
+          open={isReportOpen}
+          onOpenChange={setIsReportOpen}
+        />
+      )}
     </div>
   )
 }

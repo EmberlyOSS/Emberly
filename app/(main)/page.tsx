@@ -48,9 +48,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      <div className="relative">{children}</div>
+    <div className={`glass-card glass-hover overflow-hidden ${className}`}>
+      {children}
     </div>
   )
 }
@@ -143,7 +142,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'What file sizes are supported?',
-    answer: 'Free tier supports up to 100MB per file. Pro and higher tiers support much larger files.',
+    answer: 'Spark (free) supports up to 500 MB per file. Paid plans increase this up to unlimited on Ember and Enterprise tiers.',
   },
   {
     question: 'Is there an API?',
@@ -186,19 +185,19 @@ export default async function HomePage() {
             <div className="space-y-6">
               <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30">
                 <Sparkles className="h-3 w-3 mr-1" />
-                Open Source File Hosting
+                Open Source Platform
               </Badge>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
-                File Sharing,
-                <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                  Forged in Fire.
+                Share Files.
+                <span className="block text-gradient">
+                  Build Together.
                 </span>
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-                Fast, private file sharing and short links designed for developers and teams.
-                Upload files, set expirations, and point custom domains to serve your content with confidence.
+                The open-source platform for secure file sharing and team collaboration.
+                Upload, manage, and share content with custom domains, rich embeds, and built-in talent discovery.
               </p>
 
               {/* CTA Buttons */}
@@ -219,8 +218,8 @@ export default async function HomePage() {
                   </Button>
                 )}
                 <Button size="lg" variant="outline" asChild className="bg-background/50">
-                  <Link href="/docs">
-                    Documentation
+                  <Link href="/about">
+                    Learn More
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -231,7 +230,7 @@ export default async function HomePage() {
                 {HERO_FEATURES.map((feature) => (
                   <div
                     key={feature.label}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/50 border border-border/50 text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-subtle text-sm"
                   >
                     <feature.icon className="h-4 w-4 text-primary" />
                     {feature.label}
@@ -242,8 +241,8 @@ export default async function HomePage() {
 
             {/* Right: Interactive Preview */}
             <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 rounded-3xl blur-2xl opacity-60" />
-              <GlassCard className="relative">
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 rounded-3xl blur-2xl opacity-40" />
+              <GlassCard className="relative gradient-border-animated animate-float">
                 <div className="p-6 md:p-8">
                   {/* Preview Header */}
                   <div className="flex items-center justify-between mb-6">
@@ -258,7 +257,7 @@ export default async function HomePage() {
                   </div>
 
                   {/* File Preview Card */}
-                  <div className="rounded-xl bg-background/60 border border-border/50 p-4 space-y-4">
+                  <div className="glass-subtle p-4 space-y-4">
                     {/* URL Bar */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/80 border border-border/30">
                       <Lock className="h-4 w-4 text-chart-4" />
@@ -323,8 +322,8 @@ export default async function HomePage() {
               Built for teams and builders
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Emberly focuses on a simple, predictable file hosting experience with features that matter:
-              expirations, custom domains, usage controls, and privacy-first defaults.
+              Everything you need to share, collaborate, and grow — secure file hosting,
+              custom domains, URL shortening, rich embeds, and team collaboration tools.
             </p>
           </div>
 
@@ -359,36 +358,42 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {HOW_IT_WORKS.map((item, index) => (
-              <div key={item.step} className="relative">
-                <GlassCard className="group h-full">
-                  <div className="p-6 text-center">
-                    {/* Step Number */}
-                    <div className="relative inline-flex">
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity" />
-                      <div className="relative p-4 rounded-full bg-gradient-to-br from-primary to-accent">
-                        <item.icon className="h-8 w-8 text-primary-foreground" />
+          <GlassCard>
+            <div className="p-6 md:p-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+                {HOW_IT_WORKS.map((item, index) => (
+                  <div key={item.step} className="group relative flex md:flex-col items-start md:items-center gap-4 md:gap-0 p-4 md:px-6 md:py-2">
+                    {/* Connector line (between steps) */}
+                    {index < HOW_IT_WORKS.length - 1 && (
+                      <>
+                        {/* Horizontal line on desktop */}
+                        <div className="hidden md:block absolute top-[calc(50%-16px)] left-[calc(50%+28px)] right-0 h-px bg-gradient-to-r from-primary/40 to-primary/10 z-0" />
+                        {/* Vertical line on mobile */}
+                        <div className="md:hidden absolute left-[30px] top-[60px] bottom-0 w-px bg-gradient-to-b from-primary/40 to-primary/10 z-0" />
+                      </>
+                    )}
+
+                    {/* Step circle */}
+                    <div className="relative flex-shrink-0 z-10">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+                      <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <item.icon className="h-6 w-6 text-primary-foreground" />
                       </div>
                     </div>
 
-                    <div className="mt-1 text-xs font-bold text-primary">{item.step}</div>
-                    <h3 className="mt-3 font-semibold text-xl">{item.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {item.description}
-                    </p>
+                    {/* Content */}
+                    <div className="md:text-center md:mt-4">
+                      <span className="text-xs font-bold text-primary">{item.step}</span>
+                      <h3 className="font-semibold text-lg">{item.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
-                </GlassCard>
-
-                {/* Connector Arrow (outside the card, not on last) */}
-                {index < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden md:flex absolute top-1/2 -right-5 transform -translate-y-1/2 z-10">
-                    <ArrowRight className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          </GlassCard>
         </section>
 
         {/* Partners Carousel */}
@@ -445,8 +450,8 @@ export default async function HomePage() {
                 Ready to get started?
               </h2>
               <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-                Join thousands of developers and teams who trust Emberly for secure,
-                private file sharing. Free to start, no credit card required.
+                Join developers and teams who use Emberly for secure file sharing,
+                collaboration, and talent discovery. Free to start, no credit card required.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 {session ? (

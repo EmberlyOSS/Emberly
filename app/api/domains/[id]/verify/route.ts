@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
 import dns from 'dns'
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getCustomHostname } from '@/packages/lib/cloudflare/client'

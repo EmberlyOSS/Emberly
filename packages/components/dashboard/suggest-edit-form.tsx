@@ -152,7 +152,7 @@ export function SuggestEditForm({ file, initialContent }: SuggestEditFormProps) 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {/* File Info */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-border/50">
+            <div className="flex items-center justify-between p-4 rounded-lg glass-subtle">
                 <div className="flex items-center gap-3">
                     <FileCode className="h-5 w-5 text-muted-foreground" />
                     <div>
@@ -210,7 +210,7 @@ export function SuggestEditForm({ file, initialContent }: SuggestEditFormProps) 
                         onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}
                         className="w-full"
                     >
-                        <TabsList className="w-full justify-start bg-background/50 border border-border/50">
+                        <TabsList className="w-full justify-start glass-subtle">
                             <TabsTrigger value="edit" className="flex items-center gap-2">
                                 <FileCode className="h-4 w-4" />
                                 Edit
@@ -221,7 +221,7 @@ export function SuggestEditForm({ file, initialContent }: SuggestEditFormProps) 
                             </TabsTrigger>
                         </TabsList>
                         <TabsContent value="edit" className="mt-2">
-                            <div className="rounded-lg border border-border/50 overflow-hidden">
+                            <div className="glass-subtle overflow-hidden">
                                 <CodeMirror
                                     value={content}
                                     onChange={setContent}
@@ -241,7 +241,7 @@ export function SuggestEditForm({ file, initialContent }: SuggestEditFormProps) 
                             </div>
                         </TabsContent>
                         <TabsContent value="preview" className="mt-2">
-                            <div className="rounded-lg border border-border/50 bg-background/50 p-6 min-h-[400px] max-h-[400px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
+                            <div className="glass-subtle p-6 min-h-[400px] max-h-[400px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
                                 {content ? (
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
@@ -258,7 +258,7 @@ export function SuggestEditForm({ file, initialContent }: SuggestEditFormProps) 
                         </TabsContent>
                     </Tabs>
                 ) : (
-                    <div className="rounded-lg border border-border/50 overflow-hidden">
+                    <div className="glass-subtle overflow-hidden">
                         <CodeMirror
                             value={content}
                             onChange={setContent}

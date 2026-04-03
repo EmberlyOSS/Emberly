@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
-        if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
-        let userId = (session.user as any).id
-        if (!userId && session.user?.email) {
-            const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
-            if (u) userId = u.id
-        }
+        const userId = user.id
 
         // total bytes (current)
         const totalAgg = await prisma.file.aggregate({ where: { userId }, _sum: { size: true } })

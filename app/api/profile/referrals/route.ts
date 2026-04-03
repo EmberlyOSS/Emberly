@@ -1,37 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { NextResponse } from 'next/server'
 
-import { authOptions } from '@/packages/lib/auth'
 import { getReferralStats, getReferralHistory, setCustomReferralCode } from '@/packages/lib/referrals'
 import { prisma } from '@/packages/lib/database/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const { user, response } = await requireAuth(request)
+    if (response) return response
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const searchParams = request.nextUrl.searchParams
+    const searchParams = new URL(request.url).searchParams
     const action = searchParams.get('action')
 
     if (action === 'stats') {
-      const stats = await getReferralStats(session.user.id)
+      const stats = await getReferralStats(user.id)
       return NextResponse.json(stats)
     }
 
     if (action === 'history') {
-      const history = await getReferralHistory(session.user.id)
+      const history = await getReferralHistory(user.id)
       return NextResponse.json(history)
     }
 
     // Default: return referral code (don't auto-generate)
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: { referralCode: true },
     })
-    return NextResponse.json({ referralCode: user?.referralCode || null })
+    return NextResponse.json({ referralCode: dbUser?.referralCode || null })
   } catch (error) {
     console.error('Referral API error:', error)
     return NextResponse.json(
@@ -41,13 +37,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, response } = await requireAuth(request)
+    if (response) return response
 
     const body = await request.json()
     const { code } = body
@@ -56,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Code is required' }, { status: 400 })
     }
 
-    const result = await setCustomReferralCode(session.user.id, code)
+    const result = await setCustomReferralCode(user.id, code)
     return NextResponse.json(result)
   } catch (error) {
     console.error('Set referral code error:', error)

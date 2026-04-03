@@ -1,6 +1,6 @@
 import type { EventPayload, EventType } from '@/packages/types/events'
 
-import { sendTemplateEmail, BasicEmail, AdminBroadcastEmail, AccountChangeEmail, PerkGainedEmail } from '@/packages/lib/emails'
+import { sendTemplateEmail, BasicEmail, AdminBroadcastEmail, AccountChangeEmail, PerkGainedEmail, QuotaReachedEmail, StorageAssignedEmail, NewLoginEmail, NexiumWelcomeEmail, NexiumOpportunityEmail, NexiumSquadInviteEmail } from '@/packages/lib/emails'
 import { loggers } from '@/packages/lib/logger'
 
 import { events } from '../index'
@@ -81,6 +81,105 @@ async function sendEmail(options: {
                 perkIcon: typeof variables.perkIcon === 'string' ? variables.perkIcon : '🎉',
                 expiresAt: typeof variables.expiresAt === 'string' ? variables.expiresAt : null,
                 viewUrl: typeof variables.viewUrl === 'string' ? variables.viewUrl : 'https://embrly.ca/dashboard/profile',
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    // Map quota-reached event to QuotaReachedEmail template
+    if (template === 'quota-reached') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: QuotaReachedEmail,
+            props: {
+                currentUsage: typeof variables.currentUsage === 'number' ? variables.currentUsage : 0,
+                quotaLimit: typeof variables.quotaLimit === 'number' ? variables.quotaLimit : 0,
+                percentage: typeof variables.percentage === 'number' ? variables.percentage : 100,
+                unit: typeof variables.unit === 'string' ? variables.unit : 'MB',
+                dashboardUrl: typeof variables.dashboardUrl === 'string' ? variables.dashboardUrl : undefined,
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    // Map storage-assigned event to StorageAssignedEmail template
+    if (template === 'storage-assigned') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: StorageAssignedEmail,
+            props: {
+                storageAmount: String(variables.storageAmount || '0 MB'),
+                reason: typeof variables.reason === 'string' ? variables.reason : undefined,
+                usageUrl: typeof variables.usageUrl === 'string' ? variables.usageUrl : undefined,
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    // Map new-device-login event to NewLoginEmail template
+    if (template === 'new-device-login') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: NewLoginEmail,
+            props: {
+                loginLocation: typeof variables.location === 'string' ? variables.location : undefined,
+                loginTime: typeof variables.time === 'string' ? variables.time : undefined,
+                loginDevice: typeof variables.device === 'string' ? variables.device : undefined,
+                reviewUrl: typeof variables.reviewUrl === 'string' ? variables.reviewUrl : undefined,
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    if (template === 'nexium-welcome') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: NexiumWelcomeEmail,
+            props: {
+                name: typeof variables.name === 'string' ? variables.name : undefined,
+                profileUrl: typeof variables.profileUrl === 'string' ? variables.profileUrl : 'https://embrly.ca/discovery',
+                profileId: String(variables.profileId || ''),
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    if (template === 'nexium-opportunity') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: NexiumOpportunityEmail,
+            props: {
+                name: typeof variables.name === 'string' ? variables.name : undefined,
+                opportunityTitle: String(variables.opportunityTitle || ''),
+                opportunityUrl: typeof variables.opportunityUrl === 'string' ? variables.opportunityUrl : 'https://embrly.ca/discovery',
+                companyName: typeof variables.companyName === 'string' ? variables.companyName : undefined,
+                skills: Array.isArray(variables.skills) ? variables.skills.map(String) : [],
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    if (template === 'nexium-squad-invite') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: NexiumSquadInviteEmail,
+            props: {
+                name: typeof variables.name === 'string' ? variables.name : undefined,
+                squadName: String(variables.squadName || ''),
+                inviterName: String(variables.inviterName || ''),
+                inviteUrl: typeof variables.inviteUrl === 'string' ? variables.inviteUrl : 'https://embrly.ca/discovery',
             },
             skipTracking: true,
         })
@@ -311,4 +410,9 @@ export const EMAIL_TEMPLATES = {
     'payment-succeeded': 'Payment receipt',
     'payment-failed': 'Payment failed alert',
     'refund-issued': 'Refund confirmation',
+
+    // Nexium
+    'nexium-welcome': 'Discovery profile created – welcome email',
+    'nexium-opportunity': 'Nexium opportunity match notification',
+    'nexium-squad-invite': 'Nexium squad invitation',
 } as const

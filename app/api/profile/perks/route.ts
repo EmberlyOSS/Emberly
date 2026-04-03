@@ -1,7 +1,8 @@
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+
+
 import { prisma } from '@/packages/lib/database/prisma'
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { calculateStorageBonusGB, calculateDomainSlotBonus, getContributorMilestone, getNextContributorMilestone, getDiscordBoosterMilestone, getNextDiscordBoosterMilestone } from '@/packages/lib/perks'
 import { GITHUB_CONTRIBUTION_THRESHOLD, CONTRIBUTOR_MILESTONES, DISCORD_BOOSTER_MILESTONES } from '@/packages/lib/perks/constants'
 
@@ -24,15 +25,13 @@ interface PerkInfo {
  * GET /api/profile/perks
  * Get all perks (active and available) for the authenticated user
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user: authUser, response } = await requireAuth(req)
+    if (response) return response
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       select: {
         perkRoles: true,
         linkedAccounts: {
@@ -135,12 +134,32 @@ export async function GET() {
     // Discord Booster Perk
     const boosterPerk = perkRoles.find((role) => role.startsWith('DISCORD_BOOSTER:'))
     const boostMonths = boosterPerk ? parseInt(boosterPerk.split(':')[1] || '0') : 0
-    const hasBooster = boostMonths > 0
+    const hasBooster = !!boosterPerk // presence of the role means they are/were boosting
     const discordAccount = user.linkedAccounts.find((acc) => acc.provider === 'discord')
     const currentBoosterMilestone = getDiscordBoosterMilestone(boostMonths)
     const nextBoosterMilestone = getNextDiscordBoosterMilestone(boostMonths)
 
-    if (hasBooster && currentBoosterMilestone) {
+    if (hasBooster && !currentBoosterMilestone) {
+      // Boosting but hasn't hit the 1-month Bronze milestone yet
+      perks.push({
+        name: 'Discord Booster - Pending',
+        icon: '🚀',
+        description: 'Thank you for boosting! Bronze unlocks after 1 month.',
+        benefits: [
+          'Bronze (1 month): +1GB, +1 domain',
+          'Silver (3 months): +2GB, +1 domain',
+          'Gold (6 months): +3GB, +2 domains',
+          'Platinum (12 months): +5GB, +2 domains',
+          'Diamond (24 months): +7GB, +3 domains',
+        ],
+        active: true,
+        progress: nextBoosterMilestone ? {
+          current: boostMonths,
+          next: nextBoosterMilestone.months,
+          unit: 'months boosting',
+        } : undefined,
+      })
+    } else if (hasBooster && currentBoosterMilestone) {
       // Calculate time to next milestone
       let progressInfo = undefined
       if (nextBoosterMilestone && discordAccount) {

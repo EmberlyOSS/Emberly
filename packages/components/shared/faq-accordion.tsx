@@ -15,9 +15,8 @@ type Props = {
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -30,32 +29,32 @@ export default function FAQAccordion({ items }: Props) {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto items-start">
-            {items.map((item, index) => (
-                <GlassCard key={index}>
-                    <div>
+        <GlassCard>
+            <div className="divide-y divide-border/50">
+                {items.map((item, index) => (
+                    <div key={index}>
                         <button
                             type="button"
                             onClick={() => toggleItem(index)}
-                            className="w-full p-4 cursor-pointer flex items-center justify-between hover:text-primary transition-colors text-left"
+                            className="w-full px-6 py-4 cursor-pointer flex items-center justify-between hover:text-primary transition-colors text-left gap-4"
                             aria-expanded={openIndex === index}
                         >
-                            <span className="font-medium pr-4">{item.question}</span>
+                            <span className="font-medium">{item.question}</span>
                             <ChevronDown
-                                className={`h-4 w-4 text-muted-foreground transition-transform flex-shrink-0 ${openIndex === index ? 'rotate-180' : ''
+                                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 flex-shrink-0 ${openIndex === index ? 'rotate-180' : ''
                                     }`}
                             />
                         </button>
                         {openIndex === index && (
-                            <div className="px-4 pb-4 animate-in fade-in-50 slide-in-from-top-2 duration-200">
-                                <p className="text-sm text-muted-foreground">
+                            <div className="px-6 pb-4 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+                                <p className="text-sm text-muted-foreground leading-relaxed">
                                     {item.answer}
                                 </p>
                             </div>
                         )}
                     </div>
-                </GlassCard>
-            ))}
-        </div>
+                ))}
+            </div>
+        </GlassCard>
     )
 }

@@ -292,7 +292,7 @@ export function PasteForm() {
             onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}
             className="w-full"
           >
-            <TabsList className="w-full justify-start bg-background/50 border border-border/50">
+            <TabsList className="w-full justify-start glass-subtle">
               <TabsTrigger value="edit" className="flex items-center gap-2">
                 <FileCode className="h-4 w-4" />
                 Edit
@@ -303,7 +303,7 @@ export function PasteForm() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="edit" className="mt-2">
-              <div className="rounded-lg border border-border/50 overflow-hidden">
+              <div className="glass-subtle overflow-hidden">
                 <CodeMirror
                   value={content}
                   onChange={setContent}
@@ -330,7 +330,7 @@ export function PasteForm() {
               </div>
             </TabsContent>
             <TabsContent value="preview" className="mt-2">
-              <div className="rounded-lg border border-border/50 bg-background/50 p-6 min-h-[400px] max-h-[400px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
+              <div className="glass-subtle p-6 min-h-[400px] max-h-[400px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
                 {content ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -347,7 +347,7 @@ export function PasteForm() {
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="rounded-lg border border-border/50 overflow-hidden">
+          <div className="glass-subtle overflow-hidden">
             <CodeMirror
               value={content}
               onChange={setContent}
@@ -439,7 +439,7 @@ export function PasteForm() {
       </div>
 
       {/* Collaboration Settings */}
-      <div className="rounded-lg border border-border/50 bg-background/30 p-4 space-y-4">
+      <div className="glass-subtle p-4 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Users className="h-4 w-4 text-muted-foreground" />
           Collaboration Settings

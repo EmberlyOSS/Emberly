@@ -5,6 +5,7 @@ import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { compare } from 'bcryptjs'
 import { prisma } from '@/packages/lib/database/prisma'
 import { apiError, apiResponse } from '@/packages/lib/api/response'
+import { events } from '@/packages/lib/events'
 import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
 import { createRecoveryCodes, invalidateRecoveryCodes } from '@/packages/lib/auth/recovery-codes'
 
@@ -106,9 +107,7 @@ export async function POST(req: Request) {
                     template: VerificationCodeEmail,
                     props: {
                         code,
-                        expiresMinutes: 10,
-                        action: 'Enable Two-Factor Authentication',
-                        userName: user.name || undefined,
+                        expiresInMinutes: 10,
                     },
                 })
             } catch (emailError) {
@@ -163,6 +162,18 @@ export async function POST(req: Request) {
 
             // Generate recovery codes
             const recoveryCodes = await createRecoveryCodes(user.id)
+
+            // Emit auditable events (fire-and-forget)
+            void events.emit('auth.2fa-enabled', {
+                userId: user.id,
+                email: user.email,
+                method: 'totp',
+            }).catch((err) => console.error('[Events] Failed to emit auth.2fa-enabled', err))
+            void events.emit('auth.2fa-backup-codes-generated', {
+                userId: user.id,
+                email: user.email,
+                codesCount: recoveryCodes.length,
+            }).catch((err) => console.error('[Events] Failed to emit auth.2fa-backup-codes-generated', err))
 
             return apiResponse({ 
                 success: true, 
@@ -237,9 +248,7 @@ export async function DELETE(req: Request) {
                     template: VerificationCodeEmail,
                     props: {
                         code,
-                        expiresMinutes: 10,
-                        action: 'Disable Two-Factor Authentication',
-                        userName: user.name || undefined,
+                        expiresInMinutes: 10,
                     },
                 })
             } catch (emailError) {
@@ -303,6 +312,14 @@ export async function DELETE(req: Request) {
 
             // Invalidate all recovery codes
             await invalidateRecoveryCodes(user.id)
+
+            // Emit auditable event (fire-and-forget)
+            void events.emit('auth.2fa-disabled', {
+                userId: user.id,
+                email: user.email,
+                method: 'totp',
+                disabledBy: 'user',
+            }).catch((err) => console.error('[Events] Failed to emit auth.2fa-disabled', err))
 
             return apiResponse({ success: true, message: '2FA disabled successfully' })
         } else {

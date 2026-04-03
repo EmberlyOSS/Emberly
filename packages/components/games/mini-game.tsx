@@ -77,9 +77,8 @@ export default function MiniGame() {
             aria-label="Ember Blitz mini-game"
             className="relative z-10 w-full max-w-lg"
           >
-            <div className="relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
-              <div className="relative p-6">
+            <div className="glass-card shadow-2xl overflow-hidden">
+              <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-xl bg-primary/20">
@@ -381,7 +380,7 @@ function Game() {
       {/* Game Area */}
       <div
         ref={areaRef}
-        className="relative rounded-xl bg-gradient-to-br from-slate-900/50 via-slate-800/50 to-slate-900/50 border border-white/10 h-64 touch-none overflow-hidden select-none"
+        className="relative rounded-xl bg-gradient-to-br from-slate-900/50 via-slate-800/50 to-slate-900/50 border border-border/50 h-64 touch-none overflow-hidden select-none"
         style={{ cursor: running ? 'crosshair' : 'default' }}
       >
         {/* Grid background */}

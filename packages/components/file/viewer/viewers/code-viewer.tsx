@@ -70,7 +70,7 @@ export function CodeViewer() {
             </Badge>
           </div>
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'code' | 'preview')}>
-            <TabsList className="h-8 bg-background/50 border border-border/50">
+            <TabsList className="h-8 glass-subtle">
               <TabsTrigger value="preview" className="h-7 px-2 sm:px-3 text-xs gap-1">
                 <Eye className="h-3 w-3" />
                 <span className="hidden xs:inline">Preview</span>
@@ -84,7 +84,7 @@ export function CodeViewer() {
         </div>
 
         {viewMode === 'preview' ? (
-          <div className="rounded-lg border border-border/50 bg-background/50 p-4 sm:p-6 max-h-[50vh] sm:max-h-[60vh] overflow-auto prose prose-sm sm:prose-base prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/50 prose-pre:overflow-x-auto prose-code:text-primary prose-code:before:content-none prose-code:after:content-none prose-p:break-words prose-a:break-all">
+          <div className="glass-subtle p-4 sm:p-6 max-h-[50vh] sm:max-h-[60vh] overflow-auto prose prose-sm sm:prose-base prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/50 prose-pre:overflow-x-auto prose-code:text-primary prose-code:before:content-none prose-code:after:content-none prose-p:break-words prose-a:break-all">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}

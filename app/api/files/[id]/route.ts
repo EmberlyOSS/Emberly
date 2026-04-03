@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
 import { hash } from 'bcryptjs'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { emitAuditEvent } from '@/packages/lib/events/audit-helper'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
 
@@ -30,10 +30,8 @@ export async function PATCH(
       )
     }
 
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, response } = await requireAuth(request)
+    if (response) return response
 
     const file = await prisma.file.findUnique({
       where: { id },
@@ -43,7 +41,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    if (file.userId !== session.user.id) {
+    if (file.userId !== user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -88,10 +86,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, response } = await requireAuth(req)
+    if (response) return response
 
     const { id: fileId } = await params
     const file = await prisma.file.findUnique({
@@ -102,7 +98,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    if (file.userId !== session.user.id) {
+    if (file.userId !== user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -122,13 +118,21 @@ export async function DELETE(
       })
 
       await tx.user.update({
-        where: { id: session.user.id },
+        where: { id: user.id },
         data: {
           storageUsed: {
             decrement: file.size,
           },
         },
       })
+    })
+
+    void emitAuditEvent('file.deleted', {
+      fileId,
+      userId: file.userId,
+      fileName: file.name,
+      fileSize: file.size,
+      deletedBy: user.id,
     })
 
     return NextResponse.json({ success: true })

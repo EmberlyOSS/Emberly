@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Check, Sparkles, Zap, RotateCcw } from 'lucide-react'
 import { Card } from '@/packages/components/ui/card'
@@ -11,27 +10,38 @@ import { Switch } from '@/packages/components/ui/switch'
 import { Label } from '@/packages/components/ui/label'
 import { PRESET_HUES, THEME_PRESETS } from '@/packages/components/theme/theme-customizer'
 import { sortCategories, getCategoryLabel, getCategoryIcon } from '@/packages/lib/theme/theme-categories'
-import { useTheme } from '@/packages/lib/theme/theme-context'
-import { hasPermission, Permission } from '@/packages/lib/permissions'
+import { useTheme, generateHueColors } from '@/packages/lib/theme/theme-context'
 import { useToast } from '@/packages/hooks/use-toast'
 import { cn } from '@/packages/lib/utils'
 
 interface AppearancePanelProps {
-  /** Whether the panel is in admin mode (can save system themes) */
-  isAdminMode?: boolean
+  /**
+   * Admin mode: override save destination.
+   * When provided, Save button calls this instead of the user-profile API.
+   * Receives the currently previewed themeId and its colors.
+   */
+  onSave?: (themeId: string, colors: Record<string, string>) => Promise<boolean>
+  /**
+   * Admin mode: called on every theme/hue selection so the parent can track changes
+   * (e.g. update workingConfig for the "Modified" badge).
+   */
+  onThemeChange?: (
+    themeId: string,
+    colors: Record<string, string>,
+    meta?: { backgroundEffect?: string; animationSpeed?: string }
+  ) => void
 }
 
 /**
  * Unified Appearance Panel using the new theme context
- * 
+ *
  * Features:
  * - Instant preview with automatic rollback on cancel
  * - Single source of truth via context
- * - Works for both user and admin flows
+ * - Works for both user and admin flows via optional onSave / onThemeChange callbacks
  * - Effects toggle integrated
  */
-export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
-  const { data: session } = useSession()
+export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps = {}) {
   const router = useRouter()
   const { toast } = useToast()
   const {
@@ -41,18 +51,11 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
     previewTheme,
     previewHue,
     saveTheme,
-    saveAsSystemTheme,
     cancelPreview,
     setEffectsEnabled,
     resetToDefault,
     metadata,
   } = useTheme()
-
-  // Check if user has admin permissions
-  const canManageSystemThemes = useMemo(() => {
-    if (!isAdminMode) return false
-    return session?.user?.role && hasPermission(session.user.role as any, Permission.MANAGE_APPEARANCE)
-  }, [session?.user?.role, isAdminMode])
 
   // Group themes by category
   const themesByCategory = useMemo(() => {
@@ -69,13 +72,20 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
   // Handle preset selection
   const handlePresetSelect = useCallback((preset: typeof THEME_PRESETS[0]) => {
     const presetThemeId = preset.themeId || preset.name.replace(/[^\w-]/g, '').toLowerCase()
-    previewTheme(presetThemeId, preset.colors as unknown as Record<string, string>)
-  }, [previewTheme])
+    const presetColors = preset.colors as unknown as Record<string, string>
+    previewTheme(presetThemeId, presetColors)
+    onThemeChange?.(presetThemeId, presetColors, {
+      backgroundEffect: preset.backgroundEffect,
+      animationSpeed: preset.animationSpeed,
+    })
+  }, [previewTheme, onThemeChange])
 
   // Handle hue selection
   const handleHueSelect = useCallback((hue: number) => {
     previewHue(hue)
-  }, [previewHue])
+    const hueColors = generateHueColors(hue)
+    onThemeChange?.(`hue:${hue}`, hueColors)
+  }, [previewHue, onThemeChange])
 
   // Handle cancel preview
   const handleCancelPreview = useCallback(() => {
@@ -106,24 +116,16 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
     })
   }, [setEffectsEnabled, toast])
 
-  // Handle save
+  // Handle save — admin passes onSave to override the user-profile destination
   const handleSave = useCallback(async () => {
-    let success = false
-    
-    if (canManageSystemThemes) {
-      success = await saveAsSystemTheme()
-    } else {
-      success = await saveTheme()
-    }
-    
+    const success = onSave ? await onSave(themeId, customColors) : await saveTheme()
     if (success) {
       toast({
-        title: canManageSystemThemes ? 'System theme updated' : 'Theme saved',
-        description: metadata?.name 
-          ? `${metadata.name} is now ${canManageSystemThemes ? 'the system default' : 'your active theme'}`
+        title: 'Theme saved',
+        description: metadata?.name
+          ? `${metadata.name} is now your active theme`
           : 'Your appearance settings have been saved',
       })
-      // Refresh to pick up server-rendered theme
       router.refresh()
     } else {
       toast({
@@ -132,7 +134,7 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
         variant: 'destructive',
       })
     }
-  }, [canManageSystemThemes, saveAsSystemTheme, saveTheme, router, toast, metadata])
+  }, [saveTheme, router, toast, metadata])
 
   // Get the theme ID for a preset (for selection matching)
   const getPresetThemeId = (preset: typeof THEME_PRESETS[0]) => {
@@ -146,12 +148,10 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            {canManageSystemThemes ? 'System Themes' : 'Appearance'}
+            Appearance
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            {canManageSystemThemes
-              ? 'Manage system wide theme presets'
-              : 'Customize your visual experience'}
+            Customize your visual experience
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -172,14 +172,14 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
             size="sm"
             className="min-w-[100px]"
           >
-            {canManageSystemThemes ? 'Save System Theme' : 'Save'}
+            Save
           </Button>
         </div>
       </div>
 
       {/* Current Theme Info */}
       {metadata && (
-        <Card className="p-3 glass-panel border-primary/20">
+        <Card className="p-3 glass-subtle">
           <div className="flex items-center gap-3">
             <div className="text-2xl">{metadata.emoji || '🎨'}</div>
             <div className="flex-1">
@@ -196,10 +196,10 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
       )}
 
       {/* Theme Presets */}
-      <Card className="p-4 glass-panel">
+      <Card className="p-4 glass-subtle">
         <Tabs defaultValue="basic" className="w-full">
           <TabsList 
-            className="grid w-full bg-background/50 p-1 rounded-lg" 
+            className="grid w-full glass-subtle p-1" 
             style={{ gridTemplateColumns: `repeat(${Object.keys(themesByCategory).length}, 1fr)` }}
           >
             {sortCategories(Object.keys(themesByCategory) as any[]).map((category) => (
@@ -230,7 +230,7 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
                         "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10",
                         isSelected
                           ? "border-primary ring-2 ring-primary/30"
-                          : "border-white/10 bg-white/5 dark:bg-black/5"
+                          : "border-border/50 bg-muted/30"
                       )}
                     >
                       {/* Gradient Preview Background */}
@@ -274,7 +274,7 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
       </Card>
 
       {/* Hue Customizer */}
-      <Card className="p-4 glass-panel">
+      <Card className="p-4 glass-subtle">
         <h4 className="text-sm font-semibold mb-3">Custom Hues</h4>
         <p className="text-xs text-muted-foreground mb-4">
           Quick color adjustments based on a single hue value
@@ -291,7 +291,7 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
                   "hover:scale-105 hover:shadow-lg",
                   isSelected
                     ? "border-white ring-2 ring-white/50"
-                    : "border-transparent hover:border-white/30"
+                    : "border-transparent hover:border-border/50"
                 )}
                 style={{ 
                   background: `linear-gradient(135deg, hsl(${hue}, ${saturation}%, ${lightness}%), hsl(${hue}, ${saturation}%, ${lightness - 15}%))` 
@@ -312,31 +312,29 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
         </div>
       </Card>
 
-      {/* Effects Toggle - Only for non-admin mode */}
-      {!canManageSystemThemes && (
-        <Card className="p-4 glass-panel">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Zap className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <Label htmlFor="effects-toggle" className="text-sm font-semibold">
-                  Theme Effects & Animations
-                </Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Enable visual effects like particles, glitch, and special animations
-                </p>
-              </div>
+      {/* Effects Toggle */}
+      <Card className="p-4 glass-subtle">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Zap className="h-4 w-4 text-primary" />
             </div>
-            <Switch
-              id="effects-toggle"
-              checked={effectsEnabled}
-              onCheckedChange={handleEffectsToggle}
-            />
+            <div>
+              <Label htmlFor="effects-toggle" className="text-sm font-semibold">
+                Theme Effects & Animations
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Enable visual effects like particles, glitch, and special animations
+              </p>
+            </div>
           </div>
-        </Card>
-      )}
+          <Switch
+            id="effects-toggle"
+            checked={effectsEnabled}
+            onCheckedChange={handleEffectsToggle}
+          />
+        </div>
+      </Card>
 
       {/* Reset Button */}
       <div className="flex justify-center">
@@ -353,7 +351,7 @@ export function AppearancePanel({ isAdminMode = false }: AppearancePanelProps) {
 
       {/* Info Footer */}
       <p className="text-xs text-muted-foreground text-center">
-        Changes preview instantly • {canManageSystemThemes ? 'System themes apply to all users' : 'Click Save to persist your selection'}
+        Changes preview instantly • Click Save to persist your selection
       </p>
     </div>
   )

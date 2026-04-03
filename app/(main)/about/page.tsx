@@ -25,9 +25,8 @@ import HomeShell from '@/packages/components/layout/home-shell'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -166,7 +165,7 @@ import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
     title: 'About Us',
-    description: 'Learn about Emberly a privacy-first, open source file sharing platform built for developers and teams.',
+    description: 'Emberly is an open source platform for file sharing, URL shortening, and talent discovery. Privacy-first, developer-friendly, and built for teams.',
 })
 
 export default async function AboutPage() {
@@ -176,7 +175,7 @@ export default async function AboutPage() {
         <HomeShell>
             <div className="container space-y-8">
                 {/* Hero Section */}
-                <GlassCard>
+                <GlassCard className="gradient-border-animated">
                     <div className="p-8 md:p-12">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
                             <div>
@@ -185,14 +184,15 @@ export default async function AboutPage() {
                                     Open Source
                                 </Badge>
                                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
-                                    File sharing,
-                                    <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                                        reimagined.
+                                    More than hosting,
+                                    <span className="block text-gradient">
+                                        it&apos;s a platform.
                                     </span>
                                 </h1>
                                 <p className="mt-6 text-lg text-muted-foreground max-w-xl leading-relaxed">
-                                    Emberly is a lightweight, developer first file sharing platform focused on privacy,
-                                    reliability, and simplicity. Self hostable and extensible for teams and communities.
+                                    Emberly started as a privacy-first file sharing tool for developers and has grown into
+                                    a full platform: file hosting, URL shortening, and Nexium our built in talent discovery and squad
+                                    collaboration network. Self-hostable, open source, and built for teams.
                                 </p>
 
                                 <div className="mt-8 flex flex-wrap gap-3">
@@ -204,9 +204,9 @@ export default async function AboutPage() {
                                         </Link>
                                     </Button>
                                     <Button size="lg" variant="outline" asChild className="bg-background/50">
-                                        <Link href="/docs">
+                                        <Link href="/blog">
                                             <BookOpen className="h-4 w-4 mr-2" />
-                                            Documentation
+                                            Blog
                                         </Link>
                                     </Button>
                                 </div>
@@ -215,8 +215,8 @@ export default async function AboutPage() {
                             {/* Mission Card */}
                             <div className="hidden lg:block">
                                 <div className="relative">
-                                    <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 rounded-3xl blur-2xl opacity-60" />
-                                    <GlassCard className="relative">
+                                    <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 rounded-3xl blur-2xl opacity-40" />
+                                    <GlassCard className="relative animate-float">
                                         <div className="p-6">
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className="p-2 rounded-xl bg-primary/20">
@@ -225,14 +225,15 @@ export default async function AboutPage() {
                                                 <h3 className="text-lg font-semibold">Our Mission</h3>
                                             </div>
                                             <p className="text-muted-foreground text-sm leading-relaxed">
-                                                Make private, reliable file sharing accessible and easy to self-host
-                                                for teams and communities everywhere.
+                                                Build and share more than just files. Emberly gives you the tools
+                                                to host content, shorten links, discover talent, and collaborate
+                                                with squads — all in one open source platform.
                                             </p>
                                             <div className="mt-6 space-y-3">
                                                 {[
                                                     'Fast uploads with chunked and presigned flows',
-                                                    'Password protected files with per file visibility',
-                                                    'Clean dashboard and CMS for content management',
+                                                    'URL shortener with analytics and custom slugs',
+                                                    'Discovery: talent profiles, squads, and discovery',
                                                 ].map((item, i) => (
                                                     <div key={i} className="flex items-start gap-3">
                                                         <div className="mt-0.5 p-1 rounded-full bg-primary/20">
@@ -253,9 +254,9 @@ export default async function AboutPage() {
                 {/* Core Values */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {CORE_VALUES.map((value) => (
-                        <GlassCard key={value.title}>
+                        <GlassCard key={value.title} className="glass-hover group">
                             <div className="p-6">
-                                <div className={`inline-flex p-3 rounded-xl ${value.bg}`}>
+                                <div className={`inline-flex p-3 rounded-xl ${value.bg} group-hover:scale-110 transition-transform`}>
                                     <value.icon className={`h-6 w-6 ${value.color}`} />
                                 </div>
                                 <h3 className="mt-4 font-semibold text-lg">{value.title}</h3>
@@ -274,20 +275,21 @@ export default async function AboutPage() {
                             <h2 className="text-2xl font-bold">Why Emberly?</h2>
                             <p className="mt-4 text-muted-foreground leading-relaxed">
                                 We built Emberly because existing file sharing solutions are either too complex,
-                                too expensive, or don't respect your privacy. Emberly prioritizes speed, privacy,
-                                and a pleasant UX. It's built so teams can self host without wrestling with
-                                complex infrastructure.
+                                too expensive, or don&apos;t respect your privacy. Emberly prioritizes speed, privacy,
+                                and a pleasant UX. It&apos;s built so teams can self-host without wrestling with complex
+                                infrastructure.
                             </p>
                             <p className="mt-4 text-muted-foreground leading-relaxed">
-                                Whether you're a developer sharing code snippets, a team collaborating on assets,
-                                or a community building something together. Emberly scales with you while keeping
-                                your data under your control.
+                                As Emberly has grown, so has the scope. File hosting is the core — but now we also
+                                offer URL shortening, rich embed previews, and Discovery: a talent discovery and squad
+                                collaboration platform. Whether you&apos;re a developer, creator, or community builder,
+                                Emberly scales with you while keeping your data under your control.
                             </p>
                             <div className="mt-6 flex flex-wrap gap-2">
                                 {FEATURES.map((feature) => (
                                     <div
                                         key={feature.label}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/50 border border-border/50 text-sm"
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-full glass-subtle text-sm"
                                     >
                                         <feature.icon className="h-4 w-4 text-primary" />
                                         {feature.label}
@@ -369,12 +371,12 @@ export default async function AboutPage() {
                 )}
 
                 {/* CTA Section */}
-                <GlassCard>
+                <GlassCard className="gradient-border-animated">
                     <div className="p-8 text-center">
                         <h2 className="text-2xl md:text-3xl font-bold">Ready to get started?</h2>
                         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-                            Join thousands of developers and teams who trust Emberly for secure,
-                            private file sharing.
+                            Join thousands of developers, creators, and teams who use Emberly to share,
+                            build, and connect.
                         </p>
                         <div className="mt-6 flex flex-wrap justify-center gap-3">
                             <Button size="lg" asChild>

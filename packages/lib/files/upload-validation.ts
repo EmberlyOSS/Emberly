@@ -77,11 +77,18 @@ export async function validateCustomDomain(
         return { valid: true }
     }
 
-    // Check if this is a verified custom domain for the user
+    // Check if this is a verified custom domain owned by the user OR one of their squads
     const domainRecord = await prisma.customDomain.findFirst({
         where: {
             domain: cleanDomain,
-            userId,
+            OR: [
+                { userId },
+                {
+                    squad: {
+                        members: { some: { userId } },
+                    },
+                },
+            ],
         },
         select: {
             verified: true,
@@ -101,6 +108,54 @@ export async function validateCustomDomain(
         return {
             valid: false,
             error: `Domain "${cleanDomain}" has not been verified yet. Please complete domain verification first.`,
+            errorCode: 'DOMAIN_NOT_VERIFIED',
+        }
+    }
+
+    return { valid: true }
+}
+
+/**
+ * Validate a custom domain for a squad upload (authenticated via squad token/API key).
+ * The domain must belong to the squad itself.
+ */
+export async function validateSquadCustomDomain(
+    squadId: string,
+    requestedDomain: string | null
+): Promise<UploadValidationResult> {
+    if (!requestedDomain) return { valid: true }
+
+    const cleanDomain = requestedDomain
+        .replace(/^https?:\/\//, '')
+        .replace(/\/+$/, '')
+        .toLowerCase()
+
+    const appDomain = (process.env.APP_BASE_URL || process.env.NEXTAUTH_URL || '')
+        .replace(/^https?:\/\//, '')
+        .replace(/\/+$/, '')
+        .toLowerCase()
+
+    if (cleanDomain === appDomain || cleanDomain === 'localhost' || cleanDomain.startsWith('localhost:')) {
+        return { valid: true }
+    }
+
+    const domainRecord = await prisma.customDomain.findFirst({
+        where: { domain: cleanDomain, squadId },
+        select: { verified: true, domain: true },
+    })
+
+    if (!domainRecord) {
+        return {
+            valid: false,
+            error: `Domain "${cleanDomain}" is not registered to this squad`,
+            errorCode: 'DOMAIN_NOT_FOUND',
+        }
+    }
+
+    if (!domainRecord.verified) {
+        return {
+            valid: false,
+            error: `Domain "${cleanDomain}" has not been verified yet`,
             errorCode: 'DOMAIN_NOT_VERIFIED',
         }
     }

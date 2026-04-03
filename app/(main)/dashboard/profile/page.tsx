@@ -1,9 +1,8 @@
-import { redirect } from 'next/navigation'
-
-import { getServerSession } from 'next-auth/next'
-
 import dynamic from 'next/dynamic'
 const ProfileClient = dynamic(() => import('@/packages/components/profile').then((m) => m.ProfileClient))
+
+import { getServerSession } from 'next-auth/next'
+import Link from 'next/link'
 
 import { authOptions } from '@/packages/lib/auth'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
@@ -21,15 +20,12 @@ import { LogoutButton } from './logout-button'
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user) {
-    redirect('/auth/login')
-  }
-
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: session!.user.id },
     select: {
       id: true,
       name: true,
+      fullName: true,
       email: true,
       image: true,
       storageUsed: true,
@@ -39,13 +35,20 @@ export default async function ProfilePage() {
       enableRichEmbeds: true,
       emailNotificationsEnabled: true,
       emailPreferences: true,
+      discordWebhookUrl: true,
+      discordNotificationsEnabled: true,
+      discordPreferences: true,
       defaultFileExpiration: true,
       defaultFileExpirationAction: true,
       urlId: true,
       vanityId: true,
       bio: true,
       website: true,
+      twitter: true,
+      github: true,
+      discord: true,
       isProfilePublic: true,
+      showLinkedAccounts: true,
       stripeCustomerId: true,
       passwordBreachDetectedAt: true,
       subscriptions: {
@@ -86,39 +89,67 @@ export default async function ProfilePage() {
 
   return (
     <div className="container space-y-6">
-      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-        <div className="relative p-8">
+      <div className="glass-card">
+        <div className="p-8">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Profile</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
               <p className="text-muted-foreground mt-2">
                 Manage your account settings, preferences, and usage statistics
               </p>
+              <div className="flex gap-3 mt-4 flex-wrap">
+                {user.isProfilePublic && (
+                  <Link
+                    href={`/user/${user.name}`}
+                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    View Public Profile ↗
+                  </Link>
+                )}
+                <Link
+                  href="/discovery"
+                  className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-chart-3/10 text-chart-3 hover:bg-chart-3/20 transition-colors"
+                >
+                  Discovery ↗
+                </Link>
+                <Link
+                  href="/applications"
+                  className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  Applications ↗
+                </Link>
+              </div>
             </div>
             <LogoutButton />
           </div>
         </div>
       </div>
 
-      <div className="relative rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10" />
-        <div className="relative p-8">
-          <ProfileClient
+      <ProfileClient
             user={{
               id: user.id,
               name: user.name,
+              fullName: user.fullName,
               email: user.email,
               image: user.image,
               storageUsed: user.storageUsed,
               role: user.role,
               randomizeFileUrls: user.randomizeFileUrls,
               enableRichEmbeds: user.enableRichEmbeds ?? true,
+              emailNotificationsEnabled: user.emailNotificationsEnabled ?? true,
+              emailPreferences: (user.emailPreferences as any) ?? undefined,
+              discordWebhookUrl: user.discordWebhookUrl ?? null,
+              discordNotificationsEnabled: user.discordNotificationsEnabled ?? false,
+              discordPreferences: (user.discordPreferences as any) ?? undefined,
               urlId: user.urlId,
               vanityId: user.vanityId,
               bio: user.bio,
               website: user.website,
+              twitter: user.twitter,
+              github: user.github,
+              discord: user.discord,
               isProfilePublic: user.isProfilePublic,
+              showLinkedAccounts: user.showLinkedAccounts,
               stripeCustomerId: user.stripeCustomerId ?? null,
               subscription: user.subscriptions?.[0]
                 ? {
@@ -142,8 +173,6 @@ export default async function ProfilePage() {
             usagePercentage={usagePercentage}
             isAdmin={user.role === 'ADMIN'}
           />
-        </div>
-      </div>
     </div>
   )
 }

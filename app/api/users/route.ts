@@ -10,9 +10,12 @@ import {
 } from '@/packages/lib/api/response'
 import { requireAdmin, requireSuperAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { events } from '@/packages/lib/events'
+import { emitAuditEvent } from '@/packages/lib/events/audit-helper'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
-import { events } from '@/packages/lib/events'
+import { findUserByEmail, findUserById, findUserByUrlId, urlIdIsUnique } from '@/packages/lib/users/lookup'
+import { USER_ADMIN_SELECT } from '@/packages/lib/users/service'
 
 const logger = loggers.users
 
@@ -29,22 +32,7 @@ export async function GET(req: Request) {
     const total = await prisma.user.count()
 
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        urlId: true,
-        storageUsed: true,
-        emailNotificationsEnabled: true,
-        _count: {
-          select: {
-            files: true,
-            shortenedUrls: true,
-          },
-        },
-      },
+      select: USER_ADMIN_SELECT,
       orderBy: {
         createdAt: 'desc',
       },
@@ -81,9 +69,7 @@ export async function POST(req: Request) {
     const body = result.data
     const raw = json as any
 
-    const exists = await prisma.user.findUnique({
-      where: { email: body.email },
-    })
+    const exists = await findUserByEmail(body.email)
 
     if (exists) {
       return apiError('User already exists', HTTP_STATUS.BAD_REQUEST)
@@ -97,16 +83,8 @@ export async function POST(req: Request) {
       }).join('')
 
     let urlId = generateUrlId()
-    let isUnique = false
-    while (!isUnique) {
-      const existing = await prisma.user.findUnique({
-        where: { urlId },
-      })
-      if (!existing) {
-        isUnique = true
-      } else {
-        urlId = generateUrlId()
-      }
+    while (!(await urlIdIsUnique(urlId))) {
+      urlId = generateUrlId()
     }
 
     // If attempting to create an ADMIN/SUPERADMIN user, require SUPERADMIN
@@ -124,21 +102,7 @@ export async function POST(req: Request) {
         urlId,
         uploadToken: uuidv4(),
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        urlId: true,
-        storageUsed: true,
-        _count: {
-          select: {
-            files: true,
-            shortenedUrls: true,
-          },
-        },
-      },
+      select: USER_ADMIN_SELECT,
     })
 
     return apiResponse<UserResponse>(user)
@@ -150,7 +114,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { response } = await requireAdmin()
+    const { user: adminUser, response } = await requireAdmin()
     if (response) return response
 
     const json = await req.json()
@@ -163,18 +127,14 @@ export async function PUT(req: Request) {
     const body = result.data
     const raw = json as any
 
-    const existingUser = await prisma.user.findUnique({
-      where: { id: body.id },
-    })
+    const existingUser = await findUserById(body.id)
 
     if (!existingUser) {
       return apiError('User not found', HTTP_STATUS.NOT_FOUND)
     }
 
     if (body.urlId) {
-      const existingUrlId = await prisma.user.findUnique({
-        where: { urlId: body.urlId },
-      })
+      const existingUrlId = await findUserByUrlId(body.urlId)
       if (existingUrlId && existingUrlId.id !== body.id) {
         return apiError('URL ID is already in use', HTTP_STATUS.BAD_REQUEST)
       }
@@ -326,22 +286,19 @@ export async function PUT(req: Request) {
     const user = await prisma.user.update({
       where: { id: body.id },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        urlId: true,
-        storageUsed: true,
-        _count: {
-          select: {
-            files: true,
-            shortenedUrls: true,
-          },
-        },
-      },
+      select: USER_ADMIN_SELECT,
     })
+
+    // Emit role change event if role was changed
+    if (body.role && body.role !== existingUser.role) {
+      await emitAuditEvent('admin.user-role-changed', {
+        targetUserId: body.id,
+        targetEmail: existingUser.email!,
+        adminUserId: adminUser.id,
+        oldRole: existingUser.role,
+        newRole: body.role,
+      })
+    }
 
     return apiResponse<UserResponse>(user)
   } catch (error) {

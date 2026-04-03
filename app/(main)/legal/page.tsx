@@ -30,9 +30,8 @@ export default async function LegalHubPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {rows.map((row) => (
             <Link key={row.href} href={row.href} className="group">
-              <div className="relative h-full overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg shadow-black/5 backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-black/10 dark:border-white/10 dark:bg-black/10 dark:shadow-black/20">
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/5 opacity-80 dark:from-white/5 dark:via-transparent dark:to-black/15" />
-                <div className="relative flex h-full flex-col gap-3">
+              <div className="glass-card glass-hover h-full overflow-hidden p-5 transition duration-200 hover:-translate-y-0.5">
+                <div className="flex h-full flex-col gap-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <h3 className="text-lg font-semibold leading-tight group-hover:text-primary transition-colors">{row.title}</h3>

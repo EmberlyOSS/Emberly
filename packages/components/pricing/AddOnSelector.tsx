@@ -9,9 +9,8 @@ import { Button } from '@/packages/components/ui/button'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -60,6 +59,7 @@ export default function AddOnSelector({
     step = 1,
     defaultValue = 1,
 }: AddOnSelectorProps) {
+    const isFixed = min === max
     const [open, setOpen] = useState(false)
     const [qty, setQty] = useState(defaultValue)
 
@@ -105,20 +105,33 @@ export default function AddOnSelector({
                             </div>
                         </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)} className="shrink-0 bg-background/50">
-                        {open ? (
-                            <>
-                                Hide <ChevronUp className="w-4 h-4 ml-2" />
-                            </>
-                        ) : (
-                            <>
-                                Configure <ChevronDown className="w-4 h-4 ml-2" />
-                            </>
-                        )}
-                    </Button>
+                    {isFixed ? (
+                        <CheckoutButton
+                            priceId={priceId}
+                            mode={mode}
+                            label="Purchase"
+                            type={type}
+                            quantity={1}
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 bg-background/50"
+                        />
+                    ) : (
+                        <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)} className="shrink-0 bg-background/50">
+                            {open ? (
+                                <>
+                                    Hide <ChevronUp className="w-4 h-4 ml-2" />
+                                </>
+                            ) : (
+                                <>
+                                    Configure <ChevronDown className="w-4 h-4 ml-2" />
+                                </>
+                            )}
+                        </Button>
+                    )}
                 </div>
 
-                {open && (
+                {!isFixed && open && (
                     <div className="mt-6 pt-6 border-t border-border/50 space-y-4">
                         {pricePerUnit == null || !priceId ? (
                             <p className="text-sm text-muted-foreground">Pricing not set for this add-on.</p>
@@ -144,7 +157,7 @@ export default function AddOnSelector({
                                         )
                                     })}
                                 </div>
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-background/80 border border-border/50">
+                                <div className="flex items-center justify-between p-4 glass-subtle">
                                     <span className="text-sm font-medium">Total</span>
                                     <span className="text-xl font-bold">${total}</span>
                                 </div>

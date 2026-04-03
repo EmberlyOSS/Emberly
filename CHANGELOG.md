@@ -4,6 +4,516 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-03-29
+
+### Added
+- **Royal Purple Theme** - Signature preset Emberly theme with rich purple color palette.
+  - Royal Purple (💜) now the default theme for all new installations.
+  - Comprehensive color configuration with custom hue/saturation/lightness controls.
+  - Theme preset system expanded with additional base and animated themes.
+  - Persistent theme selection in user profile persisted to database.
+- **Discord Webhook Notification System** - Complete Discord integration for account and event notifications.
+  - New `/api/profile/discord-webhook/test` endpoint to validate webhook URLs and send test notifications.
+  - Discord notification handler integrated into event system with automatic preference gating.
+  - User model extended with `discordWebhookUrl`, `discordNotificationsEnabled`, and `discordPreferences` fields.
+  - Notification preferences UI in profile settings with category toggles: Security, Account, Billing, Marketing, Product Updates.
+  - Event-driven delivery: billing events, security alerts, and account changes routed to Discord webhooks.
+  - Prisma migration: `20260330011308_add_discord_webhook_notification_preferences`.
+- **Custom Domain Routing via Proxy** - Visitors on custom domains see owner's public profile on root path.
+  - New `/api/internal/domain-lookup` endpoint for secure hostname → profile mapping.
+  - Middleware-level custom domain detection with fallback to normal routing for non-root paths.
+  - Dynamic profile lookup using vanityId, urlId, and name with public visibility checks.
+  - Enables white-label-style domains pointing to individual creator profiles.
+- **Nexium Talent Discovery Platform** - New `/nexium` page introducing talent discovery features coming to Emberly.
+  - Landing page showcasing Nexium's core features: unified profiles, proof-of-skill signals, smart opportunity routing, squad collaboration.
+  - "How It Works" journey: Show Your Best Work → Prove with Signals → Match with Opportunities → Collaborate Fast.
+  - Feature cards with animated hover effects and gradient icons.
+  - FAQ section with 5 key questions about platform scope, audience, and timeline.
+  - Audience badges: Developers, Creators, Community Managers, Studios.
+  - Call-to-action buttons linking to registration and GitHub/Discord community channels.
+- **Nexium Backend Infrastructure** - Complete talent platform backend with profiles, skills, signals, opportunities, applications, and squads.
+  - 8 new Prisma models: `NexiumProfile`, `NexiumSkill`, `NexiumSignal`, `NexiumOpportunity`, `NexiumApplication`, `NexiumSquad`, `NexiumSquadMember`, `NexiumSquadSubscription`, `NexiumSquadApiKey`.
+  - 8 new enums: `NexiumAvailability`, `NexiumSkillLevel`, `NexiumSignalType`, `NexiumOpportunityType`, `NexiumOpportunityStatus`, `NexiumApplicationStatus`, `NexiumSquadStatus`, `NexiumSquadRole`.
+  - `NexiumProfile` extends `User` with unique `@handle` (lowercase, 3–32 chars), title, headline, availability, `lookingFor` tags, timezone, and location.
+  - `NexiumSkill` supports level (Beginner → Expert), category (13 categories including Frontend, Backend, Game Dev, Data/ML), and sort ordering (max 30 per profile).
+  - `NexiumSignal` tracks proof-of-work artifacts: GitHub repos, deployed apps, open-source contributions, shipped products, certifications, and more (max 20 per profile, with optional verification).
+  - `NexiumOpportunity` supports Full-Time, Part-Time, Contract, Collab, and Bounty types with budget ranges, deadlines, required skills, and team size.
+  - `NexiumApplication` workflow: PENDING → VIEWED → SHORTLISTED → ACCEPTED/REJECTED/WITHDRAWN with one-app-per-opportunity constraint.
+  - Prisma migration: `20260330091056_add_nexium_tables`.
+- **Nexium Library Modules** - Full business logic layer across 7 modules in `packages/lib/nexium/`.
+  - `constants.ts`: Platform-wide limits (30 skills, 20 signals, 20 squad members, 10 API keys), handle regex, and enum-to-label mappings for all 8 enums.
+  - `profiles.ts`: CRUD + discovery with paginated `listProfiles()` filtering by availability, skill, and `lookingFor` tags. Handle availability check with case-insensitive validation.
+  - `skills.ts`: Add, update, remove, reorder (atomic transaction), and bulk replace for profile skills.
+  - `signals.ts`: Add, update, remove, reorder, and admin `verifySignal()` for proof-of-work verification.
+  - `opportunities.ts`: CRUD with poster ownership enforcement, paginated listing with type/skill/remote filters.
+  - `applications.ts`: Apply/withdraw for applicants, list/status-update for opportunity posters.
+  - `squads.ts`: Full squad lifecycle (create/update/disband), membership management (join/leave/kick/role), upload tokens, API keys, quota, and custom domains.
+  - Zod DTOs in `packages/types/dto/nexium.ts` for all request/response validation (15+ schemas).
+  - Barrel export via `packages/lib/nexium/index.ts`.
+- **Nexium API Routes** - 20+ REST endpoints for the complete Nexium platform.
+  - Profile: `GET/POST/PUT/DELETE /api/nexium/profile`, `GET /api/nexium/profile/[handle]` (public lookup).
+  - Skills: `GET/POST /api/nexium/skills`, `PUT/DELETE /api/nexium/skills/[id]` — supports add, bulk replace, and reorder via POST.
+  - Signals: `GET/POST /api/nexium/signals`, `PUT/DELETE /api/nexium/signals/[id]` — supports add and reorder via POST.
+  - Opportunities: `GET/POST /api/nexium/opportunities`, `GET/PUT/DELETE /api/nexium/opportunities/[id]`, `GET/POST/DELETE /api/nexium/opportunities/[id]/apply`.
+  - Squads: `GET/POST /api/nexium/squads` (with `?mine=true` filter), `GET/PUT/DELETE /api/nexium/squads/[id]`, `POST/DELETE /api/nexium/squads/[id]/members`.
+  - All routes use `requireAuth()` with appropriate ownership checks; public endpoints available for discovery.
+- **Nexium Squad Infrastructure** - Teams/squads with quotas, billing, API access, upload tokens, and plans.
+  - `NexiumSquad` model with `storageUsed`, `storageQuotaMB`, `uploadToken` (unique UUID), and `stripeCustomerId` for Stripe billing integration.
+  - `NexiumSquadSubscription` model mirrors user `Subscription`, reuses existing `Product` table for plan management.
+  - `NexiumSquadApiKey` model with `nsk_` prefixed keys, SHA-256 hashed storage, prefix display (first 12 chars), and `lastUsedAt` tracking. Max 10 keys per squad.
+  - Upload token management: `GET/POST /api/nexium/squads/[id]/token` — generate and rotate Bearer tokens for squad file uploads.
+  - API key management: `GET/POST /api/nexium/squads/[id]/keys`, `DELETE /api/nexium/squads/[id]/keys/[keyId]` — full key shown once on creation, only prefix visible after.
+  - Quota endpoint: `GET /api/nexium/squads/[id]/quota` — returns plan name, storage used/quota, upload size cap, percent usage.
+  - Free tier defaults: 5 GB storage, 500 MB upload size cap, 3 custom domains, 10 API keys.
+  - Prisma migration: `20260330135926_add_nexium_squad_billing_and_api_keys`.
+- **Nexium Squad Custom Domains** - Squads can own and manage custom domains independently from users.
+  - `CustomDomain` model updated: `userId` made nullable, new `squadId` foreign key and `NexiumSquad` relation added.
+  - Domain management API: `GET/POST /api/nexium/squads/[id]/domains`, `DELETE /api/nexium/squads/[id]/domains/[domainId]`.
+  - Domain limits enforced per plan (3 for free tier, unlimited for paid plans via subscription lookup).
+  - Cloudflare integration for domain registration and removal via existing `registerCustomDomain`/`removeCustomDomain` utilities.
+  - Upload validation updated: `validateSquadCustomDomain()` validates domain ownership for squad-authenticated uploads.
+- **Nexium Squad Authentication** - Squad-level Bearer token and API key authentication integrated into existing auth system.
+  - New `AuthenticatedSquad` type in `api-auth.ts` with `squadId`, `slug`, `ownerUserId`, `storageUsed`, `storageQuotaMB`, and `authMethod` (`upload_token` | `api_key`).
+  - `getSquadFromBearerToken(req)`: Authenticates squads via Bearer header — tries squad upload token first, then SHA-256 hashes `nsk_` prefixed keys against `NexiumSquadApiKey.keyHash`.
+  - `requireSquadAuth(req)`: Wrapper returning `{ squad, response }` for use in API route handlers.
+  - User domain validation extended: `validateCustomDomain()` now accepts domains owned by any squad the user is a member of.
+- **Nexium Squad ShareX Config** - Pre-configured ShareX `.sxcu` download for squad file uploads.
+  - New endpoint: `GET /api/nexium/squads/[id]/sharex` — generates and downloads a ShareX config file.
+  - Config uses squad's upload token as Bearer auth, prefers squad's primary custom domain if available.
+  - Version 15.0.0 format with MultipartFormData body, `{json:data.url}` response URL parsing.
+  - Only accessible to squad members with an active upload token.
+- **Nexium Dashboard** - Standalone squad management dashboard at `/dashboard/nexium` with full glass-card styling.
+  - Dashboard list page: View all squads the user belongs to, create new squads inline, status badges (Forming/Active/Completed/Disbanded), member counts.
+  - Squad detail page at `/dashboard/nexium/squads/[id]` with membership verification and role-based access.
+  - Tabbed squad management interface with 6 tabs:
+    - **Overview**: Squad info cards (members, domains, API keys), slug, max size, visibility, skills tags.
+    - **Members**: Member list with avatars, role badges (Owner/Member/Observer), kick functionality for owners.
+    - **Uploads**: Upload token display/hide/copy/rotate, ShareX `.sxcu` config download button.
+    - **API Keys**: Create named keys, one-time full key display with copy, revoke keys, prefix-only listing with last-used dates.
+    - **Domains**: Add/remove custom domains, verified/pending status badges, primary domain indicator.
+    - **Storage**: Plan name, storage usage progress bar with color thresholds (green/yellow/red), max upload size display.
+  - Lazy-loaded tab data fetched only when tab is viewed for performance.
+  - All management actions gated by squad role (owner-only for destructive operations).
+- **Nexium Profile Dashboard Tab** - Nexium talent profile management integrated into existing profile settings.
+  - New "Nexium" tab in profile dashboard with `Zap` icon for profile creation and management.
+  - Setup flow for new users: handle and headline input with regex validation and availability check.
+  - Full profile editor: title, headline, availability (Open/Limited/Closed), `lookingFor` tags, timezone, location, visibility toggle.
+  - Skills management section: add/edit/delete skills with level, category, and years of experience fields.
+  - Signals management section: add/edit/delete proof-of-work signals with type, title, description, URL, and verification status.
+- **Nexium Public Profile Section** - Talent information displayed on public user profiles.
+  - New "Talent" tab on public profiles when user has a Nexium profile.
+  - Displays `@handle`, availability badge (color-coded green/yellow/gray), `lookingFor` tags, title, and headline.
+  - Skills listed with color-coded level badges (Beginner blue, Intermediate green, Advanced orange, Expert purple).
+  - Signals listed with type labels, titles, verified checkmarks, and clickable URL links.
+  - Server-side `nexiumProfile` data fetched and passed to `PublicProfile` component.
+- **Rich Embeds Infrastructure** - Advanced metadata handling system for file embeds across Discord, Twitter, and other platforms.
+  - New `bot-handler.ts` middleware detects crawler/bot requests and applies rich embed strategy based on user's `enableRichEmbeds` setting.
+  - New `metadata.ts` core module with `buildRichMetadata()` function implementing platform-specific strategies:
+    - **Images**: Use raw URL for direct embedding (Discord/Twitter show actual image)
+    - **Videos**: og:video for inline playback, og:image for poster thumbnail, Twitter player for iframe embeds
+    - **Audio/Music**: og:audio + cover art thumbnail
+    - **Other files**: Branded OG card with file type badge and metadata
+  - New file classification system (`file-classification.ts`) categorizing files by type (video, image, audio, music, document, code, text, other).
+  - Dynamic OG/Twitter image generation respects active theme colors from site configuration.
+  - `GET /api/internal/file-settings` endpoint for middleware to fetch `enableRichEmbeds` setting without database access on Edge runtime.
+- **Dynamic Open Graph & Twitter Images** - Theme-aware preview cards for file embeds.
+  - New `opengraph-image.tsx` (1200×630px) and `twitter-image.tsx` (1200×628px) dynamic image generators for file pages.
+  - Displays Emberly wordmark, file type icon with label (🎬 Video, 🎵 Audio, 🖼️ Image, etc.), file name, file size.
+  - Subtle radial gradient accents using primary theme color for branded appearance.
+  - Font sizing responds to file name length for proper readability.
+  - Colors extracted from site config theme in real-time.
+- **Twitter Video Player Support** - Minimal HTML player iframe for Twitter video embeds.
+  - New `/[userUrlId]/[filename]/player` route serving minimal HTML page with one `<video>` element.
+  - Supports Twitter's `player` card type for interactive video embeds (requires HTTPS and domain whitelisting).
+  - Access control identical to main file page (respects visibility, password protection, session auth).
+  - Gracefully degrades on unwhitelisted domains — Twitter falls back to summary_large_image.
+- **Embed Preview Dialog** - Dashboard component for previewing embeds on Discord and Twitter before sharing.
+  - Shows file name, size, type badge, and thumbnail/media preview.
+  - Separate Discord and Twitter/X preview tabs.
+  - Demonstrates actual embed appearance including with/without rich embeds enabled.
+  - Located in file card actions for quick preview of how files will appear when shared.
+- **Perks Refresh API** - New `/api/profile/perks/refresh` endpoint to re-check perk eligibility in real-time.
+  - Verifies Discord booster status against current guild membership.
+  - Verifies GitHub contributor status against contribution history.
+  - Handles linked account scenarios (missing tokens, unlinked accounts) gracefully.
+  - Returns structured results with per-platform success/error status.
+  - UI button in Profile → Perks tab allows users to manually trigger re-check.
+- **Unified Glass Styling System** - Consolidated glassmorphism design language across all UI components.
+  - New reusable `glass`, `glass-card`, `glass-subtle`, `glass-hover`, `gradient-border`, and `gradient-border-animated` CSS utility classes.
+  - Applied to 30+ components: footer, leaderboard, legal article, partners, pricing tabs, FAQ, status page, profile cards, testimonials.
+  - Consistent backdrop blur, border opacity, shadow patterns, and color gradients across site.
+  - Improves visual cohesion and reduces code duplication in component-level GlassCard implementations.
+- **Navigation Component Rewrite** - Refactored navigation into modular, maintainable `NavContent` component.
+  - New `packages/components/layout/nav.tsx` with centralized route definitions.
+  - Separated route logic from layout (base, dashboard, admin, extras) for easier maintenance.
+  - Updated `base-nav.tsx` to consume `NavContent` as lightweight wrapper.
+  - Desktop: centered dropdown pill with section icons and nested routes.
+  - Mobile: sheet-based navigation with collapsible sections and auth footer.
+  - Added role-based route filtering: superadmin-only routes hidden from admins, admin routes hidden from users.
+  - Nexium and Leaderboard added to base routes.
+- **User Banner Images** - Profile banner upload support added to user profiles.
+  - New `banner String?` field on `User` model stored as a URL after upload.
+  - `POST/DELETE /api/profile/banner` — upload and remove profile banner.
+  - `GET /api/users/[id]/banner` — public banner endpoint for display on profiles.
+  - Prisma migration: `20260330184144_add_user_banner_field`.
+- **OAuth Social Link Auto-fill** - GitHub and Discord handles automatically populated when linking accounts.
+  - After linking GitHub: `github` profile field auto-set to the linked GitHub login.
+  - After linking Discord: `discord` profile field auto-set to the linked Discord username.
+  - Eliminates the manual copy-paste step previously required after account linking.
+- **User Reports & Bans System** - Community moderation with user-to-user reporting and admin ban management.
+  - New `UserReport` model with `ReportCategory` enum (SPAM, HARASSMENT, INAPPROPRIATE_CONTENT, IMPERSONATION, ABUSE, OTHER) and `ReportStatus` enum (PENDING, REVIEWING, RESOLVED, DISMISSED).
+  - New `UserBan` model recording ban records with issuer, type (temporary/permanent), expiry, and lift metadata.
+  - `User` model extended with `bannedAt`, `banReason`, `banExpiresAt`, and `banType` fields.
+  - Report button on public profiles — authenticated users can report others (cannot self-report); category selector, reason (10–500 chars), and optional details.
+  - `POST /api/reports` — submit a report; unique constraint prevents duplicate reports between the same user pair.
+  - `GET /api/reports/[id]` — reporter or admin can view a specific report.
+  - `GET /api/admin/reports`, `PATCH /api/admin/reports/[id]` — admin lists and resolves reports with filterable status/category.
+  - `POST/DELETE/GET /api/admin/users/[id]/ban` — ban and unban users; admins/superadmins cannot be banned.
+  - Ban enforcement in NextAuth `authorize`: expired temporary bans auto-lift on login; active bans redirect to `AccountSuspended` error page.
+  - Admin reports management page at `/admin/reports` with status filter tabs and user profile links.
+  - Events fired: `moderation.user-reported`, `moderation.report-resolved`, `admin.user-banned`, `admin.user-unbanned`.
+  - Prisma migration: `20260330224911_add_reports_bans_applications`.
+- **Applications System** - Staff applications, partner applications, verification requests, and ban appeals.
+  - New `Application` model with `ApplicationType` enum (STAFF, PARTNER, VERIFICATION, BAN_APPEAL) and `ApplicationStatus` enum (PENDING, REVIEWING, APPROVED, REJECTED, WITHDRAWN).
+  - Public applications landing page at `/applications` with glass cards and "Apply" links per type.
+  - Type-specific validated forms: Staff (role, why, experience, availability), Partner (website, description, audience, collaboration), Verification (reason, social links), Ban Appeal (reason, evidence).
+  - `POST/GET /api/applications` — submit application and list own; duplicate PENDING/REVIEWING check prevents spam.
+  - `DELETE /api/applications/[id]` — withdraw a PENDING application.
+  - `GET /api/admin/applications`, `PATCH /api/admin/applications/[id]` — admin list by type/status and review (REVIEWING/APPROVED/REJECTED).
+  - Approving a BAN_APPEAL application automatically unbans the user (clears all ban fields).
+  - Admin applications management at `/admin/applications` with type/status filters and `/admin/applications/[id]` review page.
+  - Events fired: `application.submitted`, `application.reviewed`.
+- **Admin Discord Alert System** - Admin-only Discord webhook for moderation and system event notifications.
+  - New `packages/lib/events/handlers/admin-discord.ts` with `registerAdminDiscordHandlers()`.
+  - Posts to `DISCORD_WEBHOOK_URL` environment variable (distinct from per-user Discord webhook URLs).
+  - Covers: user bans (🔨 red), unbans (✅ green), user reports (🚨 orange), new applications (📋 blue), testimonials submitted/edited (💬 blue), client errors (🐛 yellow), server crashes (💥 red).
+  - Rich Discord embeds with color-coded severity, user details, and action context.
+- **Client & Server Error Reporting** - Automatic error forwarding to admin Discord.
+  - New public `POST /api/errors/report` endpoint accepting `{ message, url, stack?, type, userAgent? }`.
+  - Error boundary (`app/error.tsx`) automatically POSTs on every client-side render failure via `useEffect`.
+  - Stack traces capped at 2 000 chars; endpoint always returns `204 No Content` to avoid leaking details.
+  - Events: `system.client-error` and `system.server-error` routed to admin Discord.
+- **Testimonial Event Notifications** - Admin Discord notifications on testimonial activity.
+  - `testimonial.submitted` event fired when a testimonial is created via `POST /api/testimonials`.
+  - `testimonial.edited` event fired when a testimonial is updated via `PUT /api/testimonials`.
+  - Admin receives rich embed with user info and content preview (first 100 characters).
+- **Codebase Consolidation Library Suite** - 13 new shared library modules replacing scattered inline logic.
+  - `packages/lib/generators/index.ts` — `generateUrlId()`, `generateShortCode()`, `generateUploadToken()`, and related ID/token utilities.
+  - `packages/lib/pagination/index.ts` — `parsePaginationParams()` and `createPaginatedResponse()` standardizing all paginated API responses.
+  - `packages/lib/users/lookup.ts` — `findUserByIdentifier()`, `emailIsTaken()`, `findUserByIdWithSelect()` for consistent user queries.
+  - `packages/lib/users/service.ts` — `getUserProfile()`, `updateUserProfile()`, `USER_ADMIN_SELECT` constant for admin user views.
+  - `packages/lib/validation/index.ts` — 50+ centralized Zod schemas organized by domain (auth, files, users, domains, billing).
+  - `packages/lib/api/error-handler.ts` — `handleApiError()`, `withErrorHandling()` for consistent API error logging and responses.
+  - `packages/lib/files/service.ts` — 14 file operation functions consolidating upload, update, and delete logic.
+  - `packages/lib/domain/service.ts` — `isValidDomainName()`, `getDomainWithOwnership()`, Cloudflare integration helpers.
+  - `packages/lib/auth/service.ts` — `generateSecureToken()`, `verify2FACode()`, `getBaseUrl()`, `parseVerificationCodes()`.
+  - `packages/lib/notifications/index.ts` — unified `notify()` dispatching emails and Discord events through the event system.
+  - `packages/lib/plans/index.ts` — `planAtLeast()`, `resolvePlanKey()`, plan tier constants for subscription feature gating.
+  - `packages/lib/github/index.ts` — GitHub REST API client with typed interfaces for user, repository, and contribution data.
+  - `packages/lib/events/audit-helper.ts` — `emitAuditEvent()`, `auditAdminAction()`, `auditSecurityEvent()`, `auditBillingEvent()` for structured audit trails.
+
+- **Navigation Mobile Drawer** - Replaced right-side sheet with Apple-style bottom drawer for mobile navigation.
+  - Sheet slides up from the bottom with `rounded-t-2xl` corners and capped at `85dvh`.
+  - Glass backdrop (`bg-background/80 backdrop-blur-xl`) matching v2 design system.
+  - Drag handle ("bezel") positioned at top of drawer — a visual pill indicator consistent with iOS bottom sheets.
+  - Full drag-to-dismiss: pointer/touch events track drag distance and dismiss on 100px+ downward drag, otherwise snap back.
+  - Section headers use `bg-primary/10` icon badges and `rounded-xl` pill buttons for v2 aesthetic.
+  - Active nav items use `bg-primary/10 text-primary` styling instead of flat `bg-secondary` dividers.
+  - Footer profile row shows avatar inline with name for quick profile access.
+  - X close button hidden — bezel drag is the sole dismiss affordance.
+- **ScrollIndicator Component** - New shared `packages/components/ui/scroll-indicator.tsx` for overflow-scrollable tab navs.
+  - Detects horizontal overflow via `ResizeObserver` + scroll events.
+  - Shows left/right fade gradient overlays + `ChevronLeft`/`ChevronRight` icons when content is scrollable in that direction.
+  - `pointer-events-none` overlays so indicator doesn't interfere with scroll or tap.
+  - Integrated into 4 tab-based components: profile settings, Nexium dashboard, PricingTabs, and admin settings manager.
+
+### Changed
+- **v2 Glass Design System Normalization** - Comprehensive site-wide audit and standardization of all card, surface, and container components.
+  - `bg-background/80 backdrop-blur-lg border-border/50 shadow-sm` established as the single canonical surface standard.
+  - `Card` component updated from `bg-card/80` to `bg-background/80` to match glass system opacity.
+  - 30+ components migrated: file cards, shared file cards, file grid (search, filters, pagination, skeleton), URL list tables, URL form, verification codes panel, analytics overview, blog TOC, upload form, OCR dialog, appearance panel, referrals, and more.
+  - `glass-subtle` class redefined from lighter `bg-muted/50` baseline to `bg-background/80 backdrop-blur-md` to match dark glass standard.
+  - All remaining `bg-muted/30`, `bg-background/30`, `bg-background/50` surface patterns normalized to `bg-background/80`.
+  - Hardcoded `dark:` overrides (e.g. `dark:bg-muted/20`, `dark:bg-black/5`) removed from dashboard components — theme-aware tokens handle both modes.
+  - `border-white/[0.0x]` → `border-border/X` and `bg-white/[0.0x]` → `bg-muted/X` replacements throughout.
+  - Profile settings sidebar, admin settings sidebar, and all section panels brought to v2 dark glass standard.
+  - Empty state containers (testimonials, partners) normalized to `bg-background/80`.
+- **Navigation Dropdowns** - All nav sections (Base, Dashboard, Administration, Extras) now use consistent 2-column grid layout.
+  - All `DropdownMenuContent` now render with `min-w-72 p-1.5` and `grid grid-cols-2 gap-0.5` regardless of item count.
+  - Previously only the Administration section (11 items) used the grid; smaller sections used single-column `min-w-40`.
+  - Consistent visual treatment across all nav sections.
+- **CheckoutButton Component** - Extended with styling props for contextual use.
+  - Added `className`, `variant`, and `size` props — if omitted, falls back to previous `w-full` default.
+  - Enables reuse in compact inline contexts without needing a wrapper override.
+- **Verified Badge Purchase Button** - Restyled to visually match Configure dropdown buttons on other add-ons.
+  - Previously rendered as full-width primary button; now uses `variant="outline" size="sm"` to match Configure buttons.
+  - `bg-background/50` styling consistent with the rest of the add-on action row.
+
+### Fixed
+- **Broken Nexium Import Paths** - Corrected 24 API routes and lib files importing from non-existent `discovery` module paths post-rebrand.
+  - `@/packages/lib/discovery` → `@/packages/lib/nexium` in 13 `app/api/discovery/**` route files.
+  - `@/packages/types/dto/discovery` → `@/packages/types/dto/nexium` in 11 `app/api/discovery/**` route files.
+  - Root cause: automated rebrand pass renamed source directories but also incorrectly rewrote internal import paths.
+- **Build Errors — Duplicate Variable Declarations** - Fixed 8 duplicate `const user` and 1 duplicate `const response` blocking production build.
+  - `profile/avatar`, `profile/bash`, `profile/flameshot`, `profile/sharex`, `profile/spectacle`: `requireAuth` returns `{ user }` then same block re-declared `const user` from a Prisma query — renamed DB result to `dbUser` and updated all field accesses.
+  - `analytics/summary` and `analytics/export`: same `user` duplication pattern; `analytics/summary` also had duplicate `const response` — renamed result object to `result` throughout.
+- **Build Error — Missing Module** - Fixed `contact/route.ts` importing from non-existent `@/packages/lib/notifications`.
+  - Corrected to `@/packages/lib/events/utils/discord-webhook` which is the actual `notifyDiscord` export location.
+
+
+  - Outline buttons now use glass styling with semi-transparent background (`bg-background/60 backdrop-blur-sm`).
+  - Default button hover shadow increased and uses primary color tint for glow effect.
+  - Active state changed to `scale-[0.97]` (down from `scale-95`) for subtler press feedback.
+  - Border color on outline buttons refined to `border-white/[0.08]` for better contrast.
+- **Card Component Styling** - Improved shadows, borders, and overall visual depth.
+  - Card border-radius increased from `rounded-xl` to `rounded-2xl`.
+  - Border color updated to `border-white/[0.08]` for consistency with modern design.
+  - Added 2-part shadow system: inset subtle border + outer drop shadow.
+  - Backdrop blur increased to `backdrop-blur-xl` for stronger glass effect.
+  - Transition added for smooth state changes (`transition-all duration-300`).
+- **Layout & Shell Components** - Simplified page headers and containers using unified glass styling.
+  - `PageShell` component now uses `glass-card` class instead of inline backdrop styles.
+  - Page title text updated to use `text-gradient` class for consistent gradient effect.
+  - Removed redundant gradient overlay divs in favor of CSS utility approach.
+  - Footer styling simplified from manual glass setup to `glass` + `gradient-border` classes.
+- **Theme Customizer Changes** - UI improvements and system theme management removal.
+  - Default theme switched from 'default-dark' to 'royal-purple' in config and theme context.
+  - Removed `saveAsSystemTheme()` method and `onSaveSystemTheme` callback (admin-only feature archived).
+  - Theme tabs layout refined with better class ordering consistency.
+  - Advanced color picker UI tweaks for improved readability.
+- **Partners Component Rewrite** - Simplified from complex animated carousel to responsive static grid.
+  - Removed auto-scrolling carousel with pause/resume mechanics.
+  - Replaced with simple 2-5 column responsive grid (2 on mobile, up to 5 on desktop).
+  - Updated to static server component (removed client-side state management).
+  - Hover effects simplified to subtle background and shadow changes.
+  - Tooltip/expanded info removed in favor of simpler truncated name/tagline display.
+- **FAQ Accordion Refactoring** - Consolidated multi-card layout to single unified FAQ section.
+  - Changed from 2-column grid of individual GlassCards to single card with divided items.
+  - Added divider lines between questions for better visual separation.
+  - Improved padding and spacing for better mobile readability.
+  - ChevronDown rotation transitions added for expand/collapse cues.
+  - Answer text styling improved with `leading-relaxed` for better readability.
+- **Leaderboard Component Updates** - Animation consolidation and glass styling migration.
+  - Replaced individual Tailwind animations (fade-in, slide-in, zoom-in) with unified `animate-fade-up` class.
+  - Removed `animate-float` duration overrides, now uses consistent animation timing.
+  - Updated loading skeleton colors from `bg-muted` to `bg-primary/10` and `bg-primary/5` for consistency.
+  - GlassCards updated to remove inline gradient overlays in favor of unified `glass` class.
+  - Podium card borders changed from generic highlight to `gradient-border-animated` for top contributor.
+  - Hover states improved with consistent `glass-hover` class application.
+- **Status Page Components** - Unified styling and simplified color scheme.
+  - Updated all inline glass styling to use `glass` utility class.
+  - Component row backgrounds changed from `bg-background/30` to `bg-white/[0.03]` for subtler appearance.
+  - Border colors refined to `border-white/[0.04]` across all component state levels.
+  - Removed redundant gradient overlay divs.
+- **Profile Notifications UI** - Enhanced Discord webhook configuration with better layout and validation.
+  - Master toggle for Discord notifications now disabled when no webhook URL is set.
+  - Webhook URL input has visual feedback during save/test operations.
+  - Preference category switches disabled when master toggle is off.
+  - Toast notifications for all save, test, and toggle operations.
+  - Better label and description text for Discord notification features.
+- **Email Template Updates** - Password reset link expiration changed from hours to minutes.
+  - `PasswordResetEmail` component now shows expiration in `expiresInMinutes` (default 30) instead of `expiresInHours`.
+  - Updated prop names for clarity: `expiresInHours` → `expiresInMinutes`.
+  - Email template adjusted timeout display to use minutes for more precise user expectations.
+- **Markdown Component Relocations** - Standardized documentation rendering paths.
+  - `MarkdownRenderer` moved from `packages/components/docs/` to `packages/components/shared/`.
+  - `LegalArticle.tsx` import updated to reference new location.
+  - Shared status enables reuse across legal, blog, and documentation pages.
+- **Public Profile Styling** - Reduced visual noise with glass-subtle styling for opportunity cards.
+  - "How to Earn Perks" section updated to use `glass-subtle` background.
+  - Contributor, Discord Booster, and Affiliate cards now use consistent `glass-subtle glass-hover` classes.
+  - Removed explicit `bg-muted/30` and `hover:bg-muted/50` in favor of unified glass styling.
+- **Login History Styling** - Updated background colors to match modern white/opacity scheme.
+  - Recent login highlight changed from `border-primary/30 bg-primary/5` to better contrast `bg-white/[0.03]` base.
+  - Older login entries updated to `border-white/[0.04] bg-white/[0.03]` instead of `border-border/50 bg-background/50`.
+- **Auth Error Page** - Added `AccountSuspended` error state.
+  - New case with user-friendly message: "Your account has been suspended. Contact support if you believe this is an error."
+  - Zero admin details exposed — ban reason and issuer are never shown to the affected user.
+- **Dashboard Navigation** - Added "Squads" link to dashboard navigation routes.
+  - New `/dashboard/nexium` entry in `dashboardRoutes` using `Sparkles` icon, positioned after Analytics.
+  - Provides direct access to Nexium squad management from the main dashboard menu.
+- **Custom Domain Model** - Extended to support squad ownership alongside user ownership.
+  - `userId` field changed from required `String` to optional `String?` to allow squad-only domains.
+  - New `squadId String?` field with relation to `NexiumSquad` model.
+  - Domain validation updated to accept domains owned by any squad the authenticated user is a member of.
+- **Verification Codes Panel** - Glass styling consolidation and layout improvements.
+  - Panel header refactored to use `overflow-hidden glass rounded-2xl` consistent with other cards.
+  - Removed inline gradient overlay div (now handled by `glass` utility class).
+  - Improved spacing and relative positioning for cleaner structure.
+- **Profile Page Components** - Extensive glass styling migration and consistency improvements.
+  - `GlassCard` wrapper component standardized to `rounded-2xl glass transition-all duration-300`.
+  - Removed all inline `bg-white/10 dark:bg-black/10 backdrop-blur-xl` patterns in favor of utility classes.
+  - Profile data explorer, testimonials, and shared file sections updated to use `glass` class.
+  - Consistent `glass-subtle` styling for list items, input backgrounds, and secondary sections.
+- **File Components** - Unified glass styling across file operations.
+  - Collaborator manager buttons and content updated to `glass-subtle glass-hover` classes.
+  - File actions buttons (copy, download, open raw, OCR, etc.) now use `glass-subtle glass-hover` classes.
+  - Suggestion manager content sections updated with `glass-subtle` styling.
+  - Code viewer tabs and preview areas now use `glass-subtle` class.
+- **Form & Upload Components** - Improved styling for file transfer operations.
+  - Upload form drag-and-drop zone updated with `bg-white/[0.03]` for better contrast.
+  - File list items changed from `bg-white/10 dark:bg-black/10` to `glass-subtle` class.
+  - Paste form tabs and preview sections updated to use `glass-subtle` styling.
+  - Suggest edit form components receive `glass-subtle` treatment for consistency.
+- **Pricing Components** - Comprehensive glass styling updates across pricing UI.
+  - All GlassCard components in pricing pages now use simplified `glass` class.
+  - Plan cards, add-on selectors, current plan cards updated with consistent styling.
+  - FAQ accordion items use `glass-subtle` for better visual hierarchy.
+  - Pricing tab headers updated to `glass` styling.
+- **Legacy Component Removals** - Deleted unused documentation component library.
+  - Removed `packages/components/docs/BlogToc.tsx` - blog table of contents component.
+  - Removed `packages/components/docs/DocsAlert.tsx` - info/warning/danger alert variants.
+  - Removed `packages/components/docs/DocsBrowser.tsx` - searchable docs listing UI.
+  - Removed `packages/components/docs/DocsCard.tsx` - simple doc card wrapper.
+  - Removed `packages/components/docs/DocsShell.tsx` - docs page shell layout.
+  - Removed `packages/components/docs/DocsToc.tsx` - docs table of contents sidebar.
+  - Removed `packages/components/docs/EndpointTable.tsx` - API endpoint listing table.
+  - Removed `packages/components/docs/SubPageSelector.tsx` - doc category selector.
+  - Moved `MarkdownRenderer` from `docs/` to `shared/` for reuse across site.
+  - Removed `packages/components/docs/nav-links.ts` - hardcoded docs navigation routes.
+
+### Fixed
+- **Theme Management** - Fixed system-theme context to properly initialize with royal-purple default.
+  - Default theme context now matches config default ('royal-purple' instead of 'default-dark').
+  - Theme initialization logic consolidated to prevent mismatches between system and user preferences.
+- **Custom Domain Lookup Edge Cases** - Improved error handling in proxy domain routing.
+  - Added proper try-catch around domain lookup API calls.
+  - Returns graceful fallback when lookup fails or domain not found.
+  - Non-root paths on custom domains now skip rewrite and proceed with normal routing.
+- **Profile Perks Refresh** - Fixed missing import of new perk utilities in profile component.
+  - Added `getPerkDisplayInfo()` function import and usage in perk calculation logic.
+  - Properly handles missing or empty perk roles without errors.
+
+### Removed
+- **ST5 Fan Hub System** - Removed ST5 (streaming show fan community hub) in preparation for feature sunset.
+  - Deleted `packages/components/st5/Comments.tsx` - full comment system with replies, reactions, image attachments, spoiler tags.
+  - Deleted `packages/components/st5/Countdown.tsx` - countdown timer to release dates with live status.
+  - Deleted `packages/components/st5/Facts.tsx` - info cards, viewing tips, and cast/crew notes.
+  - Removed Prisma models: `St5Comment`, `St5CommentReply`, `St5CommentReaction`, and `St5CommentAttachment` table.
+  - Removed `/api/st5/*` API routes: `/comments`, `/comments/:id`, `/comments/:id/replies`, `/comments/:id/reactions`.
+  - Removed `/st5` page and related ST5 navigation.
+  - Removed ST5 routes from public middleware paths and auth exclusions.
+  - Migration: `20260614000000_remove_docs_and_st5`.
+- **Database-Backed Documentation System** - Removed DocPage model and related infrastructure.
+  - Deleted `DocPage` Prisma model and associations.
+  - Removed doc service (`packages/lib/docs/service.ts`) and doc loader (`packages/lib/docs/load-markdown.ts`).
+  - Removed enums: `DocCategory` (API, MAIN, USERS, HOSTING, INTEGRATIONS, SECURITY, TROUBLESHOOTING, ADMINS).
+  - Removed `DocStatus` enum (DRAFT, PUBLISHED, ARCHIVED).
+  - Removed `/admin/docs` route and admin UI components.
+  - Documentation now served from external docs site (docs.embrly.ca) with link in navigation.
+  - Markdown fallback for legacy docs removed (external docs site is canonical).
+- **System Theme Save Feature** - Removed admin capability to set system-wide default theme.
+  - Deleted `onSaveSystemTheme` callback from theme context provider.
+  - Removed `saveAsSystemTheme()` method from theme context.
+  - Removed admin theme override API.
+  - Only user theme customization now supported (stored in profile).
+
+### Security
+- **Discord Webhook URL Validation** - All Discord webhook URLs validated as proper HTTPS endpoints.
+  - Zod schema ensures webhook URLs are valid URLs (not arbitrary strings).
+  - Webhook URLs stored securely in database (plaintext but should be rotated if leaked).
+  - Test endpoint validates webhook URL before sending to Discord.
+- **Nexium Squad API Key Security** - Secure key generation and storage for squad integrations.
+  - API keys generated with 24 cryptographically random bytes (`crypto.randomBytes`) encoded as base64url with `nsk_` prefix.
+  - Keys stored as SHA-256 hashes only — full key returned once at creation time and never retrievable again.
+  - Bearer token authentication checks squad upload token first, then hashes `nsk_` prefixed tokens against stored key hashes.
+  - All squad management endpoints enforce ownership verification (owner-only for destructive operations).
+
+### Technical
+- **Configuration Defaults** - System now defaults to Royal Purple theme instead of Default Dark.
+  - Updated `DEFAULT_CONFIG` in `packages/lib/config/index.ts` with Royal Purple color values.
+  - Updated `DEFAULT_THEME_CONFIG` in `packages/lib/theme/theme-types.ts`.
+  - Updated initial user theme in theme provider to match system default.
+- **Prisma Migrations** - Several major migrations in this version.
+  - `20260329120000_migrate_users_to_royal_purple` - Config defaults update (informational).
+  - `20260330011308_add_discord_webhook_notification_preferences` - Discord fields on User model.
+  - `20260330091056_add_nexium_tables` - 8 enums and 5 core Nexium tables (Profile, Skill, Signal, Opportunity, Application) with Squad and SquadMember.
+  - `20260330135926_add_nexium_squad_billing_and_api_keys` - Squad billing fields (storageUsed, storageQuotaMB, uploadToken, stripeCustomerId), NexiumSquadSubscription, and NexiumSquadApiKey tables.
+  - `20260330165324_unify_nexium_profile_with_user` - Linked `NexiumProfile` directly to `User` schema.
+  - `20260330174227_add_nexium_active_hours` - Added Nexium active hours tracking field to `NexiumProfile`.
+  - `20260330184144_add_user_banner_field` - Added `banner String?` field to `User` model.
+  - `20260330224911_add_reports_bans_applications` - Added `UserBan`, `UserReport`, `Application` models; 4 new enums; ban fields on `User`.
+  - `20260614000000_remove_docs_and_st5` - Removed DocPage and St5Comment models and relations.
+- **Embed System Architecture** - Bot handler middleware + metadata builders for platform-specific embed strategy.
+  - `packages/lib/middleware/bot-handler.ts`: Detects crawler/bot requests (Discord, Telegram, Twitter, Facebook, LinkedIn), fetches `enableRichEmbeds` setting via internal API, and conditionally redirects to `/raw` if disabled.
+  - `packages/lib/embeds/metadata.ts`: Core module with `buildRichMetadata()`, `buildMinimalMetadata()` functions and metadata options interface.
+  - `packages/lib/embeds/file-classification.ts`: MIME type classifier returning boolean flags (isVideo, isImage, isAudio, isMusic, isDocument, isCode, isText, other).
+  - Dynamic image generators use Next.js `ImageResponse` API with theme color extraction via `getConfig()`.
+  - Embed preview component at `packages/components/dashboard/file-card/embed-preview-dialog.tsx` for Discord/Twitter preview simulation.
+  - `registerDiscordHandlers()` called during `registerAllHandlers()` in event initialization.
+  - Discord handler listens for billing, security, auth, and account events.
+  - Respects user preference gates before sending notifications.
+- **Event System Expansion** - 10 new event types added to `EventTypeMap` across 4 new categories.
+  - New event categories: `moderation`, `applications`, `testimonials`, `system`.
+  - New events: `admin.user-banned`, `admin.user-unbanned`, `moderation.user-reported`, `moderation.report-resolved`, `application.submitted`, `application.reviewed`, `testimonial.submitted`, `testimonial.edited`, `system.client-error`, `system.server-error`.
+  - `packages/lib/events/handlers/nexium.ts` — Nexium-specific event handler for squad and opportunity notifications.
+  - Email templates added: `nexium-welcome.tsx`, `nexium-squad-invite.tsx`, `nexium-opportunity.tsx` in `packages/lib/emails/templates/`.
+- **API Route Changes** - Removed `/admin/docs` endpoints, added new internal endpoint.
+  - New: `POST /api/profile/discord-webhook/test` - test webhook URL.
+  - New: `POST /api/profile/perks/refresh` - refresh perk status.
+  - New: `GET /api/internal/domain-lookup` - lookup custom domain owner (internal use only).
+  - New: 20+ Nexium API routes under `/api/nexium/` covering profiles, skills, signals, opportunities, applications, squads, squad tokens, squad keys, squad domains, squad quota, and squad ShareX config.
+  - New: `POST /api/reports`, `GET /api/reports/[id]` - user report submission and view.
+  - New: `GET /api/admin/reports`, `PATCH /api/admin/reports/[id]` - admin report management.
+  - New: `POST/DELETE/GET /api/admin/users/[id]/ban` - user ban management.
+  - New: `POST/GET /api/applications`, `DELETE /api/applications/[id]` - application lifecycle.
+  - New: `GET /api/admin/applications`, `PATCH /api/admin/applications/[id]` - admin application review.
+  - New: `POST /api/errors/report` - public client/server error ingestion.
+  - New: `POST/DELETE /api/profile/banner` - user banner image upload and removal.
+  - New: `GET /api/users/[id]/banner` - public banner image retrieval.
+  - New: `GET /api/profile/avatar/linked` - linked account avatar endpoint.
+- **Theme System: System Admin Themes & Hue-Based Colors** - Extended theme initialization with priority system and dynamic color generation.
+  - `ThemeInitializer.tsx` enhanced with system theme support and fallback priority: User theme → System admin theme → Config default theme.
+  - New `generateHueColors()` function creates 18-color palettes dynamically based on hue input (0-360°), maintaining destructive reds.
+  - System themes support `hue:` prefix format (e.g., `hue:220` for blue theme) for programmatic generation.
+  - Theme colors applied globally via `--color-*` CSS variables with hsl() values.
+  - Falls back gracefully when colors missing: generates them on demand or uses config defaults.
+- **Authentication Event Logging** - Audit trail integration for all login events.
+  - New `'auth.login'` event emitted during successful credential/OAuth authentication.
+  - Event captures: userId, email, method (credentials/oauth), success status, isNewDevice flag, and full login context.
+  - Enables audit logs and security monitoring for account access patterns.
+  - Non-blocking emission allows fast auth completion without waiting for event processing.
+- **Auth Header Handling** - Improved OAuth callback parameter isolation.
+  - Fixed GitHub and Discord OAuth callback handlers to extract `NEXT_PUBLIC_BASE_URL` from env (not request.url).
+  - Prevents production OAuth redirects from inheriting localhost domains in development environments.
+  - Ensures `redirect_uri` parameter consistency in OAuth flow.
+- **Config Cache Optimization** - Reduced development cache TTL for faster iteration.
+  - Development cache TTL reduced from 30 seconds to 5 seconds (production unchanged at 5 minutes).
+  - Faster config updates during development without requiring server restart.
+  - `CONFIG_TTL_SECONDS` and `SETUP_TTL_SECONDS` now use unified time constant.
+- **File Classification System** - Complete MIME type categorization for embed strategies.
+  - New `file-classification.ts` module exports `classifyMimeType()` function.
+  - Returns object with boolean flags: `isVideo`, `isImage`, `isAudio`, `isMusic`, `isDocument`, `isCode`, `isText`, `other`.
+  - Powers metadata builder strategy selection (different handling for videos vs images vs audio).
+  - Covers 50+ common MIME types with sensible categorization.
+- **File Access & Lookup Refactoring** - Modularized file access control and path resolution.
+  - New `packages/lib/files/access.ts` with `checkFileAccess()` function validating visibility, password, and auth.
+  - New `packages/lib/files/lookup.ts` with `findFileByUrlPath()` and `findFileBySha256()` for path-based and hash-based lookup.
+  - Enables consistent access checking across file page, API routes, and middleware.
+  - Supports public files, private files with password, private files requiring login.
+- **Upload Validation Enhancements** - Squad domain and custom domain support in upload flows.
+  - `validateSquadCustomDomain()` function validates domain ownership for squad uploads.
+  - Squad upload flow checks domain membership via squad relationship.
+  - `validateCustomDomain()` extended to check both user-owned and squad-owned domains.
+  - Domain whitelist validation ensures files can only be uploaded to domains the uploader has permission for.
+- **Storage Quota System** - Squad storage tracking and enforcement.
+  - `packages/lib/storage/quota.ts` module with `checkSquadQuota()` and `updateSquadStorage()` functions.
+  - Quota validation on file upload prevents exceeding squad's `storageQuotaMB` limit.
+  - Storage used tracking in `NexiumSquad.storageUsed` (bytes).
+  - Free tier default 5 GB quota sufficient for typical use cases.
+- **Discord Event Handler** - Notification delivery system for Discord webhooks.
+  - `packages/lib/events/handlers/discord.ts` with `registerDiscordHandlers()` function.
+  - Listens to events: `billing.*`, `security.*`, `auth.*`, `account.*` matching user's Discord preferences.
+  - Formats rich Discord embeds with event-specific colors, titles, and description text.
+  - Webhook retry logic with exponential backoff for failed deliveries.
+  - Event preference gating prevents unnecessary API calls when user has category disabled.
+- **Discord Notification Preferences** - Utilities for preference validation and formatting.
+  - `packages/lib/events/utils/discord-preferences.ts` with `validateDiscordPreferences()` Zod schema.
+  - Preference categories: Security (2FA, suspicious logins), Account (email/password/profile changes), Billing (credit application, subscription changes), Marketing, Product Updates.
+  - Default preferences: Security ON, Account/Billing ON, Marketing/Updates OFF (opt-in for promotional content).
+  - Removed: All `/api/admin/docs` routes.
+  - Removed: All `/api/st5` routes.
+
 ## [1.4.0] - 2026-01-04
 
 ### Added

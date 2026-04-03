@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 
 import { randomInt } from 'crypto'
 import { z } from 'zod'
 
-import { authOptions } from '@/packages/lib/auth'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, VerificationCodeEmail } from '@/packages/lib/emails'
+import { emitAuditEvent } from '@/packages/lib/events/audit-helper'
 
 const migrationSchema = z.object({
     email: z.string().email(),
@@ -17,17 +17,11 @@ const migrationSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
+        const { user: authUser, response: authResponse } = await requireAuth(req)
+        if (!authUser) return authResponse!
 
         // Rate limit: 5 attempts per 10 minutes per user
-        const rateLimit = await rateLimiter.checkFixed(`alpha-migration:${session.user.id}`, 5, 600)
+        const rateLimit = await rateLimiter.checkFixed(`alpha-migration:${authUser.id}`, 5, 600)
         if (!rateLimit.allowed) {
             return NextResponse.json(
                 { error: 'Too many requests. Please try again later.' },
@@ -48,7 +42,7 @@ export async function POST(req: Request) {
 
         // Verify the user needs alpha migration
         const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
+            where: { id: authUser.id },
             select: {
                 id: true,
                 name: true,
@@ -208,6 +202,12 @@ export async function POST(req: Request) {
                     verificationCodes: remainingCodes,
                     alphaUser: true, // Mark as OG alpha supporter!
                 },
+            })
+
+            // Emit audit event (fire-and-forget)
+            void emitAuditEvent('account.email-verified', {
+                userId: user.id,
+                email: (validCode.email || body.email) as string,
             })
 
             // Grant alpha supporter bonus: +1 custom domain slot

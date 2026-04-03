@@ -1,22 +1,16 @@
 import { NextResponse } from 'next/server'
 
-import { randomBytes, createHash } from 'crypto'
 import { z } from 'zod'
 
+import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { prisma } from '@/packages/lib/database/prisma'
 import { PasswordResetEmail, sendTemplateEmail } from '@/packages/lib/emails'
-import { rateLimiter } from '@/packages/lib/cache/rate-limit'
+import { events } from '@/packages/lib/events'
+import { getBaseUrl, generateSecureToken } from '@/packages/lib/auth/service'
 
 const requestSchema = z.object({
     email: z.string().email(),
 })
-
-function getBaseUrl() {
-    if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL
-    if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-    return 'http://localhost:3000'
-}
 
 export async function POST(req: Request) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
@@ -46,9 +40,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true })
     }
 
-    const token = randomBytes(32).toString('hex')
-    const hashedToken = createHash('sha256').update(token).digest('hex')
-    const expires = new Date(Date.now() + 30 * 60 * 1000)
+    const { token, hashedToken, expiresAt: expires } = generateSecureToken(30 * 60 * 1000)
 
     await prisma.user.update({
         where: { id: user.id },
@@ -58,7 +50,7 @@ export async function POST(req: Request) {
         },
     })
 
-    const baseUrl = getBaseUrl().replace(/\/$/, '')
+    const baseUrl = getBaseUrl()
     const resetUrl = `${baseUrl}/auth/reset?token=${token}&email=${encodeURIComponent(email)}`
 
     try {
@@ -68,14 +60,21 @@ export async function POST(req: Request) {
             template: PasswordResetEmail,
             props: {
                 resetUrl,
-                expiresMinutes: 30,
-                userName: user.name || undefined,
+                expiresInMinutes: 30,
             },
         })
     } catch (error) {
         console.error('Failed to send password reset email', error)
         return NextResponse.json({ error: 'Failed to send reset email' }, { status: 500 })
     }
+
+    // Emit auditable event (fire-and-forget)
+    void events.emit('auth.password-reset-requested', {
+        userId: user.id,
+        email: user.email,
+        expiresAt: expires,
+        context: { ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? undefined },
+    }).catch((err) => console.error('[Events] Failed to emit auth.password-reset-requested', err))
 
     return NextResponse.json({ ok: true })
 }
