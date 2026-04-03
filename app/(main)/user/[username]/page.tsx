@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
+import { Lock } from 'lucide-react'
 import { PublicProfile } from '@/packages/components/profile/public-profile'
 import { calculateStorageBonusGB, calculateDomainSlotBonus, getContributorMilestone, getDiscordBoosterMilestone } from '@/packages/lib/perks'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -64,7 +65,6 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
         { vanityId: username },
         { name: { equals: username, mode: 'insensitive' } },
       ],
-      isProfilePublic: true,
     },
     select: {
       id: true,
@@ -85,6 +85,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
       vanityId: true,
       alphaUser: true,
       role: true,
+      isProfilePublic: true,
       _count: {
         select: {
           files: {
@@ -98,12 +99,28 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
           providerUsername: true,
         },
       },
-      isProfilePublic: true,
     },
   })
 
   if (!user) {
     notFound()
+  }
+
+  // Private profile — show a locked placeholder rather than 404
+  if (!user.isProfilePublic) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="glass-card max-w-sm w-full p-8 text-center space-y-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 mx-auto">
+            <Lock className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">{user.name || 'This user'}</h1>
+            <p className="text-sm text-muted-foreground mt-1">This profile is private.</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Calculate perk benefits on server side

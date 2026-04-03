@@ -61,44 +61,55 @@ export async function GET(
     let totalDeletions = 0
     const contributedRepos: typeof orgRepos = []
 
-    for (const repo of orgRepos) {
-      try {
+    // Parallel: fetch commits for all repos simultaneously
+    const repoCommitResults = await Promise.allSettled(
+      orgRepos.map(async (repo) => {
         const commits = await getRepoCommits('EmberlyOSS', repo.name, githubAccount.providerUsername, 5)
+        return { repo, commits }
+      })
+    )
 
-        if (commits.length === 0) continue
-        contributedRepos.push(repo)
+    const reposWithCommits = repoCommitResults
+      .filter((r): r is PromiseFulfilledResult<{ repo: (typeof orgRepos)[0]; commits: Awaited<ReturnType<typeof getRepoCommits>> }> =>
+        r.status === 'fulfilled' && r.value.commits.length > 0
+      )
+      .map((r) => r.value)
 
-        for (const commit of commits) {
-          try {
-            const commitDetail = await getCommitDetail('EmberlyOSS', repo.name, commit.sha)
+    for (const { repo } of reposWithCommits) {
+      contributedRepos.push(repo)
+    }
 
-            if (commitDetail) {
-              const additions = commitDetail.stats?.additions || 0
-              const deletions = commitDetail.stats?.deletions || 0
-              const filesChanged = commitDetail.files?.length || 0
+    // Parallel: fetch all commit details across all repos simultaneously
+    const commitDetailResults = await Promise.allSettled(
+      reposWithCommits.flatMap(({ repo, commits }) =>
+        commits.map(async (commit) => {
+          const detail = await getCommitDetail('EmberlyOSS', repo.name, commit.sha)
+          return { repo, commit, detail }
+        })
+      )
+    )
 
-              recentCommits.push({
-                sha: commit.sha.substring(0, 7),
-                message: commit.commit.message.split('\n')[0],
-                date: commit.commit.author.date,
-                url: commit.html_url,
-                repo: repo.name,
-                additions,
-                deletions,
-                filesChanged,
-              })
+    for (const result of commitDetailResults) {
+      if (result.status !== 'fulfilled' || !result.value.detail) continue
+      const { repo, commit, detail } = result.value
+      const additions = detail.stats?.additions || 0
+      const deletions = detail.stats?.deletions || 0
+      const filesChanged = detail.files?.length || 0
 
-              totalFilesChanged += filesChanged
-              totalAdditions += additions
-              totalDeletions += deletions
-            }
-          } catch (commitError) {
-            console.error(`Error fetching commit ${commit.sha}:`, commitError)
-          }
-        }
-      } catch (error) {
-        console.error(`Error fetching commits for ${repo.name}:`, error)
-      }
+      recentCommits.push({
+        sha: commit.sha.substring(0, 7),
+        message: commit.commit.message.split('\n')[0],
+        date: commit.commit.author.date,
+        url: commit.html_url,
+        repo: repo.name,
+        additions,
+        deletions,
+        filesChanged,
+      })
+
+      totalFilesChanged += filesChanged
+      totalAdditions += additions
+      totalDeletions += deletions
     }
 
     // Sort commits by date and limit to 10 most recent

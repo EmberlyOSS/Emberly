@@ -38,7 +38,7 @@ interface AddOnSelectorProps {
     priceId: string
     mode?: 'subscription' | 'payment'
     type?: string
-    billingPeriod?: 'one-time' | 'monthly'
+    billingPeriod?: 'one-time' | 'monthly' | 'yearly'
     min?: number
     max?: number
     step?: number
@@ -51,7 +51,7 @@ export default function AddOnSelector({
     pricePerUnit,
     unitLabel,
     priceId,
-    mode = 'payment',
+    mode: modeProp,
     type,
     billingPeriod = 'one-time',
     min = 1,
@@ -59,6 +59,7 @@ export default function AddOnSelector({
     step = 1,
     defaultValue = 1,
 }: AddOnSelectorProps) {
+    const mode = modeProp ?? (billingPeriod === 'yearly' ? 'subscription' : 'payment')
     const isFixed = min === max
     const [open, setOpen] = useState(false)
     const [qty, setQty] = useState(defaultValue)
@@ -100,7 +101,7 @@ export default function AddOnSelector({
                                     {pricePerUnit != null ? `$${pricePerUnit.toFixed(2)}` : '—'}
                                 </span>
                                 <span className="text-sm text-muted-foreground">
-                                    / {unitLabel} ({billingPeriod === 'monthly' ? 'per month' : 'one-time'})
+                                    / {unitLabel} ({billingPeriod === 'monthly' ? 'per month' : billingPeriod === 'yearly' ? 'per year' : 'one-time'})
                                 </span>
                             </div>
                         </div>

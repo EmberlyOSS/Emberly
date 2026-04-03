@@ -156,8 +156,8 @@ export async function PUT(req: Request) {
       body.storageQuotaMB !== undefined ||
       body.grantStorageGB !== undefined ||
       body.grantCustomDomains !== undefined ||
-      raw.planProductId !== undefined ||
-      raw.planSlug !== undefined
+      body.planProductId !== undefined ||
+      body.planSlug !== undefined
 
     if (sensitiveRequested) {
       const { response: saResp } = await requireSuperAdmin()
@@ -223,13 +223,13 @@ export async function PUT(req: Request) {
     }
 
     // Allow superadmins to change the user's plan by providing a product id or slug
-    if (raw.planProductId || raw.planSlug) {
+    if (body.planProductId || body.planSlug) {
       try {
         const product = await prisma.product.findFirst({
           where: {
             OR: [
-              raw.planProductId ? { stripeProductId: String(raw.planProductId) } : undefined,
-              raw.planSlug ? { slug: String(raw.planSlug) } : undefined,
+              body.planProductId ? { stripeProductId: String(body.planProductId) } : undefined,
+              body.planSlug ? { slug: String(body.planSlug) } : undefined,
             ].filter(Boolean) as any,
           },
         })

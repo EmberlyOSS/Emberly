@@ -285,7 +285,7 @@ export function ProfileClient({
                     <div>
                       <div className="font-medium">Current plan</div>
                       <div className="text-sm text-muted-foreground">
-                        {user.subscription.productId}
+                        {user.subscription.productName ?? user.subscription.productId}
                       </div>
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -295,14 +295,23 @@ export function ProfileClient({
 
                   {user.subscription.currentPeriodEnd && (
                     <div className="mt-3 pt-3 border-t border-border/50 dark:border-border/20 text-sm text-muted-foreground">
-                      Expires:{' '}
+                      Renews:{' '}
                       {format(new Date(user.subscription.currentPeriodEnd), 'PPP')}
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 text-sm text-muted-foreground">
-                  No active subscription
+                  No active subscription — if you recently subscribed,{' '}
+                  <button
+                    className="text-primary underline underline-offset-2 hover:no-underline"
+                    onClick={async () => {
+                      await fetch('/api/payments/sync-subscription', { method: 'POST' })
+                      window.location.reload()
+                    }}
+                  >
+                    click here to sync
+                  </button>
                 </div>
               )}
 

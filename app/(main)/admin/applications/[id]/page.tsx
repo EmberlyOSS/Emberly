@@ -111,7 +111,7 @@ export default async function AdminApplicationDetailPage({
                   </div>
                   {application.user.urlId && (
                     <Link
-                      href={`/${application.user.urlId}`}
+                      href={`/user/${application.user.urlId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline"

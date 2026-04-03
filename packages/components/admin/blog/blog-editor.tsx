@@ -81,7 +81,7 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
         content,
         excerpt,
         status,
-        publishedAt: publishedAt || null,
+        publishedAt: publishedAt ? new Date(publishedAt).toISOString() : null,
       }
       let res
       if (postId) {

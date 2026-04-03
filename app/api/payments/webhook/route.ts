@@ -37,7 +37,9 @@ export async function POST(req: Request) {
                     const stripeSub = await stripe.subscriptions.retrieve(subId, { expand: ['items.data.price.product'] })
                     const customer = stripeSub.customer as string
                     const product = (stripeSub.items.data[0].price.product as any)?.id || null
-                    const currentPeriodEnd = stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null
+                    // Clover API: current_period_end moved to item level
+                    const rawPeriodEnd = (stripeSub as any).current_period_end ?? (stripeSub.items.data[0] as any)?.current_period_end
+                    const currentPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : null
 
                     // find user by stripe customer id or client_reference_id
                     let user = null
@@ -49,10 +51,14 @@ export async function POST(req: Request) {
                     }
 
                     if (user) {
+                        // Resolve our DB product from the Stripe product ID
+                        const dbProduct = product ? await prisma.product.findFirst({ where: { stripeProductId: product } }) : null
+                        const resolvedProductId = dbProduct?.id || product || 'unknown'
+
                         // upsert subscription
                         await upsertSubscriptionRecord({
                             userId: user.id,
-                            productId: product || 'unknown',
+                            productId: resolvedProductId,
                             stripeSubscriptionId: subId,
                             status: stripeSub.status,
                             currentPeriodEnd,
@@ -63,8 +69,6 @@ export async function POST(req: Request) {
                             await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer } })
                         }
 
-                        // Resolve product name for notification
-                        const dbProduct = product ? await prisma.product.findFirst({ where: { stripeProductId: product } }) : null
                         const planName = dbProduct?.name || 'Unknown Plan'
                         const interval = stripeSub.items.data[0]?.price?.recurring?.interval === 'year' ? 'year' : 'month'
                         const amountCents = stripeSub.items.data[0]?.price?.unit_amount || 0
@@ -160,15 +164,22 @@ export async function POST(req: Request) {
                 if (subscriptionId) {
                     const stripeSub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price.product'] })
                     const customer = stripeSub.customer as string
-                    const product = (stripeSub.items.data[0].price.product as any)?.id || null
-                    const currentPeriodEnd = stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null
+                    const stripeProductId = (stripeSub.items.data[0].price.product as any)?.id || null
+                    // Clover API: current_period_end moved to item level
+                    const rawPeriodEnd = (stripeSub as any).current_period_end ?? (stripeSub.items.data[0] as any)?.current_period_end
+                    const currentPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : null
 
                     const user = await prisma.user.findFirst({ where: { stripeCustomerId: customer } })
                     if (user) {
+                        // Map Stripe product ID → internal DB product ID
+                        const dbProduct = stripeProductId
+                            ? await prisma.product.findFirst({ where: { stripeProductId } })
+                            : null
+                        const resolvedProductId = dbProduct?.id || stripeProductId || 'unknown'
                         // update or create subscription
                         await upsertSubscriptionRecord({
                             userId: user.id,
-                            productId: product || 'unknown',
+                            productId: resolvedProductId,
                             stripeSubscriptionId: subscriptionId,
                             status: stripeSub.status,
                             currentPeriodEnd,
@@ -227,9 +238,6 @@ export async function POST(req: Request) {
                 const subscription = event.data.object as any
                 const stripeSubId = subscription.id as string
                 const customerId = subscription.customer as string
-                const currentPeriodEnd = subscription.current_period_end
-                    ? new Date(subscription.current_period_end * 1000)
-                    : null
 
                 const user = await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
                 if (user) {
@@ -241,11 +249,16 @@ export async function POST(req: Request) {
                         ? await prisma.product.findFirst({ where: { stripeProductId } })
                         : null
 
+                    // Clover API: current_period_end moved to item level
+                    const rawPeriodEnd = (stripeSub as any).current_period_end ?? (stripeSub.items.data[0] as any)?.current_period_end
+                    const currentPeriodEnd = rawPeriodEnd ? new Date(rawPeriodEnd * 1000) : null
+
                     const existing = await prisma.subscription.findFirst({
                         where: { stripeSubscriptionId: stripeSubId },
                     })
 
-                    const resolvedProductId = existing?.productId || mappedProduct?.id
+                    // Prefer the freshly mapped DB product; fall back to existing record
+                    const resolvedProductId = mappedProduct?.id || existing?.productId
                     if (!resolvedProductId) {
                         logger.warn(`[Webhook] Unable to map product for subscription ${stripeSubId}`)
                         break
@@ -255,10 +268,10 @@ export async function POST(req: Request) {
                         userId: user.id,
                         productId: resolvedProductId,
                         stripeSubscriptionId: stripeSubId,
-                        status: subscription.status,
+                        status: stripeSub.status,
                         currentPeriodEnd,
-                        cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
-                        metadata: subscription.metadata || {},
+                        cancelAtPeriodEnd: Boolean(stripeSub.cancel_at_period_end),
+                        metadata: stripeSub.metadata || {},
                     })
 
                     const newPlanId = resolvedProductId
@@ -287,13 +300,16 @@ export async function POST(req: Request) {
                 })
 
                 if (existing) {
+                    // Clover API: current_period_end moved to item level
+                    const rawDeletedPeriodEnd = (subscription as any).current_period_end
+                        ?? (subscription.items?.data[0] as any)?.current_period_end
                     await prisma.subscription.update({
                         where: { id: existing.id },
                         data: {
                             status: 'cancelled',
                             cancelAtPeriodEnd: false,
-                            currentPeriodEnd: subscription.current_period_end
-                                ? new Date(subscription.current_period_end * 1000)
+                            currentPeriodEnd: rawDeletedPeriodEnd
+                                ? new Date(rawDeletedPeriodEnd * 1000)
                                 : existing.currentPeriodEnd,
                         },
                     })

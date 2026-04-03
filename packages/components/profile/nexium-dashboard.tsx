@@ -27,7 +27,15 @@ import {
   Briefcase,
   Send,
   Building2,
+  GitMerge,
+  Package,
+  Users,
+  Layers,
+  Award,
+  FileText,
 } from 'lucide-react'
+import { SiDiscord, SiGithub as SiGithubIcon } from 'react-icons/si'
+import { SkillIcon } from './skill-icons'
 import {
   NEXIUM_AVAILABILITY_LABELS,
   NEXIUM_SKILL_LEVEL_LABELS,
@@ -347,6 +355,48 @@ function ProfileEditor({ profile, onUpdate }: { profile: NexiumProfile; onUpdate
   )
 }
 
+// ── Shared display helpers ───────────────────────────────────────────────────
+
+function SkillLevelBar({ level }: { level: string }) {
+  const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT']
+  const rank = levels.indexOf(level)
+  const colorMap: Record<string, string> = {
+    BEGINNER: 'bg-blue-500',
+    INTERMEDIATE: 'bg-green-500',
+    ADVANCED: 'bg-orange-500',
+    EXPERT: 'bg-purple-500',
+  }
+  return (
+    <div className="flex items-center gap-0.5" title={NEXIUM_SKILL_LEVEL_LABELS[level as keyof typeof NEXIUM_SKILL_LEVEL_LABELS]}>
+      {levels.map((_, i) => (
+        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i <= rank ? colorMap[level] : 'bg-muted-foreground/20'}`} />
+      ))}
+    </div>
+  )
+}
+
+const SIGNAL_TYPE_ICONS: Record<string, React.ReactNode> = {
+  GITHUB_REPO: <SiGithubIcon className="w-3.5 h-3.5" />,
+  DEPLOYED_APP: <Globe className="w-3.5 h-3.5" />,
+  OPEN_SOURCE_CONTRIBUTION: <GitMerge className="w-3.5 h-3.5" />,
+  SHIPPED_PRODUCT: <Package className="w-3.5 h-3.5" />,
+  COMMUNITY_IMPACT: <Users className="w-3.5 h-3.5" />,
+  ASSET_PACK: <Layers className="w-3.5 h-3.5" />,
+  CERTIFICATION: <Award className="w-3.5 h-3.5" />,
+  OTHER: <FileText className="w-3.5 h-3.5" />,
+}
+
+const SIGNAL_TYPE_COLORS: Record<string, string> = {
+  GITHUB_REPO: 'bg-zinc-500/15 text-zinc-400',
+  DEPLOYED_APP: 'bg-blue-500/15 text-blue-400',
+  OPEN_SOURCE_CONTRIBUTION: 'bg-emerald-500/15 text-emerald-400',
+  SHIPPED_PRODUCT: 'bg-orange-500/15 text-orange-400',
+  COMMUNITY_IMPACT: 'bg-pink-500/15 text-pink-400',
+  ASSET_PACK: 'bg-purple-500/15 text-purple-400',
+  CERTIFICATION: 'bg-amber-500/15 text-amber-400',
+  OTHER: 'bg-muted/50 text-muted-foreground',
+}
+
 // ── Skills panel ──────────────────────────────────────────────────────────────
 
 function SkillsPanel({ profile }: { profile: NexiumProfile }) {
@@ -472,29 +522,42 @@ function SkillsPanel({ profile }: { profile: NexiumProfile }) {
         </form>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {skills.length === 0 && (
-          <p className="text-sm text-muted-foreground py-2">No skills added yet.</p>
-        )}
-        {skills.map((skill) => (
-          <div key={skill.id} className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-background hover:border-primary/30 transition-colors">
-            <span className="text-sm font-medium">{skill.name}</span>
-            <Badge variant="outline" className={`text-xs ${levelColors[skill.level] ?? ''}`}>
-              {NEXIUM_SKILL_LEVEL_LABELS[skill.level as keyof typeof NEXIUM_SKILL_LEVEL_LABELS]}
-            </Badge>
-            {skill.yearsExperience != null && (
-              <span className="text-xs text-muted-foreground">{skill.yearsExperience}y</span>
-            )}
-            <button
-              onClick={() => removeSkill(skill.id)}
-              className="opacity-0 group-hover:opacity-100 ml-1 text-muted-foreground hover:text-destructive transition-all"
-              aria-label="Remove skill"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-          </div>
-        ))}
-      </div>
+      {skills.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">No skills added yet.</p>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(
+            skills.reduce<Record<string, typeof skills>>((acc, s) => {
+              const cat = s.category || 'General'
+              acc[cat] = [...(acc[cat] ?? []), s]
+              return acc
+            }, {})
+          ).map(([cat, catSkills]) => (
+            <div key={cat}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2">{cat}</p>
+              <div className="flex flex-wrap gap-2">
+                {catSkills.map((skill) => (
+                  <div key={skill.id} className="group flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-background hover:border-primary/30 transition-colors">
+                    <SkillIcon name={skill.name} className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-sm font-medium">{skill.name}</span>
+                    <SkillLevelBar level={skill.level} />
+                    {skill.yearsExperience != null && (
+                      <span className="text-xs text-muted-foreground border-l border-border/50 pl-1.5">{skill.yearsExperience}y</span>
+                    )}
+                    <button
+                      onClick={() => removeSkill(skill.id)}
+                      className="opacity-0 group-hover:opacity-100 ml-0.5 text-muted-foreground hover:text-destructive transition-all"
+                      aria-label="Remove skill"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -615,37 +678,40 @@ function SignalsPanel({ profile }: { profile: NexiumProfile }) {
           <p className="text-sm text-muted-foreground py-2">No signals yet. Add links to your work to build trust.</p>
         )}
         {signals.map((signal) => (
-          <div key={signal.id} className="group flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:border-primary/30 transition-colors">
+          <div key={signal.id} className="group flex items-start gap-3 p-3 rounded-xl border border-border bg-background hover:border-primary/30 transition-colors">
+            <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${SIGNAL_TYPE_COLORS[signal.type] ?? 'bg-muted/50 text-muted-foreground'}`}>
+              {SIGNAL_TYPE_ICONS[signal.type] ?? <FileText className="w-3.5 h-3.5" />}
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs font-medium text-primary/80">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {NEXIUM_SIGNAL_TYPE_LABELS[signal.type as keyof typeof NEXIUM_SIGNAL_TYPE_LABELS]}
                 </span>
                 {signal.verified && (
-                  <Badge variant="outline" className="text-xs gap-1 text-green-600 border-green-500/30 bg-green-500/10">
-                    <CheckCircle className="w-3 h-3" /> Verified
-                  </Badge>
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-green-600">
+                    <CheckCircle className="w-2.5 h-2.5" /> Verified
+                  </span>
                 )}
               </div>
-              <p className="text-sm font-medium truncate">{signal.title}</p>
+              <p className="text-sm font-semibold truncate">{signal.title}</p>
               {signal.description && (
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{signal.description}</p>
               )}
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
               {signal.url && (
                 <a
                   href={signal.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-primary transition-colors"
+                  className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-primary hover:bg-muted/40 transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
               <button
                 onClick={() => removeSignal(signal.id)}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
                 aria-label="Remove signal"
               >
                 <Trash2 className="w-3.5 h-3.5" />

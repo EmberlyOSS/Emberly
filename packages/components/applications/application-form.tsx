@@ -136,11 +136,11 @@ export function ApplicationForm({ type }: ApplicationFormProps) {
                                 <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Moderator">Moderator</SelectItem>
-                                <SelectItem value="Developer">Developer</SelectItem>
-                                <SelectItem value="Designer">Designer</SelectItem>
-                                <SelectItem value="Support">Support</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="moderator">Moderator</SelectItem>
+                                <SelectItem value="developer">Developer</SelectItem>
+                                <SelectItem value="designer">Designer</SelectItem>
+                                <SelectItem value="support">Support</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

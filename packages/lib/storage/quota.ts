@@ -12,6 +12,11 @@
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { calculateStorageBonusGB, calculateDomainSlotBonus } from '@/packages/lib/perks'
+import { syncUserSubscriptionsFromStripe } from '@/packages/lib/stripe/billing'
+
+// Per-user TTL cache: only attempt one Stripe sync per user per 5-minute window
+const stripeSyncCache = new Map<string, number>()
+const STRIPE_SYNC_TTL_MS = 5 * 60 * 1000
 
 export interface QuotaInfo {
     quotaMB: number
@@ -61,6 +66,39 @@ export async function getPlanLimits(userId: string): Promise<PlanLimits> {
         }
     }
 
+    // No active subscription in DB — attempt a one-time Stripe sync to self-heal
+    // (covers cases where the webhook was missed or not yet configured)
+    const now = Date.now()
+    const lastSync = stripeSyncCache.get(userId) ?? 0
+    if (now - lastSync > STRIPE_SYNC_TTL_MS) {
+        stripeSyncCache.set(userId, now)
+        try {
+            const userRecord = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { stripeCustomerId: true },
+            })
+            if (userRecord?.stripeCustomerId) {
+                await syncUserSubscriptionsFromStripe(userId, userRecord.stripeCustomerId)
+                // Re-check after sync
+                const syncedSub = await prisma.subscription.findFirst({
+                    where: { userId, status: 'active' },
+                    include: { product: true },
+                    orderBy: { createdAt: 'desc' },
+                })
+                if (syncedSub?.product) {
+                    return {
+                        storageQuotaGB: syncedSub.product.storageQuotaGB ?? null,
+                        uploadSizeCapMB: syncedSub.product.uploadSizeCapMB ?? null,
+                        customDomainsLimit: syncedSub.product.customDomainsLimit ?? null,
+                        planName: syncedSub.product.name,
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[getPlanLimits] Stripe subscription sync failed:', err)
+        }
+    }
+
     // Default free plan (Spark)
     return {
         storageQuotaGB: 10,
@@ -82,18 +120,30 @@ export async function getUserDomainCount(userId: string): Promise<number> {
 
 /**
  * Get the number of purchased domain slots for a user.
+ * Counts legacy one-off purchases as well as active yearly subscriptions.
  */
 export async function getPurchasedDomainSlots(userId: string): Promise<number> {
-    const result = await prisma.oneOffPurchase.aggregate({
-        where: {
-            userId,
-            type: 'custom_domain',
-        },
-        _sum: {
-            quantity: true,
-        },
-    })
-    return result._sum?.quantity || 0
+    const [oneOffResult, subscriptionCount] = await Promise.all([
+        prisma.oneOffPurchase.aggregate({
+            where: {
+                userId,
+                type: 'custom_domain',
+            },
+            _sum: {
+                quantity: true,
+            },
+        }),
+        prisma.subscription.count({
+            where: {
+                userId,
+                status: { in: ['active', 'trialing'] },
+                product: {
+                    slug: { in: ['extra-domain-slot', 'extra-domain-slot-squad'] },
+                },
+            },
+        }),
+    ])
+    return (oneOffResult._sum?.quantity || 0) + subscriptionCount
 }
 
 /**

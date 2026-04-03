@@ -75,12 +75,32 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
       })
       result.stripeProductId = stripeProduct.id
     } else {
-      await stripe.products.update(result.stripeProductId, {
-        name: product.name,
-        description: product.description || '',
-        active: product.active,
-        metadata: { emberly_slug: product.slug, emberly_type: product.type },
-      })
+      try {
+        await stripe.products.update(result.stripeProductId, {
+          name: product.name,
+          description: product.description || '',
+          active: product.active,
+          metadata: { emberly_slug: product.slug, emberly_type: product.type },
+        })
+      } catch (updateErr: any) {
+        // Stale product ID (e.g. from test mode) — create a fresh one
+        if (updateErr?.raw?.code === 'resource_missing') {
+          console.warn(`[stripe-sync] Stale product ID for "${product.slug}", creating new Stripe product`)
+          result.stripeProductId = null
+          result.stripePriceMonthlyId = null
+          result.stripePriceYearlyId = null
+          result.stripePriceOneTimeId = null
+          const stripeProduct = await stripe.products.create({
+            name: product.name,
+            description: product.description || undefined,
+            active: product.active,
+            metadata: { emberly_slug: product.slug, emberly_type: product.type },
+          })
+          result.stripeProductId = stripeProduct.id
+        } else {
+          throw updateErr
+        }
+      }
     }
   } catch (err) {
     console.warn(`[stripe-sync] Failed to create/update Stripe product for "${product.slug}":`, err)
@@ -101,7 +121,7 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
         const price = await stripe.prices.create({
           product: result.stripeProductId,
           unit_amount: cents,
-          currency: 'usd',
+          currency: 'cad',
           recurring: { interval: 'month' },
           metadata: { emberly_slug: product.slug, emberly_period: 'monthly' },
         })
@@ -116,7 +136,7 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
         const price = await stripe.prices.create({
           product: result.stripeProductId,
           unit_amount: Math.round(cents * 6), // 50% off yearly
-          currency: 'usd',
+          currency: 'cad',
           recurring: { interval: 'year' },
           metadata: { emberly_slug: product.slug, emberly_period: 'yearly' },
         })
@@ -134,7 +154,7 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
         const price = await stripe.prices.create({
           product: result.stripeProductId,
           unit_amount: cents,
-          currency: 'usd',
+          currency: 'cad',
           recurring: { interval: 'month' },
           metadata: { emberly_slug: product.slug, emberly_period: 'monthly' },
         })
@@ -148,7 +168,7 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
         const price = await stripe.prices.create({
           product: result.stripeProductId,
           unit_amount: Math.round(cents * 6), // 50% off yearly
-          currency: 'usd',
+          currency: 'cad',
           recurring: { interval: 'year' },
           metadata: { emberly_slug: product.slug, emberly_period: 'yearly' },
         })
@@ -166,7 +186,7 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
         const price = await stripe.prices.create({
           product: result.stripeProductId,
           unit_amount: cents,
-          currency: 'usd',
+          currency: 'cad',
           recurring: { interval: 'year' },
           metadata: { emberly_slug: product.slug, emberly_period: 'yearly' },
         })
@@ -183,7 +203,7 @@ export async function syncProductToStripe(product: ProductSyncInput): Promise<Pr
         const price = await stripe.prices.create({
           product: result.stripeProductId,
           unit_amount: cents,
-          currency: 'usd',
+          currency: 'cad',
           metadata: { emberly_slug: product.slug, emberly_period: 'one-time' },
         })
         result.stripePriceOneTimeId = price.id

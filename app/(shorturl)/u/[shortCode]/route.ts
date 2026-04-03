@@ -30,17 +30,23 @@ export async function GET(
       return NextResponse.redirect(url.targetUrl)
     }
 
-    // 2. Fall back to user profile lookup (urlId or vanityId)
+    // 2. Fall back to user profile lookup (urlId, vanityId, or username)
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ urlId: shortCode }, { vanityId: shortCode }],
+        OR: [
+          { urlId: shortCode },
+          { vanityId: shortCode },
+          { name: { equals: shortCode, mode: 'insensitive' } },
+        ],
         isProfilePublic: true,
       },
-      select: { urlId: true },
+      select: { urlId: true, vanityId: true, name: true },
     })
 
     if (user) {
-      return NextResponse.redirect(new URL(`/user/${shortCode}`, req.url))
+      // Prefer vanityId → urlId → name for the profile URL
+      const slug = user.vanityId || user.urlId || shortCode
+      return NextResponse.redirect(new URL(`/user/${slug}`, req.url))
     }
 
     return new NextResponse(null, { status: 404 })
