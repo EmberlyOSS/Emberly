@@ -87,6 +87,30 @@ export default async function PricingPage() {
     }
   })
 
+  const discoveryPlanProducts = activeProducts.filter((p) => p.type === 'nexium-plan')
+
+  const discoveryPlans = discoveryPlanProducts.map((product) => {
+    const pricing = getPlanPricing(product)
+    return {
+      id: product.id,
+      key: product.slug || product.id,
+      name: product.name,
+      description: product.description || 'Flexible Discovery plan for your squad.',
+      price: pricing.monthlyDisplay,
+      priceYearly: pricing.yearlyDisplay,
+      features: product.features && product.features.length ? product.features : ['Everything your squad needs.'],
+      priceIdMonthly: pricing.priceIdMonthly,
+      priceIdYearly: pricing.priceIdYearly,
+      popular: Boolean(product.popular),
+    }
+  })
+
+  const discoveryActivePlanKey = activeSubscription
+    ? (discoveryPlanProducts.find((p) => p.id === activeSubscription.productId)?.slug
+      || discoveryPlanProducts.find((p) => p.id === activeSubscription.productId)?.id
+      || 'nexium-free')
+    : 'nexium-free'
+
   return (
     <HomeShell>
       <div className="container space-y-8">
@@ -100,6 +124,8 @@ export default async function PricingPage() {
           plans={plans}
           activePlanKey={activePlanKey}
           addOns={addOns}
+          discoveryPlans={discoveryPlans}
+          discoveryActivePlanKey={discoveryActivePlanKey}
         />
 
         <CustomPricingCTA />

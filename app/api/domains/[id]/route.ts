@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
+import { getDomainWithOwnership, isValidDomainName } from '@/packages/lib/domain/service'
 
 const logger = loggers.domains
 
@@ -12,13 +12,13 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
+  const { user, response } = await requireAuth(req)
+    if (response) return response
 
   try {
     const { id } = await params
-    const domain = await prisma.customDomain.findUnique({ where: { id } })
-    if (!domain || domain.userId !== session.user.id)
+    const domain = await getDomainWithOwnership(id, user.id)
+    if (!domain)
       return new NextResponse('Not found', { status: 404 })
 
     await prisma.customDomain.delete({ where: { id } })
@@ -33,16 +33,16 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
+  const { user, response } = await requireAuth(req)
+    if (response) return response
 
   try {
     const { id } = await params
     const body = await req.json()
     const action = body.action as string | undefined
 
-    const domain = await prisma.customDomain.findUnique({ where: { id } })
-    if (!domain || domain.userId !== session.user.id)
+    const domain = await getDomainWithOwnership(id, user.id)
+    if (!domain)
       return new NextResponse('Not found', { status: 404 })
 
     if (action === 'setPrimary') {
@@ -51,7 +51,7 @@ export async function PATCH(
 
       await prisma.$transaction([
         prisma.customDomain.updateMany({
-          where: { userId: session.user.id },
+          where: { userId: user.id },
           data: { isPrimary: false },
         }),
         prisma.customDomain.update({
@@ -65,7 +65,7 @@ export async function PATCH(
 
     if (action === 'update') {
       const newDomain = (body.domain || '').toString().trim().toLowerCase()
-      if (!newDomain || !/^([a-z0-9-]+\.)+[a-z]{2,}$/.test(newDomain)) {
+      if (!newDomain || !isValidDomainName(newDomain)) {
         return new NextResponse('Invalid domain', { status: 400 })
       }
 

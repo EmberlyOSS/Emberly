@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -15,11 +14,8 @@ export async function GET(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
@@ -47,7 +43,7 @@ export async function GET(
         }
 
         // Only owner can view collaborators
-        if (file.userId !== session.user.id) {
+        if (file.userId !== user.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -71,11 +67,8 @@ export async function POST(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
@@ -86,7 +79,7 @@ export async function POST(
             return NextResponse.json({ error: 'File not found' }, { status: 404 })
         }
 
-        if (file.userId !== session.user.id) {
+        if (file.userId !== user.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -112,7 +105,7 @@ export async function POST(
             return NextResponse.json({ error: 'User not found' }, { status: 404 })
         }
 
-        if (targetUser.id === session.user.id) {
+        if (targetUser.id === user.id) {
             return NextResponse.json(
                 { error: 'Cannot add yourself as a collaborator' },
                 { status: 400 }
@@ -178,11 +171,8 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
@@ -193,7 +183,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'File not found' }, { status: 404 })
         }
 
-        if (file.userId !== session.user.id) {
+        if (file.userId !== user.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -227,11 +217,8 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params
-        const session = await getServerSession(authOptions)
-
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
         const { searchParams } = new URL(request.url)
         const collaboratorId = searchParams.get('collaboratorId')
@@ -252,7 +239,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'File not found' }, { status: 404 })
         }
 
-        if (file.userId !== session.user.id) {
+        if (file.userId !== user.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 

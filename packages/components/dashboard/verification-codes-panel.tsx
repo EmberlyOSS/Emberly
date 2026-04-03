@@ -102,13 +102,12 @@ export function VerificationCodesPanel() {
     }
 
     return (
-        <Card className="relative overflow-hidden bg-white/5 dark:bg-black/5 backdrop-blur-xl border-white/10 dark:border-white/5 shadow-lg shadow-black/5">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10 pointer-events-none" />
-            <CardHeader className="relative">
+        <Card className="overflow-hidden glass-card">
+            <CardHeader>
                 <CardTitle className="text-xl font-semibold">Verification codes</CardTitle>
                 <CardDescription>Store and manage codes for actions that need an extra check.</CardDescription>
             </CardHeader>
-            <CardContent className="relative space-y-6">
+            <CardContent className="space-y-6">
                 <div className="space-y-2">
                     <Label htmlFor="new-code" className="text-sm font-medium">Add a code</Label>
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -118,7 +117,7 @@ export function VerificationCodesPanel() {
                             value={newCode}
                             onChange={(e) => setNewCode(e.target.value)}
                             disabled={saving}
-                            className="h-11 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20"
+                            className="h-11 bg-muted/30 border-border/50 focus:border-primary/50 focus:ring-primary/20"
                         />
                         <Button onClick={addCode} disabled={saving} className="sm:w-auto h-11 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all">
                             {saving ? (
@@ -143,7 +142,7 @@ export function VerificationCodesPanel() {
                     ) : null}
                     <div className="grid gap-2">
                         {codes.map((code) => (
-                            <div key={code} className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/60 px-4 py-3">
+                            <div key={code} className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/80 px-4 py-3">
                                 <div className="flex-1 truncate text-sm font-medium">{code}</div>
                                 <div className="flex items-center gap-2">
                                     <Button variant="outline" size="sm" className="h-9" onClick={() => copyCode(code)}>

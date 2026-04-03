@@ -33,10 +33,10 @@ interface URLListProps {
 
 function URLTableSkeleton() {
   return (
-    <div className="rounded-xl border border-border/30 bg-background/30 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="border-border/30 hover:bg-transparent">
+          <TableRow className="border-border/50 hover:bg-transparent">
             <TableHead className="text-muted-foreground/80">Original URL</TableHead>
             <TableHead className="text-muted-foreground/80">Short URL</TableHead>
             <TableHead className="text-right text-muted-foreground/80">Clicks</TableHead>
@@ -145,7 +145,7 @@ export function URLList({ refreshTrigger = 0 }: URLListProps) {
 
   if (urls.length === 0) {
     return (
-      <div className="rounded-xl border border-border/30 bg-background/30 backdrop-blur-sm p-12 text-center">
+      <div className="rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg p-12 text-center">
         <div className="mx-auto w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-4">
           <Copy className="h-6 w-6 text-muted-foreground/60" />
         </div>
@@ -156,10 +156,10 @@ export function URLList({ refreshTrigger = 0 }: URLListProps) {
   }
 
   return (
-    <div className="rounded-xl border border-border/30 bg-background/30 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="border-border/30 hover:bg-transparent">
+          <TableRow className="border-border/50 hover:bg-transparent">
             <TableHead className="text-muted-foreground/80 font-medium">Original URL</TableHead>
             <TableHead className="text-muted-foreground/80 font-medium">Short URL</TableHead>
             <TableHead className="text-right text-muted-foreground/80 font-medium">Clicks</TableHead>
@@ -169,7 +169,7 @@ export function URLList({ refreshTrigger = 0 }: URLListProps) {
         </TableHeader>
         <TableBody>
           {urls.map((url) => (
-            <TableRow key={url.id} className="border-border/30 hover:bg-white/5 dark:hover:bg-white/[0.02] transition-colors">
+            <TableRow key={url.id} className="border-border/50 hover:bg-muted/30 transition-colors">
               <TableCell className="font-medium max-w-[300px] truncate text-foreground/90">
                 {url.targetUrl}
               </TableCell>

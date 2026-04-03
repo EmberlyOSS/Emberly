@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { apiError, apiResponse } from '@/packages/lib/api/response'
 import { sendTemplateEmail, AdminBroadcastEmail } from '@/packages/lib/emails'
@@ -18,13 +17,8 @@ const broadcastSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const { user, response } = await requireAuth(req)
+        const { response } = await requireAdmin()
         if (response) return response
-
-        // Check if user is admin
-        if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
-            return apiError('Only administrators can send broadcast emails', 403)
-        }
 
         const body = await req.json().catch(() => null)
         const parsed = broadcastSchema.safeParse(body)
@@ -128,13 +122,8 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
     try {
-        const { user, response } = await requireAuth(req)
+        const { response } = await requireAdmin()
         if (response) return response
-
-        // Check if user is admin
-        if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
-            return apiError('Only administrators can view broadcast statistics', 403)
-        }
 
         // Get user counts by filter
         const stats = {

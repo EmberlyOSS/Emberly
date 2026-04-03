@@ -1,6 +1,7 @@
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAuth, getAuthenticatedUser, requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { events } from '@/packages/lib/events'
 
 export async function GET(req: Request) {
     try {
@@ -75,6 +76,14 @@ export async function POST(req: Request) {
             include: { user: { select: { id: true, name: true, urlId: true } } },
         })
 
+        void events.emit('testimonial.submitted', {
+            testimonialId: created.id,
+            userId: user.id,
+            userName: user.name || 'Unknown',
+            userEmail: user.email || '',
+            contentPreview: content.slice(0, 100),
+        }).catch(() => {})
+
         return apiResponse(created)
     } catch (error) {
         return apiError('Failed to submit testimonial', HTTP_STATUS.INTERNAL_SERVER_ERROR)
@@ -103,6 +112,14 @@ export async function PUT(req: Request) {
                 ...(archived !== undefined && { archived }),
             },
         })
+
+        void events.emit('testimonial.edited', {
+            testimonialId: existing.id,
+            userId: user.id,
+            userName: user.name || 'Unknown',
+            userEmail: user.email || '',
+            contentPreview: (content ?? existing.content).slice(0, 100),
+        }).catch(() => {})
 
         return apiResponse(updated)
     } catch (error) {

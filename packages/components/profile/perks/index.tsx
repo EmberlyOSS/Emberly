@@ -25,6 +25,7 @@ interface PerkInfo {
 export function ProfilePerks() {
   const [perks, setPerks] = useState<PerkInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -51,11 +52,39 @@ export function ProfilePerks() {
     }
   }
 
+  const refreshPerks = async () => {
+    try {
+      setIsRefreshing(true)
+      const response = await fetch('/api/profile/perks/refresh', {
+        method: 'POST',
+      })
+      if (!response.ok) throw new Error('Failed to refresh perks')
+      
+      await response.json()
+      
+      // Refetch perks to show updated data
+      await fetchPerks()
+      toast({
+        title: 'Perks updated',
+        description: 'Your perk status has been refreshed',
+      })
+    } catch (error) {
+      console.error('Failed to refresh perks:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh perks. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="p-6 rounded-xl border border-border/50 bg-card">
+          <div key={i} className="p-6 glass-subtle">
             <div className="flex items-start gap-4">
               <Skeleton className="h-12 w-12 rounded-lg" />
               <div className="flex-1 space-y-2">
@@ -75,6 +104,28 @@ export function ProfilePerks() {
 
   return (
     <div className="space-y-8">
+      {/* Re-check button */}
+      <div className="flex justify-end">
+        <Button
+          onClick={refreshPerks}
+          disabled={isRefreshing}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          {isRefreshing ? (
+            <>
+              <Icons.spinner className="h-4 w-4 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <Icons.refresh className="h-4 w-4" />
+              Re-check Perks
+            </>
+          )}
+        </Button>
+      </div>
       {/* Active Perks */}
       {activePerks.length > 0 && (
         <div className="space-y-4">
@@ -196,7 +247,7 @@ export function ProfilePerks() {
             {availablePerks.map((perk, idx) => (
               <div
                 key={idx}
-                className="p-6 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm opacity-75 hover:opacity-100 transition-opacity"
+                className="p-6 glass-subtle opacity-75 hover:opacity-100 transition-opacity"
               >
                 <div className="flex items-start gap-4">
                   {/* Icon (grayscale) */}

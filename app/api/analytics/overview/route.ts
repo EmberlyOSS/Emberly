@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+import { planKeyForProduct, hasAnalytics, hasAdvancedAnalytics } from '@/packages/lib/plans'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthenticatedUser(req)
 
     // prefer per-user metrics when authenticated (dashboard context)
-    let userId = session?.user?.id
-    // some session setups don't include `id` on `session.user`; fallback to lookup by email
-    if (!userId && session?.user?.email) {
-      const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
+    let userId = user?.id
+    // some session setups don't include `id` on `user`; fallback to lookup by email
+    if (!userId && user?.email) {
+      const u = await prisma.user.findUnique({ where: { email: user.email }, select: { id: true } })
       if (u) userId = u.id
     }
 
@@ -51,16 +51,16 @@ export async function GET() {
     const totalViews = totalsAgg._sum?.views ?? 0
     const totalDownloads = totalsAgg._sum?.downloads ?? 0
 
-    // compute allowed features for the viewer (starter/pro gating)
+    // compute allowed features for the viewer (plan-based gating)
     const allowed = { topFiles: false, topUrls: false, exportCSV: false }
-    if (session?.user) {
-      const subs = await prisma.subscription.findMany({ where: { userId: session.user.id, status: 'active' }, include: { product: true } })
+    if (user) {
+      const subs = await prisma.subscription.findMany({ where: { userId: user?.id, status: 'active' }, include: { product: true } })
       if (subs.length > 0) {
-        allowed.topFiles = true
-        allowed.topUrls = true
+        const bestPlan = subs.map(s => planKeyForProduct(s.product)).sort()[0] || 'free'
+        allowed.topFiles = hasAnalytics(bestPlan)
+        allowed.topUrls = hasAnalytics(bestPlan)
+        allowed.exportCSV = hasAdvancedAnalytics(bestPlan)
       }
-      const hasPro = subs.some((s) => (s.product?.slug || '').toLowerCase().includes('pro'))
-      if (hasPro) allowed.exportCSV = true
     }
 
     const totalUrlClicks = urlClicksAgg._sum?.clicks ?? 0

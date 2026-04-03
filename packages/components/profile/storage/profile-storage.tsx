@@ -49,7 +49,7 @@ export function ProfileStorage({
                 <Progress
                   value={usagePercentage}
                   className={cn(
-                    'h-3 bg-white/10 dark:bg-black/10',
+                    'h-3 bg-muted/50 dark:bg-black/10',
                     usagePercentage > 90
                       ? '[&>div]:bg-destructive'
                       : usagePercentage > 75
@@ -92,7 +92,7 @@ export function ProfileStorage({
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-between rounded-xl p-4 bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+          <div className="flex items-center justify-between rounded-xl p-4 bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
             <div className="flex flex-col">
               <span className="text-xl font-bold">{formattedUsed}</span>
               <span className="text-sm text-muted-foreground">
@@ -106,7 +106,7 @@ export function ProfileStorage({
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between rounded-xl p-4 bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+          <div className="flex items-center justify-between rounded-xl p-4 bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
             <div className="flex flex-col">
               <span className="text-xl font-bold">{fileCount}</span>
               <span className="text-sm text-muted-foreground">Total Files</span>
@@ -115,7 +115,7 @@ export function ProfileStorage({
               <Icons.file className="h-5 w-5 text-primary" />
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-xl p-4 bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+          <div className="flex items-center justify-between rounded-xl p-4 bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
             <div className="flex flex-col">
               <span className="text-xl font-bold">{shortUrlCount}</span>
               <span className="text-sm text-muted-foreground">

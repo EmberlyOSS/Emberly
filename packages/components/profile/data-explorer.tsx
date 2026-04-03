@@ -48,7 +48,7 @@ export function ProfileDataExplorer() {
     }
 
     return (
-        <Card className="bg-white/5 dark:bg-black/5 backdrop-blur-sm border-white/10 dark:border-white/5">
+        <Card className="glass">
             <CardHeader>
                 <CardTitle>Your data</CardTitle>
             </CardHeader>
@@ -64,7 +64,7 @@ export function ProfileDataExplorer() {
                 ) : error ? (
                     <div className="text-sm text-destructive">{error}</div>
                 ) : (
-                    <pre className="rounded-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 p-4 overflow-auto text-sm max-h-96">{JSON.stringify(data, null, 2)}</pre>
+                    <pre className="rounded-xl bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 p-4 overflow-auto text-sm max-h-96">{JSON.stringify(data, null, 2)}</pre>
                 )}
             </CardContent>
         </Card>

@@ -137,7 +137,7 @@ export function ResendVerificationForm() {
       )}
 
       {/* Footer Links */}
-      <div className="flex flex-col space-y-3 pt-4 border-t border-white/10">
+      <div className="flex flex-col space-y-3 pt-4 border-t border-border/50">
         <Link
           href="/auth/verify-email"
           className="text-xs text-muted-foreground hover:text-foreground text-center hover:underline transition-colors"

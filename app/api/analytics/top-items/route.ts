@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
+        const user = await getAuthenticatedUser(req)
 
         // allow anonymous viewing, but only return user-owned items when authenticated
         let userId: string | undefined
-        if (session?.user) {
-            userId = (session.user as any).id
-            if (!userId && session.user.email) {
-                const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
+        if (user) {
+            userId = user?.id
+            if (!userId && user.email) {
+                const u = await prisma.user.findUnique({ where: { email: user.email }, select: { id: true } })
                 if (u) userId = u.id
             }
         }

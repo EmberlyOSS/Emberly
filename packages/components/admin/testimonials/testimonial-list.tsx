@@ -22,7 +22,7 @@ function TestimonialSkeleton() {
             {/* Mobile skeleton */}
             <div className="lg:hidden space-y-3">
                 {[...Array(3)].map((_, i) => (
-                    <div key={i} className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] border border-white/10 dark:border-white/5 p-4">
+                    <div key={i} className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 p-4">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <Skeleton className="h-5 w-24" />
@@ -40,10 +40,10 @@ function TestimonialSkeleton() {
             </div>
 
             {/* Desktop skeleton */}
-            <div className="hidden lg:block rounded-xl border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02] overflow-hidden">
+            <div className="hidden lg:block rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg overflow-hidden">
                 <Table>
                     <TableHeader>
-                        <TableRow className="hover:bg-transparent border-white/10 dark:border-white/5">
+                        <TableRow className="hover:bg-transparent border-border/50">
                             <TableHead>User</TableHead>
                             <TableHead>Content</TableHead>
                             <TableHead>Rating</TableHead>
@@ -53,7 +53,7 @@ function TestimonialSkeleton() {
                     </TableHeader>
                     <TableBody>
                         {[...Array(3)].map((_, i) => (
-                            <TableRow key={i} className="border-white/10 dark:border-white/5">
+                            <TableRow key={i} className="border-border/50">
                                 <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-64" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-16" /></TableCell>
@@ -133,7 +133,7 @@ export function TestimonialList() {
             </div>
 
             {items.length === 0 ? (
-                <div className="rounded-xl border border-border/50 border-dashed bg-background/30 p-12 text-center">
+                <div className="rounded-xl border border-border/50 border-dashed bg-background/80 p-12 text-center">
                     <div className="flex justify-center mb-4">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                             <MessageSquareQuote className="h-7 w-7 text-primary" />
@@ -145,7 +145,7 @@ export function TestimonialList() {
                     </p>
                 </div>
             ) : (
-                <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
+                <div className="glass-subtle overflow-hidden">
                     <Table>
                         <TableHeader>
                             <TableRow className="hover:bg-transparent border-border/50">

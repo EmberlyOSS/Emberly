@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 
-import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
-import { authOptions } from '@/packages/lib/auth'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
+import { emitAuditEvent } from '@/packages/lib/events/audit-helper'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
 
@@ -15,12 +15,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    const { id } = await params
+    const { response: authResponse } = await requireAdmin()
+    if (authResponse) return authResponse
 
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
+    const { id } = await params
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -62,6 +60,13 @@ export async function DELETE(
 
     await prisma.user.delete({
       where: { id },
+    })
+
+    await emitAuditEvent('account.deleted', {
+      userId: user.id,
+      email: user.email ?? '',
+      deletedBy: 'admin',
+      reason: 'Admin-initiated deletion',
     })
 
     return new NextResponse(null, { status: 204 })

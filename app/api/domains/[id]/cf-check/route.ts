@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { getCustomHostname, createCustomHostname, listCustomHostnames, listDnsRecords } from '@/packages/lib/cloudflare/client'
+import { getDomainWithOwnership, persistCfErrorBackoff, safeSerialize } from '@/packages/lib/domain/service'
 
 const logger = loggers.domains
 
@@ -14,19 +14,19 @@ export async function POST(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
+    const { user, response } = await requireAuth(req)
+    if (response) return response
 
     // Rate limit: 10 requests per 10 minutes per user
-    const { allowed } = await rateLimiter.check(`domains:cf-check:${session.user.id}`, 10, 600)
+    const { allowed } = await rateLimiter.check(`domains:cf-check:${user.id}`, 10, 600)
     if (!allowed) {
         return NextResponse.json({ error: 'Too many verification attempts. Please try again in 10 minutes.' }, { status: 429 })
     }
 
     try {
         const { id } = await params
-        const domain = await prisma.customDomain.findUnique({ where: { id } })
-        if (!domain || domain.userId !== session.user.id)
+        const domain = await getDomainWithOwnership(id, user.id)
+        if (!domain)
             return new NextResponse('Not found', { status: 404 })
 
         // If a CF hostname already exists, fetch latest status
@@ -55,27 +55,6 @@ export async function POST(
                     body: err?.body,
                 })
 
-                const safeStringify = (v: unknown) => {
-                    try {
-                        const seen = new Set()
-                        return JSON.parse(
-                            JSON.stringify(v, (_k, val) => {
-                                if (val && typeof val === 'object') {
-                                    if (seen.has(val)) return '[Circular]'
-                                    seen.add(val)
-                                }
-                                return val
-                            })
-                        )
-                    } catch (_) {
-                        try {
-                            return String(v)
-                        } catch {
-                            return null
-                        }
-                    }
-                }
-
                 const payload: {
                     error: string
                     status: any
@@ -85,7 +64,7 @@ export async function POST(
                 } = {
                     error: String(err?.message || err || 'Unknown error'),
                     status: err?.status ?? null,
-                    body: safeStringify(err?.body ?? err),
+                    body: safeSerialize(err?.body ?? err),
                 }
 
                 // Helpful suggestion when Cloudflare account doesn't have SSL-for-SaaS
@@ -107,18 +86,7 @@ export async function POST(
 
                 if (process.env.NODE_ENV !== 'production') payload.stack = err?.stack
 
-                // increment backoff count for domain to slow polling
-                try {
-                    const current = domain.cfBackoffCount ?? 0
-                    const next = Math.min(current + 1, 10)
-                    // compute delay: base 5s * 2^(min(next,5)-1)
-                    const exp = Math.min(next, 5)
-                    const delayMs = 5000 * Math.pow(2, Math.max(0, exp - 1))
-                    const pauseUntil = new Date(Date.now() + delayMs)
-                    await prisma.customDomain.update({ where: { id }, data: { cfStatus: 'error', cfMeta: err?.body ?? err, cfBackoffCount: next, cfPauseUntil: pauseUntil } })
-                } catch (dbErr) {
-                    logger.error('Failed to persist CF error backoff state', { message: (dbErr as any)?.message ?? String(dbErr) })
-                }
+                await persistCfErrorBackoff(id, domain.cfBackoffCount ?? 0, err?.body ?? err)
 
                 return NextResponse.json(payload, { status: 500 })
             }
@@ -185,27 +153,6 @@ export async function POST(
         } catch (err: any) {
             logger.error('Cloudflare create failed', { message: err?.message, status: err?.status, body: err?.body })
 
-            const safeStringify = (v: unknown) => {
-                try {
-                    const seen = new Set()
-                    return JSON.parse(
-                        JSON.stringify(v, (_k, val) => {
-                            if (val && typeof val === 'object') {
-                                if (seen.has(val)) return '[Circular]'
-                                seen.add(val)
-                            }
-                            return val
-                        })
-                    )
-                } catch (_) {
-                    try {
-                        return String(v)
-                    } catch {
-                        return null
-                    }
-                }
-            }
-
             const payload: {
                 error: string
                 status: any
@@ -214,19 +161,10 @@ export async function POST(
             } = {
                 error: String(err?.message || err || 'Unknown error'),
                 status: err?.status ?? null,
-                body: safeStringify(err?.body ?? err),
+                body: safeSerialize(err?.body ?? err),
             }
             // Persist error state and backoff to help operators and slow retries
-            try {
-                const current = domain.cfBackoffCount ?? 0
-                const next = Math.min(current + 1, 10)
-                const exp = Math.min(next, 5)
-                const delayMs = 5000 * Math.pow(2, Math.max(0, exp - 1))
-                const pauseUntil = new Date(Date.now() + delayMs)
-                await prisma.customDomain.update({ where: { id }, data: { cfStatus: 'error', cfMeta: err?.body ?? err, cfBackoffCount: next, cfPauseUntil: pauseUntil } })
-            } catch (dbErr) {
-                logger.error('Failed to persist CF error state (create)', { message: (dbErr as any)?.message ?? String(dbErr) })
-            }
+            await persistCfErrorBackoff(id, domain.cfBackoffCount ?? 0, err?.body ?? err)
 
             if (process.env.NODE_ENV !== 'production') payload.stack = err?.stack
             return NextResponse.json(payload, { status: 500 })

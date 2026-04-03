@@ -30,10 +30,9 @@ function GlassCard({
 }) {
     return (
         <div
-            className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}
+            className={`glass-card overflow-hidden ${className}`}
         >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+            {children}
         </div>
     )
 }

@@ -5,11 +5,11 @@ import { useSearchParams } from 'next/navigation'
 
 import { ProfileClientProps } from '@/packages/types/components/profile'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/packages/components/ui/card'
 import { Button } from '@/packages/components/ui/button'
 import { format } from 'date-fns'
 import { Separator } from '@/packages/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
+import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
+
 import { useToast } from '@/packages/hooks/use-toast'
 import {
   User as UserIcon,
@@ -22,9 +22,14 @@ import {
   Palette,
   MessageSquare,
   Database,
+  Zap,
+  Link as LinkIcon,
+  ClipboardList,
+  Settings,
 } from 'lucide-react'
 
 import { ProfileAccount } from './account'
+import { ProfileSettings } from './account'
 import { ProfileDomains } from '../dashboard/domains'
 import { ProfileExport } from './export'
 import { EmailPreferences } from './notifications'
@@ -39,28 +44,41 @@ import { PasswordBreachAlert } from './password-breach-alert'
 import { ProfileReferrals } from './referrals'
 import { BillingCreditsSection } from './billing-credits'
 import { ProfilePerks } from './perks'
+import { NexiumDashboard } from './nexium-dashboard'
+import { ApplicationsDashboard } from './applications-dashboard'
 
-const profileTabs = [
-  { value: 'profile', label: 'Profile', icon: UserIcon },
-  { value: 'billing', label: 'Billing', icon: CreditCard },
-  { value: 'uploads', label: 'Uploads', icon: Upload },
-  { value: 'security', label: 'Security', icon: Shield },
-  { value: 'perks', label: 'Perks', icon: Gift },
-  { value: 'referrals', label: 'Referrals', icon: Users },
-  { value: 'notifications', label: 'Notifications', icon: Bell },
-  { value: 'appearance', label: 'Appearance', icon: Palette },
-  { value: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-  { value: 'data', label: 'Data', icon: Database },
+const profileSections = [
+  { group: 'Account', items: [
+    { value: 'profile', label: 'Profile', icon: UserIcon },
+    { value: 'settings', label: 'Settings', icon: Settings },
+    { value: 'connections', label: 'Connections', icon: LinkIcon },
+    { value: 'security', label: 'Security', icon: Shield },
+    { value: 'appearance', label: 'Appearance', icon: Palette },
+  ]},
+  { group: 'Content', items: [
+    { value: 'uploads', label: 'Uploads', icon: Upload },
+    { value: 'discovery', label: 'Discovery', icon: Zap },
+    { value: 'applications', label: 'Applications', icon: ClipboardList },
+  ]},
+  { group: 'Engagement', items: [
+    { value: 'notifications', label: 'Notifications', icon: Bell },
+    { value: 'testimonials', label: 'Testimonials', icon: MessageSquare },
+    { value: 'perks', label: 'Perks', icon: Gift },
+    { value: 'referrals', label: 'Referrals', icon: Users },
+  ]},
+  { group: 'Billing & Data', items: [
+    { value: 'billing', label: 'Billing', icon: CreditCard },
+    { value: 'data', label: 'Data', icon: Database },
+  ]},
 ]
+
+const allTabs = profileSections.flatMap(s => s.items)
 
 // Glass card wrapper component for consistent styling
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative rounded-xl bg-white/5 dark:bg-black/5 backdrop-blur-sm border border-white/10 dark:border-white/5 shadow-lg shadow-black/5 ${className}`}>
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-black/5 dark:from-white/[0.02] dark:via-transparent dark:to-black/5 pointer-events-none" />
-      <div className="relative">
-        {children}
-      </div>
+    <div className={`glass-card transition-all duration-300 ${className}`}>
+      {children}
     </div>
   )
 }
@@ -125,7 +143,7 @@ export function ProfileClient({
   // Set initial tab from URL query param or default
   useEffect(() => {
     const tabParam = searchParams.get('tab')
-    if (tabParam && profileTabs.some(t => t.value === tabParam)) {
+    if (tabParam && allTabs.some(t => t.value === tabParam)) {
       setSelectedTab(tabParam)
     } else if (!selectedTab) {
       setSelectedTab(defaultTab)
@@ -150,51 +168,111 @@ export function ProfileClient({
     productUpdates: true,
   }
 
-  return (
-    <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-6">
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-xl blur-xl" />
-        <TabsList className="relative w-full h-auto flex-wrap justify-start gap-1 p-1.5 bg-white/5 dark:bg-black/20 backdrop-blur-sm border border-white/10 dark:border-white/5 rounded-xl">
-          {profileTabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-primary/20 transition-all duration-200 hover:bg-white/5"
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
-      </div>
+  const activeSection = allTabs.find(t => t.value === selectedTab)
 
-      <TabsContent value="profile" className="space-y-6">
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 overflow-hidden lg:items-start">
+      {/* Sidebar Navigation — full on desktop, horizontal scroll on mobile */}
+      <nav className="lg:w-56 shrink-0">
+        {/* Mobile: horizontal scrollable strip */}
+        <ScrollIndicator className="lg:hidden glass-subtle rounded-xl p-1.5">
+          <div className="flex gap-1 w-max">
+            {allTabs.map((item) => {
+              const Icon = item.icon
+              const isActive = selectedTab === item.value
+              return (
+                <button
+                  key={item.value}
+                  onClick={() => handleTabChange(item.value)}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
+                    isActive
+                      ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  {isActive && item.label}
+                </button>
+              )
+            })}
+          </div>
+        </ScrollIndicator>
+
+        {/* Desktop: full grouped sidebar */}
+        <div className="hidden lg:block glass-subtle rounded-xl p-2 lg:sticky lg:top-24 space-y-3">
+          {profileSections.map((section) => (
+            <div key={section.group}>
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {section.group}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = selectedTab === item.value
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => handleTabChange(item.value)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium shadow-sm border border-primary/20'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </nav>
+
+      {/* Content Area */}
+      <div className="flex-1 min-w-0 space-y-6">
+      {selectedTab === 'profile' && (
+        <>
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Profile Information</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Your identity, bio, and social links</p>
           </GlassCardHeader>
           <GlassCardContent>
             <ProfileAccount user={user} onUpdate={handleRefresh} />
           </GlassCardContent>
         </GlassCard>
+      </>
+      )}
 
+      {selectedTab === 'settings' && (
         <GlassCard>
           <GlassCardHeader>
-            <GlassCardTitle>Linked Accounts</GlassCardTitle>
+            <GlassCardTitle>Settings</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Control visibility, expiry defaults, and file URL options</p>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <ProfileSettings user={user} onUpdate={handleRefresh} />
+          </GlassCardContent>
+        </GlassCard>
+      )}
+
+      {selectedTab === 'connections' && (
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Connections</GlassCardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Connect your social accounts to unlock exclusive perks and features
+              Connect your social accounts to unlock perks and use their avatars
             </p>
           </GlassCardHeader>
           <GlassCardContent>
             <LinkedAccounts />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+      )}
 
-      <TabsContent value="billing" className="space-y-6">
+      {selectedTab === 'billing' && (
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Billing</GlassCardTitle>
@@ -202,7 +280,7 @@ export function ProfileClient({
           <GlassCardContent>
             <div className="space-y-4">
               {user.subscription ? (
-                <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+                <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">Current plan</div>
@@ -216,14 +294,14 @@ export function ProfileClient({
                   </div>
 
                   {user.subscription.currentPeriodEnd && (
-                    <div className="mt-3 pt-3 border-t border-white/10 dark:border-white/5 text-sm text-muted-foreground">
+                    <div className="mt-3 pt-3 border-t border-border/50 dark:border-border/20 text-sm text-muted-foreground">
                       Expires:{' '}
                       {format(new Date(user.subscription.currentPeriodEnd), 'PPP')}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 text-sm text-muted-foreground">
+                <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 text-sm text-muted-foreground">
                   No active subscription
                 </div>
               )}
@@ -234,7 +312,7 @@ export function ProfileClient({
                     Manage billing
                   </a>
                 </Button>
-                <Button variant="outline" onClick={() => window.location.href = '/pricing'} className="border-border/50 hover:bg-white/5 transition-colors">
+                <Button variant="outline" onClick={() => window.location.href = '/pricing'} className="border-border/50 hover:bg-muted/30 transition-colors">
                   View plans
                 </Button>
               </div>
@@ -244,9 +322,10 @@ export function ProfileClient({
             </div>
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+      )}
 
-      <TabsContent value="uploads" className="space-y-6">
+      {selectedTab === 'uploads' && (
+        <>
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Storage Usage</GlassCardTitle>
@@ -271,9 +350,11 @@ export function ProfileClient({
             <ProfileTools />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+        </>
+      )}
 
-      <TabsContent value="security" className="space-y-6">
+      {selectedTab === 'security' && (
+        <>
         <PasswordBreachAlert passwordBreachDetectedAt={user.passwordBreachDetectedAt} />
         <GlassCard>
           <GlassCardHeader>
@@ -283,9 +364,10 @@ export function ProfileClient({
             <ProfileSecurity onUpdate={handleRefresh} />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+        </>
+      )}
 
-      <TabsContent value="perks" className="space-y-6">
+      {selectedTab === 'perks' && (
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Your Perks</GlassCardTitle>
@@ -297,9 +379,9 @@ export function ProfileClient({
             <ProfilePerks />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+      )}
 
-      <TabsContent value="referrals" className="space-y-6">
+      {selectedTab === 'referrals' && (
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Referral Program</GlassCardTitle>
@@ -311,9 +393,9 @@ export function ProfileClient({
             <ProfileReferrals />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+      )}
 
-      <TabsContent value="notifications" className="space-y-6">
+      {selectedTab === 'notifications' && (
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Email Notifications</GlassCardTitle>
@@ -323,29 +405,51 @@ export function ProfileClient({
               userId={user.id}
               emailNotificationsEnabled={user.emailNotificationsEnabled ?? true}
               emailPreferences={user.emailPreferences ?? defaultEmailPreferences}
+              discordWebhookUrl={user.discordWebhookUrl ?? null}
+              discordNotificationsEnabled={user.discordNotificationsEnabled ?? false}
+              discordPreferences={user.discordPreferences ?? {
+                security: true,
+                account: false,
+                billing: true,
+                marketing: false,
+                productUpdates: false,
+              }}
               onUpdate={handleRefresh}
             />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+      )}
 
-      <TabsContent value="appearance" className="space-y-6">
+      {selectedTab === 'appearance' && (
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Appearance</GlassCardTitle>
           </GlassCardHeader>
           <GlassCardContent>
-            {/* Lazy-load simple appearance selector (client-only) */}
             <ProfileAppearance />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
+      )}
 
-      <TabsContent value="testimonials" className="space-y-6">
+      {selectedTab === 'testimonials' && (
         <ProfileTestimonials />
-      </TabsContent>
+      )}
 
-      <TabsContent value="data" className="space-y-6">
+      {selectedTab === 'applications' && (
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Your Applications</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              View and manage your applications for staff, partnerships, verification, and ban appeals
+            </p>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <ApplicationsDashboard />
+          </GlassCardContent>
+        </GlassCard>
+      )}
+
+      {selectedTab === 'data' && (
         <GlassCard>
           <GlassCardHeader>
             <GlassCardTitle>Data</GlassCardTitle>
@@ -353,12 +457,27 @@ export function ProfileClient({
           <GlassCardContent className="space-y-6">
             <ProfileExport />
 
-            <Separator className="my-6 bg-white/10" />
+            <Separator className="my-6 bg-muted/50" />
 
             <ProfileDataExplorer />
           </GlassCardContent>
         </GlassCard>
-      </TabsContent>
-    </Tabs>
+      )}
+
+      {selectedTab === 'discovery' && (
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Discovery Settings</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Set up your talent profile to get discovered for opportunities, collaborations, and squads
+            </p>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <NexiumDashboard />
+          </GlassCardContent>
+        </GlassCard>
+      )}
+      </div>
+    </div>
   )
 }

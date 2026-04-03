@@ -149,7 +149,7 @@ export function ProfileReferrals() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-40 bg-white/5 dark:bg-black/5 rounded-lg animate-pulse" />
+        <div className="h-40 bg-muted/30 dark:bg-black/5 rounded-lg animate-pulse" />
       </div>
     )
   }
@@ -182,7 +182,7 @@ export function ProfileReferrals() {
                   setCustomCode(e.target.value)
                   setCodeError('')
                 }}
-                className="flex-1 px-3 py-2 rounded-lg bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 text-sm placeholder-muted-foreground/50 focus:outline-none focus:border-orange-500/50"
+                className="flex-1 px-3 py-2 rounded-lg bg-muted/50 border border-border/40 text-sm placeholder-muted-foreground/50 focus:outline-none focus:border-orange-500/50"
               />
               <Button
                 type="submit"
@@ -275,7 +275,7 @@ export function ProfileReferrals() {
 
       {/* Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+        <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
           <div className="text-sm text-muted-foreground mb-1">Billing Credits</div>
           <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400 break-all">${stats.totalCredits.toFixed(2)}
           </div>
@@ -284,7 +284,7 @@ export function ProfileReferrals() {
           </div>
         </div>
 
-        <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+        <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
           <div className="text-sm text-muted-foreground mb-1">Total Referrals</div>
           <div className="text-3xl font-bold">{stats.referralCount}</div>
           <div className="text-xs text-muted-foreground mt-1">
@@ -292,7 +292,7 @@ export function ProfileReferrals() {
           </div>
         </div>
 
-        <div className="p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+        <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
           <div className="text-sm text-muted-foreground mb-1">Credited</div>
           <div className="text-3xl font-bold">{stats.creditedCount}</div>
           <div className="text-xs text-muted-foreground mt-1">
@@ -325,7 +325,7 @@ export function ProfileReferrals() {
             {history.map((referral) => (
               <div
                 key={referral.id}
-                className="p-3 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 flex items-center justify-between"
+                className="p-3 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 flex items-center justify-between"
               >
                 <div>
                   <div className="font-medium">{referral.name || 'Unknown'}</div>
@@ -341,7 +341,7 @@ export function ProfileReferrals() {
       )}
 
       {history.length === 0 && (
-        <div className="p-6 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 text-center">
+        <div className="p-6 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 text-center">
           <p className="text-muted-foreground">
             No referrals yet. Share your code to start earning credits!
           </p>

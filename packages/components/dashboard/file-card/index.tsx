@@ -264,9 +264,9 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
   const isImage = file.mimeType.startsWith('image/')
 
   return (
-    <Card className="group relative overflow-hidden bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl border-white/10 dark:border-white/5 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 dark:hover:border-white/10 transition-all duration-300">
+    <Card className="group relative overflow-hidden bg-background/80 backdrop-blur-lg border-border/50 shadow-sm hover:shadow-md hover:bg-background/90 hover:border-border/50 transition-all duration-300">
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-muted/10 via-transparent to-transparent pointer-events-none" />
 
       {/* Thumbnail section */}
       <div className="relative">
@@ -294,7 +294,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
               )}
             </div>
           ) : (
-            <div className="relative aspect-square bg-white/5 dark:bg-white/[0.02] flex items-center justify-center">
+            <div className="relative aspect-square bg-muted/30 flex items-center justify-center">
               {getFileIcon(file.mimeType, 'h-16 w-16 text-muted-foreground')}
             </div>
           )}
@@ -305,7 +305,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
           className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20 opacity-0 ${!isLoadingOcr && 'group-hover:opacity-100'} transition-all duration-300 flex flex-col items-center justify-center gap-3`}
         >
           {/* View button */}
-          <Button variant="secondary" className="bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white" size="sm" asChild>
+          <Button variant="secondary" className="bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white" size="sm" asChild>
             <Link href={sanitizeUrl(file.urlPath)}>View</Link>
           </Button>
 
@@ -317,7 +317,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     onClick={handleCopyLink}
                     aria-label="Copy link"
                   >
@@ -331,7 +331,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     asChild
                     aria-label={`Download ${file.name}`}
                   >
@@ -350,7 +350,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     onClick={() => setIsVisibilityDialogOpen(true)}
                     aria-label="Change visibility"
                   >
@@ -364,7 +364,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     onClick={() => setIsPasswordDialogOpen(true)}
                     aria-label="Password protect"
                   >
@@ -379,7 +379,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                      className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                       onClick={handleFetchOcr}
                       disabled={isLoadingOcr}
                       aria-label="Extract text (OCR)"
@@ -395,7 +395,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     onClick={() => setIsExpiryModalOpen(true)}
                     aria-label="Manage expiration"
                   >
@@ -409,7 +409,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     onClick={() => setIsEmbedPreviewOpen(true)}
                     aria-label="Embed preview"
                   >
@@ -423,7 +423,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-white/10 text-white"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
                     onClick={() => setIsDeleteDialogOpen(true)}
                     aria-label="Delete file"
                   >
@@ -438,7 +438,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
 
         {/* Visibility badge */}
         <div className="absolute bottom-2 left-2">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 dark:bg-black/40 text-xs backdrop-blur-md border border-white/10">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 text-xs backdrop-blur-md border border-border/50">
             {file.password ? (
               <>
                 <KeyRound className="h-3 w-3" />
@@ -500,7 +500,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
           <TooltipProvider delayDuration={150}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 dark:bg-black/40 text-xs backdrop-blur-md border border-white/10">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 text-xs backdrop-blur-md border border-border/50">
                   <Clock className="h-3 w-3" />
                   {getRelativeTime(new Date(file.uploadedAt))}
                 </div>
@@ -519,7 +519,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
       </div>
 
       {/* File info section */}
-      <div className="p-3 relative border-t border-white/5">
+      <div className="p-3 relative border-t border-border/20">
         <div className="flex items-center justify-between gap-2">
           <TooltipProvider delayDuration={150}>
             <Tooltip>

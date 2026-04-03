@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -14,8 +13,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const [session, { id }] = await Promise.all([
-      getServerSession(authOptions),
+    const [user, { id }] = await Promise.all([
+      getAuthenticatedUser(request),
       params,
     ])
 
@@ -47,8 +46,8 @@ export async function GET(
     }
 
     // Check access permissions (similar to main file endpoint)
-    const isOwner = session?.user?.id === file.userId
-    const isAdmin = session?.user?.role === 'ADMIN'
+    const isOwner = user?.id === file.userId
+    const isAdmin = user?.role === 'ADMIN'
     const isPrivate = file.visibility === 'PRIVATE' && !isOwner && !isAdmin
 
     if (isPrivate) {

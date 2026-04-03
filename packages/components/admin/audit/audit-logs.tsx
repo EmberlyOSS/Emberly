@@ -229,8 +229,8 @@ export function AdminAuditLogs() {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-                <div className="px-4 py-3 border-b border-border/50 bg-background/50">
+            <div className="glass-subtle overflow-hidden">
+                <div className="px-4 py-3 border-b border-border/40 bg-muted/20">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h3 className="font-medium">Filters</h3>
@@ -378,8 +378,8 @@ export function AdminAuditLogs() {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-border/50 bg-background/30 overflow-hidden">
-                <div className="px-4 py-3 border-b border-border/50 bg-background/50">
+            <div className="glass-subtle overflow-hidden">
+                <div className="px-4 py-3 border-b border-border/40 bg-muted/20">
                     <div className="flex items-center justify-between gap-3">
                         <div>
                             <h3 className="font-medium">Results</h3>

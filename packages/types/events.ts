@@ -549,6 +549,250 @@ export type EventTypeMap = {
     failedCount: number
     context?: RequestContext
   }
+
+  'admin.user-banned': {
+    adminId: string
+    adminName: string
+    targetId: string
+    targetName: string
+    targetEmail: string
+    banType: 'temporary' | 'permanent'
+    reason: string
+    expiresAt?: Date
+  }
+
+  'admin.user-unbanned': {
+    adminId: string
+    adminName: string
+    targetId: string
+    targetName: string
+    targetEmail: string
+    reason?: string
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MODERATION EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'moderation.user-reported': {
+    reportId: string
+    reportedUserId: string
+    reportedUserName: string
+    reporterUserId: string
+    reporterUserName: string
+    category: string
+    reason: string
+  }
+
+  'moderation.report-resolved': {
+    reportId: string
+    reportedUserId: string
+    adminId: string
+    adminName: string
+    resolution: string
+    action: 'banned' | 'dismissed' | 'warned'
+  }
+
+  'moderation.squad-reported': {
+    reportId: string
+    squadId: string
+    squadName: string
+    reporterUserId: string
+    reporterUserName: string
+    category: string
+    reason: string
+  }
+
+  'moderation.squad-report-resolved': {
+    reportId: string
+    squadId: string
+    squadName: string
+    adminId: string
+    adminName: string
+    resolution: string
+    action: 'disbanded' | 'dismissed' | 'warned'
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // APPLICATION EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'application.submitted': {
+    applicationId: string
+    userId: string
+    userName: string
+    userEmail: string
+    type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL'
+  }
+
+  'application.reviewed': {
+    applicationId: string
+    userId: string
+    userName: string
+    userEmail: string
+    type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL'
+    status: 'APPROVED' | 'REJECTED'
+    reviewerName: string
+    reviewNotes?: string
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TESTIMONIAL EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'testimonial.submitted': {
+    testimonialId: string
+    userId: string
+    userName: string
+    userEmail: string
+    contentPreview: string
+  }
+
+  'testimonial.edited': {
+    testimonialId: string
+    userId: string
+    userName: string
+    userEmail: string
+    contentPreview: string
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SYSTEM EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'system.client-error': {
+    url: string
+    message: string
+    stack?: string
+    userId?: string
+    userAgent?: string
+  }
+
+  'system.server-error': {
+    url: string
+    message: string
+    stack?: string
+    userId?: string
+    statusCode?: number
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NEXIUM EVENTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  'nexium.profile-created': {
+    userId: string
+    email: string
+    profileId: string
+    context?: RequestContext
+  }
+
+  'nexium.profile-updated': {
+    userId: string
+    email: string
+    fields: string[]
+    context?: RequestContext
+  }
+
+  'nexium.profile-deleted': {
+    userId: string
+    email: string
+    context?: RequestContext
+  }
+
+  'nexium.skill-added': {
+    userId: string
+    email: string
+    skillName: string
+    context?: RequestContext
+  }
+
+  'nexium.skills-replaced': {
+    userId: string
+    email: string
+    count: number
+    context?: RequestContext
+  }
+
+  'nexium.signal-added': {
+    userId: string
+    email: string
+    signalType: string
+    signalTitle: string
+    context?: RequestContext
+  }
+
+  'nexium.opportunity-created': {
+    userId: string
+    email: string
+    opportunityId: string
+    title: string
+    context?: RequestContext
+  }
+
+  'nexium.squad-created': {
+    userId: string
+    email: string
+    squadId: string
+    squadName: string
+    context?: RequestContext
+  }
+
+  'nexium.squad-invite': {
+    userId: string
+    email: string
+    name?: string
+    squadId: string
+    squadName: string
+    inviterName: string
+    inviteUrl: string
+    context?: RequestContext
+  }
+
+  'nexium.opportunity-match': {
+    userId: string
+    email: string
+    name?: string
+    opportunityId: string
+    opportunityTitle: string
+    opportunityUrl: string
+    companyName?: string
+    matchedSkills: string[]
+    context?: RequestContext
+  }
+
+  'nexium.application-received': {
+    userId: string
+    email: string
+    applicantName: string
+    applicationId: string
+    opportunityId: string
+    opportunityTitle: string
+    reviewUrl: string
+    context?: RequestContext
+  }
+
+  'nexium.application-accepted': {
+    userId: string
+    email: string
+    name?: string
+    applicationId: string
+    opportunityId: string
+    opportunityTitle: string
+    squadName?: string
+    profileUrl: string
+    context?: RequestContext
+  }
+
+  'nexium.application-rejected': {
+    userId: string
+    email: string
+    name?: string
+    applicationId: string
+    opportunityId: string
+    opportunityTitle: string
+    context?: RequestContext
+  }
 }
 
 export type EventType = keyof EventTypeMap
@@ -566,7 +810,12 @@ export const EventCategories = {
   email: ['email.send', 'email.sent', 'email.failed', 'email.bounced'],
   billing: ['billing.subscription-created', 'billing.subscription-updated', 'billing.subscription-cancelled', 'billing.payment-succeeded', 'billing.payment-failed', 'billing.refund-issued'],
   security: ['security.suspicious-activity', 'security.rate-limit-exceeded', 'security.api-key-created', 'security.api-key-revoked'],
-  admin: ['admin.user-role-changed', 'admin.user-suspended', 'admin.user-unsuspended', 'admin.content-removed', 'admin.broadcast-sent'],
+  admin: ['admin.user-role-changed', 'admin.user-suspended', 'admin.user-unsuspended', 'admin.content-removed', 'admin.broadcast-sent', 'admin.user-banned', 'admin.user-unbanned'],
+  moderation: ['moderation.user-reported', 'moderation.report-resolved', 'moderation.squad-reported', 'moderation.squad-report-resolved'],
+  applications: ['application.submitted', 'application.reviewed'],
+  testimonials: ['testimonial.submitted', 'testimonial.edited'],
+  system: ['system.client-error', 'system.server-error'],
+  nexium: ['nexium.profile-created', 'nexium.profile-updated', 'nexium.profile-deleted', 'nexium.skill-added', 'nexium.skills-replaced', 'nexium.signal-added', 'nexium.opportunity-created', 'nexium.squad-created', 'nexium.squad-invite', 'nexium.opportunity-match', 'nexium.application-received', 'nexium.application-accepted', 'nexium.application-rejected'],
 } as const
 
 export type EventCategory = keyof typeof EventCategories

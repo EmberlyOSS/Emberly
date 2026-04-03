@@ -17,12 +17,12 @@ import { Tailwind } from '@react-email/tailwind'
 
 interface PasswordResetEmailProps {
   resetUrl: string
-  expiresInHours?: number
+  expiresInMinutes?: number
 }
 
 export function PasswordResetEmail({
   resetUrl,
-  expiresInHours = 1,
+  expiresInMinutes = 30,
 }: PasswordResetEmailProps) {
   return (
     <Html>
@@ -86,7 +86,7 @@ export function PasswordResetEmail({
               <Row className="mt-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
                 <Column align="center">
                   <Text className="m-0 text-sm text-yellow-800">
-                    <strong>⏰ This link expires in {expiresInHours} hour{expiresInHours > 1 ? 's' : ''}</strong>
+                    <strong>⏰ This link expires in {expiresInMinutes} minutes</strong>
                   </Text>
                 </Column>
               </Row>

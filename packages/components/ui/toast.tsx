@@ -31,7 +31,7 @@ const toastVariants = cva(
     variants: {
       variant: {
         default:
-          'border-white/20 dark:border-white/10 bg-white/10 dark:bg-black/10 text-foreground shadow-black/5 dark:shadow-black/20 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-white/10 before:via-transparent before:to-black/5 dark:before:from-white/5 dark:before:via-transparent dark:before:to-black/10 before:pointer-events-none',
+          'border-border/50 bg-muted/50 text-foreground shadow-black/5 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-muted/30 before:via-transparent before:to-transparent before:pointer-events-none',
         destructive:
           'border-destructive/30 bg-destructive/10 text-destructive-foreground shadow-destructive/10 backdrop-blur-xl before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-destructive/10 before:via-transparent before:to-destructive/5 before:pointer-events-none',
       },

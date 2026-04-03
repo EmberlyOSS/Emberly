@@ -37,21 +37,6 @@ export function ThemeProviderWrapper({
     }
   }
 
-  // Save system theme via admin API
-  const handleSaveSystemTheme = async (themeId: string, colors: Record<string, string>): Promise<boolean> => {
-    try {
-      const response = await fetch('/api/admin/themes/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ themeId, colors }),
-      })
-      return response.ok
-    } catch (error) {
-      console.error('[ThemeProviderWrapper] Failed to save system theme:', error)
-      return false
-    }
-  }
-
   return (
     <EmberlyThemeProvider
       initialUserTheme={initialUserTheme}
@@ -59,7 +44,6 @@ export function ThemeProviderWrapper({
       systemTheme={systemTheme}
       systemColors={systemColors}
       onSaveUserTheme={handleSaveUserTheme}
-      onSaveSystemTheme={handleSaveSystemTheme}
     >
       {children}
     </EmberlyThemeProvider>

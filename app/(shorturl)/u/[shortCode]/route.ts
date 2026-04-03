@@ -9,20 +9,41 @@ export async function GET(
   try {
     const { shortCode } = await params
 
+    // 1. Try URL short code first
     const url = await prisma.shortenedUrl.findUnique({
       where: { shortCode },
     })
 
-    if (!url) {
-      return new NextResponse(null, { status: 404 })
+    if (url) {
+      // Block flagged URLs
+      if (url.flagged) {
+        return new NextResponse(
+          'This URL has been flagged by our moderation team and is currently unavailable.',
+          { status: 451, headers: { 'Content-Type': 'text/plain' } }
+        )
+      }
+
+      await prisma.shortenedUrl.update({
+        where: { id: url.id },
+        data: { clicks: { increment: 1 } },
+      })
+      return NextResponse.redirect(url.targetUrl)
     }
 
-    await prisma.shortenedUrl.update({
-      where: { id: url.id },
-      data: { clicks: { increment: 1 } },
+    // 2. Fall back to user profile lookup (urlId or vanityId)
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ urlId: shortCode }, { vanityId: shortCode }],
+        isProfilePublic: true,
+      },
+      select: { urlId: true },
     })
 
-    return NextResponse.redirect(url.targetUrl)
+    if (user) {
+      return NextResponse.redirect(new URL(`/user/${shortCode}`, req.url))
+    }
+
+    return new NextResponse(null, { status: 404 })
   } catch (error) {
     console.error('URL redirect error:', error)
     return new NextResponse(null, { status: 500 })

@@ -19,6 +19,7 @@ body {
 .emberly-text {
   font-family: var(--font-inter);
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 @layer base {
@@ -31,32 +32,127 @@ body {
   }
 }
 
-/* Glassmorphism Effects */
+/* ─── Surface tiers ───────────────────────────────────────────────────────── */
+
 .glass {
-  @apply bg-background/80 backdrop-blur-lg border border-white/10;
+  @apply bg-background/80 backdrop-blur-lg border border-border/50;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .glass-hover {
-  @apply hover:bg-background/90 transition-colors duration-200;
+  @apply transition-all duration-200;
+}
+.glass-hover:hover {
+  @apply bg-background/90 border-border;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .glass-card {
-  @apply glass rounded-lg shadow-lg;
+  @apply glass rounded-2xl;
 }
 
+/* Elevated surface — for navbars, headers, prominent containers */
+.glass-elevated {
+  @apply bg-background/70 backdrop-blur-xl border border-border/40;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.08),
+    0 4px 16px -4px rgba(0,0,0,0.12);
+}
 
-/* Custom Gradients */
+/* Subtle surface — for nested panels inside other containers */
+.glass-subtle {
+  @apply bg-background/80 backdrop-blur-lg border border-border/50 rounded-xl;
+}
+
+/* ─── Glow utilities ──────────────────────────────────────────────────────── */
+
+.glow-primary {
+  box-shadow: 0 0 24px -8px hsl(var(--primary) / 0.12);
+}
+
+.glow-primary-subtle {
+  box-shadow: 0 0 20px -6px hsl(var(--primary) / 0.08);
+}
+
+.glow-primary-strong {
+  box-shadow:
+    0 0 12px -2px hsl(var(--primary) / 0.18),
+    0 0 40px -8px hsl(var(--primary) / 0.1);
+}
+
+/* ─── Gradient borders (animated) ─────────────────────────────────────────── */
+
+.gradient-border-animated {
+  position: relative;
+  border: none !important;
+}
+.gradient-border-animated::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.4),
+    hsl(var(--primary) / 0.08) 40%,
+    transparent 60%,
+    hsl(var(--primary) / 0.08) 80%,
+    hsl(var(--primary) / 0.4)
+  );
+  background-size: 300% 300%;
+  animation: gradient-rotate 8s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes gradient-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Static gradient border */
 .gradient-border {
-  @apply border border-transparent bg-gradient-to-r from-primary/50 via-primary/25 to-transparent;
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
+  position: relative;
+  border: none !important;
 }
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.3),
+    hsl(var(--primary) / 0.06) 50%,
+    hsl(var(--primary) / 0.3)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ─── Backgrounds ─────────────────────────────────────────────────────────── */
 
 .gradient-bg {
-  @apply bg-gradient-to-br from-background via-background/95 to-primary/10;
+  @apply bg-gradient-to-br from-background via-background to-primary/5;
 }
 
-/* Animation Utilities */
+/* Ambient dot grid overlay */
+.dot-grid {
+  background-image: radial-gradient(circle, hsl(var(--primary) / 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Animation utilities ─────────────────────────────────────────────────── */
+
 .animate-fade-in {
   @apply animate-in fade-in duration-500;
 }
@@ -65,7 +161,66 @@ body {
   @apply animate-in slide-in-from-bottom-4 duration-500;
 }
 
-/* Custom Scrollbar */
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up-delay-1 { animation-delay: 0.1s; }
+.animate-fade-up-delay-2 { animation-delay: 0.2s; }
+.animate-fade-up-delay-3 { animation-delay: 0.3s; }
+.animate-fade-up-delay-4 { animation-delay: 0.4s; }
+
+/* Shimmer effect for loading states or accents */
+.shimmer {
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    hsl(var(--primary) / 0.06) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Subtle float for hero elements */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ─── Text utilities ──────────────────────────────────────────────────────── */
+
+.text-gradient {
+  @apply bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent;
+}
+
+.text-gradient-subtle {
+  @apply bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent;
+}
+
+/* ─── Custom Scrollbar ────────────────────────────────────────────────────── */
+
 @layer utilities {
   .scrollbar-custom {
     @apply scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary/20 hover:scrollbar-thumb-primary/30;
@@ -81,9 +236,8 @@ body {
   }
 }
 
-/* Customize scrollbar for Webkit browsers (Chrome, Safari, etc.) */
 ::-webkit-scrollbar {
-  width: 14px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -91,16 +245,19 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground));
-  border: 4px solid transparent;
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border: 3px solid transparent;
   background-clip: padding-box;
   border-radius: 9999px;
 }
 
-/* For Firefox */
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
 }
 
 /* Theme: The Upside Down - Flips headers and adds eerie effects */

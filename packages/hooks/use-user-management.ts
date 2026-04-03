@@ -12,6 +12,10 @@ export interface User {
   role: 'SUPERADMIN' | 'ADMIN' | 'USER'
   urlId: string
   storageUsed: number
+  bannedAt: string | null
+  banReason: string | null
+  banType: string | null
+  banExpiresAt: string | null
   _count: {
     files: number
     shortenedUrls: number

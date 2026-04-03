@@ -1,6 +1,7 @@
 import type { EventPayload } from '@/packages/types/events'
 
 import { loggers } from '@/packages/lib/logger'
+import { notifyDiscord } from '../utils/discord-webhook'
 
 import { events } from '../index'
 
@@ -55,7 +56,24 @@ export function registerSecurityHandlers(): void {
                     details: payload.details,
                     context: payload.context,
                 })
-                // TODO: Send to admin notification channel (Discord, Slack, etc.)
+
+                const adminWebhookUrl = process.env.DISCORD_WEBHOOK_URL
+                if (adminWebhookUrl) {
+                    await notifyDiscord({
+                        webhookUrl: adminWebhookUrl,
+                        embeds: [{
+                            title: '🚨 CRITICAL Security Event',
+                            description: payload.details,
+                            color: 0xef4444,
+                            fields: [
+                                { name: 'Activity', value: payload.activityType, inline: true },
+                                { name: 'Severity', value: payload.severity.toUpperCase(), inline: true },
+                                { name: 'User', value: payload.email || payload.userId || 'Unknown', inline: true },
+                                { name: 'IP', value: payload.context?.ip || 'Unknown', inline: true },
+                            ],
+                        }],
+                    })
+                }
             }
         },
         { enabled: true, timeout: 30000 }

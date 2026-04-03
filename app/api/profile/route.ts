@@ -8,6 +8,7 @@ import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { sessionCache } from '@/packages/lib/cache/session-cache'
 import { prisma } from '@/packages/lib/database/prisma'
+import { events } from '@/packages/lib/events'
 import { loggers } from '@/packages/lib/logger'
 import { checkPasswordReuse, recordPasswordHistory } from '@/packages/lib/security/password-reuse-checker'
 
@@ -30,6 +31,9 @@ export async function GET(req: Request) {
         enableRichEmbeds: true,
         emailNotificationsEnabled: true,
         emailPreferences: true,
+        discordWebhookUrl: true,
+        discordNotificationsEnabled: true,
+        discordPreferences: true,
         createdAt: true,
         updatedAt: true,
         // Public profile fields
@@ -177,11 +181,28 @@ export async function PUT(req: Request) {
       const existingPrefs = (existingUser?.emailPreferences as Record<string, boolean>) || {}
       updateData.emailPreferences = { ...existingPrefs, ...body.emailPreferences }
     }
+    if (body.discordWebhookUrl !== undefined)
+      updateData.discordWebhookUrl = body.discordWebhookUrl
+    if (typeof body.discordNotificationsEnabled === 'boolean')
+      updateData.discordNotificationsEnabled = body.discordNotificationsEnabled
+    if (body.discordPreferences) {
+      const existingUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { discordPreferences: true },
+      })
+      const existingPrefs = (existingUser?.discordPreferences as Record<string, boolean>) || {}
+      updateData.discordPreferences = { ...existingPrefs, ...body.discordPreferences }
+    }
 
     // Public profile fields
+    if (body.fullName !== undefined) updateData.fullName = body.fullName
     if (body.bio !== undefined) updateData.bio = body.bio
     if (body.website !== undefined) updateData.website = body.website
+    if (body.twitter !== undefined) updateData.twitter = body.twitter
+    if (body.github !== undefined) updateData.github = body.github
+    if (body.discord !== undefined) updateData.discord = body.discord
     if (typeof body.isProfilePublic === 'boolean') updateData.isProfilePublic = body.isProfilePublic
+    if (typeof body.showLinkedAccounts === 'boolean') updateData.showLinkedAccounts = body.showLinkedAccounts
     if (body.profileVisibility) updateData.profileVisibility = body.profileVisibility
 
     const updatedUser = await prisma.user.update({
@@ -190,22 +211,45 @@ export async function PUT(req: Request) {
       select: {
         id: true,
         name: true,
+        fullName: true,
         email: true,
         image: true,
         randomizeFileUrls: true,
         enableRichEmbeds: true,
         emailNotificationsEnabled: true,
         emailPreferences: true,
+        discordWebhookUrl: true,
+        discordNotificationsEnabled: true,
+        discordPreferences: true,
         // Public profile fields
         bio: true,
         website: true,
+        twitter: true,
+        github: true,
+        discord: true,
         isProfilePublic: true,
+        showLinkedAccounts: true,
         profileVisibility: true,
       },
     })
 
     // Invalidate session cache
     await sessionCache.invalidateUserSession(user.id)
+
+    // Emit auditable event (fire-and-forget)
+    if (body.newPassword) {
+      void events.emit('auth.password-changed', {
+        userId: user.id,
+        email: updatedUser.email!,
+        changedBy: 'user',
+      }).catch((err) => console.error('[Events] Failed to emit auth.password-changed', err))
+    } else {
+      void events.emit('account.profile-updated', {
+        userId: user.id,
+        email: updatedUser.email!,
+        fields: Object.keys(updateData),
+      }).catch((err) => console.error('[Events] Failed to emit account.profile-updated', err))
+    }
 
     return apiResponse<ProfileResponse>(updatedUser)
   } catch (error) {
@@ -236,7 +280,7 @@ export async function DELETE(req: Request) {
 
     for (const file of userData.files) {
       try {
-        await unlink(join(process.cwd(), file.path))
+        await unlink(join(/*turbopackIgnore: true*/ process.cwd(), file.path))
       } catch (error) {
         logger.error(`Error deleting file ${file.path}:`, error as Error)
       }
@@ -244,7 +288,7 @@ export async function DELETE(req: Request) {
 
     if (userData.image?.startsWith('/avatars/')) {
       try {
-        await unlink(join(process.cwd(), 'public', userData.image))
+        await unlink(join(/*turbopackIgnore: true*/ process.cwd(), 'public', userData.image))
       } catch (error) {
         logger.error('Error deleting avatar:', error as Error)
       }
@@ -253,6 +297,13 @@ export async function DELETE(req: Request) {
     await prisma.user.delete({
       where: { id: user.id },
     })
+
+    // Emit auditable event (fire-and-forget)
+    void events.emit('account.deleted', {
+      userId: user.id,
+      email: userData.email!,
+      deletedBy: 'user',
+    }).catch((err) => console.error('[Events] Failed to emit account.deleted', err))
 
     return new Response(null, { status: HTTP_STATUS.NO_CONTENT })
   } catch (error) {

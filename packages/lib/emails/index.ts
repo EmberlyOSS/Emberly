@@ -53,6 +53,9 @@ export { AdminBroadcastEmail } from './templates/admin-broadcast'
 export { PerkGainedEmail } from './templates/perk-gained'
 export { QuotaReachedEmail } from './templates/quota-reached'
 export { StorageAssignedEmail } from './templates/storage-assigned'
+export { NexiumWelcomeEmail } from './templates/nexium-welcome'
+export { NexiumOpportunityEmail } from './templates/nexium-opportunity'
+export { NexiumSquadInviteEmail } from './templates/nexium-squad-invite'
 
 export async function sendEmail({
     to,

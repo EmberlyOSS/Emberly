@@ -1,33 +1,20 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
-
-type PlanKey = 'free' | 'glow' | 'flare' | 'blaze' | 'enterprise'
-
-function planKeyForProduct(product: { id?: string | null; slug?: string | null; stripeProductId?: string | null } | null): PlanKey {
-    if (!product) return 'free'
-    const p = (product.slug || product.stripeProductId || '').toLowerCase()
-    if (p.includes('flare') || p.includes('pro')) return 'flare'
-    if (p.includes('blaze') || p.includes('team') || p.includes('scale')) return 'blaze'
-    if (p.includes('enterprise') || p.includes('inferno')) return 'enterprise'
-    if (p.includes('glow') || p.includes('starter')) return 'glow'
-    if (p.includes('free') || p.includes('spark')) return 'free'
-    return 'glow'
-}
+import { planKeyForProduct, hasAdvancedAnalytics } from '@/packages/lib/plans'
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
-        if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
-        const user = await prisma.user.findUnique({ where: { id: session.user.id } })
-        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+        if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
         const subscription = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, include: { product: true } })
         const plan = planKeyForProduct(subscription?.product ?? null)
 
-        if (!['flare', 'blaze', 'enterprise'].includes(plan)) {
+        if (!hasAdvancedAnalytics(plan)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 

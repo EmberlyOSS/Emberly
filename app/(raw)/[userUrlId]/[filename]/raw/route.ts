@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 
-import { compare } from 'bcryptjs'
 import { getServerSession } from 'next-auth'
 import { Readable } from 'stream'
 
 import { authOptions } from '@/packages/lib/auth'
-import { prisma } from '@/packages/lib/database/prisma'
 import { getConfig } from '@/packages/lib/config'
+import { prisma } from '@/packages/lib/database/prisma'
+import { checkFileAccess } from '@/packages/lib/files/access'
+import { findFileByUrlPath } from '@/packages/lib/files/lookup'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
 
@@ -129,39 +130,14 @@ export async function HEAD(
     const url = new URL(req.url)
     const providedPassword = url.searchParams.get('password')
 
-    let file = await prisma.file.findUnique({
-      where: { urlPath },
-    })
-
-    if (!file && filename.includes(' ')) {
-      const urlSafeFilename = filename.replace(/ /g, '-')
-      const urlSafePath = `/${userUrlId}/${urlSafeFilename}`
-      file = await prisma.file.findUnique({
-        where: { urlPath: urlSafePath },
-      })
-    }
+    const file = await findFileByUrlPath(userUrlId, filename)
 
     if (!file) {
       return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
 
-    const isOwner = session?.user?.id === file.userId
-    const isPrivate = file.visibility === 'PRIVATE' && !session?.user
-
-    if (isPrivate) {
-      return new Response(null, { status: 404, headers: CORS_HEADERS })
-    }
-
-    if (file.password && !isOwner) {
-      if (!providedPassword) {
-        return new Response(null, { status: 401, headers: CORS_HEADERS })
-      }
-
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
-        return new Response(null, { status: 401, headers: CORS_HEADERS })
-      }
-    }
+    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
+    if (deny) return new Response(null, { status: deny.status, headers: CORS_HEADERS })
 
     const storageProvider = await getStorageProvider()
     const size = await storageProvider.getFileSize(file.path)
@@ -194,39 +170,14 @@ export async function GET(
     const url = new URL(req.url)
     const providedPassword = url.searchParams.get('password')
 
-    let file = await prisma.file.findUnique({
-      where: { urlPath },
-    })
-
-    if (!file && filename.includes(' ')) {
-      const urlSafeFilename = filename.replace(/ /g, '-')
-      const urlSafePath = `/${userUrlId}/${urlSafeFilename}`
-      file = await prisma.file.findUnique({
-        where: { urlPath: urlSafePath },
-      })
-    }
+    const file = await findFileByUrlPath(userUrlId, filename)
 
     if (!file) {
       return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
 
-    const isOwner = session?.user?.id === file.userId
-    const isPrivate = file.visibility === 'PRIVATE' && !session?.user
-
-    if (isPrivate) {
-      return new Response(null, { status: 404, headers: CORS_HEADERS })
-    }
-
-    if (file.password && !isOwner) {
-      if (!providedPassword) {
-        return new Response(null, { status: 401, headers: CORS_HEADERS })
-      }
-
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
-        return new Response(null, { status: 401, headers: CORS_HEADERS })
-      }
-    }
+    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
+    if (deny) return new Response(null, { status: deny.status, headers: CORS_HEADERS })
 
     const config = await getConfig()
     const storageProvider = await getStorageProvider()

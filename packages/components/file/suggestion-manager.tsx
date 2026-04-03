@@ -188,7 +188,7 @@ export function SuggestionManager({
                 <Button
                     variant="outline"
                     size="sm"
-                    className="bg-background/50 backdrop-blur-sm border-border/40 hover:bg-background/80 rounded-xl px-2.5 sm:px-3"
+                    className="glass-subtle glass-hover rounded-xl px-2.5 sm:px-3"
                 >
                     <FileEdit className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Suggestions</span>
@@ -245,7 +245,7 @@ export function SuggestionManager({
                                 {suggestions.map((suggestion) => (
                                     <div
                                         key={suggestion.id}
-                                        className="rounded-lg border border-border/50 bg-background/50 overflow-hidden"
+                                        className="glass-subtle overflow-hidden"
                                     >
                                         {/* Header */}
                                         <div className="flex items-center justify-between p-3 bg-muted/30">

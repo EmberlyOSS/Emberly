@@ -70,17 +70,17 @@ export function EmbedPreviewDialog({
                 </DialogHeader>
 
                 <Tabs defaultValue="discord" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-white/5 dark:bg-white/[0.02]">
+                    <TabsList className="grid w-full grid-cols-2 bg-muted/30">
                         <TabsTrigger
                             value="discord"
-                            className="flex items-center gap-2 data-[state=active]:bg-white/10"
+                            className="flex items-center gap-2 data-[state=active]:bg-muted/50"
                         >
                             <MessageSquare className="h-4 w-4" />
                             Discord
                         </TabsTrigger>
                         <TabsTrigger
                             value="twitter"
-                            className="flex items-center gap-2 data-[state=active]:bg-white/10"
+                            className="flex items-center gap-2 data-[state=active]:bg-muted/50"
                         >
                             <X className="h-4 w-4" />
                             Twitter/X
@@ -128,7 +128,7 @@ export function EmbedPreviewDialog({
                                             {isVideo && (
                                                 <div className="relative aspect-video flex items-center justify-center bg-[#202225]">
                                                     <div className="absolute inset-0 flex items-center justify-center">
-                                                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                                                        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
                                                             <div className="w-0 h-0 border-l-[16px] border-l-white border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent ml-1" />
                                                         </div>
                                                     </div>
@@ -156,7 +156,7 @@ export function EmbedPreviewDialog({
                             </div>
 
                             {!enableRichEmbeds && (
-                                <div className="text-xs text-muted-foreground bg-white/5 rounded-lg p-3">
+                                <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
                                     <Globe className="h-4 w-4 inline mr-1.5" />
                                     Rich embeds are disabled. Only the URL will be shown when shared.
                                 </div>
@@ -211,7 +211,7 @@ export function EmbedPreviewDialog({
                             </div>
 
                             {!enableRichEmbeds && (
-                                <div className="text-xs text-muted-foreground bg-white/5 rounded-lg p-3">
+                                <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
                                     <Globe className="h-4 w-4 inline mr-1.5" />
                                     Rich embeds are disabled. Only the URL will be shown when shared.
                                 </div>
@@ -220,7 +220,7 @@ export function EmbedPreviewDialog({
                     </TabsContent>
                 </Tabs>
 
-                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="text-xs text-muted-foreground">
                         {enableRichEmbeds ? (
                             <span className="flex items-center gap-1.5">

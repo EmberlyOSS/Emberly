@@ -10,9 +10,11 @@ export const EmailPreferencesSchema = z.object({
 })
 
 export type EmailPreferences = z.infer<typeof EmailPreferencesSchema>
+export type DiscordPreferences = z.infer<typeof EmailPreferencesSchema>
 
 export const UpdateProfileSchema = z.object({
   name: z.string().min(2).optional(),
+  fullName: z.string().max(100).nullable().optional(),
   email: z.string().email('Invalid email address').max(255, 'Email too long').trim().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).optional(),
@@ -26,10 +28,18 @@ export const UpdateProfileSchema = z.object({
   // Email notification preferences
   emailNotificationsEnabled: z.boolean().optional(),
   emailPreferences: EmailPreferencesSchema.partial().optional(),
+  // Discord webhook notification preferences
+  discordWebhookUrl: z.string().url().nullable().optional(),
+  discordNotificationsEnabled: z.boolean().optional(),
+  discordPreferences: EmailPreferencesSchema.partial().optional(),
   // Public profile fields
   bio: z.string().max(500).nullable().optional(),
   website: z.string().url().nullable().optional(),
+  twitter: z.string().max(100).nullable().optional(),
+  github: z.string().max(100).nullable().optional(),
+  discord: z.string().max(100).nullable().optional(),
   isProfilePublic: z.boolean().optional(),
+  showLinkedAccounts: z.boolean().optional(),
   profileVisibility: z.string().optional(),
 })
 
@@ -45,4 +55,7 @@ export interface ProfileResponse {
   theme?: string | null
   emailNotificationsEnabled?: boolean
   emailPreferences?: EmailPreferences
+  discordWebhookUrl?: string | null
+  discordNotificationsEnabled?: boolean
+  discordPreferences?: DiscordPreferences
 }

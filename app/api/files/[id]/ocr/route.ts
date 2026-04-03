@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
+import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 
 import { compare } from 'bcryptjs'
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
@@ -53,8 +52,8 @@ export async function GET(
       )
     }
 
-    const session = await getServerSession(authOptions)
-    const isOwner = session?.user?.id === file.userId
+    const user = await getAuthenticatedUser(req)
+    const isOwner = user?.id === file.userId
 
     if (file.visibility === 'PRIVATE' && !isOwner) {
       return NextResponse.json(

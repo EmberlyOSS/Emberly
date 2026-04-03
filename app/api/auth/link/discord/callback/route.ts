@@ -139,6 +139,14 @@ export async function GET(request: NextRequest) {
             },
         })
 
+        // Auto-populate the user's discord social link if not already set
+        if (userInfo.username) {
+            await prisma.user.update({
+                where: { id: session.user.id },
+                data: { discord: userInfo.username },
+            })
+        }
+
         // Verify booster status
         await verifyDiscordBoosterStatus(session.user.id, userInfo.id)
 

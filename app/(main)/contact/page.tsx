@@ -25,9 +25,8 @@ import HomeShell from '@/packages/components/layout/home-shell'
 // Reusable GlassCard component
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden ${className}`}>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+        <div className={`glass-card overflow-hidden ${className}`}>
+            {children}
         </div>
     )
 }
@@ -103,7 +102,7 @@ const EMAIL_CONTACTS = [
 ]
 
 const QUICK_LINKS = [
-    { icon: BookOpen, label: 'Documentation', href: '/docs' },
+    { icon: BookOpen, label: 'Blog', href: '/blog' },
     { icon: Bug, label: 'Bug Reports', href: 'https://github.com/EmberlyOSS/Website/issues/new?template=bug_report.md' },
     { icon: Zap, label: 'Feature Requests', href: 'https://github.com/EmberlyOSS/Website/issues/new?template=feature_request.md' },
 ]
@@ -161,7 +160,7 @@ export default function ContactPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="mt-4 pt-4 border-t border-border/50">
+                                        <div className="mt-4 pt-4 border-t border-border/40">
                                             <Button
                                                 variant="ghost"
                                                 className="w-full justify-between group-hover:bg-background/50"
@@ -208,7 +207,7 @@ export default function ContactPage() {
                                             </div>
                                         </div>
                                         {index < EMAIL_CONTACTS.length - 1 && (
-                                            <div className="border-b border-border/50 mt-4" />
+                                            <div className="border-b border-border/40 mt-4" />
                                         )}
                                     </div>
                                 ))}
@@ -273,14 +272,14 @@ export default function ContactPage() {
                         <Mail className="h-12 w-12 mx-auto text-primary/50 mb-4" />
                         <h2 className="text-2xl font-bold">Can't find what you're looking for?</h2>
                         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-                            Check out our documentation for guides and API references,
+                            Check out our blog for the latest updates and guides,
                             or reach out directly and we'll point you in the right direction.
                         </p>
                         <div className="mt-6 flex flex-wrap justify-center gap-3">
                             <Button size="lg" asChild>
-                                <Link href="/docs">
+                                <Link href="/blog">
                                     <BookOpen className="h-4 w-4 mr-2" />
-                                    Browse Documentation
+                                    Browse Blog
                                 </Link>
                             </Button>
                             <Button size="lg" variant="outline" className="bg-background/50" asChild>

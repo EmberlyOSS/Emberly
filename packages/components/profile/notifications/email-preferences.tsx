@@ -12,10 +12,12 @@ import {
     Shield,
     Sparkles,
     User,
+    Webhook,
 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/packages/components/ui/alert'
 import { Button } from '@/packages/components/ui/button'
+import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
 import { Separator } from '@/packages/components/ui/separator'
 import { Switch } from '@/packages/components/ui/switch'
@@ -34,6 +36,9 @@ interface EmailPreferencesProps {
     userId: string
     emailNotificationsEnabled: boolean
     emailPreferences: EmailPreferences
+    discordWebhookUrl?: string | null
+    discordNotificationsEnabled?: boolean
+    discordPreferences?: EmailPreferences
     onUpdate: () => void
 }
 
@@ -94,11 +99,25 @@ export function EmailPreferences({
     userId,
     emailNotificationsEnabled: initialEnabled,
     emailPreferences: initialPreferences,
+    discordWebhookUrl: initialDiscordWebhookUrl,
+    discordNotificationsEnabled: initialDiscordEnabled = false,
+    discordPreferences: initialDiscordPreferences,
     onUpdate,
 }: EmailPreferencesProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [notificationsEnabled, setNotificationsEnabled] = useState(initialEnabled)
     const [preferences, setPreferences] = useState<EmailPreferences>(initialPreferences)
+    const [discordWebhookUrl, setDiscordWebhookUrl] = useState(initialDiscordWebhookUrl || '')
+    const [discordEnabled, setDiscordEnabled] = useState(initialDiscordEnabled)
+    const [discordPrefs, setDiscordPrefs] = useState<EmailPreferences>(
+        initialDiscordPreferences || {
+            security: true,
+            account: false,
+            billing: true,
+            marketing: false,
+            productUpdates: false,
+        }
+    )
     const { toast } = useToast()
     const router = useRouter()
 
@@ -170,6 +189,138 @@ export function EmailPreferences({
             setIsLoading(false)
         }
     }, [preferences, router, onUpdate, toast])
+
+    const handleSaveDiscordWebhook = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    discordWebhookUrl: discordWebhookUrl.trim() ? discordWebhookUrl.trim() : null,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to save Discord webhook URL')
+            }
+
+            router.refresh()
+            onUpdate()
+
+            toast({
+                title: 'Discord webhook saved',
+                description: 'Your Discord webhook URL has been updated.',
+            })
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to save Discord webhook URL',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [discordWebhookUrl, router, onUpdate, toast])
+
+    const handleTestDiscordWebhook = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const response = await fetch('/api/profile/discord-webhook/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    webhookUrl: discordWebhookUrl.trim() || undefined,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to send test notification')
+            }
+
+            toast({
+                title: 'Test notification sent',
+                description: 'Check your Discord channel for the test message.',
+            })
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to send test notification',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [discordWebhookUrl, toast])
+
+    const handleDiscordMasterToggle = useCallback(async (enabled: boolean) => {
+        setIsLoading(true)
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ discordNotificationsEnabled: enabled }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to update Discord notification settings')
+            }
+
+            setDiscordEnabled(enabled)
+            router.refresh()
+            onUpdate()
+
+            toast({
+                title: enabled ? 'Discord notifications enabled' : 'Discord notifications disabled',
+                description: enabled
+                    ? 'You will receive Discord notifications based on your preferences.'
+                    : 'All Discord notifications are disabled.',
+            })
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to update Discord notification settings',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [router, onUpdate, toast])
+
+    const handleDiscordPreferenceChange = useCallback(async (key: keyof EmailPreferences, value: boolean) => {
+        setIsLoading(true)
+        try {
+            const newPreferences = { ...discordPrefs, [key]: value }
+
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ discordPreferences: { [key]: value } }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to update Discord preference')
+            }
+
+            setDiscordPrefs(newPreferences)
+            router.refresh()
+            onUpdate()
+
+            const config = PREFERENCE_CONFIG.find(c => c.key === key)
+            toast({
+                title: 'Discord preference updated',
+                description: `${config?.label} Discord notifications ${value ? 'enabled' : 'disabled'}`,
+            })
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to update Discord preference',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [discordPrefs, router, onUpdate, toast])
 
     const enabledCount = Object.values(preferences).filter(Boolean).length
 
@@ -299,6 +450,93 @@ export function EmailPreferences({
                         </div>
                     )
                 })}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/30">
+                    <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${discordEnabled ? 'bg-primary/10' : 'bg-muted'}`}>
+                            <Webhook className={`h-5 w-5 ${discordEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </div>
+                        <div className="space-y-0.5">
+                            <Label htmlFor="discord-notifications-master" className="text-base font-medium">
+                                Discord Webhook Notifications
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                                Deliver account, security, and billing notifications to your Discord channel.
+                            </p>
+                        </div>
+                    </div>
+                    <Switch
+                        id="discord-notifications-master"
+                        checked={discordEnabled}
+                        onCheckedChange={handleDiscordMasterToggle}
+                        disabled={isLoading || !discordWebhookUrl.trim()}
+                        aria-label="Toggle all Discord notifications"
+                    />
+                </div>
+
+                <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+                    <Label htmlFor="discord-webhook-url">Discord Webhook URL</Label>
+                    <Input
+                        id="discord-webhook-url"
+                        placeholder="https://discord.com/api/webhooks/..."
+                        value={discordWebhookUrl}
+                        onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                        disabled={isLoading}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleSaveDiscordWebhook}
+                            disabled={isLoading}
+                        >
+                            Save Webhook
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTestDiscordWebhook}
+                            disabled={isLoading || !discordWebhookUrl.trim()}
+                        >
+                            Send Test
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        Discord Categories
+                    </h3>
+                    {PREFERENCE_CONFIG.map((config) => {
+                        const isEnabled = discordPrefs[config.key]
+
+                        return (
+                            <div
+                                key={`discord-${config.key}`}
+                                className={`flex items-center justify-between rounded-xl border p-4 ${discordEnabled
+                                    ? 'bg-accent/5 border-accent/20'
+                                    : 'bg-muted/10 border-transparent opacity-60'
+                                    }`}
+                            >
+                                <div>
+                                    <p className="font-medium">{config.label}</p>
+                                    <p className="text-sm text-muted-foreground">{config.description}</p>
+                                </div>
+                                <Switch
+                                    checked={isEnabled}
+                                    onCheckedChange={(value) => handleDiscordPreferenceChange(config.key, value)}
+                                    disabled={isLoading || !discordEnabled}
+                                    aria-label={`Toggle Discord ${config.label}`}
+                                />
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
 
             <div className="text-xs text-muted-foreground pt-4 border-t">

@@ -1,6 +1,8 @@
 import type { EventPayload } from '@/packages/types/events'
 
 import { loggers } from '@/packages/lib/logger'
+import { prisma } from '@/packages/lib/database/prisma'
+import { syncDiscordSupporterRole } from '@/packages/lib/perks/discord'
 
 import { events } from '../index'
 
@@ -188,5 +190,44 @@ export function registerBillingHandlers(): void {
         { enabled: true, timeout: 15000 }
     )
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Discord supporter role sync
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    events.on(
+        'billing.subscription-created',
+        'sync-discord-supporter-role',
+        async (payload: EventPayload<'billing.subscription-created'>) => {
+            const discordId = await getLinkedDiscordId(payload.userId)
+            if (discordId) {
+                await syncDiscordSupporterRole(payload.userId, discordId)
+            }
+        },
+        { enabled: true, timeout: 10000 }
+    )
+
+    events.on(
+        'billing.subscription-cancelled',
+        'sync-discord-supporter-role',
+        async (payload: EventPayload<'billing.subscription-cancelled'>) => {
+            const discordId = await getLinkedDiscordId(payload.userId)
+            if (discordId) {
+                await syncDiscordSupporterRole(payload.userId, discordId)
+            }
+        },
+        { enabled: true, timeout: 10000 }
+    )
+
     logger.debug('Billing event handlers registered')
+}
+
+// ---------------------------------------------------------------------------
+// Internal helper — looks up a user's linked Discord account
+// ---------------------------------------------------------------------------
+async function getLinkedDiscordId(userId: string): Promise<string | null> {
+    const account = await prisma.linkedAccount.findFirst({
+        where: { userId, provider: 'discord' },
+        select: { providerUserId: true },
+    })
+    return account?.providerUserId ?? null
 }

@@ -25,11 +25,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 // Glass card component for consistent styling
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-xl sm:rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/20 ${className}`}>
-            <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-black/10 pointer-events-none" />
-            <div className="relative">
-                {children}
-            </div>
+        <div className={`glass-card ${className}`}>
+            {children}
         </div>
     )
 }
@@ -558,7 +555,7 @@ export default function AnalyticsOverview() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {data.topStorageFiles.slice(0, 6).map((file: any, i: number) => (
-                                <div key={file.id} className="flex items-center gap-2 p-2 rounded-lg bg-background/50">
+                                <div key={file.id} className="flex items-center gap-2 p-2 glass-subtle">
                                     <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
                                     <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                     <span className="text-sm truncate flex-1">{file.name}</span>

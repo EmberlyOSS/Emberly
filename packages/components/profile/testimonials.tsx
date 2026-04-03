@@ -15,11 +15,8 @@ import {
 // Glass card wrapper component for consistent styling
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`relative rounded-xl bg-white/5 dark:bg-black/5 backdrop-blur-sm border border-white/10 dark:border-white/5 shadow-lg shadow-black/5 ${className}`}>
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-black/5 dark:from-white/[0.02] dark:via-transparent dark:to-black/5 pointer-events-none" />
-            <div className="relative">
-                {children}
-            </div>
+        <div className={`glass-card transition-all duration-300 ${className}`}>
+            {children}
         </div>
     )
 }
@@ -139,7 +136,7 @@ export function ProfileTestimonials() {
         <GlassCard>
             <div className="p-6">
                 <h3 className="font-semibold leading-none tracking-tight text-lg mb-4">Testimonials</h3>
-                <div className="mb-4 text-sm text-muted-foreground p-4 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5">
+                <div className="mb-4 text-sm text-muted-foreground p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
                     By submitting a testimonial you agree to let us display your message and name on the site once approved by an admin. Please keep submissions civil and related to your experience using Emberly. Max 1000 characters.
                 </div>
 
@@ -150,7 +147,7 @@ export function ProfileTestimonials() {
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             rows={6}
-                            className="bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20 transition-colors resize-none"
+                            className="bg-muted/30 dark:bg-black/5 border-border/50 dark:border-border/20 focus:border-primary/50 focus:ring-primary/20 transition-colors resize-none"
                         />
                     </div>
 
@@ -160,7 +157,7 @@ export function ProfileTestimonials() {
                             value={rating === '' ? 'no-rating' : String(rating)}
                             onValueChange={(val) => setRating(val === 'no-rating' ? '' : Number(val))}
                         >
-                            <SelectTrigger className="w-48 bg-white/5 dark:bg-black/5 border-white/10 dark:border-white/5 focus:ring-primary/20">
+                            <SelectTrigger className="w-48 bg-muted/30 dark:bg-black/5 border-border/50 dark:border-border/20 focus:ring-primary/20">
                                 <SelectValue placeholder="Select a rating" />
                             </SelectTrigger>
                             <SelectContent>
@@ -184,16 +181,16 @@ export function ProfileTestimonials() {
                         {testimonial && editing && (
                             <>
                                 <Button type="submit" disabled={loading} className="w-full sm:w-auto shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all">Save</Button>
-                                <Button variant="ghost" onClick={() => { setEditing(false); setMessage(null); }} className="w-full sm:w-auto hover:bg-white/5 transition-colors">Cancel</Button>
+                                <Button variant="ghost" onClick={() => { setEditing(false); setMessage(null); }} className="w-full sm:w-auto hover:bg-muted/30 transition-colors">Cancel</Button>
                             </>
                         )}
 
                         {/* Actions when testimonial exists and not editing */}
                         {testimonial && !editing && (
                             <>
-                                <Button variant="ghost" onClick={() => setEditing(true)} className="w-full sm:w-auto hover:bg-white/5 transition-colors">Edit</Button>
+                                <Button variant="ghost" onClick={() => setEditing(true)} className="w-full sm:w-auto hover:bg-muted/30 transition-colors">Edit</Button>
                                 <Button variant="ghost" onClick={handleDelete} disabled={loading} className="w-full sm:w-auto hover:bg-destructive/10 hover:text-destructive transition-colors">Delete</Button>
-                                <Button variant="outline" onClick={toggleArchive} disabled={loading} className="w-full sm:w-auto border-border/50 hover:bg-white/5 transition-colors">{testimonial.archived ? 'Unarchive' : 'Archive'}</Button>
+                                <Button variant="outline" onClick={toggleArchive} disabled={loading} className="w-full sm:w-auto border-border/50 hover:bg-muted/30 transition-colors">{testimonial.archived ? 'Unarchive' : 'Archive'}</Button>
                             </>
                         )}
 

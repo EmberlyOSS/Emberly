@@ -11,11 +11,10 @@ import { Badge } from '@/packages/components/ui/badge'
 // Reusable GlassCard component
 function GlassCard({ children, className = '', highlight = false }: { children: React.ReactNode; className?: string; highlight?: boolean }) {
     return (
-        <div className={`relative rounded-2xl bg-background/60 backdrop-blur-xl border shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl ${highlight ? 'border-primary/50 shadow-primary/10 ring-1 ring-primary/20' : 'border-border/50 shadow-black/5 dark:shadow-black/20'} ${className}`}>
+        <div className={`glass-card overflow-hidden transition-all duration-300 hover:shadow-xl ${highlight ? 'border-primary/50 shadow-primary/10 ring-1 ring-primary/20' : ''} ${className}`}>
             {highlight && (
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-accent" />
             )}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
             <div className="relative">{children}</div>
         </div>
     )
@@ -91,7 +90,7 @@ function CurrentPlanBanner({ plan, billingCycle }: { plan: Plan; billingCycle: '
                     {/* Right: Actions */}
                     <div className="flex items-center gap-3">
                         <Button asChild variant="outline" className="bg-background/50">
-                            <Link href="/dashboard/settings/billing">
+                            <Link href="/api/payments/portal">
                                 <Settings className="h-4 w-4 mr-2" />
                                 Manage Billing
                             </Link>

@@ -26,10 +26,18 @@ interface BuildMetadataOptions {
 
 /**
  * Build rich metadata for file embeds with proper strategy per file type.
- * - Images: Include branded preview URL in og:image
- * - Videos: Use raw URL for playable embed
- * - Audio: Use raw URL for player
- * - Other: Include branded preview URL
+ *
+ * Strategy per type:
+ * - Images  → og:image = raw URL (Discord/Twitter display the actual image)
+ * - Videos  → og:video = raw URL for inline playback (Discord/Telegram/Slack);
+ *              og:image = opengraph-image URL as poster thumbnail;
+ *              twitter:player = /player iframe for Twitter
+ * - Audio   → og:audio = raw URL; og:image = opengraph-image URL
+ * - Other   → og:image = opengraph-image branded card
+ *
+ * Twitter `player` card requires a dedicated HTML iframe page at /player and
+ * HTTPS with a whitelisted domain. For development/unwhitelisted domains it
+ * silently degrades — Twitter will fall back to summary_large_image.
  */
 export async function buildRichMetadata({
   baseUrl,
@@ -43,6 +51,7 @@ export async function buildRichMetadata({
 }: BuildMetadataOptions): Promise<Metadata> {
   const classification = classifyMimeType(mimeType)
   const fileUrl = new URL(fileUrlPath, baseUrl).toString()
+  const ogImageUrl = new URL(`${fileUrlPath}/opengraph-image`, baseUrl).toString()
   const uploadDate = uploadedAt.toISOString()
   const formattedSize = formatFileSize(size)
 
@@ -60,16 +69,20 @@ export async function buildRichMetadata({
     'al:android:url': rawUrl,
   }
 
-  // Determine OG type and media strategy based on classification
   let ogType = 'website'
-  let openGraphImages: any = undefined
-  let openGraphVideos: any = undefined
-  let openGraphAudio: any = undefined
-  let twitterCard = 'summary'
-  let twitterPlayers: any = undefined
+  let openGraphImages: any[] | undefined
+  let openGraphVideos: any[] | undefined
+  let openGraphAudio: any[] | undefined
+  // twitter:player card requires an HTML iframe page + domain whitelisting by Twitter.
+  // We point to /player which is a minimal iframe-compatible video page.
+  // On unwhitelisted domains Twitter silently degrades to summary_large_image.
+  let twitterCard: string = 'summary_large_image'
+  let twitterPlayer: { playerUrl: string; streamUrl: string; width: number; height: number } | undefined
 
   if (classification.isVideo) {
     ogType = 'video.other'
+    // og:video for Discord/Telegram/Slack inline playback.
+    // Do NOT also set other['og:video'] — that creates duplicate tags that confuse crawlers.
     openGraphVideos = [{
       url: rawUrl,
       secureUrl: rawUrl,
@@ -77,44 +90,54 @@ export async function buildRichMetadata({
       width: 1280,
       height: 720,
     }]
+    // Poster thumbnail — Discord shows this as the card thumbnail before and during playback.
+    openGraphImages = [{
+      url: ogImageUrl,
+      alt: fileName,
+      width: 1200,
+      height: 630,
+    }]
+    // Twitter player card: /player is a minimal HTML iframe page with just the <video> element.
     twitterCard = 'player'
-    twitterPlayers = [{
-      playerUrl: rawUrl,
+    const playerUrl = new URL(`${fileUrlPath}/player`, baseUrl).toString()
+    twitterPlayer = {
+      playerUrl,
       streamUrl: rawUrl,
       width: 1280,
       height: 720,
+    }
+  } else if (classification.isImage) {
+    // Use the raw image URL directly — Discord and Twitter render the actual image
+    // in the embed rather than a generic branded card, which is far better UX.
+    ogType = 'website'
+    openGraphImages = [{
+      url: rawUrl,
+      alt: fileName,
     }]
-    // Add explicit video meta tags for Discord compatibility
-    other['og:video'] = rawUrl
-    other['og:video:secure_url'] = rawUrl
-    other['og:video:type'] = mimeType || 'video/mp4'
-    other['og:video:width'] = '1280'
-    other['og:video:height'] = '720'
+    twitterCard = 'summary_large_image'
   } else if (classification.isAudio || classification.isMusic) {
     ogType = classification.isMusic ? 'music.song' : 'website'
     openGraphAudio = [{
       url: rawUrl,
       type: mimeType || 'audio/mpeg',
     }]
-  } else if (classification.isImage) {
-    // For images with rich embeds, generate branded preview URL
-    // Use the opengraph-image route (Next.js will handle it)
-    const previewUrl = new URL(`${fileUrlPath}/opengraph-image`, baseUrl).toString()
+    // Cover art card so platforms that don't render audio still show something meaningful.
     openGraphImages = [{
-      url: previewUrl,
-      alt: `Preview of ${fileName}`,
+      url: ogImageUrl,
+      alt: fileName,
       width: 1200,
       height: 630,
     }]
+    twitterCard = 'summary_large_image'
   } else {
-    // For other files with rich embeds, use branded preview
-    const previewUrl = new URL(`${fileUrlPath}/opengraph-image`, baseUrl).toString()
+    // Generic file — branded preview card
     openGraphImages = [{
-      url: previewUrl,
-      alt: `Preview of ${fileName}`,
+      url: ogImageUrl,
+      alt: `${fileName} — shared via Emberly`,
       width: 1200,
       height: 630,
     }]
+    twitterCard = 'summary_large_image'
   }
 
   return {
@@ -127,20 +150,20 @@ export async function buildRichMetadata({
       url: fileUrl,
       siteName: 'Emberly',
       locale: 'en_US',
-      type: ogType,
+      type: ogType as any,
       images: openGraphImages,
       videos: openGraphVideos,
       audio: openGraphAudio,
     },
-    twitter: twitterPlayers
+    twitter: twitterPlayer
       ? {
-          card: twitterCard,
+          card: twitterCard as any,
           title,
           description,
-          players: twitterPlayers,
+          players: [twitterPlayer],
         }
       : {
-          card: 'summary',
+          card: twitterCard as any,
           title,
           description,
           images: openGraphImages?.map((img: any) => img.url),
@@ -192,7 +215,7 @@ export async function buildSiteMetadata(overrides?: {
 
   const siteName = 'Emberly'
   const title = overrides?.title || siteName
-  const description = overrides?.description || 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.'
+  const description = overrides?.description || 'Emberly is an open source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly with custom domains, expiring links, and squad (team) collaboration.'
 
   const themeColor = config.settings.appearance.customColors?.primary
     ? `hsl(${config.settings.appearance.customColors.primary})`
@@ -227,6 +250,6 @@ export async function buildSiteMetadata(overrides?: {
 export function buildPageMetadata(options: { title: string; description?: string }): Metadata {
   return {
     title: options.title,
-    description: options.description || 'Emberly focuses on a simple, predictable file hosting experience with features that matter: expirations, custom domains, usage controls, and privacy-first defaults.',
+    description: options.description || 'Emberly is an open source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly with custom domains, expiring links, and squad (team) collaboration.',
   }
 }

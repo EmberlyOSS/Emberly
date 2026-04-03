@@ -6,7 +6,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recha
 function GatedOverlay({ required }: { required: string }) {
     return (
         <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
-            <div className="w-full h-full rounded-xl bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+            <div className="w-full h-full glass-subtle flex flex-col items-center justify-center gap-3">
                 <div className="text-sm font-semibold uppercase">Upgrade to {required} to view</div>
                 <a href="/pricing" className="inline-block rounded bg-primary px-3 py-1 text-sm">Upgrade</a>
             </div>
@@ -33,7 +33,7 @@ export default function TopUsers() {
     }, [])
 
     if (forbidden) return (
-        <div className="relative rounded-md border border-white/6 bg-secondary/50 p-4">
+        <div className="relative rounded-md border border-border/30 bg-secondary/50 p-4">
             <h4 className="text-sm font-medium">Top users</h4>
             <GatedOverlay required="ADMIN" />
         </div>
@@ -56,7 +56,7 @@ export default function TopUsers() {
     )
 
     const scoringCard = (
-        <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+        <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
             <div className="flex items-start justify-between">
                 <h4 className="text-sm font-medium">Your score</h4>
                 <div className="flex gap-2 items-center">
@@ -124,7 +124,7 @@ export default function TopUsers() {
         return (
             <div className="space-y-4">
                 {scoringCard}
-                <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+                <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
                     <div className="flex items-start justify-between">
                         <h4 className="text-sm font-medium">Top users</h4>
                         <div className="text-sm text-muted-foreground">Showing top {items.length}</div>

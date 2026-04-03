@@ -71,7 +71,7 @@ export function SharedFilesSection() {
 
     if (isLoading) {
         return (
-            <Card className="bg-white/5 dark:bg-black/5 backdrop-blur-sm border-white/10 dark:border-white/5">
+            <Card className="glass">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5" />
@@ -93,7 +93,7 @@ export function SharedFilesSection() {
     }
 
     return (
-        <Card className="bg-white/5 dark:bg-black/5 backdrop-blur-sm border-white/10 dark:border-white/5">
+        <Card className="glass">
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
@@ -118,7 +118,7 @@ export function SharedFilesSection() {
                         <Link
                             key={file.id}
                             href={file.urlPath}
-                            className="group flex items-start gap-3 rounded-lg border border-border/50 bg-background/50 p-3 transition-colors hover:bg-accent/50"
+                            className="group flex items-start gap-3 glass-subtle p-3 transition-colors hover:bg-accent/50"
                         >
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
                                 <FileText className="h-5 w-5 text-primary" />

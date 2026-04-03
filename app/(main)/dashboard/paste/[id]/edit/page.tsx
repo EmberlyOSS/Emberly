@@ -17,16 +17,16 @@ export default async function EditPastePage({ params }: EditPastePageProps) {
     const { id } = await params
     const session = await getServerSession(authOptions)
 
-    if (!session?.user) {
-        redirect('/auth/login')
-    }
-
     const file = await prisma.file.findUnique({
         where: { id },
     })
 
     if (!file) {
         notFound()
+    }
+
+    if (!session?.user?.id) {
+        redirect('/dashboard')
     }
 
     // Check ownership
@@ -53,8 +53,8 @@ export default async function EditPastePage({ params }: EditPastePageProps) {
 
     return (
         <div className="container max-w-5xl space-y-6">
-            <div className="rounded-xl border border-border/50 bg-background/30 backdrop-blur-md overflow-hidden">
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50 bg-background/50">
+            <div className="glass-card overflow-hidden">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50 bg-muted/30">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                         <Code2 className="h-5 w-5 text-primary" />
                     </div>

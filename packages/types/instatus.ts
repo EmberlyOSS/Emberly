@@ -7,7 +7,8 @@
 // Common Types
 // ============================================================================
 
-export type StatusType = 'UP' | 'DOWN' | 'DEGRADED' | 'UNKNOWN'
+// Overall page-level status values returned by Instatus public API
+export type StatusType = 'UP' | 'HASISSUES' | 'UNDERMAINTENANCE' | 'DOWN' | 'DEGRADED' | 'UNKNOWN'
 
 export type ComponentStatus =
     | 'OPERATIONAL'
@@ -244,6 +245,7 @@ export interface EmberlyStatusResponse {
 export const STATUS_COLORS: Record<StatusType | ComponentStatus, string> = {
     // Overall status
     UP: 'text-emerald-500',
+    HASISSUES: 'text-yellow-500',
     DOWN: 'text-red-500',
     DEGRADED: 'text-yellow-500',
     UNKNOWN: 'text-muted-foreground',
@@ -257,6 +259,7 @@ export const STATUS_COLORS: Record<StatusType | ComponentStatus, string> = {
 
 export const STATUS_BG_COLORS: Record<StatusType | ComponentStatus, string> = {
     UP: 'bg-emerald-500/10',
+    HASISSUES: 'bg-yellow-500/10',
     DOWN: 'bg-red-500/10',
     DEGRADED: 'bg-yellow-500/10',
     UNKNOWN: 'bg-muted/50',
@@ -268,10 +271,11 @@ export const STATUS_BG_COLORS: Record<StatusType | ComponentStatus, string> = {
 }
 
 export const STATUS_LABELS: Record<StatusType | ComponentStatus, string> = {
-    UP: 'Operational',
-    DOWN: 'Down',
-    DEGRADED: 'Degraded',
-    UNKNOWN: 'Unknown',
+    UP: 'All systems operational',
+    HASISSUES: 'Some systems affected',
+    DOWN: 'Major outage',
+    DEGRADED: 'Degraded performance',
+    UNKNOWN: 'Status unknown',
     OPERATIONAL: 'Operational',
     UNDERMAINTENANCE: 'Under Maintenance',
     DEGRADEDPERFORMANCE: 'Degraded Performance',

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { signIn } from 'next-auth/react'
 
@@ -15,6 +15,8 @@ import { validatePasswordAction } from '@/packages/lib/security/password-actions
 
 export function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const referralCode = searchParams.get('ref') || searchParams.get('referral') || undefined
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,6 +54,7 @@ export function RegisterForm() {
           email,
           password,
           name,
+          ...(referralCode ? { referralCode } : {}),
         }),
       })
 
@@ -96,6 +99,11 @@ export function RegisterForm() {
         <p className="text-base text-muted-foreground">
           Enter your details to get started
         </p>
+        {referralCode && (
+          <p className="text-sm text-primary font-medium">
+            🎉 Invited by a friend — you&apos;ll both get credits when you join!
+          </p>
+        )}
       </div>
       <div className="space-y-4">
         <div className="space-y-2">

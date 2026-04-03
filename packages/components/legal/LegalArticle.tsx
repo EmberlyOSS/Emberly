@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, Scale, FileText, BookOpen, ExternalLink, MessageCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
-import MarkdownRenderer from '@/packages/components/docs/MarkdownRenderer'
+import MarkdownRenderer from '@/packages/components/shared/MarkdownRenderer'
 import PageShell from '@/packages/components/layout/PageShell'
 import { Button } from '@/packages/components/ui/button'
 
@@ -52,7 +52,7 @@ export default function LegalArticle({
                     {/* Main content */}
                     <div className="space-y-6">
                         {/* Document header card */}
-                        <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                        <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                             <div className="relative p-6">
                                 <div className="flex flex-wrap items-center gap-4">
@@ -82,17 +82,17 @@ export default function LegalArticle({
                         </div>
 
                         {/* Article body */}
-                        <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                        <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                             <div className="relative p-6 sm:p-8">
-                                <article className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-li:text-muted-foreground prose-blockquote:border-primary/50 prose-blockquote:text-muted-foreground prose-hr:border-white/10 prose-ul:text-muted-foreground prose-ol:text-muted-foreground">
+                                <article className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/50 prose-li:text-muted-foreground prose-blockquote:border-primary/50 prose-blockquote:text-muted-foreground prose-hr:border-border/50 prose-ul:text-muted-foreground prose-ol:text-muted-foreground">
                                     <MarkdownRenderer>{content}</MarkdownRenderer>
                                 </article>
                             </div>
                         </div>
 
                         {/* Footer card */}
-                        <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                        <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
                             <div className="relative p-6">
                                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -102,12 +102,12 @@ export default function LegalArticle({
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Link href="/contact">
-                                            <Button variant="outline" className="bg-white/5 dark:bg-white/[0.02] border-white/10 dark:border-white/5 hover:bg-white/10">
+                                            <Button variant="outline" className="bg-background/80 border-border/50 hover:bg-background/90">
                                                 Contact us
                                             </Button>
                                         </Link>
                                         <Link href={backHref}>
-                                            <Button variant="outline" className="bg-white/5 dark:bg-white/[0.02] border-white/10 dark:border-white/5 hover:bg-white/10">
+                                            <Button variant="outline" className="bg-background/80 border-border/50 hover:bg-background/90">
                                                 View all docs
                                             </Button>
                                         </Link>
@@ -121,7 +121,7 @@ export default function LegalArticle({
                     <aside className="hidden lg:block">
                         <div className="sticky top-24 space-y-6">
                             {/* Document info */}
-                            <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                            <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                                 <div className="relative p-5">
                                     <div className="flex items-center gap-2 mb-3">
@@ -148,7 +148,7 @@ export default function LegalArticle({
                             </div>
 
                             {/* Quick links */}
-                            <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+                            <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                                 <div className="relative p-5">
                                     <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Related</h4>

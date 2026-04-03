@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server'
 import { compare } from 'bcryptjs'
 import { z } from 'zod'
 
+import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
+import { verify2FACode } from '@/packages/lib/auth/service'
+import { auditSuspiciousActivity, emitAuditEvent } from '@/packages/lib/events/audit-helper'
 
 const logger = loggers.auth
 
@@ -56,6 +59,26 @@ export async function POST(req: Request) {
 
     const { emailOrUsername, password, twoFactorCode } = parsed.data
 
+    // Extract IP for rate limiting and audit
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown'
+    const failKey = `auth:desktop:fail:${ip}`
+
+    // Helper: track a failed attempt and emit a security audit event at threshold 3
+    const trackFailedAttempt = async () => {
+      const { allowed } = await rateLimiter.checkFixed(failKey, 2, 600)
+      if (!allowed) {
+        auditSuspiciousActivity(
+          'multiple-failed-login-attempts',
+          `Multiple failed desktop login attempts from IP ${ip}`,
+          'medium',
+          { email: emailOrUsername }
+        )
+      }
+    }
+
     // Find user by email or username (case insensitive)
     const user = await prisma.user.findFirst({
       where: {
@@ -79,6 +102,7 @@ export async function POST(req: Request) {
     })
 
     if (!user) {
+      await trackFailedAttempt()
       logger.warn('Desktop login attempt for non-existent user', { emailOrUsername })
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
@@ -98,6 +122,7 @@ export async function POST(req: Request) {
     // Verify password
     const isPasswordValid = await compare(password, user.password)
     if (!isPasswordValid) {
+      await trackFailedAttempt()
       logger.warn('Desktop login failed - invalid password', { userId: user.id })
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
@@ -122,11 +147,9 @@ export async function POST(req: Request) {
         )
       }
 
-      const { authenticator } = await import('otplib')
-      const isValidCode = authenticator.check(twoFactorCode, user.twoFactorSecret)
-      
-      if (!isValidCode) {
-        // TODO: Also check recovery codes if needed
+      const isValid = await verify2FACode(user.id, user.twoFactorSecret, twoFactorCode)
+      if (!isValid) {
+        await trackFailedAttempt()
         logger.warn('Desktop login failed - invalid 2FA code', { userId: user.id })
         return NextResponse.json(
           { success: false, error: 'Invalid two-factor code' },
@@ -155,6 +178,15 @@ export async function POST(req: Request) {
     }
 
     logger.info('Desktop login successful', { userId: user.id })
+
+    // Emit auth.login audit event (fire-and-forget)
+    void emitAuditEvent('auth.login', {
+      userId: user.id,
+      email: user.email ?? '',
+      method: 'credentials',
+      success: true,
+      context: { ip },
+    })
 
     return NextResponse.json({
       success: true,

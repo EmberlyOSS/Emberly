@@ -6,8 +6,9 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { sendTemplateEmail, NewLoginEmail } from '@/packages/lib/emails'
+import { events } from '@/packages/lib/events'
 import { detectNewLogin, recordLogin } from './login-detection'
-import { validateAndConsumeRecoveryCode } from './recovery-codes'
+import { verify2FACode } from './service'
 import { ensurePasswordInHistory } from '@/packages/lib/security/password-reuse-checker'
 import { checkPasswordBreach } from '@/packages/lib/security/password-breach-checker'
 
@@ -26,6 +27,8 @@ const userSelect = {
   twoFactorEnabled: true,
   twoFactorSecret: true,
   passwordBreachDetectedAt: true,
+  bannedAt: true,
+  banExpiresAt: true,
 } as const
 
 // Optional: allow configuring a shared cookie domain for NextAuth via
@@ -110,6 +113,28 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // Check if user is banned
+        if (user.bannedAt) {
+          const now = new Date()
+          if (user.banExpiresAt && user.banExpiresAt <= now) {
+            // Temporary ban has expired — auto-lift it
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                bannedAt: null,
+                banReason: null,
+                banType: null,
+                banExpiresAt: null,
+              },
+            })
+          } else {
+            throw Object.assign(
+              new Error('AccountSuspended'),
+              { name: 'AccountSuspended' }
+            )
+          }
+        }
+
         // Safety check: warn if username looks like an email
         if (user.name && user.name.includes('@')) {
           console.warn(`[Auth] WARNING: User ${user.id} has email-like username: "${user.name}". This should not happen in production.`)
@@ -146,19 +171,9 @@ export const authOptions: NextAuthOptions = {
              if (!validUser.twoFactorSecret) {
                return null
              }
-             const { authenticator } = await import('otplib')
-             
-             // Try TOTP code first
-             const isValidCode = authenticator.check(credentials.twoFactorCode, validUser.twoFactorSecret)
-             if (!isValidCode) {
-               // Try recovery code
-               const isValidRecoveryCode = await validateAndConsumeRecoveryCode(
-                 validUser.id,
-                 credentials.twoFactorCode
-               )
-               if (!isValidRecoveryCode) {
-                 return null
-               }
+             const isValid = await verify2FACode(validUser.id, validUser.twoFactorSecret, credentials.twoFactorCode)
+             if (!isValid) {
+               return null
              }
            }
 
@@ -237,19 +252,9 @@ export const authOptions: NextAuthOptions = {
           if (!user.twoFactorSecret) {
             return null
           }
-          const { authenticator } = await import('otplib')
-          
-          // Try TOTP code first
-          const isValidCode = authenticator.check(credentials.twoFactorCode, user.twoFactorSecret)
-          if (!isValidCode) {
-            // Try recovery code
-            const isValidRecoveryCode = await validateAndConsumeRecoveryCode(
-              user.id,
-              credentials.twoFactorCode
-            )
-            if (!isValidRecoveryCode) {
-              return null
-            }
+          const isValid = await verify2FACode(user.id, user.twoFactorSecret, credentials.twoFactorCode)
+          if (!isValid) {
+            return null
           }
         }
 
@@ -320,9 +325,9 @@ export const authOptions: NextAuthOptions = {
         const manageUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'}/profile?tab=security`
 
         const loginContext = {
-          ip,
-          userAgent,
-          geo: (country || city) ? { country, city } : null
+          ip: ip ?? undefined,
+          userAgent: userAgent ?? undefined,
+          geo: (country || city) ? { country: country ?? undefined, city: city ?? undefined } : undefined,
         }
 
         void prisma.user
@@ -367,6 +372,16 @@ export const authOptions: NextAuthOptions = {
             // Record this login in history
             await recordLogin(user.id as string, loginContext, true)
 
+            // Emit auditable auth.login event so audit logs capture every sign-in
+            await events.emit('auth.login', {
+              userId: user.id as string,
+              email: userEmail,
+              method: credentials ? 'credentials' : 'oauth',
+              success: true,
+              isNewDevice: detection.isNewDevice,
+              context: loginContext,
+            })
+
             // Only send alert if detection says we should
             if (detection.shouldAlert) {
               await sendTemplateEmail({
@@ -374,12 +389,10 @@ export const authOptions: NextAuthOptions = {
                 subject: '⚠️ New device sign-in to your Emberly account',
                 template: NewLoginEmail,
                 props: {
-                  userName: user.name || undefined,
-                  time,
-                  location: detection.reason,
-                  ipAddress: ip,
-                  device: userAgent,
-                  manageUrl,
+                  loginTime: time,
+                  loginLocation: detection.reason,
+                  loginDevice: userAgent,
+                  reviewUrl: manageUrl,
                 },
               })
             }

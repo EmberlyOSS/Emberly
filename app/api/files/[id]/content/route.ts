@@ -6,6 +6,7 @@ import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
+import { bytesToMB } from '@/packages/lib/utils'
 
 const logger = loggers.files
 
@@ -104,13 +105,15 @@ export async function PUT(
 
         // Convert content to buffer and upload
         const buffer = Buffer.from(content, 'utf-8')
-        const newSize = buffer.length
+        const newSizeBytes = buffer.length
+        // Store size in MB (consistent with upload API)
+        const newSizeMB = bytesToMB(newSizeBytes)
 
         // Update storage with new content
         await storageProvider.uploadFile(buffer, file.path, file.mimeType)
 
-        // Calculate storage difference
-        const sizeDifference = newSize - file.size
+        // Calculate storage difference in MB (file.size is already in MB)
+        const sizeDifference = newSizeMB - file.size
 
         // Prepare update data
         const updateData: {
@@ -118,7 +121,7 @@ export async function PUT(
             updatedAt: Date
             allowSuggestions?: boolean
         } = {
-            size: newSize,
+            size: newSizeMB,
             updatedAt: new Date(),
         }
 
@@ -153,8 +156,8 @@ export async function PUT(
             fileId: id,
             editorId: session.user.id,
             ownerId: file.userId,
-            oldSize: file.size,
-            newSize,
+            oldSizeMB: file.size,
+            newSizeMB,
         })
 
         return NextResponse.json({

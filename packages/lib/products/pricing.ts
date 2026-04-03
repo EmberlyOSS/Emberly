@@ -19,8 +19,8 @@ export const getPlanPricing = (product: Product) => {
 
   const yearlyCents = product.billingInterval === 'year'
     ? product.defaultPriceCents ?? null
-    : product.stripePriceYearlyId
-      ? product.defaultPriceCents != null ? product.defaultPriceCents * 12 : null
+    : product.defaultPriceCents != null && product.defaultPriceCents > 0
+      ? Math.round(product.defaultPriceCents * 6) // 50% off (6 months instead of 12)
       : null
 
   const monthlyDisplay = monthlyCents != null
@@ -48,17 +48,22 @@ export const getPlanPricing = (product: Product) => {
 
 export const getAddOnPricing = (product: Product) => {
   const pricePerUnitCents = product.defaultPriceCents ?? null
-  const billingPeriod: 'monthly' | 'one-time' = product.billingInterval === 'month' ? 'monthly' : 'one-time'
-  const priceId = product.stripePriceOneTimeId || product.stripePriceMonthlyId || null
+  const billingPeriod: 'monthly' | 'yearly' | 'one-time' =
+    product.billingInterval === 'month' ? 'monthly' :
+    product.billingInterval === 'year' ? 'yearly' :
+    'one-time'
+  const priceId = product.stripePriceMonthlyId || product.stripePriceYearlyId || product.stripePriceOneTimeId || null
+  const cadence: Cadence = billingPeriod === 'monthly' ? 'month' : billingPeriod === 'yearly' ? 'year' : 'one-time'
 
   return {
     pricePerUnitCents,
     pricePerUnit: pricePerUnitCents != null ? pricePerUnitCents / 100 : null,
     billingPeriod,
     priceId,
-    display: formatDisplay(pricePerUnitCents, billingPeriod === 'monthly' ? 'month' : 'one-time'),
+    display: formatDisplay(pricePerUnitCents, cadence),
     stripeProductId: product.stripeProductId || null,
     priceIdMonthly: product.stripePriceMonthlyId || null,
+    priceIdYearly: product.stripePriceYearlyId || null,
     priceIdOneTime: product.stripePriceOneTimeId || null,
   }
 }

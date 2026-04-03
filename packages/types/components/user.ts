@@ -1,16 +1,12 @@
 import { ExpiryAction } from '@/packages/types/events'
+import type { DiscordPreferences, EmailPreferences } from '@/packages/types/dto/profile'
 
-export interface EmailPreferences {
-  security: boolean
-  account: boolean
-  billing: boolean
-  marketing: boolean
-  productUpdates: boolean
-}
+export type { EmailPreferences }
 
 export interface User {
   id: string
   name: string | null
+  fullName?: string | null
   email: string | null
   image: string | null
   storageUsed: number
@@ -21,7 +17,11 @@ export interface User {
   vanityId?: string | null
   bio?: string | null
   website?: string | null
+  twitter?: string | null
+  github?: string | null
+  discord?: string | null
   isProfilePublic?: boolean
+  showLinkedAccounts?: boolean
   fileCount: number
   shortUrlCount: number
   defaultFileExpiration: 'DISABLED' | 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | null
@@ -39,6 +39,10 @@ export interface User {
   // Email notification preferences
   emailNotificationsEnabled?: boolean
   emailPreferences?: EmailPreferences
+  // Discord webhook notification preferences
+  discordWebhookUrl?: string | null
+  discordNotificationsEnabled?: boolean
+  discordPreferences?: DiscordPreferences
   // Password breach detection
   passwordBreachDetectedAt?: string | null
 }

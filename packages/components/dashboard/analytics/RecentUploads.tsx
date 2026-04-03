@@ -5,7 +5,7 @@ import { Button } from '@/packages/components/ui/button'
 
 export default function RecentUploads({ recentUploads, onRefresh, plan, onExport }: { recentUploads?: any[]; onRefresh: () => void; plan?: string; onExport: () => void }) {
     return (
-        <div className="rounded-md border border-white/6 bg-secondary/50 p-4">
+        <div className="rounded-md border border-border/30 bg-secondary/50 p-4">
             <div>
                 <h3 className="text-base font-medium">Recent uploads</h3>
                 <p className="text-sm text-muted-foreground">Latest files uploaded to your account</p>

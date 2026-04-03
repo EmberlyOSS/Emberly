@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import pkg from '@/package.json'
+import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 import { css } from '@codemirror/lang-css'
 import { html } from '@codemirror/lang-html'
 import CodeMirror from '@uiw/react-codemirror'
@@ -13,9 +14,12 @@ import {
 	Circle,
 	Cloud,
 	Code,
+	Copy,
 	CreditCard,
 	Database,
 	ExternalLink,
+	Eye,
+	EyeOff,
 	FileCode,
 	Github,
 	Globe,
@@ -23,6 +27,7 @@ import {
 	Heart,
 	Image,
 	InfoIcon,
+	Key,
 	Palette,
 	RefreshCw,
 	RotateCcw,
@@ -79,13 +84,10 @@ function GlassCard({
 }) {
 	return (
 		<div className={cn(
-			"relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden",
+			"glass-card overflow-hidden",
 			className
 		)}>
-			{gradient && (
-				<div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-			)}
-			<div className="relative">{children}</div>
+			{children}
 		</div>
 	)
 }
@@ -194,7 +196,7 @@ function SettingsSkeleton() {
 	return (
 		<div className="space-y-6">
 			{/* Header skeleton */}
-			<div className="relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 p-6">
+			<div className="glass-card p-6">
 				<div className="flex items-center gap-4">
 					<Skeleton className="h-12 w-12 rounded-xl" />
 					<div className="space-y-2">
@@ -205,7 +207,7 @@ function SettingsSkeleton() {
 			</div>
 
 			{/* Tabs skeleton */}
-			<div className="flex gap-2 p-1 bg-background/30 rounded-xl border border-border/30 w-fit">
+			<div className="flex gap-2 p-1 bg-background/80 rounded-xl border border-border/50 w-fit">
 				<Skeleton className="h-10 w-32 rounded-lg" />
 				<Skeleton className="h-10 w-32 rounded-lg" />
 				<Skeleton className="h-10 w-32 rounded-lg" />
@@ -214,7 +216,7 @@ function SettingsSkeleton() {
 			{/* Cards skeleton */}
 			<div className="space-y-4">
 				{[1, 2, 3].map((i) => (
-					<div key={i} className="rounded-2xl border border-border/50 bg-background/60 p-6 space-y-6">
+					<div key={i} className="rounded-2xl border border-border/50 bg-background/80 p-6 space-y-6">
 						<div className="flex items-start gap-4">
 							<Skeleton className="h-11 w-11 rounded-xl shrink-0" />
 							<div className="space-y-2 flex-1">
@@ -255,6 +257,137 @@ function SettingsSkeleton() {
 const isSafeUrl = (url: string | null): url is string => {
 	if (!url) return false
 	return url.startsWith('blob:') && /^blob:https?:\/\//.test(url)
+}
+
+function SystemApiKeySection() {
+	const { toast } = useToast()
+	const [exists, setExists] = useState(false)
+	const [prefix, setPrefix] = useState<string | null>(null)
+	const [createdAt, setCreatedAt] = useState<string | null>(null)
+	const [newKey, setNewKey] = useState<string | null>(null)
+	const [showKey, setShowKey] = useState(false)
+	const [loading, setLoading] = useState(true)
+	const [generating, setGenerating] = useState(false)
+	const [revoking, setRevoking] = useState(false)
+
+	const fetchMeta = useCallback(async () => {
+		try {
+			const res = await fetch('/api/admin/system-key')
+			if (!res.ok) throw new Error('Failed to fetch')
+			const data = await res.json()
+			setExists(data.exists)
+			setPrefix(data.prefix ?? null)
+			setCreatedAt(data.createdAt ?? null)
+		} catch {
+			toast({ title: 'Error', description: 'Failed to load system key info', variant: 'destructive' })
+		} finally {
+			setLoading(false)
+		}
+	}, [toast])
+
+	useEffect(() => { fetchMeta() }, [fetchMeta])
+
+	const handleGenerate = async () => {
+		if (exists && !confirm('This will revoke the current key and generate a new one. Continue?')) return
+		setGenerating(true)
+		setNewKey(null)
+		try {
+			const res = await fetch('/api/admin/system-key', { method: 'POST' })
+			if (!res.ok) throw new Error('Failed to generate')
+			const data = await res.json()
+			setNewKey(data.key)
+			setShowKey(true)
+			setExists(true)
+			setPrefix(data.prefix)
+			setCreatedAt(new Date().toISOString())
+			toast({ title: 'Key generated', description: 'Copy it now — it won\'t be shown again.' })
+		} catch {
+			toast({ title: 'Error', description: 'Failed to generate key', variant: 'destructive' })
+		} finally {
+			setGenerating(false)
+		}
+	}
+
+	const handleRevoke = async () => {
+		if (!confirm('Revoke the system API key? Any integrations using it will stop working.')) return
+		setRevoking(true)
+		try {
+			const res = await fetch('/api/admin/system-key', { method: 'DELETE' })
+			if (!res.ok) throw new Error('Failed to revoke')
+			setExists(false)
+			setPrefix(null)
+			setCreatedAt(null)
+			setNewKey(null)
+			toast({ title: 'Key revoked' })
+		} catch {
+			toast({ title: 'Error', description: 'Failed to revoke key', variant: 'destructive' })
+		} finally {
+			setRevoking(false)
+		}
+	}
+
+	const copyKey = () => {
+		if (!newKey) return
+		navigator.clipboard.writeText(newKey)
+		toast({ title: 'Copied to clipboard' })
+	}
+
+	if (loading) {
+		return (
+			<SettingsSection icon={Key} title="System API Key" description="Manage the system-level API key for external integrations.">
+				<div className="space-y-3">
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-40" />
+				</div>
+			</SettingsSection>
+		)
+	}
+
+	return (
+		<SettingsSection icon={Key} title="System API Key" description="A single key for external integrations like Discord bots. Grants system-level access — treat it like a password.">
+			{newKey && (
+				<GlassCard>
+					<div className="p-4 space-y-2">
+						<p className="text-sm font-medium text-primary">New key generated — copy it now, it won&apos;t be shown again.</p>
+						<div className="flex items-center gap-2">
+							<code className="flex-1 text-xs bg-muted/50 rounded-lg px-3 py-2 font-mono break-all select-all">
+								{showKey ? newKey : '•'.repeat(newKey.length)}
+							</code>
+							<Button variant="ghost" size="icon" className="shrink-0" onClick={() => setShowKey(!showKey)}>
+								{showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+							</Button>
+							<Button variant="ghost" size="icon" className="shrink-0" onClick={copyKey}>
+								<Copy className="h-4 w-4" />
+							</Button>
+						</div>
+					</div>
+				</GlassCard>
+			)}
+
+			{exists && (
+				<SettingRow label="Current Key" description={createdAt ? `Created ${new Date(createdAt).toLocaleDateString()}` : undefined}>
+					<code className="text-xs text-muted-foreground font-mono">{prefix}••••••••</code>
+				</SettingRow>
+			)}
+
+			<div className="flex items-center gap-2 pt-2">
+				<Button onClick={handleGenerate} disabled={generating || revoking} size="sm">
+					{generating ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Key className="h-4 w-4 mr-2" />}
+					{exists ? 'Regenerate Key' : 'Generate Key'}
+				</Button>
+				{exists && (
+					<Button onClick={handleRevoke} disabled={revoking || generating} variant="destructive" size="sm">
+						{revoking ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+						Revoke
+					</Button>
+				)}
+			</div>
+
+			{!exists && !newKey && (
+				<p className="text-xs text-muted-foreground">No key exists yet. Generate one to use with external integrations.</p>
+			)}
+		</SettingsSection>
+	)
 }
 
 export function SettingsManager() {
@@ -522,6 +655,52 @@ export function SettingsManager() {
 		})
 	}
 
+	/**
+	 * Save system/admin appearance directly to /api/settings (PATCH).
+	 * Used as the onSave override for AppearancePanel in admin context so it
+	 * does NOT call PUT /api/profile like the user-facing flow.
+	 */
+	const handleAdminSaveAppearance = async (themeId: string, colors: Record<string, string>): Promise<boolean> => {
+		try {
+			const response = await fetch('/api/settings', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					section: 'appearance',
+					data: {
+						theme: themeId,
+						customColors: colors,
+					},
+				}),
+			})
+			if (!response.ok) throw new Error('Failed to save appearance')
+			const updatedConfig: EmberlyConfig = await response.json()
+			setSavedConfig(JSON.parse(JSON.stringify(updatedConfig)))
+			setWorkingConfig(JSON.parse(JSON.stringify(updatedConfig)))
+			return true
+		} catch (error) {
+			console.error('[SettingsManager] Failed to save appearance', error)
+			return false
+		}
+	}
+
+	/**
+	 * Track admin theme selections so the "Modified" badge reflects appearance changes
+	 * while the admin is previewing (before saving).
+	 */
+	const handleAdminThemeChange = useCallback((
+		themeId: string,
+		colors: Record<string, string>,
+		meta?: { backgroundEffect?: string; animationSpeed?: string }
+	) => {
+		handleSettingChange('appearance', {
+			theme: themeId,
+			backgroundEffect: meta?.backgroundEffect || 'none',
+			animationSpeed: meta?.animationSpeed || 'medium',
+			customColors: colors,
+		})
+	}, [handleSettingChange])
+
 	const checkForUpdates = async () => {
 		try {
 			setIsCheckingUpdate(true)
@@ -593,8 +772,8 @@ export function SettingsManager() {
 			{/* Main Content */}
 			<Tabs defaultValue="general" className="space-y-6">
 				{/* Improved Tab Navigation */}
-				<div className="overflow-x-auto -mx-2 px-2">
-					<TabsList className="inline-flex h-12 items-center justify-start gap-1 rounded-xl bg-background/50 backdrop-blur-sm p-1.5 border border-border/50 shadow-sm">
+				<ScrollIndicator className="-mx-2 px-2">
+					<TabsList className="inline-flex h-12 items-center justify-start gap-1 glass-subtle p-1.5 shadow-sm">
 						<TabsTrigger 
 							value="general" 
 							className="relative inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-border/50"
@@ -634,8 +813,15 @@ export function SettingsManager() {
 								</span>
 							)}
 						</TabsTrigger>
+						<TabsTrigger 
+							value="integrations" 
+							className="relative inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-border/50"
+						>
+							<Key className="h-4 w-4" />
+							<span>Integrations</span>
+						</TabsTrigger>
 					</TabsList>
-				</div>
+				</ScrollIndicator>
 
 				{/* General Settings Tab */}
 				<TabsContent value="general" className="space-y-5 mt-0">
@@ -1123,21 +1309,8 @@ export function SettingsManager() {
 						}
 					>
 						<AppearancePanel
-							onSaveAsSystemTheme={async (themeId, colors) => {
-								const res = await fetch('/api/admin/themes/save', {
-									method: 'POST',
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify({ themeId, colors }),
-								})
-								if (res.ok) {
-									const data = await res.json()
-									toast({ title: 'Success', description: data.message })
-									return true
-								} else {
-									toast({ title: 'Error', description: 'Failed to save system theme', variant: 'destructive' })
-									return false
-								}
-							}}
+							onSave={handleAdminSaveAppearance}
+							onThemeChange={handleAdminThemeChange}
 						/>
 					</SettingsSection>
 
@@ -1332,6 +1505,11 @@ export function SettingsManager() {
 							)}
 						</div>
 					</SettingsSection>
+				</TabsContent>
+
+				{/* Integrations Tab */}
+				<TabsContent value="integrations" className="space-y-5 mt-0">
+					<SystemApiKeySection />
 				</TabsContent>
 			</Tabs>
 

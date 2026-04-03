@@ -45,11 +45,12 @@ export function ProfileDomains() {
   const [newDomain, setNewDomain] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [domainLimit, setDomainLimit] = useState<{
-    allowed: number
-    base: number
+    allowed: number | null
+    base: number | null
     purchased: number
     used: number
-    remaining: number
+    remaining: number | null
+    unlimited: boolean
   } | null>(null)
   const { toast } = useToast()
   const [openAdd, setOpenAdd] = useState(false)
@@ -83,7 +84,7 @@ export function ProfileDomains() {
     setAdding(true)
     setError(null)
 
-    if (domainLimit && domainLimit.remaining <= 0) {
+    if (domainLimit && domainLimit.unlimited !== true && (domainLimit.remaining ?? 1) <= 0) {
       setError('Domain limit reached. Upgrade your plan to add more domains.')
       setAdding(false)
       return
@@ -248,7 +249,7 @@ export function ProfileDomains() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+          <div className="glass-subtle p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Globe className="h-4 w-4 text-primary" />
@@ -260,7 +261,7 @@ export function ProfileDomains() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+          <div className="glass-subtle p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-500/10">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -272,7 +273,7 @@ export function ProfileDomains() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+          <div className="glass-subtle p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-amber-500/10">
                 <Clock className="h-4 w-4 text-amber-500" />
@@ -284,14 +285,14 @@ export function ProfileDomains() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+          <div className="glass-subtle p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-violet-500/10">
                 <Sparkles className="h-4 w-4 text-violet-500" />
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {domainLimit?.remaining ?? '∞'}
+                  {domainLimit?.unlimited ? '∞' : (domainLimit?.remaining ?? '∞')}
                 </p>
                 <p className="text-xs text-muted-foreground">Available Slots</p>
               </div>
@@ -359,7 +360,7 @@ export function ProfileDomains() {
           </div>
           <Button
             onClick={() => setOpenAdd(true)}
-            disabled={Boolean(domainLimit && domainLimit.remaining <= 0)}
+            disabled={Boolean(domainLimit && !domainLimit.unlimited && (domainLimit.remaining ?? 1) <= 0)}
             className="shrink-0"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -371,16 +372,20 @@ export function ProfileDomains() {
         {domainLimit && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
-            <span>
-              Using {domainLimit.used} of {domainLimit.allowed} domain slots
-              {domainLimit.purchased > 0 && ` (${domainLimit.purchased} purchased)`}
-            </span>
-            {domainLimit.remaining <= 2 && domainLimit.remaining > 0 && (
+            {domainLimit.unlimited ? (
+              <span>Using {domainLimit.used} domain{domainLimit.used !== 1 ? 's' : ''} &mdash; <span className="text-primary">Unlimited slots</span></span>
+            ) : (
+              <span>
+                Using {domainLimit.used} of {domainLimit.allowed} domain slots
+                {(domainLimit.purchased ?? 0) > 0 && ` (${domainLimit.purchased} purchased)`}
+              </span>
+            )}
+            {!domainLimit.unlimited && (domainLimit.remaining ?? 1) <= 2 && (domainLimit.remaining ?? 1) > 0 && (
               <Badge variant="secondary" className="text-xs">
                 {domainLimit.remaining} remaining
               </Badge>
             )}
-            {domainLimit.remaining <= 0 && (
+            {!domainLimit.unlimited && (domainLimit.remaining ?? 1) <= 0 && (
               <Badge variant="destructive" className="text-xs">
                 Limit reached
               </Badge>
@@ -389,7 +394,7 @@ export function ProfileDomains() {
         )}
 
         {/* Domain List */}
-        <div className="rounded-xl border border-border/50 bg-card/30 overflow-hidden">
+        <div className="glass-subtle overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Icons.spinner className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -408,7 +413,7 @@ export function ProfileDomains() {
         {/* Help Text */}
         <p className="text-sm text-muted-foreground text-center">
           Need help? Check our{' '}
-          <a href="/docs/user/custom-domains" className="text-primary hover:underline">
+          <a href="https://docs.embrly.ca/docs/user-guide/custom-domains" className="text-primary hover:underline">
             domain setup guide
           </a>{' '}
           or{' '}

@@ -1,23 +1,20 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { urlForHost } from '@/packages/lib/utils'
 
 const logger = loggers.users
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, response } = await requireAuth(req)
+    if (response) return response
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         uploadToken: true,
         name: true,
@@ -25,7 +22,7 @@ export async function GET(request: Request) {
       },
     })
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
@@ -52,8 +49,8 @@ export async function GET(request: Request) {
       )
     }
 
-    const preferredHost = user.preferredUploadDomain
-      ? urlForHost(user.preferredUploadDomain).replace(/\/+$/, '')
+    const preferredHost = dbUser.preferredUploadDomain
+      ? urlForHost(dbUser.preferredUploadDomain).replace(/\/+$/, '')
       : null
     const requestBaseUrl = preferredHost || normalizedBaseUrl
 
@@ -64,7 +61,7 @@ export async function GET(request: Request) {
       RequestMethod: 'POST',
       RequestURL: `${requestBaseUrl}/api/files`,
       Headers: {
-        Authorization: `Bearer ${user.uploadToken}`,
+        Authorization: `Bearer ${dbUser.uploadToken}`,
       },
       Body: 'MultipartFormData',
       FileFormName: 'file',

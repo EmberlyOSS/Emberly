@@ -5,7 +5,6 @@ import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
 import { Textarea } from '@/packages/components/ui/textarea'
-import { Card } from '@/packages/components/ui/card'
 import { Badge } from '@/packages/components/ui/badge'
 import { useToast } from '@/packages/hooks/use-toast'
 import {
@@ -23,6 +22,7 @@ interface PublicProfileEditorProps {
   user: {
     id: string
     name: string | null
+    fullName: string | null
     image: string | null
     bio: string | null
     website: string | null
@@ -30,6 +30,7 @@ interface PublicProfileEditorProps {
     github: string | null
     discord: string | null
     isProfilePublic: boolean
+    showLinkedAccounts: boolean
     profileVisibility: string
     urlId: string
     vanityId: string | null
@@ -41,16 +42,18 @@ export function PublicProfileEditor({ user, onSave }: PublicProfileEditorProps) 
   const [isLoading, setIsLoading] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
   const [formData, setFormData] = useState({
+    fullName: user.fullName || '',
     bio: user.bio || '',
     website: user.website || '',
     twitter: user.twitter || '',
     github: user.github || '',
     discord: user.discord || '',
     isProfilePublic: user.isProfilePublic,
+    showLinkedAccounts: user.showLinkedAccounts,
   })
 
   const { toast } = useToast()
-  const profileUrl = user.vanityId || user.urlId
+  const profileUrl = user.name
   const fullProfileUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/profile/${profileUrl}`
 
   const handleChange = (
@@ -122,7 +125,7 @@ export function PublicProfileEditor({ user, onSave }: PublicProfileEditorProps) 
   return (
     <div className="space-y-6">
       {/* Profile URL Section */}
-      <Card className="p-6 border-primary/20 bg-card/50">
+      <div className="glass-subtle p-6">
         <h3 className="font-semibold mb-4">Your Public Profile</h3>
         <div className="flex items-center gap-2">
           <Input
@@ -152,10 +155,28 @@ export function PublicProfileEditor({ user, onSave }: PublicProfileEditorProps) 
         <p className="text-xs text-muted-foreground mt-2">
           Share this link to show others your profile and perks
         </p>
-      </Card>
+      </div>
+
+      {/* Full Name */}
+      <div className="glass-subtle p-6">
+        <Label htmlFor="fullName" className="font-semibold mb-2 block">
+          Full Name
+        </Label>
+        <Input
+          id="fullName"
+          name="fullName"
+          value={formData.fullName}
+          onChange={handleChange}
+          placeholder="Your full name (optional)"
+          maxLength={100}
+        />
+        <p className="text-xs text-muted-foreground mt-2">
+          Displayed on your public profile alongside your username
+        </p>
+      </div>
 
       {/* Bio */}
-      <Card className="p-6 border-primary/20 bg-card/50">
+      <div className="glass-subtle p-6">
         <Label htmlFor="bio" className="font-semibold mb-2 block">
           Bio
         </Label>
@@ -171,10 +192,10 @@ export function PublicProfileEditor({ user, onSave }: PublicProfileEditorProps) 
         <p className="text-xs text-muted-foreground mt-2">
           {formData.bio.length}/500 characters
         </p>
-      </Card>
+      </div>
 
       {/* Social Links */}
-      <Card className="p-6 border-primary/20 bg-card/50">
+      <div className="glass-subtle p-6">
         <h3 className="font-semibold mb-4">Social Links</h3>
         <div className="space-y-4">
           {/* Website */}
@@ -238,31 +259,54 @@ export function PublicProfileEditor({ user, onSave }: PublicProfileEditorProps) 
             />
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Visibility Settings */}
-      <Card className="p-6 border-primary/20 bg-card/50">
+      <div className="glass-subtle p-6">
         <h3 className="font-semibold mb-4">Profile Visibility</h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-sm">
-              {formData.isProfilePublic ? 'Public Profile' : 'Private Profile'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {formData.isProfilePublic
-                ? 'Your profile is visible to everyone'
-                : 'Your profile is hidden from public view'}
-            </p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">
+                {formData.isProfilePublic ? 'Public Profile' : 'Private Profile'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formData.isProfilePublic
+                  ? 'Your profile is visible to everyone'
+                  : 'Your profile is hidden from public view'}
+              </p>
+            </div>
+            <Button
+              variant={formData.isProfilePublic ? 'default' : 'outline'}
+              onClick={handleTogglePublic}
+              size="sm"
+            >
+              {formData.isProfilePublic ? 'Public' : 'Private'}
+            </Button>
           </div>
-          <Button
-            variant={formData.isProfilePublic ? 'default' : 'outline'}
-            onClick={handleTogglePublic}
-            size="sm"
-          >
-            {formData.isProfilePublic ? 'Public' : 'Private'}
-          </Button>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Show Connected Accounts</p>
+              <p className="text-xs text-muted-foreground">
+                Display your linked Discord and GitHub accounts on your public profile
+              </p>
+            </div>
+            <Button
+              variant={formData.showLinkedAccounts ? 'default' : 'outline'}
+              onClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  showLinkedAccounts: !prev.showLinkedAccounts,
+                }))
+              }
+              size="sm"
+            >
+              {formData.showLinkedAccounts ? 'Visible' : 'Hidden'}
+            </Button>
+          </div>
         </div>
-      </Card>
+      </div>
 
       {/* Save Button */}
       <div className="flex gap-2 sticky bottom-0 bg-background/95 backdrop-blur-sm p-4 -mx-4 rounded-t-lg border-t border-primary/10">

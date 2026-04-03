@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
 
-export const alt = 'Emberly - Simple, predictable file hosting'
+export const alt = 'Emberly — File sharing, URL shortening, and talent discovery'
 export const size = {
   width: 1200,
   height: 630,
@@ -117,7 +117,7 @@ export default async function Image() {
               margin: 0,
             }}
           >
-            Simple, predictable file hosting with features that matter
+            File sharing, talent discovery, and everything in between
           </p>
 
           {/* Feature pills */}
@@ -130,7 +130,7 @@ export default async function Image() {
               justifyContent: 'center',
             }}
           >
-            {['Expirations', 'Custom Domains', 'Usage Controls', 'Privacy-First'].map(
+            {['File Sharing', 'URL Shortener', 'Discovery Squads', 'Custom Domains'].map(
               (feature) => (
                 <div
                   key={feature}

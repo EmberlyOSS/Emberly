@@ -103,7 +103,7 @@ export function FileGridPagination({
     <div className="flex justify-center mt-8">
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-xl" />
-        <div className="relative bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-xl px-4 py-2 shadow-lg shadow-black/5">
+        <div className="relative bg-background/80 backdrop-blur-lg border border-border/50 rounded-xl px-4 py-2 shadow-sm">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -189,13 +189,13 @@ export function PaginationSkeleton() {
     <div className="flex justify-center mt-8">
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-xl" />
-        <div className="relative bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-xl px-4 py-2 shadow-lg shadow-black/5">
+        <div className="relative bg-background/80 backdrop-blur-lg border border-border/50 rounded-xl px-4 py-2 shadow-sm">
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-md bg-white/10 animate-pulse" />
-            <div className="h-9 w-9 rounded-md bg-white/10 animate-pulse" />
-            <div className="h-9 w-9 rounded-md bg-white/10 animate-pulse" />
-            <div className="h-9 w-9 rounded-md bg-white/10 animate-pulse" />
-            <div className="h-9 w-9 rounded-md bg-white/10 animate-pulse" />
+            <div className="h-9 w-9 rounded-md bg-muted/50 animate-pulse" />
+            <div className="h-9 w-9 rounded-md bg-muted/50 animate-pulse" />
+            <div className="h-9 w-9 rounded-md bg-muted/50 animate-pulse" />
+            <div className="h-9 w-9 rounded-md bg-muted/50 animate-pulse" />
+            <div className="h-9 w-9 rounded-md bg-muted/50 animate-pulse" />
           </div>
         </div>
       </div>

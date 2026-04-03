@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server'
 
 import pkg from '@/package.json'
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
+import { getRepoReleases } from '@/packages/lib/github'
 import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.api
-
-interface GitHubRelease {
-  tag_name: string
-  html_url: string
-  prerelease: boolean
-  draft: boolean
-}
 
 function compareVersions(v1: string, v2: string): number {
   const v1Parts = v1.replace(/^v/, '').split('.').map(Number)
@@ -28,27 +21,11 @@ function compareVersions(v1: string, v2: string): number {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
+    const { response } = await requireAdmin()
+    if (response) return response
 
     const currentVersion = pkg.version
-    const response = await fetch(
-      'https://api.github.com/repos/EmberlyOSS/Website/releases',
-      {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Emberly-Update-Checker',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch releases')
-    }
-
-    const releases: GitHubRelease[] = await response.json()
+    const releases = await getRepoReleases('EmberlyOSS', 'Website', 30)
 
     const stableReleases = releases
       .filter((release) => !release.prerelease && !release.draft)

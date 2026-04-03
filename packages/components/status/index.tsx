@@ -59,12 +59,11 @@ function GlassCard({
     return (
         <div
             className={cn(
-                'relative rounded-2xl bg-background/60 backdrop-blur-xl border border-border/50 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden',
+                'glass-card overflow-hidden',
                 className
             )}
         >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-            <div className="relative">{children}</div>
+            {children}
         </div>
     )
 }
@@ -389,7 +388,7 @@ export function ComponentsList({ components }: ComponentsListProps) {
                             <div key={parent.id}>
                                 <button
                                     onClick={() => toggleGroup(parent.id)}
-                                    className="w-full flex items-center justify-between p-4 rounded-xl bg-background/30 hover:bg-background/50 transition-colors"
+                                    className="w-full flex items-center justify-between p-4 rounded-xl bg-background/80 hover:bg-background/90 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
                                         {children.length > 0 ? (
@@ -456,8 +455,8 @@ function ComponentRow({
             className={cn(
                 'flex items-center justify-between p-4 rounded-xl',
                 isChild
-                    ? 'bg-background/20 border border-border/30'
-                    : 'bg-background/30'
+                    ? 'bg-background/60 border border-border/50'
+                    : 'bg-background/80'
             )}
         >
             <div className="flex items-center gap-3">
@@ -666,7 +665,7 @@ export function IncidentHistory({
                                     className={cn(
                                         'rounded-xl border transition-colors',
                                         isResolved
-                                            ? 'bg-background/30 border-border/50'
+                                            ? 'bg-background/80 border-border/50'
                                             : 'bg-yellow-500/5 border-yellow-500/30'
                                     )}
                                 >
@@ -852,10 +851,10 @@ export function MaintenanceHistory({
                                     className={cn(
                                         'rounded-xl border transition-colors',
                                         isCompleted
-                                            ? 'bg-background/30 border-border/50'
+                                            ? 'bg-background/80 border-border/50'
                                             : isInProgress
                                               ? 'bg-blue-500/5 border-blue-500/30'
-                                              : 'bg-muted/30 border-border/50'
+                                              : 'bg-background/80 border-border/50'
                                     )}
                                 >
                                     <button

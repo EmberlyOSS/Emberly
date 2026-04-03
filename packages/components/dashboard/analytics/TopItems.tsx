@@ -6,7 +6,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 function GatedOverlay({ required }: { required: string }) {
     return (
         <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
-            <div className="w-full h-full rounded-xl bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+            <div className="w-full h-full glass-subtle flex flex-col items-center justify-center gap-3">
                 <div className="text-sm font-semibold uppercase">Upgrade to {required} to view</div>
                 <a href="/pricing" className="inline-block rounded bg-primary px-3 py-1 text-sm">Upgrade</a>
             </div>
@@ -33,7 +33,7 @@ export default function TopItems({ allowed }: { allowed?: { topFiles?: boolean; 
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative rounded-md border border-white/6 bg-secondary/50 p-4">
+            <div className="relative rounded-md border border-border/30 bg-secondary/50 p-4">
                 <h4 className="text-sm font-medium">Top files (by downloads)</h4>
                 {!allowed?.topFiles ? (
                     <div className="h-48 relative">
@@ -57,7 +57,7 @@ export default function TopItems({ allowed }: { allowed?: { topFiles?: boolean; 
                 )}
             </div>
 
-            <div className="relative rounded-md border border-white/6 bg-secondary/50 p-4">
+            <div className="relative rounded-md border border-border/30 bg-secondary/50 p-4">
                 <h4 className="text-sm font-medium">Top links (by clicks)</h4>
                 {!allowed?.topUrls ? (
                     <div className="h-48 relative">

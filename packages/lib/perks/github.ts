@@ -7,35 +7,9 @@ import { recalculateContributorLevel, addPerkRole, removePerkRole } from './inde
 import { PERK_ROLES } from './constants'
 import { events } from '@/packages/lib/events'
 import { prisma } from '@/packages/lib/database/prisma'
+import { github, getGitHubUser, getOrgRepos, getRepoCommits, getCommitDetail } from '@/packages/lib/github'
 
 const logger = loggers.api
-
-const GITHUB_API_BASE = 'https://api.github.com'
-
-/**
- * Make a GitHub API request
- */
-async function githubApiCall<T>(
-  endpoint: string,
-  personalAccessToken: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `token ${personalAccessToken}`,
-      Accept: 'application/vnd.github.v3+json',
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`GitHub API error: ${response.status} ${error}`)
-  }
-
-  return response.json() as Promise<T>
-}
 
 /**
  * Get total lines of code contributed by a GitHub user
@@ -47,31 +21,22 @@ export async function getContributorLinesOfCode(
 ): Promise<number> {
   try {
     // Get all repos in EmberlyOSS organization
-    const repos = await githubApiCall<any[]>(
-      '/orgs/EmberlyOSS/repos?per_page=100&type=all',
-      personalAccessToken
-    )
+    const repos = await getOrgRepos('EmberlyOSS')
 
     let totalLines = 0
 
     for (const repo of repos) {
       try {
         // Get all commits by the user in this repo
-        const commits = await githubApiCall<any[]>(
-          `/repos/EmberlyOSS/${repo.name}/commits?author=${githubUsername}&per_page=100`,
-          personalAccessToken
-        )
+        const commits = await getRepoCommits('EmberlyOSS', repo.name, githubUsername, 100)
 
         for (const commit of commits) {
           try {
             // Get commit details to count line changes
-            const commitDetail = await githubApiCall<any>(
-              `/repos/EmberlyOSS/${repo.name}/commits/${commit.sha}`,
-              personalAccessToken
-            )
+            const commitDetail = await getCommitDetail('EmberlyOSS', repo.name, commit.sha)
 
             // Count additions (line additions are more valuable than just commits)
-            totalLines += commitDetail.stats?.additions || 0
+            totalLines += commitDetail?.stats?.additions || 0
           } catch (error) {
             logger.debug(`Failed to get commit details for ${commit.sha}`, error as Error)
             continue
@@ -169,19 +134,8 @@ export async function githubUserExists(
   githubUsername: string,
   personalAccessToken: string
 ): Promise<boolean> {
-  try {
-    await githubApiCall<any>(
-      `/users/${githubUsername}`,
-      personalAccessToken
-    )
-    return true
-  } catch (error) {
-    const errorMessage = (error as Error).message
-    if (errorMessage.includes('404')) {
-      return false
-    }
-    throw error
-  }
+  const user = await getGitHubUser(githubUsername)
+  return user !== null
 }
 
 /**
@@ -198,18 +152,16 @@ export async function getGitHubUserInfo(
   name?: string
 } | null> {
   try {
-    // If no username provided, use /user endpoint (for authenticated user)
-    const endpoint = githubUsername ? `/users/${githubUsername}` : `/user`
-    
-    const user = await githubApiCall<any>(
-      endpoint,
-      personalAccessToken
-    )
+    const user = githubUsername
+      ? await getGitHubUser(githubUsername)
+      : await github.request<{ id: number; login: string; avatar_url: string; name: string | null }>('/user')
+
+    if (!user) return null
     return {
       id: user.id,
       login: user.login,
       avatar_url: user.avatar_url,
-      name: user.name,
+      name: user.name ?? undefined,
     }
   } catch (error) {
     logger.error('Failed to get GitHub user info', error as Error, {

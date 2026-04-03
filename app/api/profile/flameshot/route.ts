@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { urlForHost } from '@/packages/lib/utils'
@@ -17,16 +16,14 @@ const flameshotSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, response } = await requireAuth(req)
+    if (response) return response
 
     const json = await req.json()
     const body = flameshotSchema.parse(json)
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         uploadToken: true,
         urlId: true,
@@ -35,7 +32,7 @@ export async function POST(req: Request) {
       },
     })
 
-    if (!user?.uploadToken) {
+    if (!dbUser?.uploadToken) {
       return NextResponse.json(
         { error: 'Upload token not found' },
         { status: 404 }
@@ -47,8 +44,8 @@ export async function POST(req: Request) {
         ? 'http://localhost:3000'
         : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
     const normalizedBaseUrl = baseUrl.replace(/\/+$/, '')
-    const preferredHost = user.preferredUploadDomain
-      ? urlForHost(user.preferredUploadDomain).replace(/\/+$/, '')
+    const preferredHost = dbUser.preferredUploadDomain
+      ? urlForHost(dbUser.preferredUploadDomain).replace(/\/+$/, '')
       : null
     let resolvedBaseUrl = preferredHost || normalizedBaseUrl
     // If the request came from a verified custom upload domain for this user,
@@ -81,13 +78,13 @@ export async function POST(req: Request) {
     }
 
     const script = generateFlameshotScript({
-      uploadToken: user.uploadToken,
+      uploadToken: dbUser.uploadToken,
       useWayland: body.useWayland,
       useCompositor: body.useCompositor,
       baseUrl: resolvedBaseUrl,
     })
 
-    const sanitizedName = (user.name || 'user')
+    const sanitizedName = (dbUser.name || 'user')
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
 

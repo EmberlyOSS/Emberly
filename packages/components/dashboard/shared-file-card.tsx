@@ -76,13 +76,13 @@ export function SharedFileCard({ file }: SharedFileCardProps) {
     const roleVariant = file.role === 'EDITOR' ? 'default' : 'secondary'
 
     return (
-        <Card className="group relative overflow-hidden bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl border-white/10 dark:border-white/5 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 dark:hover:border-white/10 transition-all duration-300">
+        <Card className="group relative overflow-hidden bg-background/80 backdrop-blur-lg border-border/50 shadow-sm hover:shadow-md hover:bg-background/90 hover:border-border/50 transition-all duration-300">
             {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-muted/10 via-transparent to-transparent pointer-events-none" />
 
             {/* Preview Area */}
             <Link href={sanitizeUrl(file.urlPath)} className="block relative">
-                <div className="relative aspect-video bg-white/5 dark:bg-white/[0.02] overflow-hidden">
+                <div className="relative aspect-video bg-muted/30 overflow-hidden">
                     {isImage ? (
                         <Image
                             src={`/api/files/${file.id}/thumbnail`}

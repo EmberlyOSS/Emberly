@@ -10,9 +10,12 @@ type Props = {
     label?: string
     type?: string
     quantity?: number
+    className?: string
+    variant?: 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive' | 'link'
+    size?: 'default' | 'sm' | 'lg' | 'icon'
 }
 
-export default function CheckoutButton({ priceId, mode = 'subscription', label, type, quantity }: Props) {
+export default function CheckoutButton({ priceId, mode = 'subscription', label, type, quantity, className, variant, size }: Props) {
     const [loading, setLoading] = useState(false)
     const { toast } = useToast()
 
@@ -63,7 +66,7 @@ export default function CheckoutButton({ priceId, mode = 'subscription', label, 
     }
 
     return (
-        <Button onClick={handle} disabled={loading} className="w-full" aria-label={label || (mode === 'subscription' ? 'Start subscription' : 'Buy')}>
+        <Button onClick={handle} disabled={loading} variant={variant} size={size} className={className ?? 'w-full'} aria-label={label || (mode === 'subscription' ? 'Start subscription' : 'Buy')}>
             {loading ? 'Redirecting...' : label || (mode === 'subscription' ? 'Start' : 'Buy')}
         </Button>
     )

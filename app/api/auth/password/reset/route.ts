@@ -8,19 +8,14 @@ import { prisma } from '@/packages/lib/database/prisma'
 import { AccountChangeEmail, sendTemplateEmail } from '@/packages/lib/emails'
 import { rateLimiter } from '@/packages/lib/cache/rate-limit'
 import { checkPasswordReuse, recordPasswordHistory } from '@/packages/lib/security/password-reuse-checker'
+import { events } from '@/packages/lib/events'
+import { getBaseUrl } from '@/packages/lib/auth/service'
 
 const requestSchema = z.object({
     email: z.string().email(),
     token: z.string().min(10),
     password: z.string().min(8),
 })
-
-function getBaseUrl() {
-    if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL
-    if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-    return 'http://localhost:3000'
-}
 
 export async function POST(req: Request) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
@@ -86,7 +81,7 @@ export async function POST(req: Request) {
         },
     })
 
-    const baseUrl = getBaseUrl().replace(/\/$/, '')
+    const baseUrl = getBaseUrl()
     const manageUrl = `${baseUrl}/dashboard/security`
 
     if (user.email) {
@@ -101,6 +96,13 @@ export async function POST(req: Request) {
                 supportUrl: `${baseUrl}/contact`,
             },
         }).catch((error) => console.error('Failed to send password change email', error))
+
+        // Emit auditable event (fire-and-forget)
+        void events.emit('auth.password-reset-completed', {
+            userId: user.id,
+            email: user.email,
+            context: { ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? undefined },
+        }).catch((err) => console.error('[Events] Failed to emit auth.password-reset-completed', err))
     }
 
     return NextResponse.json({ ok: true })

@@ -1,20 +1,16 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-import { getServerSession } from 'next-auth'
 
-import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
 // Get all files shared with the current user
-export async function GET(request: Request) {
+export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions)
+        const { user, response } = await requireAuth(req)
+    if (response) return response
 
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const { searchParams } = new URL(request.url)
+        const { searchParams } = new URL(req.url)
         const page = parseInt(searchParams.get('page') || '1')
         const limit = parseInt(searchParams.get('limit') || '20')
         const skip = (page - 1) * limit
@@ -23,7 +19,7 @@ export async function GET(request: Request) {
         const [collaborations, total] = await Promise.all([
             prisma.fileCollaborator.findMany({
                 where: {
-                    userId: session.user.id,
+                    userId: user.id,
                 },
                 include: {
                     file: {
@@ -52,7 +48,7 @@ export async function GET(request: Request) {
             }),
             prisma.fileCollaborator.count({
                 where: {
-                    userId: session.user.id,
+                    userId: user.id,
                 },
             }),
         ])

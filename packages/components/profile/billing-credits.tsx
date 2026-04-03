@@ -61,7 +61,7 @@ export function BillingCreditsSection() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-24 bg-white/5 dark:bg-black/5 rounded-lg animate-pulse" />
+        <div className="h-24 bg-muted/30 dark:bg-black/5 rounded-lg animate-pulse" />
       </div>
     )
   }
@@ -71,7 +71,7 @@ export function BillingCreditsSection() {
   }
 
   return (
-    <div className="space-y-4 mt-4 pt-4 border-t border-white/10 dark:border-white/5">
+    <div className="space-y-4 mt-4 pt-4 border-t border-border/50 dark:border-border/20">
       <div className="text-sm font-semibold">Billing Credits</div>
 
       {/* Credit Balance Cards */}
@@ -101,7 +101,7 @@ export function BillingCreditsSection() {
         )}
 
         {data.totalBalance === 0 && (
-          <div className="p-3 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 md:col-span-2">
+          <div className="p-3 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 md:col-span-2">
             <div className="text-xs text-muted-foreground">Available Credit</div>
             <div className="text-2xl font-bold">$0.00</div>
             <div className="text-xs text-muted-foreground mt-1">
@@ -119,7 +119,7 @@ export function BillingCreditsSection() {
             {data.transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="p-2 rounded-lg bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 flex items-center justify-between text-sm"
+                className="p-2 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 flex items-center justify-between text-sm"
               >
                 <div className="flex-1">
                   <div className="font-medium capitalize">

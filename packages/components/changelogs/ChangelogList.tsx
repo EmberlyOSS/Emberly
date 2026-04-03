@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Input } from '@/packages/components/ui/input'
+import { getRelativeTime } from '@/packages/lib/utils'
 import { Button } from '@/packages/components/ui/button'
 import { Skeleton } from '@/packages/components/ui/skeleton'
 import { Badge } from '@/packages/components/ui/badge'
@@ -70,24 +71,12 @@ export default function ChangelogList({ org }: { org?: string }) {
         })
     }
 
-    const getRelativeTime = (dateString: string) => {
-        const date = new Date(dateString)
-        const now = new Date()
-        const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-
-        if (diffInDays === 0) return 'Today'
-        if (diffInDays === 1) return 'Yesterday'
-        if (diffInDays < 7) return `${diffInDays} days ago`
-        if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
-        if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`
-        return `${Math.floor(diffInDays / 365)} years ago`
-    }
 
     if (!releases) {
         return (
             <div className="space-y-6">
                 {/* Filter skeleton */}
-                <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 p-4">
+                <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 p-4">
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         <Skeleton className="h-10 flex-1 rounded-lg" />
                         <Skeleton className="h-10 w-full sm:w-48 rounded-lg" />
@@ -98,7 +87,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                 {/* Release cards skeleton */}
                 <div className="space-y-4">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 p-5">
+                        <div key={i} className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 p-5">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 space-y-3">
                                     <Skeleton className="h-5 w-32 rounded-full" />
@@ -125,7 +114,7 @@ export default function ChangelogList({ org }: { org?: string }) {
     return (
         <div className="space-y-6">
             {/* Filters */}
-            <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden">
+            <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
                 <div className="relative p-4">
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -135,13 +124,13 @@ export default function ChangelogList({ org }: { org?: string }) {
                                 placeholder="Search releases, descriptions, repos..."
                                 value={q}
                                 onChange={(e: any) => setQ(e.target.value)}
-                                className="pl-10 bg-white/5 dark:bg-white/[0.02] border-white/10 dark:border-white/5 focus:border-primary/50 transition-colors"
+                                className="pl-10 bg-background/80 border-border/50 focus:border-primary/50 transition-colors"
                             />
                         </div>
                         <div className="relative flex items-center">
                             <Filter className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
                             <Select value={repoFilter} onValueChange={setRepoFilter}>
-                                <SelectTrigger className="h-10 w-full sm:w-[200px] pl-10 bg-white/5 dark:bg-white/[0.02] border-white/10 dark:border-white/5 focus:border-primary/50 focus:ring-primary/20 transition-colors">
+                                <SelectTrigger className="h-10 w-full sm:w-[200px] pl-10 bg-background/80 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-colors">
                                     <SelectValue placeholder="All repositories" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -154,7 +143,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                             variant="outline"
                             size="sm"
                             onClick={() => { setQ(''); setRepoFilter('all') }}
-                            className="h-10 px-4 bg-white/5 dark:bg-white/[0.02] border-white/10 dark:border-white/5 hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
+                            className="h-10 px-4 bg-background/80 border-border/50 hover:bg-background/90 transition-colors"
                         >
                             <RotateCcw className="h-4 w-4 mr-2" />
                             Reset
@@ -180,9 +169,9 @@ export default function ChangelogList({ org }: { org?: string }) {
                 {filtered.map(rel => (
                     <div
                         key={rel.id}
-                        className="group relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 overflow-hidden transition-all duration-200 hover:bg-white/[0.07] dark:hover:bg-white/[0.04] hover:border-white/15 dark:hover:border-white/10"
+                        className="group relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden transition-all duration-200 hover:bg-background/90 hover:border-border"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-muted/30 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
 
                         {/* Main content */}
                         <div className="relative p-5">
@@ -220,7 +209,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                                         <div className="flex items-center gap-1.5">
                                             <Calendar className="h-3.5 w-3.5" />
                                             <span>{formatDate(rel.publishedAt)}</span>
-                                            <span className="text-muted-foreground/60">({getRelativeTime(rel.publishedAt)})</span>
+                                            <span className="text-muted-foreground/60">({getRelativeTime(new Date(rel.publishedAt))})</span>
                                         </div>
                                         {rel.author && (
                                             <div className="flex items-center gap-1.5">
@@ -237,7 +226,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                                         variant="ghost"
                                         size="icon"
                                         asChild
-                                        className="h-9 w-9 rounded-lg bg-white/5 dark:bg-white/[0.02] hover:bg-white/10 dark:hover:bg-white/5 border border-white/10 dark:border-white/5"
+                                        className="h-9 w-9 rounded-lg bg-background/80 hover:bg-background/90 border border-border/50"
                                     >
                                         <a href={rel.htmlUrl} target="_blank" rel="noopener noreferrer">
                                             <ExternalLink className="h-4 w-4" />
@@ -248,10 +237,10 @@ export default function ChangelogList({ org }: { org?: string }) {
                                         size="icon"
                                         onClick={() => toggle(rel.id)}
                                         className={cn(
-                                            "h-9 w-9 rounded-lg border border-white/10 dark:border-white/5 transition-all",
+                                            "h-9 w-9 rounded-lg border border-border/50 dark:border-border/20 transition-all",
                                             expanded[rel.id]
                                                 ? "bg-primary/10 hover:bg-primary/15 text-primary"
-                                                : "bg-white/5 dark:bg-white/[0.02] hover:bg-white/10 dark:hover:bg-white/5"
+                                                : "bg-background/80 hover:bg-background/90"
                                         )}
                                     >
                                         <ChevronDown className={cn(
@@ -265,15 +254,15 @@ export default function ChangelogList({ org }: { org?: string }) {
 
                         {/* Expanded content */}
                         {expanded[rel.id] && (
-                            <div className="relative border-t border-white/10 dark:border-white/5 animate-in slide-in-from-top-2 fade-in-50 duration-200">
+                            <div className="relative border-t border-border/50 dark:border-border/20 animate-in slide-in-from-top-2 fade-in-50 duration-200">
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent dark:from-black/10 pointer-events-none" />
                                 <div className="relative p-5">
-                                    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-primary prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-li:text-muted-foreground">
+                                    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/50 prose-li:text-muted-foreground">
                                         <ReactMarkdown>{rel.body || '*No release notes provided.*'}</ReactMarkdown>
                                     </div>
 
                                     {rel.author && (
-                                        <div className="mt-6 pt-4 border-t border-white/10 dark:border-white/5 flex items-center justify-end gap-3">
+                                        <div className="mt-6 pt-4 border-t border-border/50 dark:border-border/20 flex items-center justify-end gap-3">
                                             <span className="text-sm text-muted-foreground">Released by</span>
                                             <div className="flex items-center gap-2">
                                                 {rel.author.avatar && (
@@ -294,7 +283,7 @@ export default function ChangelogList({ org }: { org?: string }) {
                 ))}
 
                 {filtered.length === 0 && (
-                    <div className="relative rounded-xl bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm border border-white/10 dark:border-white/5 p-12 text-center">
+                    <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 p-12 text-center">
                         <div className="flex flex-col items-center gap-3">
                             <div className="h-12 w-12 rounded-full bg-muted/10 flex items-center justify-center">
                                 <Search className="h-6 w-6 text-muted-foreground" />
