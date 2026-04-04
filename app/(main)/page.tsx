@@ -212,7 +212,7 @@ export default async function HomePage() {
                 ) : (
                   <Button size="lg" asChild className="group">
                     <Link href="/auth/register">
-                      Get Started Free
+                      Create Free Account
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
