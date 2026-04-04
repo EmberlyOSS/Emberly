@@ -7,7 +7,7 @@ import { recalculateContributorLevel, addPerkRole, removePerkRole } from './inde
 import { PERK_ROLES } from './constants'
 import { events } from '@/packages/lib/events'
 import { prisma } from '@/packages/lib/database/prisma'
-import { github, getGitHubUser, getOrgRepos, getRepoCommits, getCommitDetail } from '@/packages/lib/github'
+import { getGitHubUser, getOrgRepos, getRepoCommits, getCommitDetail } from '@/packages/lib/github'
 
 const logger = loggers.api
 

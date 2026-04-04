@@ -178,7 +178,7 @@ async function getGitHubClient(): Promise<GitHubClient> {
 
 async function resolveGitHubOrg(org?: string): Promise<string> {
   const integrations = await getIntegrations()
-  return org ?? integrations.github?.org || process.env.GITHUB_ORG ?? 'EmberlyOSS'
+  return org ?? (integrations.github?.org || process.env.GITHUB_ORG) ?? 'EmberlyOSS'
 }
 
 // ---------------------------------------------------------------------------

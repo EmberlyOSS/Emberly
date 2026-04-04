@@ -4,6 +4,106 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-04-04
+
+### Added
+- **Stripe API Clover Compatibility** — Updated promo code creation to use new Stripe v2025-11-17.clover API structure.
+  - `promotionCodes.create` now uses `promotion: { type: 'coupon', coupon: string }` wrapper instead of direct `coupon: string` parameter.
+  - Applied to three endpoints: `POST /api/admin/promo-codes`, `GET /api/admin/promo-codes`, and `POST /api/payments/promo-codes`.
+  - Promo code responses properly expand nested coupon data via `expand: ['data.promotion.coupon']` for complete pricing details.
+- **Promo Code Orphan Prevention** — Coupon deletion rollback mechanism when promotion code creation fails.
+  - After creating a coupon, if `promotionCodes.create` fails, the orphaned coupon is automatically deleted to prevent dangling resources.
+  - Reduces Stripe admin cleanup burden and improves data consistency.
+- **Kener Status Page Integration** — Real time service status monitoring from Kener instance.
+  - Maps Kener v4 monitor state field format to aggregated health statuses: `ACTIVE` → `UP`, `INACTIVE` → `DOWN`.
+  - `GET /api/status` returns aggregated system health from all visible monitors with 60 second cache TTL.
+  - Properly differentiates between Kener workflow state (ACTIVE/INACTIVE) and actual health status (UP/DOWN/DEGRADED).
+- **Graceful Status Fallback** — Status endpoint returns `UNKNOWN` status instead of 503 when Kener is unreachable.
+  - Improves UX for development environments without configured status page.
+  - Prevents production status page from failing hard when external monitoring is unavailable.
+- **User Buckets Storage System** — Granular file storage organization per user.
+  - New `UserBucket` model with storage quota tracking and access control.
+  - Prisma migration: `20260404075543_add_user_buckets` — Database schema for bucket management.
+  - Enables team-based storage organization without requiring squads.
+- **User Grants & Permissions System** — Role-based access control and permission management.
+  - New `UserGrant` model and permission system for granular authorization.
+  - Prisma migration: `20260404085324_add_user_grants` — Permission tracking and enforcement.
+  - Supports delegation of admin functions without full superadmin access.
+- **Sentry Error Tracking Integration** — Client and server error reporting with `@sentry/nextjs`.
+  - Automatic error capture from both browser and server environments.
+  - Environment-specific configuration via `sentry.client.config.ts`, `sentry.server.config.ts`, and `sentry.edge.config.ts`.
+  - Sentry source map upload and release tracking for production deployments.
+- **Admin Applications List Redesign** — Comprehensive card based redesign replacing plain table layout.
+  - Individual glass card rows with user avatars (initials fallback), role badges, and action buttons.
+  - Header card with live stats pills showing PENDING and REVIEWING application counts via Prisma `groupBy` aggregation.
+  - Proper empty state with centered icon when no applications exist.
+- **Admin Applications Detail Redesign** — Improved detail page layout with icon headers and organized sections.
+  - Header card with accent gradient top bar, `ClipboardCheck` icon, and back navigation.
+  - Applicant card uses `next/image` with initial fallback instead of bare `<img>` tag for proper image optimization.
+  - Section headers use small caps muted styling for visual hierarchy.
+  - Metadata sidebar displays icon prefixed rows instead of plain key/value pairs for better readability.
+- **Pricing Discounts Section Redesign** — Flat card design removing layered nesting.
+  - Changed from outer wrapper with inner nested `glass-subtle` cards to flat `glass-card` per discount.
+  - Matches the design pattern of `AddOnSelector` component.
+
+### Changed
+- **Documentation Files Comprehensive Update** — Production-ready documentation for open source project.
+  - `README.md` expanded from minimal placeholder to complete project overview including:
+    - Feature breakdown (file storage, domains, verification, teams, applications, admin tools)
+    - Tech stack reference (Next.js 15, React 19, TypeScript, Tailwind, Stripe, Prisma, PostgreSQL, Kener)
+    - Quick start setup guide with prerequisites and step-by-step instructions
+    - Directory structure overview and contribution guidelines
+    - Support channels (Discord, GitHub Discussions, email)
+    - License and acknowledgments sections
+  - `CONTRIBUTING.md` normalized for consistency:
+    - Removed hyphens in compound words (`real-time` → `realtime`, `longer-form` → `longer form`)
+    - Removed emoji formatting from template text
+    - Maintained comprehensive developer setup, PR process, and coding standards documentation
+- **Kener Status API Response Mapping** — Updated aggregation logic to handle Kener v4 format correctly.
+  - Recognizes `ACTIVE` as enabled monitor state (treated as UP health status).
+  - Differentiates between workflow state and actual health status properly.
+  - Fallback to `UNKNOWN` status prevents status page crashes during Kener outages.
+- **GitHub Module Export Structure** — Fixed module export for better client bundling.
+  - Removed unused `github` object export from `packages/lib/github/index.ts`.
+  - Clients now import only required functions (`getGitHubUser`, `getOrgRepos`, etc.) instead of entire module.
+- **Grant Constants Client Access** — Separated client-safe constants from server code.
+  - `public-profile.tsx` now imports `GRANT_META` and `ALL_GRANTS` directly from `packages/lib/grants/constants`.
+  - Prevents Prisma (server-only database code) from being bundled into browser JavaScript.
+
+### Fixed
+- **TypeScript Nullish Coalescing Operator Syntax** — Resolved Turbopack build error in GitHub utility.
+  - Fixed operator precedence in `packages/lib/github/index.ts:181` by adding parentheses.
+  - Changed: `org ?? integrations.github?.org || process.env.GITHUB_ORG ?? 'EmberlyOSS'`
+  - To: `org ?? (integrations.github?.org || process.env.GITHUB_ORG) ?? 'EmberlyOSS'`
+- **Admin Applications Pages File Truncation** — Resolved file truncation issues from concurrent editing.
+  - `app/(main)/admin/applications/page.tsx` — truncated old table code block removed, file normalized to 224 lines.
+  - `app/(main)/admin/applications/[id]/page.tsx` — stray old code after return removed, missing closing brace added, file normalized to 243 lines.
+- **Review Form Hydration Error** — Fixed React hydration mismatch in application review form.
+  - `packages/components/admin/applications/review-form.tsx` — replaced invalid `<Badge>` render inside `<p>` tag with `<div>` flex container.
+  - Text content wrapped in `<span>` elements to maintain layout structure without hydration mismatches.
+- **Stripe Promo Code Expansion Fields** — Public promo code endpoint now correctly expands promotion coupon data.
+  - Added `expand: ['data.promotion.coupon']` to `promotionCodes.list` calls for complete coupon details in responses.
+  - Clients can now access coupon discount amounts directly from promo code API responses.
+- **Prisma Bundle in Client Components** — Removed Node.js database library from browser bundles.
+  - `public-profile.tsx` client component no longer imports server-only database utilities.
+  - Reduced bundle size and prevented runtime errors from missing Node.js modules (dns, fs, net, tls) in browser context.
+- **Debug Console Output Cleanup** — Removed temporary logging statements from Kener integration.
+  - Cleaned up `[KENER]` prefixed console logs used during debugging phase.
+
+### Technical
+- **Prisma Migrations** — Three migrations for storage and permissions infrastructure.
+  - `20260404075543_add_user_buckets` — User bucket management schema with quota tracking.
+  - `20260404085324_add_user_grants` — User grants and permission system models.
+- **Status Endpoint Architecture** — Kener integration in `packages/lib/kener/index.ts`.
+  - `getKenerStatus()` fetches from `/api/v4/monitors` with Bearer token authorization.
+  - `aggregateStatus()` intelligently maps monitor states to health statuses with proper fallback logic.
+  - 60 second cache TTL reduces API load while maintaining reasonable freshness.
+- **Sentry Configuration** — Multi-environment error tracking setup.
+  - `sentry.client.config.ts` — Browser client configuration with sourcemap upload and release tracking.
+  - `sentry.server.config.ts` — Backend API server error capture.
+  - `sentry.edge.config.ts` — Edge runtime (middleware) error handling.
+  - Environment-aware initialization with development/production specific settings.
+
 ## [2.1.0] - 2026-04-03
 
 ### Added

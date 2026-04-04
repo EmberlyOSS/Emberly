@@ -322,7 +322,7 @@ export default async function HomePage() {
               Built for teams and builders
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to share, collaborate, and grow — secure file hosting,
+              Everything you need to share, collaborate, and grow secure file hosting,
               custom domains, URL shortening, rich embeds, and team collaboration tools.
             </p>
           </div>

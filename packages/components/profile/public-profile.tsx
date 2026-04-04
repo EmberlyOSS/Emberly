@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/
 import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
+import { GRANT_META, ALL_GRANTS } from '@/packages/lib/grants/constants'
 import HomeShell from '@/packages/components/layout/home-shell'
 import { type NexiumPublicProfileData } from './nexium-public-section'
 import {
@@ -48,7 +49,6 @@ import {
   Handshake,
 } from 'lucide-react'
 import { SiDiscord, SiGithub as SiGithubIcon } from 'react-icons/si'
-import { GRANT_META, ALL_GRANTS } from '@/packages/lib/grants'
 import { SkillIcon } from './skill-icons'
 import { ReportUserDialog } from './report-user-dialog'
 
