@@ -22,19 +22,6 @@ export function registerAccountHandlers(): void {
                 userId: payload.userId,
                 method: payload.method,
             })
-
-            await events.emit('email.send', {
-                to: payload.email,
-                template: 'welcome',
-                subject: 'Welcome to Emberly!',
-                variables: {
-                    email: payload.email,
-                    method: payload.method,
-                },
-                userId: payload.userId,
-                priority: 'normal',
-                sourceEvent: 'account.created',
-            })
         },
         { enabled: true, timeout: 15000 }
     )
@@ -52,7 +39,7 @@ export function registerAccountHandlers(): void {
             await events.emit('email.send', {
                 to: payload.email,
                 template: 'verify-email',
-                subject: 'Verify your Emberly email address',
+                subject: 'Verify your Emberly email address - testing',
                 variables: {
                     email: payload.email,
                     verifyToken: payload.token,
@@ -248,6 +235,7 @@ export function registerAccountHandlers(): void {
             await events.emit('email.send', {
                 to: payload.email,
                 template: 'account-deleted',
+                body: [`We're sorry to see you go. Your Emberly account associated with ${payload.email} has been deleted.`],
                 subject: 'Your Emberly account has been deleted',
                 variables: {
                     email: payload.email,
