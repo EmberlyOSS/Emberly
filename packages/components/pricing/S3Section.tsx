@@ -13,11 +13,10 @@ const LOCATIONS = [
 
 const FEATURES = [
     'S3-compatible API',
-    'Unlimited buckets per subscription',
     'No per-bucket charges',
     'Removes all platform storage & upload limits',
     'Dedicated credentials emailed within 24 hours',
-    'Backups included — available on request',
+    'Backups included available on request',
 ]
 
 interface Props {
@@ -73,7 +72,7 @@ export default function S3Section({ priceId }: Props) {
                             </p>
                             <ul className="space-y-2 mb-6">
                                 {[
-                                    '1 TB·h of object storage',
+                                    '1 TB of object storage',
                                     '1.5 GB of outbound traffic',
                                 ].map((item) => (
                                     <li key={item} className="flex items-center gap-3 text-sm">

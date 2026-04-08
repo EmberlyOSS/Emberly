@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/packages/lib/auth'
 
 import {
     ArrowRight,
@@ -80,6 +82,11 @@ async function getContributors() {
     if (pat) {
         headers.Authorization = `token ${pat}`
     }
+    const excludedRepos = new Set(
+        (["premid", "activities", "statuspage", "peppermint"])
+            .map((repo) => repo.trim().toLowerCase())
+            .filter(Boolean)
+    )
 
     try {
         const [membersRes, reposRes] = await Promise.all([
@@ -97,7 +104,9 @@ async function getContributors() {
         const reposJson = reposRes.ok ? await reposRes.json() : []
 
         const repoNames = Array.isArray(reposJson)
-            ? reposJson.map((r: any) => r.name).filter(Boolean)
+            ? reposJson.map((r: any) => r.name)
+                .filter((name: any) => typeof name === 'string' && name.trim().length > 0)
+                .filter((name: string) => !excludedRepos.has(name.toLowerCase()))
             : []
 
         const contribPromises = repoNames.map((name: string) =>
@@ -172,6 +181,7 @@ export const metadata = buildPageMetadata({
 })
 
 export default async function AboutPage() {
+    const session = await getServerSession(authOptions)
     const contributors = await getContributors()
 
     return (
@@ -382,12 +392,21 @@ export default async function AboutPage() {
                             build, and connect.
                         </p>
                         <div className="mt-6 flex flex-wrap justify-center gap-3">
-                            <Button size="lg" asChild>
-                                <Link href="/auth/register">
-                                    Get Started Free
-                                    <ArrowRight className="h-4 w-4 ml-2" />
-                                </Link>
-                            </Button>
+                            {session ? (
+                                <Button size="lg" asChild className="group">
+                                    <Link href="/dashboard">
+                                        Open Dashboard
+                                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                    </Link>
+                                </Button>
+                            ) : (
+                                <Button size="lg" asChild className="group">
+                                    <Link href="/auth/register">
+                                        Create Free Account
+                                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                    </Link>
+                                </Button>
+                            )}
                             <Button size="lg" variant="outline" className="bg-background/50" asChild>
                                 <Link href="/contact">
                                     Contact Us
