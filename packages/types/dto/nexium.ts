@@ -86,6 +86,7 @@ export const SignalInputSchema = z.object({
   title: z.string().min(1).max(120),
   url: z.string().url().optional(),
   description: z.string().max(500).optional(),
+  imageUrl: z.string().url().optional(),
   skills: z.array(z.string()).max(10).optional(),
 })
 

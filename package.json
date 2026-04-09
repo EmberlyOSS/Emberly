@@ -1,6 +1,6 @@
 {
   "name": "@emberly/website",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "license": "AGPL-3.0-only",
   "author": "CodeMeAPixel",
   "homepage": "https://github.com/EmberlyOSS/Website",
@@ -17,6 +17,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "npx tsx scripts/seed-plans.ts",
     "dev": "next dev --turbopack",

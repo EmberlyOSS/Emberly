@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { GRANT_META, ALL_GRANTS } from '@/packages/lib/grants/constants'
 import HomeShell from '@/packages/components/layout/home-shell'
 import { type NexiumPublicProfileData } from './nexium-public-section'
+import { SignalCard } from './signal-card'
 import {
   NEXIUM_AVAILABILITY_LABELS,
   NEXIUM_SKILL_LEVEL_LABELS,
@@ -541,33 +542,7 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
                   <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Proof of Skill</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {nexiumProfile!.signals.map((signal) => (
-                      <div key={signal.id} className="group flex items-start gap-3 p-4 rounded-xl border border-border/30 bg-background/30 hover:bg-background/50 transition-colors">
-                        <div className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-lg ${signalTypeColors[signal.type] ?? 'bg-muted/50 text-muted-foreground'}`}>
-                          {signalTypeIcons[signal.type] ?? <FileText className="w-3.5 h-3.5" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {NEXIUM_SIGNAL_TYPE_LABELS[signal.type as keyof typeof NEXIUM_SIGNAL_TYPE_LABELS]}
-                            </span>
-                            {signal.verified && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-green-600 dark:text-green-400">
-                                <CheckCircle className="w-2.5 h-2.5" /> Verified
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm font-semibold leading-tight">{signal.title}</p>
-                          {signal.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{signal.description}</p>
-                          )}
-                        </div>
-                        {signal.url && (
-                          <a href={signal.url} target="_blank" rel="noopener noreferrer"
-                            className="shrink-0 mt-0.5 flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/40 transition-colors">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                      </div>
+                      <SignalCard key={signal.id} signal={signal} />
                     ))}
                   </div>
                 </div>

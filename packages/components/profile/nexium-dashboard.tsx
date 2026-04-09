@@ -27,15 +27,15 @@ import {
   Briefcase,
   Send,
   Building2,
-  GitMerge,
-  Package,
-  Users,
-  Layers,
-  Award,
-  FileText,
+  Search,
+  GitFork,
+  Lock,
+  RotateCw,
+  Info,
 } from 'lucide-react'
 import { SiDiscord, SiGithub as SiGithubIcon } from 'react-icons/si'
 import { SkillIcon } from './skill-icons'
+import { SignalCard } from './signal-card'
 import {
   NEXIUM_AVAILABILITY_LABELS,
   NEXIUM_SKILL_LEVEL_LABELS,
@@ -65,6 +65,8 @@ type NexiumSignal = {
   title: string
   url: string | null
   description: string | null
+  imageUrl: string | null
+  metadata: Record<string, unknown> | null
   skills: string[]
   verified: boolean
   sortOrder: number
@@ -375,26 +377,30 @@ function SkillLevelBar({ level }: { level: string }) {
   )
 }
 
-const SIGNAL_TYPE_ICONS: Record<string, React.ReactNode> = {
-  GITHUB_REPO: <SiGithubIcon className="w-3.5 h-3.5" />,
-  DEPLOYED_APP: <Globe className="w-3.5 h-3.5" />,
-  OPEN_SOURCE_CONTRIBUTION: <GitMerge className="w-3.5 h-3.5" />,
-  SHIPPED_PRODUCT: <Package className="w-3.5 h-3.5" />,
-  COMMUNITY_IMPACT: <Users className="w-3.5 h-3.5" />,
-  ASSET_PACK: <Layers className="w-3.5 h-3.5" />,
-  CERTIFICATION: <Award className="w-3.5 h-3.5" />,
-  OTHER: <FileText className="w-3.5 h-3.5" />,
+// ── GitHub repo picker types ──────────────────────────────────────────────────
+
+type GithubRepoPick = {
+  id: number
+  name: string
+  full_name: string
+  description: string | null
+  html_url: string
+  private: boolean
+  fork: boolean
+  archived: boolean
+  stargazers_count: number
+  forks_count: number
+  language: string | null
+  topics: string[]
+  pushed_at: string
+  owner: { login: string; avatar_url: string }
 }
 
-const SIGNAL_TYPE_COLORS: Record<string, string> = {
-  GITHUB_REPO: 'bg-zinc-500/15 text-zinc-400',
-  DEPLOYED_APP: 'bg-blue-500/15 text-blue-400',
-  OPEN_SOURCE_CONTRIBUTION: 'bg-emerald-500/15 text-emerald-400',
-  SHIPPED_PRODUCT: 'bg-orange-500/15 text-orange-400',
-  COMMUNITY_IMPACT: 'bg-pink-500/15 text-pink-400',
-  ASSET_PACK: 'bg-purple-500/15 text-purple-400',
-  CERTIFICATION: 'bg-amber-500/15 text-amber-400',
-  OTHER: 'bg-muted/50 text-muted-foreground',
+const LANGUAGE_COLORS: Record<string, string> = {
+  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5', Rust: '#dea584',
+  Go: '#00ADD8', Java: '#b07219', 'C#': '#178600', 'C++': '#f34b7d', Swift: '#F05138',
+  Kotlin: '#A97BFF', Ruby: '#701516', PHP: '#4F5D95', Vue: '#41b883', Svelte: '#ff3e00',
+  HTML: '#e34c26', CSS: '#563d7c', Shell: '#89e051',
 }
 
 // ── Skills panel ──────────────────────────────────────────────────────────────
@@ -562,14 +568,299 @@ function SkillsPanel({ profile }: { profile: NexiumProfile }) {
   )
 }
 
+// ── GitHub Repo Picker ────────────────────────────────────────────────────────
+
+function GitHubRepoPicker({
+  onSelectMultiple,
+  onManual,
+  githubUsername,
+}: {
+  onSelectMultiple: (repos: GithubRepoPick[]) => void
+  onManual: () => void
+  githubUsername?: string | null
+}) {
+  const [repos, setRepos] = useState<GithubRepoPick[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [showForks, setShowForks] = useState(false)
+  const [selectedOwner, setSelectedOwner] = useState<string>('')
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const { toast } = useToast()
+
+  const fetchRepos = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    setSelectedIds(new Set())
+    try {
+      const res = await fetch('/api/discovery/repos')
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to load repos')
+      setRepos(json.data ?? [])
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchRepos() }, [fetchRepos])
+
+  const owners = Array.from(new Set(repos.map((r) => r.owner.login))).sort((a, b) => {
+    if (a === githubUsername) return -1
+    if (b === githubUsername) return 1
+    return a.localeCompare(b)
+  })
+
+  const filtered = repos.filter((r) => {
+    if (!showForks && r.fork) return false
+    if (r.archived) return false
+    if (selectedOwner && r.owner.login !== selectedOwner) return false
+    const q = search.toLowerCase()
+    return !q || r.full_name.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q)
+  })
+
+  const toggleRepo = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectedCount = selectedIds.size
+
+  const handleSubmit = () => {
+    const selected = repos.filter((r) => selectedIds.has(r.id))
+    if (selected.length > 0) onSelectMultiple(selected)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Loading your repositories…
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+        <p className="text-sm text-destructive">{error}</p>
+        <Button size="sm" variant="outline" onClick={fetchRepos}>
+          <RotateCw className="w-3.5 h-3.5 mr-1.5" /> Retry
+        </Button>
+        <a
+          href="/api/auth/link/github"
+          className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+        >
+          Re-authorize GitHub to grant access to more orgs
+        </a>
+        <button onClick={onManual} className="text-xs text-muted-foreground underline underline-offset-2">
+          Enter URL manually instead
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Info callout */}
+      <div className="flex items-start gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs text-muted-foreground">
+        <Info className="w-3.5 h-3.5 text-primary/60 shrink-0 mt-0.5" />
+        <span>
+          Your GitHub repositories are shown here because your account is linked. Signals aren't limited to GitHub you can also add deployed apps, open source contributions, shipped products, and more.{' '}
+          <button onClick={onManual} className="text-primary/80 underline underline-offset-2 hover:text-primary transition-colors">
+            Add a different type of signal instead.
+          </button>
+        </span>
+      </div>
+
+      {/* Search + org dropdown + forks + refresh */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search repositories…"
+            className="h-8 pl-8 text-sm"
+          />
+        </div>
+
+        {owners.length > 1 && (
+          <select
+            value={selectedOwner}
+            onChange={(e) => { setSelectedOwner(e.target.value); setSelectedIds(new Set()) }}
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground max-w-[130px] shrink-0 cursor-pointer"
+          >
+            <option value="">All owners</option>
+            {owners.map((owner) => (
+              <option key={owner} value={owner}>
+                {owner}{owner === githubUsername ? ' (you)' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <Button
+          size="sm"
+          variant={showForks ? 'secondary' : 'ghost'}
+          className="h-8 text-xs shrink-0"
+          onClick={() => setShowForks((v) => !v)}
+        >
+          <GitFork className="w-3 h-3 mr-1" /> Forks
+        </Button>
+        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 shrink-0" onClick={fetchRepos} title="Refresh">
+          <RotateCw className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      {/* Repo list with checkboxes */}
+      <div className="max-h-64 overflow-y-auto space-y-1 pr-0.5">
+        {filtered.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            {search ? 'No matching repositories found.' : 'No repositories found.'}
+          </p>
+        )}
+        {filtered.map((repo) => {
+          const isSelected = selectedIds.has(repo.id)
+          return (
+            <button
+              key={repo.id}
+              type="button"
+              onClick={() => toggleRepo(repo.id)}
+              className={`group w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all text-left select-none ${
+                isSelected
+                  ? 'border-primary/40 bg-primary/5'
+                  : 'border-border/40 bg-background/60 hover:bg-accent hover:border-border'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${
+                isSelected ? 'bg-primary border-primary' : 'border-border/60 group-hover:border-border'
+              }`}>
+                {isSelected && (
+                  <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 12 12">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <img
+                src={repo.owner.avatar_url}
+                alt={repo.owner.login}
+                className="w-5 h-5 rounded-full shrink-0 ring-1 ring-border/40"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-medium truncate text-foreground">
+                    <span className="text-muted-foreground font-normal">{repo.owner.login}/</span>{repo.name}
+                  </span>
+                  {repo.private && <Lock className="w-2.5 h-2.5 text-muted-foreground/60 shrink-0" />}
+                  {repo.fork && <GitFork className="w-2.5 h-2.5 text-muted-foreground/60 shrink-0" />}
+                </div>
+                {repo.description && (
+                  <p className="text-[10px] text-muted-foreground truncate mt-0.5">{repo.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0 text-[10px] text-muted-foreground">
+                {repo.language && (
+                  <span className="flex items-center gap-1">
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: LANGUAGE_COLORS[repo.language] ?? '#888' }}
+                    />
+                    {repo.language}
+                  </span>
+                )}
+                {repo.stargazers_count > 0 && (
+                  <span className="flex items-center gap-0.5">
+                    <Star className="w-2.5 h-2.5" />
+                    {repo.stargazers_count >= 1000 ? `${(repo.stargazers_count / 1000).toFixed(1)}k` : repo.stargazers_count}
+                  </span>
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className="text-[10px] text-muted-foreground">{filtered.length} repo{filtered.length !== 1 ? 's' : ''}</span>
+          <a
+            href="/api/auth/link/github"
+            className="text-[10px] text-primary/70 underline underline-offset-2 hover:text-primary"
+            title="Re-connect GitHub to grant access to additional organizations"
+          >
+            Grant org access
+          </a>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={onManual} className="text-[10px] text-muted-foreground underline underline-offset-2 hover:text-foreground whitespace-nowrap">
+            Enter manually
+          </button>
+          {selectedCount > 0 && (
+            <Button size="sm" className="h-7 text-xs px-3" onClick={handleSubmit}>
+              Add {selectedCount} signal{selectedCount !== 1 ? 's' : ''}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Signals panel ─────────────────────────────────────────────────────────────
 
 function SignalsPanel({ profile }: { profile: NexiumProfile }) {
   const [signals, setSignals] = useState(profile.signals)
-  const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ type: 'GITHUB_REPO', title: '', url: '', description: '' })
+  const [mode, setMode] = useState<'idle' | 'picker' | 'manual' | 'submitting'>('idle')
+  const [form, setForm] = useState({ type: 'GITHUB_REPO', title: '', url: '', description: '', imageUrl: '' })
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+
+  const hasGitHub = profile.user.linkedAccounts.some((a) => a.provider === 'github')
+  const githubUsername = profile.user.linkedAccounts.find((a) => a.provider === 'github')?.providerUsername ?? null
+
+  // When GitHub is linked, go straight to picker; otherwise show the manual form
+  const handleOpen = () => setMode(hasGitHub ? 'picker' : 'manual')
+
+  const handleRepoMultiSelect = async (repos: GithubRepoPick[]) => {
+    setMode('submitting')
+    let added = 0
+    for (const repo of repos) {
+      try {
+        const res = await fetch('/api/discovery/signals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'GITHUB_REPO',
+            title: repo.full_name,
+            url: repo.html_url,
+            description: repo.description || undefined,
+          }),
+        })
+        const json = await res.json()
+        if (res.ok) {
+          setSignals((prev) => [...prev, json.data])
+          added++
+        }
+      } catch {
+        // continue with remaining repos
+      }
+    }
+    setMode('idle')
+    if (added > 0) toast({ title: `${added} signal${added !== 1 ? 's' : ''} added!` })
+    if (added < repos.length) toast({ title: 'Some signals failed to save', variant: 'destructive' })
+  }
+
+  const resetForm = () => {
+    setMode('idle')
+    setForm({ type: 'GITHUB_REPO', title: '', url: '', description: '', imageUrl: '' })
+  }
 
   const addSignal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -583,13 +874,14 @@ function SignalsPanel({ profile }: { profile: NexiumProfile }) {
           title: form.title.trim(),
           url: form.url || undefined,
           description: form.description || undefined,
+          imageUrl: form.imageUrl || undefined,
         }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to add signal')
       setSignals((prev) => [...prev, json.data])
-      setForm({ type: 'GITHUB_REPO', title: '', url: '', description: '' })
-      setAdding(false)
+      resetForm()
+      toast({ title: 'Signal added!' })
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' })
     } finally {
@@ -610,15 +902,48 @@ function SignalsPanel({ profile }: { profile: NexiumProfile }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{signals.length} proof-of-skill signal{signals.length !== 1 ? 's' : ''}</p>
-        {!adding && (
-          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
-            <Plus className="w-3.5 h-3.5 mr-1.5" /> Add signal
+      {(mode === 'idle' || mode === 'submitting') && (
+          <Button size="sm" variant="outline" onClick={handleOpen} disabled={mode === 'submitting'}>
+            {mode === 'submitting'
+              ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving...</>
+              : <><Plus className="w-3.5 h-3.5 mr-1.5" /> Add signal</>}
           </Button>
         )}
       </div>
 
-      {adding && (
-        <form onSubmit={addSignal} className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+      {/* GitHub Repo Picker mode */}
+      {mode === 'picker' && (
+        <div className="rounded-xl border border-border/50 bg-card p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <SiGithubIcon className="w-4 h-4 text-foreground" />
+              <span className="text-sm font-medium">Select a repository</span>
+            </div>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setMode('idle')}>Cancel</Button>
+          </div>
+          <GitHubRepoPicker
+            onSelectMultiple={handleRepoMultiSelect}
+            onManual={() => setMode('manual')}
+            githubUsername={githubUsername}
+          />
+        </div>
+      )}
+
+      {/* Manual form mode — for non-GitHub signals or when picker unavailable */}
+      {mode === 'manual' && (
+        <form onSubmit={addSignal} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium">Add signal manually</span>
+            <div className="flex items-center gap-2">
+              {hasGitHub && (
+                <Button size="sm" variant="ghost" className="h-7 text-xs" type="button" onClick={() => setMode('picker')}>
+                  <SiGithubIcon className="w-3 h-3 mr-1.5" /> Browse repos
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="h-7 text-xs" type="button" onClick={() => setMode('idle')}>Cancel</Button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Type *</Label>
@@ -643,6 +968,9 @@ function SignalsPanel({ profile }: { profile: NexiumProfile }) {
               />
             </div>
           </div>
+
+          {/* GitHub repo picker shortcut removed — use Browse repos button in header instead */}
+
           <div className="space-y-1.5">
             <Label className="text-xs">URL</Label>
             <Input
@@ -653,70 +981,67 @@ function SignalsPanel({ profile }: { profile: NexiumProfile }) {
               className="h-8 text-sm"
             />
           </div>
+
           <div className="space-y-1.5">
             <Label className="text-xs">Description</Label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Brief description of what you built or contributed..."
+              placeholder="Brief description of what you built or contributed…"
               rows={2}
-              className="text-sm"
+              className="text-sm resize-none"
             />
           </div>
-          <div className="flex gap-2">
+
+          {form.type !== 'GITHUB_REPO' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Logo / Banner URL</Label>
+              <Input
+                type="url"
+                value={form.imageUrl}
+                onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
+                placeholder="https://example.com/logo.png"
+                className="h-8 text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Optional image shown on your signal card.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
             <Button type="submit" size="sm" disabled={loading}>
               {loading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               Add signal
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
           </div>
         </form>
       )}
 
+      {/* Signal list */}
       <div className="space-y-2">
-        {signals.length === 0 && (
-          <p className="text-sm text-muted-foreground py-2">No signals yet. Add links to your work to build trust.</p>
+        {signals.length === 0 && (mode === 'idle' || mode === 'submitting') && (
+          <div className="rounded-xl border border-dashed border-border/60 p-6 text-center space-y-2">
+            <SiGithubIcon className="w-6 h-6 text-muted-foreground/50 mx-auto" />
+            <p className="text-sm font-medium text-muted-foreground">No signals yet</p>
+            <p className="text-xs text-muted-foreground/70">
+              Add links to repos, apps, and contributions to build trust with employers.
+            </p>
+            <Button size="sm" variant="outline" className="mt-2" onClick={handleOpen}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Add your first signal
+            </Button>
+          </div>
         )}
         {signals.map((signal) => (
-          <div key={signal.id} className="group flex items-start gap-3 p-3 rounded-xl border border-border bg-background hover:border-primary/30 transition-colors">
-            <div className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${SIGNAL_TYPE_COLORS[signal.type] ?? 'bg-muted/50 text-muted-foreground'}`}>
-              {SIGNAL_TYPE_ICONS[signal.type] ?? <FileText className="w-3.5 h-3.5" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {NEXIUM_SIGNAL_TYPE_LABELS[signal.type as keyof typeof NEXIUM_SIGNAL_TYPE_LABELS]}
-                </span>
-                {signal.verified && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-green-600">
-                    <CheckCircle className="w-2.5 h-2.5" /> Verified
-                  </span>
-                )}
-              </div>
-              <p className="text-sm font-semibold truncate">{signal.title}</p>
-              {signal.description && (
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{signal.description}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
-              {signal.url && (
-                <a
-                  href={signal.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-primary hover:bg-muted/40 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-              <button
-                onClick={() => removeSignal(signal.id)}
-                className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                aria-label="Remove signal"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
+          <div key={signal.id} className="group relative">
+            <SignalCard signal={signal} />
+            <button
+              onClick={() => removeSignal(signal.id)}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-background/90 border border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-all z-10 shadow-sm"
+              aria-label="Remove signal"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
           </div>
         ))}
       </div>
@@ -1325,10 +1650,33 @@ function OpportunitiesPanel() {
 
 // ── Main dashboard component ──────────────────────────────────────────────────
 
-export function NexiumDashboard() {
+export type NexiumSection = 'profile' | 'skills' | 'signals' | 'opportunities' | 'applications'
+
+export const TALENT_SECTIONS: { value: NexiumSection; label: string; icon: string }[] = [
+  { value: 'profile', label: 'Profile', icon: 'User' },
+  { value: 'skills', label: 'Skills', icon: 'Sparkles' },
+  { value: 'signals', label: 'Signals', icon: 'Zap' },
+  { value: 'opportunities', label: 'Opportunities', icon: 'Briefcase' },
+  { value: 'applications', label: 'Applications', icon: 'ClipboardList' },
+]
+
+export function NexiumDashboard({
+  activeSection: controlledSection,
+  onSectionChange,
+}: {
+  activeSection?: NexiumSection
+  onSectionChange?: (section: NexiumSection) => void
+} = {}) {
   const [profile, setProfile] = useState<NexiumProfile | null | 'loading'>('loading')
-  const [activeSection, setActiveSection] = useState<'profile' | 'skills' | 'signals' | 'opportunities' | 'applications'>('profile')
+  const [internalSection, setInternalSection] = useState<NexiumSection>('profile')
   const { toast } = useToast()
+
+  const controlled = controlledSection !== undefined
+  const activeSection = controlled ? controlledSection : internalSection
+  const setActiveSection = (s: NexiumSection) => {
+    if (controlled) onSectionChange?.(s)
+    else setInternalSection(s)
+  }
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -1398,24 +1746,26 @@ export function NexiumDashboard() {
         </Badge>
       </div>
 
-      {/* Section nav */}
-      <ScrollIndicator className="glass-subtle rounded-lg p-1">
-        <div className="flex gap-1 w-max">
-          {sections.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setActiveSection(s.id)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
-                activeSection === s.id
-                  ? 'bg-primary/10 text-primary border border-primary/20'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </ScrollIndicator>
+      {/* Section nav — hidden when sidebar controls the section externally */}
+      {!controlled && (
+        <ScrollIndicator className="glass-subtle rounded-lg p-1">
+          <div className="flex gap-1 w-max">
+            {sections.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setActiveSection(s.id)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                  activeSection === s.id
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </ScrollIndicator>
+      )}
 
       {/* Section content */}
       {activeSection === 'profile' && (

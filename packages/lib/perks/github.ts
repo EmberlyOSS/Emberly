@@ -152,9 +152,24 @@ export async function getGitHubUserInfo(
   name?: string
 } | null> {
   try {
-    const user = githubUsername
-      ? await getGitHubUser(githubUsername)
-      : await github.request<{ id: number; login: string; avatar_url: string; name: string | null }>('/user')
+    let user: { id: number; login: string; avatar_url: string; name: string | null } | null
+
+    if (githubUsername) {
+      user = await getGitHubUser(githubUsername)
+    } else {
+      // Use the user's OAuth access token to fetch the authenticated user
+      const res = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `token ${personalAccessToken}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      })
+      if (!res.ok) {
+        logger.error('Failed to get GitHub user info via token', new Error(`HTTP ${res.status}`), {})
+        return null
+      }
+      user = await res.json()
+    }
 
     if (!user) return null
     return {

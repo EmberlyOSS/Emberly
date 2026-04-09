@@ -4,6 +4,81 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-04-08
+
+### Added
+- **Email Template Expansion** — 13 new transactional email templates covering the full account lifecycle.
+  - `EmailChangedOldEmail` / `EmailChangedNewEmail` — dual notifications sent to both old and new address when email is changed, including timestamp and change source.
+  - `ExportRequestedEmail` / `ExportCompletedEmail` — confirmations for data export request and download-ready notifications.
+  - `DeletionRequestedEmail` / `DeletionCancelledEmail` / `AccountDeletedEmail` — full account deletion flow emails with cancellation window and final confirmation.
+  - `SubscriptionCreatedEmail` / `SubscriptionUpdatedEmail` / `SubscriptionCancelledEmail` — Stripe subscription lifecycle notifications with plan details.
+  - `PaymentSucceededEmail` / `PaymentFailedEmail` — payment confirmation and failure alerts with invoice context.
+  - `RefundIssuedEmail` — refund confirmation with amount and reason.
+  - All templates barrel-exported from `packages/lib/emails/index.ts` and wired into the event handler in `packages/lib/events/handlers/email.ts`.
+- **Email Event Handler Overhaul** — `packages/lib/events/handlers/email.ts` completely rewritten.
+  - Each template now has a dedicated dispatch branch instead of falling through to the generic `BasicEmail` renderer.
+  - Existing templates (`welcome`, `verify-email`, `magic-link`, `password-reset`, `account-change`, `perk-gained`, `quota-reached`, `storage-assigned`, `new-login`, `admin-broadcast`, Nexium invite/welcome/opportunity, application status/reply, bucket credentials) all converted to typed `sendTemplateEmail` calls.
+  - Eliminates the previous "body string split" fallback that caused inconsistent rendering across templates.
+- **Squad Create Dialog** — Full-featured squad creation dialog replacing the previous single-field inline form.
+  - `packages/components/discovery/squad-create-dialog.tsx` — React Hook Form + Zod validated dialog with name, description, max size, public toggle, and comma-separated skills fields.
+  - Accepts any trigger element as `children` so it can be opened from any context.
+- **Add Member Dialog** — Searchable user picker for squad owner to invite members.
+  - `packages/components/discovery/add-member-dialog.tsx` — live search via `/api/users/search` with debounced input, avatar display, and one-click add.
+  - Shows user name, handle, and email; highlights already-added members with a checkmark badge.
+- **Squad Members Manager Component** — Standalone member list with role and kick controls.
+  - `packages/components/discovery/squad-members-manager.tsx` — renders member rows with inline role `<select>` (MEMBER / OBSERVER) and kick button; owner row is non-editable.
+  - Calls `POST /api/discovery/squads/[id]/members` for both role changes and kicks.
+- **Squad Settings Form** — Full settings and danger-zone panel for squad owners.
+  - `packages/components/discovery/squad-settings-form.tsx` — editable name, description, max size, public toggle, and skills; separate danger zone card with `AlertDialog`-gated disband action.
+  - Validates with Zod, shows inline field errors, and navigates away on successful disband.
+- **User Search API Endpoint** — `GET /api/users/search?q=query&limit=10`.
+  - Returns `id`, `name`, `email`, `image`, `urlId` for matching users; searches `name` and `email` case-insensitively.
+  - Used by `AddMemberDialog` for live member lookups.
+- **Squad Members GET Endpoint** — `GET /api/discovery/squads/[id]/members` now returns the full member list for authenticated squad members (was previously missing entirely).
+- **GitHub-Style Signal Cards** — Nexium proof-of-skill signals now render as rich GitHub embed widgets for `GITHUB_REPO` type signals, and branded cards for all other types.
+  - New `packages/components/profile/signal-card.tsx` — `GitHubRepoCard` renders with GitHub's dark `#0d1117` surface, blue repo name link, muted description, topic chips, language color dot (30+ language colors from linguist palette), and live ⭐/🍴 counts pulled from metadata.
+  - Generic signals show the user-supplied logo/banner image as a card header, falling back to a colored type abbreviation chip when no image is provided.
+  - `SignalCard` dispatches to the correct renderer based on `type`; exported `SignalCardData` type consumed by all three display locations.
+- **Signal Logo / Banner URL** — Non-GitHub signals now accept an optional `imageUrl` field for custom logos or banners displayed in the signal card header.
+  - `imageUrl` added to `SignalInputSchema` in `packages/types/dto/nexium.ts` and exposed as a form field in the Nexium dashboard panel.
+  - Field is hidden for `GITHUB_REPO` signals since the owner avatar is sourced automatically from GitHub API metadata.
+- **Automatic GitHub Repo Metadata Fetch** — When a `GITHUB_REPO` signal is created or updated with a `github.com` URL, the API now automatically fetches live repository metadata and stores it in the signal's `metadata` field.
+  - `POST /api/discovery/signals` — calls `parseGitHubUrl()` then `getRepo(owner, repo)` before writing to the database; stores `full_name`, `description`, `stargazers_count`, `forks_count`, `language`, `topics`, and `owner.avatar_url`.
+  - `PUT /api/discovery/signals/[id]` — re-fetches metadata when the URL field changes on an existing `GITHUB_REPO` signal, keeping star/fork counts fresh on edit.
+
+### Fixed
+- **Squad Dashboard Blank Screen** — Squad detail page rendered nothing after a previous session changed the GET route to return `{ squad, isOwner }` while the client still read the response as the squad object directly.
+  - Reverted `GET /api/discovery/squads/[id]` to return the squad directly via `apiResponse(squad)`; the `isOwner` flag is redundant since `page.tsx` passes `role` as a prop from the server.
+- **Kick Member Failures** — Kick action was broken in two independent ways.
+  - Wrong HTTP method: client called `DELETE /members` which invokes `leaveSquad()` on the caller (owners can't leave, so always errored). Fixed to `POST /members` with `{ userId, kick: true }`.
+  - Wrong ID field: client passed `m.user.urlId` (human slug) instead of the UUID. Fixed by adding `id: true` to `SQUAD_INCLUDE`'s user selects in `packages/lib/nexium/squads.ts`.
+- **ShareX Squad Uploads Returning 401** — `POST /api/files` only checked session and personal upload tokens; squad-issued upload tokens and `nsk_` API keys were never validated.
+  - `getSquadFromBearerToken()` is now called first; on match, the squad owner's session is used as the acting user.
+  - Squad uploads check `storageQuotaMB` separately from user quota and increment `nexiumSquad.storageUsed` (in bytes) in the same DB transaction.
+- **Overview Stat Counts Always `–`** — API keys and domain counts on the squad overview tab showed dashes because those resources were only fetched when the user switched to their respective tabs.
+  - Both are now pre-fetched on initial mount alongside the squad load so overview cards populate immediately.
+- **Members Route Now Handles Four POST Cases** — `POST /api/discovery/squads/[id]/members` was previously only handling the join-self flow.
+  - Rewritten to dispatch on body shape: `{ userId, kick: true }` → kick member; `{ userId, role }` → set role; `{ userId }` → owner direct-add; empty body → join self.
+  - Direct-add validates: caller is owner, squad not at capacity, squad status is FORMING or ACTIVE, target user exists and is not already a member.
+- **Welcome Email Sent Twice** — `packages/lib/events/handlers/account.ts` was registering the welcome email listener twice on startup; removed duplicate registration.
+- **About Page Contributors Pulling from Forks** — `/about` contributors section was fetching commits from forked repositories, inflating the contributor list with unrelated accounts.
+  - Fixed query to filter out forks so only canonical repo contributors appear.
+- **Home CTA Button Wording** — Updated call-to-action button text on the home page for clarity.
+- **S3 Section Feature List** — Removed a feature description and refined another for accuracy in `packages/components/pricing/S3Section.tsx`.
+- **Magic Link Debug Logging** — Added server-side trace logging to both the send route and the NextAuth credentials provider to diagnose "Invalid or expired token" failures.
+  - `[Magic Link Send]` logs confirm token generation and DB write; `[Auth]` logs expose stored vs. incoming hash comparison on validation failure.
+
+### Technical
+- **Signal Display Refactor** — All three signal render locations unified behind the shared `SignalCard` component.
+  - `nexium-dashboard.tsx` (profile settings panel), `nexium-public-section.tsx` (public profile sidebar), and `public-profile.tsx` (Talent tab full page) all replaced their inline signal render blocks with `<SignalCard />`.
+  - Dashboard panel wraps each card in a `group relative` container so a floating delete button appears on hover without cluttering the card layout.
+- **Squad Component Library** — Four new reusable components under `packages/components/discovery/`.
+  - `squad-create-dialog.tsx`, `add-member-dialog.tsx`, `squad-members-manager.tsx`, `squad-settings-form.tsx` — all client components using React Hook Form, Zod, and the existing glass-card design system.
+- **Squad Dashboard Client Refactor** — `app/(main)/dashboard/discovery/squads/[id]/client.tsx` significantly expanded.
+  - Added `SquadMember` type (with `user.id` UUID) and `UserSearchResult` type for type-safe member operations.
+  - Member management functions: `searchUsers` (300 ms debounce), `addMember`, `kickMember`, `setMemberRole` — all inline with loading state per-action.
+  - Members tab now renders search input → results dropdown → add button alongside the full member list with inline role selector and kick button.
+
 ## [2.2.0] - 2026-04-04
 
 ### Added

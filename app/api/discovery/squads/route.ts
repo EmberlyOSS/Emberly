@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       orderBy: { joinedAt: 'desc' },
     })
 
-    const squads = memberships.map((m) => m.squad)
+    const squads = memberships.map((m) => ({ ...m.squad, myRole: m.role }))
     return apiResponse({ squads })
   }
 

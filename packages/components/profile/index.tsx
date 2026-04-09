@@ -22,7 +22,6 @@ import {
   Palette,
   MessageSquare,
   Database,
-  Zap,
   Link as LinkIcon,
   ClipboardList,
   Settings,
@@ -44,7 +43,6 @@ import { PasswordBreachAlert } from './password-breach-alert'
 import { ProfileReferrals } from './referrals'
 import { BillingCreditsSection } from './billing-credits'
 import { ProfilePerks } from './perks'
-import { NexiumDashboard } from './nexium-dashboard'
 import { ApplicationsDashboard } from './applications-dashboard'
 
 const profileSections = [
@@ -57,7 +55,6 @@ const profileSections = [
   ]},
   { group: 'Content', items: [
     { value: 'uploads', label: 'Uploads', icon: Upload },
-    { value: 'discovery', label: 'Discovery', icon: Zap },
     { value: 'applications', label: 'Applications', icon: ClipboardList },
   ]},
   { group: 'Engagement', items: [
@@ -473,19 +470,7 @@ export function ProfileClient({
         </GlassCard>
       )}
 
-      {selectedTab === 'discovery' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Discovery Settings</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Set up your talent profile to get discovered for opportunities, collaborations, and squads
-            </p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <NexiumDashboard />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+
       </div>
     </div>
   )

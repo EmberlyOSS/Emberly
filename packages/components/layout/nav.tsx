@@ -65,7 +65,7 @@ const dashboardRoutes = [
   { href: '/dashboard/urls', label: 'Links', icon: LinkIcon },
   { href: '/dashboard/domains', label: 'Domains', icon: Globe },
   { href: '/dashboard/analytics', label: 'Analytics', icon: ChartBar },
-  { href: '/dashboard/discovery', label: 'Squads', icon: Sparkles },
+  { href: '/dashboard/discovery', label: 'Discovery', icon: Sparkles },
   { href: '/dashboard/bucket', label: 'Buckets', icon: Database },
 ]
 

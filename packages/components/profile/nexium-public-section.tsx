@@ -2,6 +2,7 @@
 
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
+import { SignalCard } from '@/packages/components/profile/signal-card'
 import {
   Zap,
   ExternalLink,
@@ -31,6 +32,8 @@ type NexiumSignal = {
   title: string
   url: string | null
   description: string | null
+  imageUrl: string | null
+  metadata: Record<string, unknown> | null
   verified: boolean
 }
 
@@ -161,37 +164,7 @@ export function NexiumPublicSection({ nexiumProfile }: NexiumPublicSectionProps)
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Proof of Skill</p>
           <div className="space-y-2">
             {signals.map((signal) => (
-              <div
-                key={signal.id}
-                className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-medium text-primary/80">
-                      {NEXIUM_SIGNAL_TYPE_LABELS[signal.type as keyof typeof NEXIUM_SIGNAL_TYPE_LABELS]}
-                    </span>
-                    {signal.verified && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs gap-1 text-green-600 border-green-500/30 bg-green-500/10"
-                      >
-                        <CheckCircle className="w-3 h-3" /> Verified
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm font-medium truncate">{signal.title}</p>
-                  {signal.description && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{signal.description}</p>
-                  )}
-                </div>
-                {signal.url && (
-                  <Button size="sm" variant="ghost" asChild className="flex-shrink-0 h-7 px-2">
-                    <a href={signal.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </Button>
-                )}
-              </div>
+              <SignalCard key={signal.id} signal={signal} />
             ))}
           </div>
         </div>

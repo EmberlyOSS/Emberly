@@ -118,13 +118,28 @@ const TABS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function SquadDashboardClient({ squadId, role }: { squadId: string; role: string }) {
+export function SquadDashboardClient({
+  squadId,
+  role,
+  embedded,
+  activeTab,
+  onTabChange,
+}: {
+  squadId: string
+  role: string
+  embedded?: boolean
+  activeTab?: string
+  onTabChange?: (tab: string) => void
+}) {
   const { toast } = useToast()
   const isOwner = role === 'OWNER'
 
   const [squad, setSquad] = useState<Squad | null>(null)
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(true)
+
+  const currentTab = embedded && activeTab !== undefined ? activeTab : tab
+  const handleTabSwitch = embedded && onTabChange ? onTabChange : setTab
 
   // Data for each tab loaded lazily
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[] | null>(null)
@@ -205,9 +220,9 @@ export function SquadDashboardClient({ squadId, role }: { squadId: string; role:
   }, [fetchSquad, fetchApiKeys, fetchDomains])
 
   useEffect(() => {
-    if (tab === 'storage' && quota === null) fetchQuota()
-    if (tab === 'uploads' && uploadToken === null) fetchToken()
-  }, [tab, quota, uploadToken, fetchQuota, fetchToken])
+    if (currentTab === 'storage' && quota === null) fetchQuota()
+    if (currentTab === 'uploads' && uploadToken === null) fetchToken()
+  }, [currentTab, quota, uploadToken, fetchQuota, fetchToken])
 
   // ─── Actions ──────────────────────────────────────────────────────────
 
@@ -408,7 +423,7 @@ export function SquadDashboardClient({ squadId, role }: { squadId: string; role:
 
   if (loading) {
     return (
-      <div className="container">
+      <div className={embedded ? '' : 'container'}>
         <div className="py-8 text-center text-muted-foreground">Loading…</div>
       </div>
     )
@@ -416,41 +431,15 @@ export function SquadDashboardClient({ squadId, role }: { squadId: string; role:
 
   if (!squad) {
     return (
-      <div className="container">
+      <div className={embedded ? '' : 'container'}>
         <div className="py-8 text-center text-muted-foreground">Squad not found</div>
       </div>
     )
   }
 
-  return (
-    <div className="container space-y-6">
-      {/* Header */}
-      <div className="glass-card">
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Link
-              href="/dashboard/discovery"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight">{squad.name}</h1>
-                <Badge variant="outline" className={STATUS_COLORS[squad.status] || ''}>
-                  {squad.status}
-                </Badge>
-              </div>
-              {squad.description && (
-                <p className="text-muted-foreground mt-1">{squad.description}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+  const tabsContent = (
+    <Tabs value={currentTab} onValueChange={handleTabSwitch} className="space-y-6">
+      {!embedded && (
         <TabsList className="w-full h-auto flex-wrap justify-start gap-1 p-1.5 glass-subtle rounded-xl">
           {TABS.map((t) => {
             const Icon = t.icon
@@ -466,6 +455,7 @@ export function SquadDashboardClient({ squadId, role }: { squadId: string; role:
             )
           })}
         </TabsList>
+      )}
 
         {/* ─── Overview ──────────────────────────────────────────── */}
         <TabsContent value="overview">
@@ -941,6 +931,38 @@ export function SquadDashboardClient({ squadId, role }: { squadId: string; role:
           </GlassCard>
         </TabsContent>
       </Tabs>
+  )
+
+  if (embedded) return tabsContent
+
+  return (
+    <div className="container space-y-6">
+      {/* Header */}
+      <div className="glass-card">
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Link
+              href="/dashboard/discovery"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold tracking-tight">{squad.name}</h1>
+                <Badge variant="outline" className={STATUS_COLORS[squad.status] || ''}>
+                  {squad.status}
+                </Badge>
+              </div>
+              {squad.description && (
+                <p className="text-muted-foreground mt-1">{squad.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {tabsContent}
     </div>
   )
 }

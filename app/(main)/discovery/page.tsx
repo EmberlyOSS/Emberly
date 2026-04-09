@@ -99,7 +99,7 @@ export default async function NexiumDiscoveryPage({
                   <span className="text-muted-foreground">public profiles</span>
                 </div>
                 <Button asChild className="group">
-                  <Link href="/dashboard/profile?tab=discovery">
+                  <Link href="/dashboard/discovery">
                     Set up your profile
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
