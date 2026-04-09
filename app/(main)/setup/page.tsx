@@ -414,7 +414,7 @@ export default function SetupPage() {
           <p className="text-center text-xs text-muted-foreground">
             Need help?{' '}
             <a
-              href="https://github.com/EmberlyOSS/Website/blob/dev/README.md"
+              href="https://github.com/EmberlyOSS/Emberly/blob/dev/README.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"

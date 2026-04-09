@@ -208,7 +208,7 @@ export default function Error({
                   </Link>
                 </Button>
                 <Button variant="outline" size="sm" asChild className="bg-background/50">
-                  <Link href="https://github.com/EmberlyOSS/Website/issues" target="_blank">
+                  <Link href="https://github.com/EmberlyOSS/Emberly/issues" target="_blank">
                     <Bug className="h-4 w-4 mr-2" />
                     GitHub Issue
                   </Link>

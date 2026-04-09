@@ -54,7 +54,7 @@ const PRESS_RESOURCES = [
         icon: Palette,
         title: 'Design Assets',
         description: 'High-resolution logos, icons, and marketing materials.',
-        href: 'https://github.com/EmberlyOSS/Website/releases/latest',
+        href: 'https://github.com/EmberlyOSS/Emberly/releases/latest',
         label: 'Download ZIP',
         external: true,
         color: 'text-muted-foreground',
@@ -80,7 +80,7 @@ const CONTACT_POINTS = [
         icon: Github,
         label: 'Technical questions',
         value: 'GitHub Issues',
-        href: 'https://github.com/EmberlyOSS/Website/issues',
+        href: 'https://github.com/EmberlyOSS/Emberly/issues',
     },
 ]
 

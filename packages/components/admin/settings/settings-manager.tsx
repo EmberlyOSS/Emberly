@@ -987,7 +987,7 @@ export function SettingsManager() {
 						<div className="flex items-center gap-2 pt-2">
 							<Button variant="outline" size="sm" asChild className="h-9">
 								<a
-									href="https://github.com/EmberlyOSS/Website"
+									href="https://github.com/EmberlyOSS/Emberly"
 									target="_blank"
 									rel="noopener noreferrer"
 								>

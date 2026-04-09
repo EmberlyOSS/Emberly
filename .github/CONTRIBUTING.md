@@ -44,7 +44,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 3. **Add the upstream remote**
 
    ```bash
-   git remote add upstream https://github.com/EmberlyOSS/Website.git
+   git remote add upstream https://github.com/EmberlyOSS/Emberly.git
    ```
 
 4. **Install dependencies**

@@ -57,8 +57,8 @@ For development setup, contribution guidelines, and detailed documentation, see 
 
 ```bash
 # Clone the repository
-git clone https://github.com/EmberlyOSS/Website.git
-cd Website
+git clone https://github.com/EmberlyOSS/Emberly.git
+cd Emberly
 
 # Install dependencies
 bun install
@@ -170,4 +170,4 @@ This project adheres to the Contributor Covenant Code of Conduct. By participati
 
 ## Acknowledgments
 
-Thank you to all [contributors](https://github.com/EmberlyOSS/Website/graphs/contributors) who have helped make Emberly possible. We also appreciate the open source projects and communities that make this platform possible. 
+Thank you to all [contributors](https://github.com/EmberlyOSS/Emberly/graphs/contributors) who have helped make Emberly possible. We also appreciate the open source projects and communities that make this platform possible. 

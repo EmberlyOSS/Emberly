@@ -36,7 +36,7 @@ const CONTACT_CHANNELS = [
         icon: Github,
         title: 'GitHub Issues',
         description: 'Report bugs, request features, or contribute to the codebase.',
-        href: 'https://github.com/EmberlyOSS/Website/issues',
+        href: 'https://github.com/EmberlyOSS/Emberly/issues',
         label: 'Open an issue',
         external: true,
         color: 'text-foreground',
@@ -103,8 +103,8 @@ const EMAIL_CONTACTS = [
 
 const QUICK_LINKS = [
     { icon: BookOpen, label: 'Blog', href: '/blog' },
-    { icon: Bug, label: 'Bug Reports', href: 'https://github.com/EmberlyOSS/Website/issues/new?template=bug_report.md' },
-    { icon: Zap, label: 'Feature Requests', href: 'https://github.com/EmberlyOSS/Website/issues/new?template=feature_request.md' },
+    { icon: Bug, label: 'Bug Reports', href: 'https://github.com/EmberlyOSS/Emberly/issues/new?template=bug_report.md' },
+    { icon: Zap, label: 'Feature Requests', href: 'https://github.com/EmberlyOSS/Emberly/issues/new?template=feature_request.md' },
 ]
 
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'

@@ -3,13 +3,13 @@
   "version": "2.3.0",
   "license": "AGPL-3.0-only",
   "author": "CodeMeAPixel",
-  "homepage": "https://github.com/EmberlyOSS/Website",
+  "homepage": "https://github.com/EmberlyOSS/Emberly",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EmberlyOSS/Website.git"
+    "url": "git+https://github.com/EmberlyOSS/Emberly.git"
   },
   "bugs": {
-    "url": "https://github.com/EmberlyOSS/Website/issues"
+    "url": "https://github.com/EmberlyOSS/Emberly/issues"
   },
   "scripts": {
     "build": "next build",

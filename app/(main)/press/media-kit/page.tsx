@@ -119,7 +119,7 @@ const CONTACT_POINTS = [
     },
     {
         label: 'GitHub Issues',
-        href: 'https://github.com/EmberlyOSS/Website/issues',
+        href: 'https://github.com/EmberlyOSS/Emberly/issues',
         icon: Github,
     },
 ]

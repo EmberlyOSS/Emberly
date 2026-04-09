@@ -120,7 +120,8 @@ function GlassCardContent({ children, className = '' }: { children: React.ReactN
 
 function IncomingInvites() {
   const { toast } = useToast()
-  const [invites, setInvites] = useState<SquadIncomingInvite[]>([])\n  const [loaded, setLoaded] = useState(false)
+  const [invites, setInvites] = useState<SquadIncomingInvite[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     fetch('/api/discovery/invites')

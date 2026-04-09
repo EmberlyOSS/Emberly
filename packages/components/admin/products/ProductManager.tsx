@@ -21,7 +21,7 @@ import { Switch } from '@/packages/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
 import { useToast } from '@/packages/hooks/use-toast'
 
-const SEED_SCRIPT_URL = 'https://github.com/EmberlyOSS/Website/blob/dev/scripts/seed-plans.ts'
+const SEED_SCRIPT_URL = 'https://github.com/EmberlyOSS/Emberly/blob/dev/scripts/seed-plans.ts'
 const PAGE_SIZE = 10
 
 export default function AdminProductManager() {
