@@ -12,6 +12,8 @@ import {
     NexiumWelcomeEmail, 
     NexiumOpportunityEmail, 
     NexiumSquadInviteEmail,
+    NexiumSquadInviteAcceptedEmail,
+    NexiumSquadInviteDeclinedEmail,
     WelcomeEmail,
     VerificationCodeEmail,
     MagicLinkEmail,
@@ -212,6 +214,38 @@ async function sendEmail(options: {
                 squadName: String(variables.squadName || ''),
                 inviterName: String(variables.inviterName || ''),
                 inviteUrl: typeof variables.inviteUrl === 'string' ? variables.inviteUrl : 'https://embrly.ca/discovery',
+                declineUrl: typeof variables.declineUrl === 'string' ? variables.declineUrl : 'https://embrly.ca/discovery',
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    if (template === 'nexium-squad-invite-accepted') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: NexiumSquadInviteAcceptedEmail,
+            props: {
+                ownerName: typeof variables.ownerName === 'string' ? variables.ownerName : undefined,
+                memberName: String(variables.memberName || ''),
+                squadName: String(variables.squadName || ''),
+                squadUrl: typeof variables.squadUrl === 'string' ? variables.squadUrl : 'https://embrly.ca/dashboard/discovery',
+            },
+            skipTracking: true,
+        })
+        return { messageId: result.id || `email-${Date.now()}` }
+    }
+
+    if (template === 'nexium-squad-invite-declined') {
+        const result = await sendTemplateEmail({
+            to,
+            subject,
+            template: NexiumSquadInviteDeclinedEmail,
+            props: {
+                ownerName: typeof variables.ownerName === 'string' ? variables.ownerName : undefined,
+                memberName: String(variables.memberName || ''),
+                squadName: String(variables.squadName || ''),
             },
             skipTracking: true,
         })

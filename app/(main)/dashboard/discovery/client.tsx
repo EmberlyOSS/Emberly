@@ -20,6 +20,9 @@ import {
   Zap,
   Briefcase,
   ClipboardList,
+  Bell,
+  Check,
+  X,
 } from 'lucide-react'
 
 import { Button } from '@/packages/components/ui/button'
@@ -31,6 +34,23 @@ import { NexiumDashboard, type NexiumSection } from '@/packages/components/profi
 import { SquadDashboardClient } from './squads/[id]/client'
 
 // -- Types -------------------------------------------------------------------
+
+type SquadIncomingInvite = {
+  id: string
+  token: string
+  expiresAt: string
+  createdAt: string
+  squad: {
+    id: string
+    name: string
+    urlId: string
+    description: string | null
+    avatarUrl: string | null
+    _count: { members: number }
+    maxSize: number
+  }
+  invitedBy: { id: string; name: string | null; image: string | null; urlId: string }
+}
 
 type Squad = {
   id: string
@@ -94,6 +114,83 @@ function GlassCardTitle({ children, className = '' }: { children: React.ReactNod
 
 function GlassCardContent({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`p-6 pt-0 ${className}`}>{children}</div>
+}
+
+// -- Incoming invites section -----------------------------------------------
+
+function IncomingInvites() {
+  const { toast } = useToast()
+  const [invites, setInvites] = useState<SquadIncomingInvite[]>([])\n  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/discovery/invites')
+      .then((r) => r.json())
+      .then((d) => setInvites(d.data?.invites ?? []))
+      .catch(() => {})
+      .finally(() => setLoaded(true))
+  }, [])
+
+  const handleAccept = useCallback((inv: SquadIncomingInvite) => {
+    // Navigate to the token accept URL — it validates, creates the membership, and redirects back
+    window.location.href = `/api/discovery/invites/${inv.token}/accept`
+  }, [])
+
+  const handleDecline = useCallback((inv: SquadIncomingInvite) => {
+    window.location.href = `/api/discovery/invites/${inv.token}/decline`
+  }, [])
+
+  if (!loaded || invites.length === 0) return null
+
+  return (
+    <GlassCard>
+      <GlassCardHeader>
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-primary" />
+          <GlassCardTitle>Squad Invites</GlassCardTitle>
+          <span className="text-xs font-medium bg-primary/15 text-primary border border-primary/25 rounded-full px-2 py-0.5">
+            {invites.length}
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">You've been invited to join these squads</p>
+      </GlassCardHeader>
+      <GlassCardContent className="space-y-3">
+        {invites.map((inv) => (
+          <div
+            key={inv.id}
+            className="flex items-center justify-between glass-subtle rounded-xl px-4 py-3 border border-primary/15"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold truncate">{inv.squad.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Invited by {inv.invitedBy.name ?? inv.invitedBy.urlId}
+                {' · '}
+                {inv.squad._count.members}/{inv.squad.maxSize} members
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-4">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => handleDecline(inv)}
+              >
+                <X className="h-3.5 w-3.5" />
+                Decline
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => handleAccept(inv)}
+              >
+                <Check className="h-3.5 w-3.5" />
+                Accept
+              </Button>
+            </div>
+          </div>
+        ))}
+      </GlassCardContent>
+    </GlassCard>
+  )
 }
 
 // -- Squads list section -----------------------------------------------------
@@ -543,7 +640,12 @@ export function NexiumDashboardClient() {
           </GlassCard>
         )}
 
-        {mode === 'top' && <SquadsList onSquadSelect={handleSquadSelect} />}
+        {mode === 'top' && (
+          <>
+            <IncomingInvites />
+            <SquadsList onSquadSelect={handleSquadSelect} />
+          </>
+        )}
       </div>
     </div>
   )

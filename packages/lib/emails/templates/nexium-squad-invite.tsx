@@ -20,6 +20,7 @@ interface NexiumSquadInviteEmailProps {
   squadName: string
   inviterName: string
   inviteUrl: string
+  declineUrl: string
 }
 
 export function NexiumSquadInviteEmail({
@@ -27,6 +28,7 @@ export function NexiumSquadInviteEmail({
   squadName,
   inviterName,
   inviteUrl,
+  declineUrl,
 }: NexiumSquadInviteEmailProps) {
   return (
     <Html>
@@ -131,11 +133,23 @@ export function NexiumSquadInviteEmail({
                 </Column>
               </Row>
 
+              {/* Decline link */}
+              <Row className="mt-4">
+                <Column align="center">
+                  <Text className="m-0 text-xs text-gray-500">
+                    Not interested?{' '}
+                    <Link href={declineUrl} className="text-gray-500 underline">
+                      Decline this invitation
+                    </Link>
+                  </Text>
+                </Column>
+              </Row>
+
               {/* Expiry / security note */}
               <Row className="mt-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
                 <Column align="center">
                   <Text className="m-0 text-sm text-yellow-800">
-                    <strong>⏰ This invite link may expire</strong> – accept it soon to secure your spot.
+                    <strong>⏰ This invite expires in 7 days</strong> – accept it soon to secure your spot.
                   </Text>
                 </Column>
               </Row>

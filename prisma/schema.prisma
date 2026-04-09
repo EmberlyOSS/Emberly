@@ -116,6 +116,8 @@ model User {
   nexiumOpportunities    NexiumOpportunity[] @relation("NexiumOpportunityPoster")
   ownedSquads            NexiumSquad[]       @relation("NexiumSquadOwner")
   nexiumSquadMemberships NexiumSquadMember[]
+  nexiumSquadInvites     NexiumSquadInvite[] @relation("InvitedUser")
+  nexiumSquadInvitesSent NexiumSquadInvite[] @relation("InviteSender")
   bansReceived           UserBan[]           @relation("BannedUser")
   bansIssued             UserBan[]           @relation("BanIssuer")
   reportsReceived        UserReport[]        @relation("ReportedUser")
@@ -677,6 +679,7 @@ model NexiumSquad {
 
   owner         User                      @relation("NexiumSquadOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   members       NexiumSquadMember[]
+  invites       NexiumSquadInvite[]
   subscriptions NexiumSquadSubscription[]
   apiKeys       NexiumSquadApiKey[]
   customDomains CustomDomain[]
@@ -700,6 +703,34 @@ model NexiumSquadMember {
   @@unique([squadId, userId])
   @@index([squadId])
   @@index([userId])
+}
+
+model NexiumSquadInvite {
+  id          String                  @id @default(cuid())
+  squadId     String
+  userId      String
+  invitedById String
+  token       String                  @unique @default(cuid())
+  status      NexiumSquadInviteStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  squad     NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user      User        @relation("InvitedUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User        @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, userId])
+  @@index([userId])
+  @@index([squadId])
+  @@index([token])
+}
+
+enum NexiumSquadInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
 }
 
 // Squad billing — same plan products as users, scoped per squad

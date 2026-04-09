@@ -62,35 +62,12 @@ export async function POST(
     }
   }
 
-  // ── add member directly (owner adding a specific user) ────────────────────
+  // ── invite a user (owner inviting a specific user) ───────────────────────
   if (body.userId && !body.role) {
-    const { prisma } = await import('@/packages/lib/database/prisma')
-
-    // Verify the caller is the owner
-    const squad = await prisma.nexiumSquad.findUnique({
-      where: { id },
-      select: { ownerUserId: true, maxSize: true, status: true, _count: { select: { members: true } } },
-    })
-    if (!squad) return apiError('Squad not found', HTTP_STATUS.NOT_FOUND)
-    if (squad.ownerUserId !== user.id) return apiError('Only the owner can add members directly', HTTP_STATUS.FORBIDDEN)
-    if (squad._count.members >= squad.maxSize) return apiError('Squad is full', HTTP_STATUS.BAD_REQUEST)
-    if (squad.status !== 'FORMING' && squad.status !== 'ACTIVE') return apiError('Squad is not accepting members', HTTP_STATUS.BAD_REQUEST)
-
-    // Check target user exists
-    const target = await prisma.user.findUnique({ where: { id: body.userId }, select: { id: true } })
-    if (!target) return apiError('User not found', HTTP_STATUS.NOT_FOUND)
-
-    // Check not already a member
-    const existing = await prisma.nexiumSquadMember.findUnique({
-      where: { squadId_userId: { squadId: id, userId: body.userId } },
-    })
-    if (existing) return apiError('User is already a member', HTTP_STATUS.CONFLICT)
-
-    const member = await prisma.nexiumSquadMember.create({
-      data: { squadId: id, userId: body.userId, role: 'MEMBER' },
-      include: { user: { select: { id: true, name: true, image: true, urlId: true } } },
-    })
-    return apiResponse({ member })
+    return apiError(
+      'Direct-add is no longer supported. Use POST /api/discovery/squads/:id/invites to send an invite.',
+      HTTP_STATUS.GONE
+    )
   }
 
   // ── join squad (self) ─────────────────────────────────────────────────────

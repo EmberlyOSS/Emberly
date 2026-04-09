@@ -255,9 +255,53 @@ export function registerNexiumHandlers(): void {
                     squadName: payload.squadName,
                     inviterName: payload.inviterName,
                     inviteUrl: payload.inviteUrl,
+                    declineUrl: payload.declineUrl,
                 },
                 userId: payload.userId,
                 sourceEvent: 'nexium.squad-invite',
+            })
+        },
+        { enabled: true, timeout: 10000 }
+    )
+
+    events.on(
+        'nexium.squad-invite-accepted',
+        'nexium-squad-invite-accepted-email',
+        async (payload: EventPayload<'nexium.squad-invite-accepted'>) => {
+            logger.info('Nexium squad invite accepted', { ownerId: payload.ownerId, squadId: payload.squadId, memberName: payload.memberName })
+            await events.emit('email.send', {
+                to: payload.ownerEmail,
+                subject: `${payload.memberName} accepted your invite to ${payload.squadName}`,
+                template: 'nexium-squad-invite-accepted',
+                variables: {
+                    ownerName: payload.ownerName,
+                    memberName: payload.memberName,
+                    squadName: payload.squadName,
+                    squadUrl: payload.squadUrl,
+                },
+                userId: payload.ownerId,
+                sourceEvent: 'nexium.squad-invite-accepted',
+            })
+        },
+        { enabled: true, timeout: 10000 }
+    )
+
+    events.on(
+        'nexium.squad-invite-declined',
+        'nexium-squad-invite-declined-email',
+        async (payload: EventPayload<'nexium.squad-invite-declined'>) => {
+            logger.info('Nexium squad invite declined', { ownerId: payload.ownerId, squadId: payload.squadId, memberName: payload.memberName })
+            await events.emit('email.send', {
+                to: payload.ownerEmail,
+                subject: `${payload.memberName} declined your invite to ${payload.squadName}`,
+                template: 'nexium-squad-invite-declined',
+                variables: {
+                    ownerName: payload.ownerName,
+                    memberName: payload.memberName,
+                    squadName: payload.squadName,
+                },
+                userId: payload.ownerId,
+                sourceEvent: 'nexium.squad-invite-declined',
             })
         },
         { enabled: true, timeout: 10000 }

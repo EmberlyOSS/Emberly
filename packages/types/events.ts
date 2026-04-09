@@ -746,6 +746,30 @@ export type EventTypeMap = {
     squadName: string
     inviterName: string
     inviteUrl: string
+    declineUrl: string
+    context?: RequestContext
+  }
+
+  'nexium.squad-invite-accepted': {
+    /** The squad owner's user id */
+    ownerId: string
+    ownerEmail: string
+    ownerName?: string
+    memberName: string
+    squadId: string
+    squadName: string
+    squadUrl: string
+    context?: RequestContext
+  }
+
+  'nexium.squad-invite-declined': {
+    /** The squad owner's user id */
+    ownerId: string
+    ownerEmail: string
+    ownerName?: string
+    memberName: string
+    squadId: string
+    squadName: string
     context?: RequestContext
   }
 
@@ -815,7 +839,7 @@ export const EventCategories = {
   applications: ['application.submitted', 'application.reviewed'],
   testimonials: ['testimonial.submitted', 'testimonial.edited'],
   system: ['system.client-error', 'system.server-error'],
-  nexium: ['nexium.profile-created', 'nexium.profile-updated', 'nexium.profile-deleted', 'nexium.skill-added', 'nexium.skills-replaced', 'nexium.signal-added', 'nexium.opportunity-created', 'nexium.squad-created', 'nexium.squad-invite', 'nexium.opportunity-match', 'nexium.application-received', 'nexium.application-accepted', 'nexium.application-rejected'],
+  nexium: ['nexium.profile-created', 'nexium.profile-updated', 'nexium.profile-deleted', 'nexium.skill-added', 'nexium.skills-replaced', 'nexium.signal-added', 'nexium.opportunity-created', 'nexium.squad-created', 'nexium.squad-invite', 'nexium.squad-invite-accepted', 'nexium.squad-invite-declined', 'nexium.opportunity-match', 'nexium.application-received', 'nexium.application-accepted', 'nexium.application-rejected'],
 } as const
 
 export type EventCategory = keyof typeof EventCategories

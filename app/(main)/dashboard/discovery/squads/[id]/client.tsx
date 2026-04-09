@@ -55,6 +55,16 @@ type Squad = {
   _count: { members: number }
 }
 
+type SquadInvite = {
+  id: string
+  token: string
+  status: string
+  expiresAt: string
+  createdAt: string
+  user: { id: string; name: string | null; image: string | null; urlId: string; email: string | null }
+  invitedBy: { id: string; name: string | null }
+}
+
 type UserSearchResult = {
   id: string
   name: string | null
@@ -149,6 +159,10 @@ export function SquadDashboardClient({
   const [tokenVisible, setTokenVisible] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
 
+  // Pending invites (owner only)
+  const [invites, setInvites] = useState<SquadInvite[] | null>(null)
+  const [revokingInvite, setRevokingInvite] = useState<string | null>(null)
+
   // ─── Fetch helpers ────────────────────────────────────────────────────
 
   const fetchSquad = useCallback(async () => {
@@ -187,6 +201,18 @@ export function SquadDashboardClient({
     }
   }, [squadId, toast])
 
+  const fetchInvites = useCallback(async () => {
+    if (!isOwner) return
+    try {
+      const res = await fetch(`/api/discovery/squads/${squadId}/invites`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setInvites(data.data?.invites ?? [])
+    } catch {
+      setInvites([])
+    }
+  }, [squadId, isOwner])
+
   const fetchQuota = useCallback(async () => {
     try {
       const res = await fetch(`/api/discovery/squads/${squadId}/quota`)
@@ -217,7 +243,8 @@ export function SquadDashboardClient({
     // Pre-fetch counts for overview stat cards
     fetchApiKeys()
     fetchDomains()
-  }, [fetchSquad, fetchApiKeys, fetchDomains])
+    if (isOwner) fetchInvites()
+  }, [fetchSquad, fetchApiKeys, fetchDomains, fetchInvites, isOwner])
 
   useEffect(() => {
     if (currentTab === 'storage' && quota === null) fetchQuota()
@@ -361,23 +388,40 @@ export function SquadDashboardClient({
   const addMember = useCallback(async (userId: string) => {
     setAddingMember(userId)
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}/members`, {
+      const res = await fetch(`/api/discovery/squads/${squadId}/invites`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to add member')
-      toast({ title: 'Member added' })
+      if (!res.ok) throw new Error(data.error || 'Failed to send invite')
+      toast({ title: 'Invite sent', description: 'The user will receive an email to accept.' })
       setMemberSearch('')
       setMemberSearchResults([])
-      fetchSquad()
+      fetchInvites()
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' })
     } finally {
       setAddingMember(null)
     }
-  }, [squadId, fetchSquad, toast])
+  }, [squadId, fetchInvites, toast])
+
+  const revokeInvite = useCallback(async (inviteId: string) => {
+    setRevokingInvite(inviteId)
+    try {
+      const res = await fetch(`/api/discovery/squads/${squadId}/invites/${inviteId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to revoke invite')
+      }
+      setInvites((prev) => prev?.filter((i) => i.id !== inviteId) ?? null)
+      toast({ title: 'Invite revoked' })
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+    } finally {
+      setRevokingInvite(null)
+    }
+  }, [squadId, toast])
 
   const kickMember = useCallback(async (userId: string) => {
     try {
@@ -562,6 +606,8 @@ export function SquadDashboardClient({
                             </div>
                             {alreadyMember ? (
                               <Badge variant="outline" className="text-xs">Already a member</Badge>
+                            ) : invites?.some((i) => i.user.id === u.id) ? (
+                              <Badge variant="outline" className="text-xs bg-chart-4/20 text-chart-4 border-chart-4/30">Invited</Badge>
                             ) : (
                               <Button
                                 size="sm"
@@ -573,7 +619,7 @@ export function SquadDashboardClient({
                                 {addingMember === u.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <UserPlus className="h-3 w-3" />}
-                                Add
+                                Invite
                               </Button>
                             )}
                           </div>
@@ -581,6 +627,50 @@ export function SquadDashboardClient({
                       })}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Pending invites — owner only */}
+              {isOwner && invites !== null && invites.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">Pending Invites ({invites.length})</h3>
+                  {invites.map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="flex items-center justify-between glass-subtle rounded-xl p-3 sm:p-4 border border-chart-4/20"
+                    >
+                      <div className="flex items-center gap-3">
+                        {inv.user.image ? (
+                          <img src={inv.user.image} alt="" className="w-8 h-8 rounded-full opacity-70" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center text-sm font-medium text-muted-foreground">
+                            {(inv.user.name || '?')[0]}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium">{inv.user.name || inv.user.urlId}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Invited · expires {new Date(inv.expiresAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs bg-chart-4/20 text-chart-4 border-chart-4/30">Pending</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => revokeInvite(inv.id)}
+                          disabled={revokingInvite === inv.id}
+                          title="Revoke invite"
+                        >
+                          {revokingInvite === inv.id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <UserMinus className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
