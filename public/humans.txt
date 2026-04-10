@@ -1,0 +1,30 @@
+/* TEAM */
+
+  Project: Emberly
+  Site: https://embrly.ca
+  GitHub: https://github.com/EmberlyOSS/Emberly
+  Location: Canada
+
+/* THANKS */
+
+  All open-source contributors and community members.
+  Discord: https://discord.gg/emberly
+
+/* TECHNOLOGY */
+
+  Framework:   Next.js 15 (App Router, React Server Components)
+  Language:    TypeScript 5
+  Database:    PostgreSQL via Prisma ORM
+  Auth:        NextAuth.js
+  UI:          Tailwind CSS + Radix UI + shadcn/ui
+  Storage:     S3-compatible (configurable endpoint)
+  Email:       Resend / SMTP (configurable)
+  Payments:    Stripe
+  Monitoring:  Sentry + Kener
+  Runtime:     Bun
+  Deployed on: Linux (Docker)
+
+/* STANDARDS */
+
+  We follow WCAG 2.2 AA accessibility guidelines where possible.
+  All user data is handled in accordance with our Privacy Policy.

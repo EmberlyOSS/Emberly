@@ -293,7 +293,7 @@ export function PublicProfile({ user, storageBonus, domainBonus, linkedAccounts,
 
   return (
     <HomeShell>
-      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
 
         {/* â”€â”€ Hero Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <GlassCard>

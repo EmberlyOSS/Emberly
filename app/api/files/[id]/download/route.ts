@@ -1,17 +1,25 @@
 import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 import { compare } from 'bcryptjs'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
+import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
 
 function encodeFilename(filename: string): string {
   const encoded = encodeURIComponent(filename)
   return `"${encoded.replace(/["\\]/g, '\\$&')}"`
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCORSPreflight(request)
+  if (preflightResponse) return preflightResponse
+  return new Response(null, { status: 204 })
 }
 
 export async function GET(
@@ -95,6 +103,7 @@ export async function GET(
         'Content-Length': chunkSize.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `attachment; filename=${encodeFilename(file.name)}`,
+        ...getCORSHeaders(),
       }
 
       return new NextResponse(stream as unknown as ReadableStream, {
@@ -109,6 +118,7 @@ export async function GET(
       'Content-Disposition': `attachment; filename=${encodeFilename(file.name)}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
+      ...getCORSHeaders(),
     }
 
     return new NextResponse(stream as unknown as ReadableStream, { headers })

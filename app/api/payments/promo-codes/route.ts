@@ -20,7 +20,9 @@ export async function GET() {
       expand: ['data.promotion.coupon'],
     })
 
-    const result = promoCodes.data.map((pc) => {
+    const result = promoCodes.data
+      .filter((pc) => pc.metadata?.['private'] !== 'true')
+      .map((pc) => {
       const promotion = pc.promotion as any
       const coupon = promotion?.coupon as any
       return {

@@ -397,11 +397,88 @@ export async function GET(request: Request) {
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
     const visibilityFilters = searchParams.get('visibility')?.split(',') || []
+    const squadId = searchParams.get('squadId') || null
     const offset = (page - 1) * limit
 
-    const where: Prisma.FileWhereInput = {
-      userId: user.id,
+    // ── Squad view: verify membership then return squad-owned files ──
+    if (squadId) {
+      const membership = await prisma.nexiumSquadMember.findFirst({
+        where: { squadId, userId: user.id },
+      })
+      if (!membership) {
+        return apiError('Not a member of this squad', HTTP_STATUS.FORBIDDEN)
+      }
+
+      const where: Prisma.FileWhereInput = { squadId }
+      const conditions: Prisma.FileWhereInput[] = []
+
+      if (search) {
+        conditions.push({
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { ocrText: { contains: search, mode: 'insensitive' } },
+          ],
+        })
+      }
+      if (types.length > 0) conditions.push({ mimeType: { in: types } })
+      if (dateFrom || dateTo) {
+        const dateFilter: Prisma.DateTimeFilter = {}
+        if (dateFrom) dateFilter.gte = new Date(dateFrom)
+        if (dateTo) { const e = new Date(dateTo); e.setHours(23,59,59,999); dateFilter.lte = e }
+        conditions.push({ uploadedAt: dateFilter })
+      }
+      if (visibilityFilters.length > 0) {
+        const visConds = visibilityFilters.map((f) =>
+          f === 'hasPassword' ? { password: { not: null } } : { visibility: f.toUpperCase() as 'PUBLIC' | 'PRIVATE' }
+        )
+        conditions.push({ OR: visConds })
+      }
+      if (conditions.length > 0) where.AND = conditions
+
+      const orderBy: Prisma.FileOrderByWithRelationInput = {}
+      if (sortBy === 'oldest') orderBy.uploadedAt = 'asc'
+      else if (sortBy === 'largest') orderBy.size = 'desc'
+      else if (sortBy === 'smallest') orderBy.size = 'asc'
+      else if (sortBy === 'name') orderBy.name = 'asc'
+      else orderBy.uploadedAt = 'desc'
+
+      const [total, files] = await Promise.all([
+        prisma.file.count({ where }),
+        prisma.file.findMany({
+          where,
+          orderBy,
+          take: limit,
+          skip: offset,
+          select: {
+            id: true,
+            name: true,
+            urlPath: true,
+            mimeType: true,
+            size: true,
+            uploadedAt: true,
+            visibility: true,
+            password: true,
+            views: true,
+            downloads: true,
+            user: { select: { urlId: true } },
+          },
+        }),
+      ])
+
+      const filesList = await Promise.all(
+        files.map(async (file) => {
+          const expiresAt = await getFileExpirationInfo(file.id)
+          return { ...file, hasPassword: Boolean(file.password), expiresAt }
+        })
+      )
+
+      return paginatedResponse<FileMetadata[]>(filesList as (FileMetadata & { expiresAt: Date | null })[],
+        { total, pageCount: Math.ceil(total / limit), page, limit }
+      )
     }
+
+    // ── Personal files ──
+    const where: Prisma.FileWhereInput = { userId: user.id }
 
     const conditions: Prisma.FileWhereInput[] = []
 

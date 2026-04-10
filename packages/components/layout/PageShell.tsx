@@ -27,7 +27,7 @@ export default async function PageShell({ title, subtitle, children, bodyVariant
 
     return (
         <DashboardWrapper nav="base" showFooter={config.settings.general.credits.showFooter} maxUploadSize={maxSizeBytes}>
-            <div className="container space-y-8 -mt-8">
+            <div className="container space-y-8 -mt-16">
                 {hasTitle && hasSubtitle ? (
                     <div className="glass-card">
                         <div className="p-8">

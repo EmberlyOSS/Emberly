@@ -4,6 +4,68 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.1] - 2026-04-10
+
+### Added
+- **Static Web Standards Files** — `robots.txt` and `manifest.webmanifest` moved to `public/` for faster serving and simpler deployment.
+  - `public/robots.txt` — Static robot exclusion file for search engines and web crawlers; disallows `/api/`, `/dashboard/`, `/admin/` paths globally and blocks AI crawlers from user content (`/u/`).
+  - `public/manifest.webmanifest` — Static PWA manifest with standalone display, dark theme (`#09090b` background, `#F97316` accent), app shortcuts (Upload, Shorten URL, Pricing), and maskable SVG icon support.
+  - No route handlers (`app/robots.ts`, `app/manifest.ts` removed); Next.js serves from `public/` directly and links manifest from metadata.
+- **CORS Headers for File Embedding** — Emberly-hosted files and images can now be embedded and used externally on other websites.
+  - New `packages/lib/api/cors.ts` module provides `addCORSHeaders()`, `addSecurityHeaders()`, `handleCORSPreflight()`, and `getCORSHeaders()` utilities.
+  - File serving routes now respond with `Access-Control-Allow-Origin: *` on both requests and preflight OPTIONS, enabling cross-origin file access from any domain.
+  - Response headers include `X-Content-Type-Options: nosniff` (prevents MIME-type sniffing) and `Referrer-Policy: no-referrer-when-downgrade` (enables safe cross-origin embedding).
+  - `Content-Disposition: inline` (not `attachment`) allows browsers to display files/images inline instead of forcing downloads, enabling embedding in `<img>`, `<video>`, `<canvas>`, `<iframe>`, and XMLHttpRequest contexts.
+  - Files remain correctly permission-checked server-side; CORS headers simply allow the browser to fetch them cross-origin once access is confirmed.
+  - Updated routes: `/api/files/[...path]/` (raw file serving), `/api/files/[id]/download/`, `/api/files/[id]/thumbnail/`, `/api/avatars/[filename]/`.
+- **SMTP Email Provider Support** — The email system now supports SMTP as an alternative to Resend, selectable via Admin → Settings → Integrations.
+  - `emailProvider` (`'resend'` | `'smtp'`, default `'resend'`) and `smtp` (`host`, `port`, `secure`, `user`, `password`, `from`) added to the config schema and `DEFAULT_CONFIG` in `packages/lib/config/index.ts`.
+  - `packages/lib/emails/index.ts` — added `getSmtpTransport()` backed by nodemailer with connection caching; `sendEmail()` now branches on `integrations.emailProvider`: SMTP path renders React templates to HTML via `@react-email/render` and sends via nodemailer; Resend path unchanged.
+  - Admin settings UI (`packages/components/admin/settings/settings-manager.tsx`) — Email Provider selector (Resend / SMTP) added to the Resend section; new SMTP section with Host, Port, Secure (TLS) toggle, Username, Password, and From Address fields plus a Test Connection button.
+  - `app/api/admin/integrations/test/route.ts` — added `testSmtp()` using `nodemailer.createTransport().verify()` and wired `'smtp'` into the `IntegrationKey` union and switch.
+- **File Sharing & Collaborators** — Files can now be shared with other users directly from the file manager.
+  - `app/api/files/[id]/collaborators/route.ts` — new `GET` / `POST` / `PATCH` / `DELETE` endpoints for managing per-file collaborators with role support (`viewer` / `editor`).
+  - Share button added to every `FileCard`; opens a dialog showing current collaborators (with role badges and remove controls) and an invite form (email + role).
+  - `FileSharedEmail` template (`packages/lib/emails/templates/file-shared.tsx`) — notifies the recipient with file name, sharer name, and a direct link.
+  - Squad files are now correctly scoped: `GET /api/files` filters by `squadId` when a query param is provided, with membership verification.
+- **Dashboard Tabbed Navigation** — `DashboardShell` (`packages/components/dashboard/dashboard-shell.tsx`) rewritten from a sidebar layout to a horizontal pill tab strip.
+  - Tabs: Overview, Files, Upload, Paste, Links, Domains, Analytics, Buckets, Discovery.
+  - Active tab highlighted with `bg-primary/10 text-primary border border-primary/20`; strip is horizontally scrollable on mobile inside a `ScrollIndicator`.
+  - `header` prop still accepted and rendered full-width above the tab strip.
+- **Squads Dashboard Migrated to `/dashboard/squads`** — The squads section previously embedded in the Discovery dashboard is now a standalone route at `/dashboard/squads`.
+- **File Grid Owned Hero** — `FileGrid` (`packages/components/dashboard/file-grid/index.tsx`) now owns the full glass-card hero — title, description, and view switcher dropdown — eliminating the need for a separate header prop on the files page.
+  - `ViewMode` is a discriminated union: `{ type: 'my-files' } | { type: 'shared' } | { type: 'squad'; squadId: string; squadName: string }`.
+  - Squad selector dropdown lets users switch between My Files, Shared with Me, and per-squad views.
+- **Upload & Paste Forms in Glass Cards** — `upload-form.tsx` and `paste-form.tsx` content sections wrapped in `glass-card` panels for visual consistency with the rest of the dashboard.
+- **Private Promo Codes** — Admins can now mark a Stripe promotion code as private so it is hidden from the public Discounts tab on the pricing page while still being redeemable at checkout.
+  - `app/api/admin/promo-codes/route.ts` — `POST` accepts `isPrivate: boolean`; when `true`, sets `metadata: { private: 'true' }` on the Stripe promotion code. `GET` returns `isPrivate` derived from the same metadata field.
+  - `app/api/payments/promo-codes/route.ts` — public endpoint now filters out any code whose Stripe `metadata.private` equals `'true'` before returning results.
+  - `packages/components/admin/payments/promo-codes-manager.tsx` — "Private code" toggle (Switch + description) added to the create dialog; private codes display an `EyeOff · Private` pill badge inline with their code in the table. Create form default state extended with `isPrivate: false`.
+
+### Fixed
+- **Admin Broadcast Email Markdown Not Rendering** — The compose UI advertised markdown support but the `AdminBroadcastEmail` template rendered the body as a plain text node, causing `**bold**`, `# headings`, `- lists`, etc. to appear literally in the email.
+  - Added a `marked` renderer with email-safe inline styles for all elements (paragraphs, headings h1–h3, bold, italic, lists, links, blockquotes, code blocks, inline code, horizontal rules) since email clients strip `<style>` tags and don't honour Tailwind class names on dynamically injected HTML.
+  - Replaced `<Text>{body}</Text>` with `<div dangerouslySetInnerHTML={{ __html: marked.parse(body) }} />` in `packages/lib/emails/templates/admin-broadcast.tsx`.
+- **Admin Product List Redesign** — `packages/components/admin/products/ProductManager.tsx` product list rebuilt to match the v2 glass aesthetic.
+  - New `TypeBadge` component with colour-coded variants per type: `plan` → blue, `addon` → violet, `nexium-plan` → orange, `one-time` → slate.
+  - Product rows use `glass-subtle` border-divided list (consistent with blog-list and partner-list) replacing the old `glass-card` wrapper.
+  - Action buttons (Stripe, Sync, Edit seed, Delete) are always visible instead of appearing only on hover.
+  - Removed `scale-75` Switch hack; switches render at full size with proper `aria-label`.
+  - Inline skeleton loading rows replace the old full-page spinner, maintaining layout stability during load.
+  - Stats row shows price as `$X.XX / interval` with the Stripe product ID in dim 10px mono beneath the feature badge row.
+- **Legal Article Page Redesign** — `packages/components/legal/LegalArticle.tsx` rebuilt for a more open, professional reading experience.
+  - Removed inner `max-w-5xl` constraint that was double-constraining content inside `DashboardWrapper`'s `max-w-7xl`.
+  - Three-card layout replacing the old heavy border stack: `glass-subtle` meta strip (type + date), `glass-subtle` article body with generous `sm:p-10` padding, and `glass-subtle` footer CTA — all spaced via `space-y-4`.
+  - Meta strip is a compact inline row replacing the large icon header card.
+  - Sidebar cards switched from manual `relative rounded-xl bg-background/80 backdrop-blur-lg border` + gradient overlay to `glass-subtle rounded-xl`, consistent with the rest of the admin/dashboard UI. Sidebar column narrowed from 280 px to 260 px.
+- **Collaborators Route `req` Reference Bug** — `POST` and `PATCH` handlers in the collaborators route incorrectly referenced `req` instead of `request`, causing runtime errors on every invocation. All handlers rewritten with consistent `request` naming and duplicate exports removed.
+- **File Filters Accidentally Triggered During Mobile Scroll** — On touch devices, scrolling past the filter buttons opened their dropdowns because Radix `DropdownMenu`/`Popover` fire on `pointerup`, which coincides with a finger lift ending a scroll gesture.
+  - `useScrollSafeOpen` hook added to `file-filters.tsx` — touch-triggered opens are deferred by one `requestAnimationFrame`; if the browser fires `pointercancel` (scroll took over) before the frame runs, the pending open is cancelled. Mouse and keyboard interactions open immediately with no change in behaviour.
+
+### Policy
+- **SLA Uptime Commitment Adjusted** — Monthly uptime guarantee updated from `99.9%` to `99.6%` to better reflect a sustainable foundation for Emberly's current stage of growth.
+- **Infrastructure Timezone Alignment** — Monitoring, maintenance windows, and status reporting moved from UTC to **Mountain Standard Time (MST / GMT-7)** to align with Emberly's Canada-based operations.
+
 ## [2.4.0] - 2026-04-09
 
 ### Added

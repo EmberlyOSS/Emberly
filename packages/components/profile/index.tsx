@@ -50,18 +50,18 @@ const profileSections = [
     { value: 'profile', label: 'Profile', icon: UserIcon },
     { value: 'settings', label: 'Settings', icon: Settings },
     { value: 'connections', label: 'Connections', icon: LinkIcon },
-    { value: 'security', label: 'Security', icon: Shield },
-    { value: 'appearance', label: 'Appearance', icon: Palette },
+    { value: 'security', label: 'Security', icon: Shield }
   ]},
   { group: 'Content', items: [
     { value: 'uploads', label: 'Uploads', icon: Upload },
     { value: 'applications', label: 'Applications', icon: ClipboardList },
+    { value: 'appearance', label: 'Appearance', icon: Palette },
   ]},
   { group: 'Engagement', items: [
     { value: 'notifications', label: 'Notifications', icon: Bell },
     { value: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-    { value: 'perks', label: 'Perks', icon: Gift },
     { value: 'referrals', label: 'Referrals', icon: Users },
+    { value: 'perks', label: 'Perks', icon: Gift },
   ]},
   { group: 'Billing & Data', items: [
     { value: 'billing', label: 'Billing', icon: CreditCard },

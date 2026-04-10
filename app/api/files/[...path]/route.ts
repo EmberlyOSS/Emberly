@@ -7,12 +7,20 @@ import { checkFileAccess } from '@/packages/lib/files/access'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
+import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
 
 function encodeFilename(filename: string): string {
   const encoded = encodeURIComponent(filename)
   return `"${encoded.replace(/["\\]/g, '\\$&')}"`
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCORSPreflight(request)
+  if (preflightResponse) return preflightResponse
+  return new Response(null, { status: 204 })
 }
 
 export async function GET(
@@ -81,6 +89,7 @@ export async function GET(
         'Content-Type': file.mimeType,
         'Content-Disposition': `${shouldForceDownload ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
         'Cache-Control': isVideo ? 'public, max-age=31536000' : 'no-cache',
+        ...getCORSHeaders(),
       }
 
       return new NextResponse(stream as unknown as ReadableStream, {
@@ -96,6 +105,7 @@ export async function GET(
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
       'Cache-Control': isVideo ? 'public, max-age=31536000' : 'no-cache',
+      ...getCORSHeaders(),
     }
 
     return new NextResponse(stream as unknown as ReadableStream, { headers })

@@ -1,12 +1,20 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getStorageProvider } from '@/packages/lib/storage'
+import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCORSPreflight(request)
+  if (preflightResponse) return preflightResponse
+  return new Response(null, { status: 204 })
+}
 
 export async function GET(
   request: Request,
@@ -71,6 +79,7 @@ export async function GET(
       headers: {
         'Content-Type': file.mimeType,
         'Cache-Control': 'public, max-age=31536000, immutable',
+        ...getCORSHeaders(),
       },
     })
   } catch (error) {

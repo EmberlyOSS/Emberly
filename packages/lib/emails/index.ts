@@ -1,5 +1,8 @@
 import type { ReactElement } from 'react'
 
+import { render } from '@react-email/render'
+import nodemailer from 'nodemailer'
+import type { Transporter } from 'nodemailer'
 import { Resend } from 'resend'
 import { prisma } from '@/packages/lib/database/prisma'
 import { getIntegrations } from '@/packages/lib/config'
@@ -27,6 +30,40 @@ async function getResendClient(): Promise<{ client: Resend; from: string }> {
     }
 
     return { client: cachedResend!, from: emailFrom }
+}
+
+let cachedSmtpTransport: Transporter | null = null
+let cachedSmtpConfig: string | null = null
+
+async function getSmtpTransport(): Promise<{ transport: Transporter; from: string }> {
+    const integrations = await getIntegrations()
+    const smtp = integrations.smtp as Record<string, unknown> | undefined
+
+    const host = (smtp?.host as string | undefined) || process.env.SMTP_HOST || ''
+    const port = (smtp?.port as number | undefined) || Number(process.env.SMTP_PORT) || 587
+    const secure = (smtp?.secure as boolean | undefined) ?? (process.env.SMTP_SECURE === 'true') ?? false
+    const user = (smtp?.user as string | undefined) || process.env.SMTP_USER || ''
+    const password = (smtp?.password as string | undefined) || process.env.SMTP_PASSWORD || ''
+    const from = (smtp?.from as string | undefined) || process.env.EMAIL_FROM || 'Emberly <noreply@embrly.ca>'
+
+    if (!host) {
+        throw new Error('SMTP host is not configured')
+    }
+
+    const configKey = JSON.stringify({ host, port, secure, user })
+    if (cachedSmtpConfig !== configKey || !cachedSmtpTransport) {
+        cachedSmtpConfig = configKey
+        cachedSmtpTransport = nodemailer.createTransport({
+            host,
+            port,
+            secure,
+            auth: user ? { user, pass: password } : undefined,
+        })
+        // eslint-disable-next-line no-console
+        console.info('[email] Using SMTP', { host, port, secure, from })
+    }
+
+    return { transport: cachedSmtpTransport, from }
 }
 
 export type SendEmailOptions = {
@@ -65,6 +102,7 @@ export { NexiumSquadInviteDeclinedEmail } from './templates/nexium-squad-invite-
 export { ApplicationReplyEmail } from './templates/application-reply'
 export { ApplicationStatusEmail } from './templates/application-status'
 export { BucketCredentialsEmail } from './templates/bucket-credentials'
+export { FileSharedEmail } from './templates/file-shared'
 export { EmailChangedOldEmail } from './templates/email-changed-old'
 export { EmailChangedNewEmail } from './templates/email-changed-new'
 export { ExportRequestedEmail } from './templates/export-requested'
@@ -95,50 +133,68 @@ export async function sendEmail({
         throw new Error('Provide react, html, or text content')
     }
 
-    const { client: resend, from: defaultFrom } = await getResendClient()
-    const payload = {
-        from: from || defaultFrom,
-        to,
-        subject,
-        replyTo,
-        react,
-        html,
-        text,
-        headers,
-    }
+    const integrations = await getIntegrations()
+    const provider = (integrations as Record<string, unknown>).emailProvider as string | undefined ?? 'resend'
 
-    const response = await resend.emails.send(payload)
+    let messageId: string | undefined
 
-    if (response.error) {
-        // Track failed email (fire-and-forget)
-        if (!skipTracking) {
-             prisma.event.create({
-                data: {
-                    type: 'email.sent',
-                    status: 'FAILED',
-                    payload: {
-                        to: Array.isArray(to) ? to : [to],
-                        subject,
-                        template: templateName || 'unknown',
+    if (provider === 'smtp') {
+        const { transport, from: defaultFrom } = await getSmtpTransport()
+        const htmlContent = html ?? (react ? await render(react) : undefined)
+        const info = await transport.sendMail({
+            from: from || defaultFrom,
+            to: Array.isArray(to) ? to.join(', ') : to,
+            subject,
+            replyTo: Array.isArray(replyTo) ? replyTo.join(', ') : replyTo,
+            html: htmlContent,
+            text,
+            headers,
+        })
+        messageId = info.messageId
+    } else {
+        const { client: resend, from: defaultFrom } = await getResendClient()
+        const payload = {
+            from: from || defaultFrom,
+            to,
+            subject,
+            replyTo,
+            react,
+            html,
+            text,
+            headers,
+        }
+
+        const response = await resend.emails.send(payload)
+
+        if (response.error) {
+            // Track failed email (fire-and-forget)
+            if (!skipTracking) {
+                 prisma.event.create({
+                    data: {
+                        type: 'email.sent',
+                        status: 'FAILED',
+                        payload: {
+                            to: Array.isArray(to) ? to : [to],
+                            subject,
+                            template: templateName || 'unknown',
+                            error: response.error.message,
+                        },
+                        failedAt: new Date(),
                         error: response.error.message,
                     },
-                    failedAt: new Date(),
-                    error: response.error.message,
-                },
-            }).catch(() => { /* mute tracking errors */ })
+                }).catch(() => { /* mute tracking errors */ })
+            }
+            throw new Error(response.error.message)
         }
-        throw new Error(response.error.message)
+
+        messageId = response.data?.id
+        if (!messageId) {
+            // Some emails may send successfully but not return an ID in dev mode
+            // eslint-disable-next-line no-console
+            console.warn('[email] Resend did not return a message id, but no error was thrown')
+        }
     }
 
-    // Resend SDK returns { data: { id }, error }
-    const id = response.data?.id
-    if (!id) {
-        // Some emails may send successfully but not return an ID in dev mode
-        // eslint-disable-next-line no-console
-        console.warn('[email] Resend did not return a message id, but no error was thrown')
-    }
-
-    // Track successful email
     // Track successful email (fire-and-forget)
     if (!skipTracking) {
          prisma.event.create({
@@ -149,7 +205,8 @@ export async function sendEmail({
                     to: Array.isArray(to) ? to : [to],
                     subject,
                     template: templateName || 'unknown',
-                    messageId: id || 'unknown',
+                    messageId: messageId || 'unknown',
+                    provider,
                 },
                 processedAt: new Date(),
             },
@@ -157,9 +214,9 @@ export async function sendEmail({
     }
 
     // eslint-disable-next-line no-console
-    console.info('[email] Resend accepted message', { id: id || 'unknown', to })
+    console.info(`[email] ${provider === 'smtp' ? 'SMTP' : 'Resend'} accepted message`, { id: messageId || 'unknown', to })
 
-    return { id: id || `email-${Date.now()}` }
+    return { id: messageId || `email-${Date.now()}` }
 }
 
 export async function sendTemplateEmail<P>(options: {

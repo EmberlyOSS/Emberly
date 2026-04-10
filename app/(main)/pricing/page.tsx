@@ -116,10 +116,6 @@ export default async function PricingPage() {
       <div className="container space-y-8">
         <PricingHero />
 
-        {activeSubscription && (
-          <CurrentPlan productId={activeSubscription.productId} productName={currentPlanName} status={activeSubscription.status} />
-        )}
-
         <PricingTabs
           plans={plans}
           activePlanKey={activePlanKey}

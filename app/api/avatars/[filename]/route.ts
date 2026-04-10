@@ -5,8 +5,16 @@ import { join } from 'path'
 
 import { loggers } from '@/packages/lib/logger'
 import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
+import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCORSPreflight(request)
+  if (preflightResponse) return preflightResponse
+  return new Response(null, { status: 204 })
+}
 
 export async function GET(
   request: NextRequest,
@@ -31,6 +39,7 @@ export async function GET(
     const headers: Record<string, string> = {
       'Content-Type': 'image/jpeg',
       'Cache-Control': 'public, max-age=31536000, immutable',
+      ...getCORSHeaders(),
     }
     try {
       const metaPath = join(process.cwd(), 'uploads', filepath) + '.meta.json'

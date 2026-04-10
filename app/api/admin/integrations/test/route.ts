@@ -1,10 +1,11 @@
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { loggers } from '@/packages/lib/logger'
+import nodemailer from 'nodemailer'
 
 const logger = loggers.config
 
-type IntegrationKey = 'stripe' | 'resend' | 'cloudflare' | 'discord' | 'github' | 'kener'
+type IntegrationKey = 'stripe' | 'resend' | 'cloudflare' | 'discord' | 'github' | 'kener' | 'smtp'
 
 interface TestIntegrationBody {
   integration: IntegrationKey
@@ -137,6 +138,25 @@ async function testKener(apiKey: string, baseUrl?: string): Promise<TestResult> 
   }
 }
 
+async function testSmtp(host: string, port: number, secure: boolean, user: string, password: string): Promise<TestResult> {
+  if (!host) return { ok: false, message: 'SMTP host is not configured' }
+  try {
+    const transport = nodemailer.createTransport({
+      host,
+      port: port || 587,
+      secure: secure ?? false,
+      auth: user ? { user, pass: password } : undefined,
+      connectionTimeout: 8000,
+      greetingTimeout: 5000,
+    })
+    await transport.verify()
+    transport.close()
+    return { ok: true, message: `Connected to SMTP server at ${host}:${port}` }
+  } catch (err) {
+    return { ok: false, message: 'Failed to connect to SMTP server', detail: String(err) }
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { user, response } = await requireAdmin(req)
@@ -165,6 +185,15 @@ export async function POST(req: Request) {
         break
       case 'kener':
         result = await testKener(credentials.apiKey, credentials.baseUrl)
+        break
+      case 'smtp':
+        result = await testSmtp(
+          credentials.host,
+          Number(credentials.port) || 587,
+          credentials.secure === 'true',
+          credentials.user,
+          credentials.password,
+        )
         break
       default:
         return apiError('Unknown integration', HTTP_STATUS.BAD_REQUEST)

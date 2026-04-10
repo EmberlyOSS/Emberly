@@ -33,10 +33,12 @@ import {
 	Key,
 	Loader2,
 	Lock,
+	Mail,
 	Palette,
 	RefreshCw,
 	RotateCcw,
 	Save,
+	Server,
 	Settings,
 	Settings2,
 	Shield,
@@ -415,7 +417,7 @@ export function SettingsManager() {
 		releaseUrl?: string
 	} | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
-	const [intTestStates, setIntTestStates] = useState<Record<string, { loading: boolean; ok?: boolean; message?: string }>>({})
+	const [intTestStates, setIntTestStates] = useState<Record<string, { loading: boolean; ok?: boolean; message?: string; detail?: string }>>({})
 	const [s3TestState, setS3TestState] = useState<{ loading: boolean; ok?: boolean; message?: string } | null>(null)
 
 	const handleIntegrationTest = async (integration: string, credentials: Record<string, string>) => {
@@ -427,7 +429,7 @@ export function SettingsManager() {
 				body: JSON.stringify({ integration, credentials }),
 			})
 			const data = await res.json()
-			setIntTestStates((s) => ({ ...s, [integration]: { loading: false, ok: data?.data?.ok, message: data?.data?.message } }))
+			setIntTestStates((s) => ({ ...s, [integration]: { loading: false, ok: data?.data?.ok, message: data?.data?.message, detail: data?.data?.detail } }))
 		} catch {
 			setIntTestStates((s) => ({ ...s, [integration]: { loading: false, ok: false, message: 'Request failed' } }))
 		}
@@ -1727,69 +1729,211 @@ export function SettingsManager() {
 						</div>
 					</SettingsSection>
 
-					{/* Resend */}
-					<SettingsSection
-						icon={Zap}
-						title="Resend"
-						description="Transactional email delivery. Overrides RESEND_API_KEY and EMAIL_FROM env vars."
-						badge={
-							isFieldChanged('integrations', ['resend']) && (
-								<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-									Modified
-								</span>
-							)
-						}
-					>
-						<SettingRow label="API Key" description="Resend API key">
-							<Input
-								type="password"
-								placeholder="re_..."
-								className="w-80 font-mono text-sm"
-								value={workingConfig?.settings.integrations?.resend?.apiKey ?? ''}
-								onChange={(e) => handleSettingChange('integrations', {
-									resend: {
-										...workingConfig?.settings.integrations?.resend,
-										apiKey: e.target.value,
-									},
-								})}
-							/>
-						</SettingRow>
-						<SettingRow label="From Address" description="Sender address for outgoing emails">
-							<Input
-								placeholder="Emberly <noreply@embrly.ca>"
-								className="w-80 text-sm"
-								value={workingConfig?.settings.integrations?.resend?.emailFrom ?? ''}
-								onChange={(e) => handleSettingChange('integrations', {
-									resend: {
-										...workingConfig?.settings.integrations?.resend,
-										emailFrom: e.target.value,
-									},
-								})}
-							/>
-						</SettingRow>
-						<div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-							<div>
-								{intTestStates['resend'] && !intTestStates['resend'].loading && (
-									<span className={`text-xs flex items-center gap-1.5 ${intTestStates['resend'].ok ? 'text-green-500' : 'text-destructive'}`}>
-										{intTestStates['resend'].ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
-										{intTestStates['resend'].message}
-									</span>
-								)}
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								className="h-8 gap-1.5 shrink-0"
-								disabled={intTestStates['resend']?.loading}
-								onClick={() => handleIntegrationTest('resend', {
-									apiKey: workingConfig?.settings.integrations?.resend?.apiKey ?? '',
-								})}
-							>
-								{intTestStates['resend']?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-								Test Connection
-							</Button>
-						</div>
-					</SettingsSection>
+					{/* Resend / SMTP */}
+					{(() => {
+						const emailProvider = (workingConfig?.settings.integrations as Record<string, unknown>)?.emailProvider as string ?? 'resend'
+						return (
+							<>
+								<SettingsSection
+									icon={Zap}
+									title="Email"
+									description="Transactional email delivery provider and credentials."
+									badge={
+										isFieldChanged('integrations', ['resend', 'smtp', 'emailProvider']) && (
+											<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+												Modified
+											</span>
+										)
+									}
+								>
+									<SettingRow label="Email Provider" description="Choose the email delivery provider">
+										<Select
+											value={emailProvider}
+											onValueChange={(value) => handleSettingChange('integrations', {
+												emailProvider: value,
+											})}
+										>
+											<SelectTrigger className="w-48 text-sm">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="resend">Resend</SelectItem>
+												<SelectItem value="smtp">SMTP</SelectItem>
+											</SelectContent>
+										</Select>
+									</SettingRow>
+
+									{emailProvider === 'resend' && (
+										<>
+											<SettingRow label="API Key" description="Resend API key">
+												<Input
+													type="password"
+													placeholder="re_..."
+													className="w-80 font-mono text-sm"
+													value={workingConfig?.settings.integrations?.resend?.apiKey ?? ''}
+													onChange={(e) => handleSettingChange('integrations', {
+														resend: {
+															...workingConfig?.settings.integrations?.resend,
+															apiKey: e.target.value,
+														},
+													})}
+												/>
+											</SettingRow>
+											<SettingRow label="From Address" description="Sender address for outgoing emails">
+												<Input
+													placeholder="Emberly <noreply@embrly.ca>"
+													className="w-80 text-sm"
+													value={workingConfig?.settings.integrations?.resend?.emailFrom ?? ''}
+													onChange={(e) => handleSettingChange('integrations', {
+														resend: {
+															...workingConfig?.settings.integrations?.resend,
+															emailFrom: e.target.value,
+														},
+													})}
+												/>
+											</SettingRow>
+											<div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+												<div>
+													{intTestStates['resend'] && !intTestStates['resend'].loading && (
+														<span className={`text-xs flex items-center gap-1.5 ${intTestStates['resend'].ok ? 'text-green-500' : 'text-destructive'}`}>
+															{intTestStates['resend'].ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+															{intTestStates['resend'].message}
+														</span>
+													)}
+												</div>
+												<Button
+													variant="outline"
+													size="sm"
+													className="h-8 gap-1.5 shrink-0"
+													disabled={intTestStates['resend']?.loading}
+													onClick={() => handleIntegrationTest('resend', {
+														apiKey: workingConfig?.settings.integrations?.resend?.apiKey ?? '',
+													})}
+												>
+													{intTestStates['resend']?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+													Test Connection
+												</Button>
+											</div>
+										</>
+									)}
+
+									{emailProvider === 'smtp' && (
+										<>
+											<SettingRow label="Host" description="SMTP server hostname">
+												<Input
+													placeholder="smtp.example.com"
+													className="w-80 font-mono text-sm"
+													value={((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.host as string ?? ''}
+													onChange={(e) => handleSettingChange('integrations', {
+														smtp: {
+															...((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown> ?? {}),
+															host: e.target.value,
+														},
+													})}
+												/>
+											</SettingRow>
+											<SettingRow label="Port" description="SMTP server port (25, 465, 587, or 2587)">
+												<Input
+													type="number"
+													placeholder="587"
+													className="w-32 font-mono text-sm"
+													value={((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.port as number ?? 587}
+													onChange={(e) => handleSettingChange('integrations', {
+														smtp: {
+															...((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown> ?? {}),
+															port: Number(e.target.value),
+														},
+													})}
+												/>
+											</SettingRow>
+											<SettingRow label="Secure (TLS)" description="Use TLS — enable for port 465, disable for STARTTLS">
+												<Switch
+													checked={((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.secure as boolean ?? false}
+													onCheckedChange={(checked) => handleSettingChange('integrations', {
+														smtp: {
+															...((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown> ?? {}),
+															secure: checked,
+														},
+													})}
+												/>
+											</SettingRow>
+											<SettingRow label="Username" description="SMTP authentication username">
+												<Input
+													placeholder="user@example.com"
+													className="w-80 text-sm"
+													value={((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.user as string ?? ''}
+													onChange={(e) => handleSettingChange('integrations', {
+														smtp: {
+															...((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown> ?? {}),
+															user: e.target.value,
+														},
+													})}
+												/>
+											</SettingRow>
+											<SettingRow label="Password" description="SMTP authentication password">
+												<Input
+													type="password"
+													placeholder="••••••••"
+													className="w-80 font-mono text-sm"
+													value={((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.password as string ?? ''}
+													onChange={(e) => handleSettingChange('integrations', {
+														smtp: {
+															...((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown> ?? {}),
+															password: e.target.value,
+														},
+													})}
+												/>
+											</SettingRow>
+											<SettingRow label="From Address" description="Sender address (overrides EMAIL_FROM env var)">
+												<Input
+													placeholder="Emberly <noreply@embrly.ca>"
+													className="w-80 text-sm"
+													value={((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.from as string ?? ''}
+													onChange={(e) => handleSettingChange('integrations', {
+														smtp: {
+															...((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown> ?? {}),
+															from: e.target.value,
+														},
+													})}
+												/>
+											</SettingRow>
+											<div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+												<div>
+													{intTestStates['smtp'] && !intTestStates['smtp'].loading && (
+														<div className="flex flex-col gap-0.5">
+															<span className={`text-xs flex items-center gap-1.5 ${intTestStates['smtp'].ok ? 'text-green-500' : 'text-destructive'}`}>
+																{intTestStates['smtp'].ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+																{intTestStates['smtp'].message}
+															</span>
+															{intTestStates['smtp'].detail && (
+																<span className="text-xs text-muted-foreground font-mono break-all">{intTestStates['smtp'].detail}</span>
+															)}
+														</div>
+													)}
+												</div>
+												<Button
+													variant="outline"
+													size="sm"
+													className="h-8 gap-1.5 shrink-0"
+													disabled={intTestStates['smtp']?.loading}
+													onClick={() => handleIntegrationTest('smtp', {
+														host: (((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.host as string) ?? '',
+														port: String((((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.port as number) ?? 587),
+														secure: String((((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.secure as boolean) ?? false),
+														user: (((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.user as string) ?? '',
+														password: (((workingConfig?.settings.integrations as Record<string, unknown>)?.smtp as Record<string, unknown>)?.password as string) ?? '',
+													})}
+												>
+													{intTestStates['smtp']?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+													Test Connection
+												</Button>
+											</div>
+										</>
+									)}
+								</SettingsSection>
+							</>
+						)
+					})()}
 
 					{/* Cloudflare */}
 					<SettingsSection

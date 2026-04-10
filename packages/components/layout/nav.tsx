@@ -193,7 +193,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
   }, [setSheetOpen])
 
   return (
-    <div className="relative flex h-16 items-center px-6">
+    <div className="relative flex h-16 items-center px-6 mt-1">
       {/* Logo */}
       <Link href={logoHref} className="flex items-center space-x-2.5 group shrink-0">
         <Icons.logo className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />

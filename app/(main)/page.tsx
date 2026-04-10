@@ -175,8 +175,78 @@ export default async function HomePage() {
     include: { user: { select: { id: true, name: true, urlId: true } } },
   })
 
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://embrly.ca'
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${BASE_URL}/#website`,
+        url: BASE_URL,
+        name: 'Emberly',
+        description: 'Open-source file sharing, URL shortening, and talent discovery platform.',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${BASE_URL}/discovery?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+        inLanguage: 'en-US',
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${BASE_URL}/#organization`,
+        name: 'Emberly',
+        url: BASE_URL,
+        logo: {
+          '@type': 'ImageObject',
+          url: `${BASE_URL}/icon.svg`,
+        },
+        sameAs: [
+          'https://github.com/EmberlyOSS/Emberly',
+        ],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          url: `${BASE_URL}/contact`,
+          contactType: 'customer support',
+          availableLanguage: 'English',
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `${BASE_URL}/#app`,
+        name: 'Emberly',
+        applicationCategory: 'UtilitiesApplication',
+        operatingSystem: 'Web',
+        url: BASE_URL,
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+          description: 'Free plan available. Paid plans from $5/mo.',
+        },
+        featureList: [
+          'File sharing with expiry and password protection',
+          'URL shortening with custom slugs',
+          'Custom domain support',
+          'Team / squad collaboration',
+          'Talent discovery profiles',
+          'S3-compatible storage buckets',
+          'Open source and self-hostable',
+        ],
+      },
+    ],
+  }
+
   return (
     <HomeShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="space-y-16 md:space-y-24">
         {/* Hero Section */}
         <section className="relative">

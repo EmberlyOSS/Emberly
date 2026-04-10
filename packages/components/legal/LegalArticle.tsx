@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, Calendar, Scale, FileText, BookOpen, ExternalLink, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Calendar, Scale, BookOpen, ExternalLink, MessageCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 import MarkdownRenderer from '@/packages/components/shared/MarkdownRenderer'
@@ -37,151 +37,119 @@ export default function LegalArticle({
 
     return (
         <PageShell title={title} subtitle={subtitle ?? ''} bodyVariant="plain">
-            <section className="mx-auto px-4 max-w-5xl">
+            <section className="w-full">
                 {/* Back button */}
                 <div className="mb-6">
                     <Link href={backHref}>
-                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                        <Button variant="ghost" size="sm" className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
                             <ArrowLeft className="h-4 w-4" />
                             {backLabel}
                         </Button>
                     </Link>
                 </div>
 
-                <div className="lg:grid lg:grid-cols-[1fr,280px] gap-8">
+                <div className="lg:grid lg:grid-cols-[1fr,260px] gap-12">
                     {/* Main content */}
-                    <div className="space-y-6">
-                        {/* Document header card */}
-                        <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-                            <div className="relative p-6">
-                                <div className="flex flex-wrap items-center gap-4">
-                                    {/* Icon */}
-                                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                                        <Scale className="h-6 w-6 text-primary" />
-                                    </div>
-                                    
-                                    {/* Meta info */}
-                                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                                        <div className="flex items-center gap-1.5">
-                                            <Calendar className="h-4 w-4" />
-                                            <span>{formatUpdated(updatedAt)}</span>
-                                            {relativeTime && (
-                                                <span className="text-muted-foreground/60">
-                                                    ({relativeTime})
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <FileText className="h-4 w-4" />
-                                            <span>Legal Document</span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="min-w-0 space-y-4">
+                        {/* Inline meta strip */}
+                        <div className="glass-subtle rounded-xl px-5 py-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <Scale className="h-3.5 w-3.5 text-primary" />
+                                <span>Legal Document</span>
+                            </div>
+                            <span className="text-border/60 select-none">·</span>
+                            <div className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>{formatUpdated(updatedAt)}</span>
+                                {relativeTime && (
+                                    <span className="text-muted-foreground/50">({relativeTime})</span>
+                                )}
                             </div>
                         </div>
 
                         {/* Article body */}
-                        <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-                            <div className="relative p-6 sm:p-8">
-                                <article className="prose prose-sm sm:prose dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/50 prose-li:text-muted-foreground prose-blockquote:border-primary/50 prose-blockquote:text-muted-foreground prose-hr:border-border/50 prose-ul:text-muted-foreground prose-ol:text-muted-foreground">
-                                    <MarkdownRenderer>{content}</MarkdownRenderer>
-                                </article>
-                            </div>
+                        <div className="glass-subtle rounded-xl p-6 sm:p-10">
+                            <article className="prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-headings:scroll-mt-24 prose-p:text-muted-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/50 prose-li:text-muted-foreground prose-blockquote:border-l-primary/50 prose-blockquote:text-muted-foreground prose-hr:border-border/40 prose-ul:text-muted-foreground prose-ol:text-muted-foreground">
+                                <MarkdownRenderer>{content}</MarkdownRenderer>
+                            </article>
                         </div>
 
-                        {/* Footer card */}
-                        <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
-                            <div className="relative p-6">
-                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                    <div className="text-center sm:text-left">
-                                        <p className="font-medium">Questions about this document?</p>
-                                        <p className="text-sm text-muted-foreground">Contact our support team for clarification.</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Link href="/contact">
-                                            <Button variant="outline" className="bg-background/80 border-border/50 hover:bg-background/90">
-                                                Contact us
-                                            </Button>
-                                        </Link>
-                                        <Link href={backHref}>
-                                            <Button variant="outline" className="bg-background/80 border-border/50 hover:bg-background/90">
-                                                View all docs
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </div>
+                        {/* Footer CTA */}
+                        <div className="glass-subtle rounded-xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div>
+                                <p className="font-medium">Questions about this document?</p>
+                                <p className="text-sm text-muted-foreground">Our support team is happy to clarify anything.</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button asChild variant="outline" size="sm">
+                                    <Link href="/contact">Contact us</Link>
+                                </Button>
+                                <Button asChild variant="ghost" size="sm">
+                                    <Link href={backHref}>View all docs</Link>
+                                </Button>
                             </div>
                         </div>
                     </div>
 
                     {/* Sidebar */}
                     <aside className="hidden lg:block">
-                        <div className="sticky top-24 space-y-6">
+                        <div className="sticky top-24 space-y-4">
                             {/* Document info */}
-                            <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-                                <div className="relative p-5">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                            <BookOpen className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <h3 className="font-semibold">Document Info</h3>
+                            <div className="glass-subtle rounded-xl p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <BookOpen className="h-3.5 w-3.5 text-primary" />
                                     </div>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground">Type</span>
-                                            <span className="font-medium">Legal</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground">Updated</span>
-                                            <span className="font-medium">{formatUpdated(updatedAt)}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground">Jurisdiction</span>
-                                            <span className="font-medium">Canada (BC)</span>
-                                        </div>
+                                    <h3 className="font-semibold text-sm">Document Info</h3>
+                                </div>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Type</span>
+                                        <span className="font-medium">Legal</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="text-muted-foreground shrink-0">Updated</span>
+                                        <span className="font-medium text-right">{formatUpdated(updatedAt)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Jurisdiction</span>
+                                        <span className="font-medium">Canada (BC)</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Quick links */}
-                            <div className="relative rounded-xl bg-background/80 backdrop-blur-lg border border-border/50 overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
-                                <div className="relative p-5">
-                                    <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Related</h4>
-                                    <ul className="space-y-3">
-                                        <li>
-                                            <Link 
-                                                href="/legal" 
-                                                className="flex items-center gap-2 text-sm hover:text-primary transition-colors group"
-                                            >
-                                                <Scale className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                                <span>Legal Hub</span>
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
-                                                href="/contact" 
-                                                className="flex items-center gap-2 text-sm hover:text-primary transition-colors group"
-                                            >
-                                                <MessageCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                                <span>Contact Support</span>
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
-                                                href="/discord" 
-                                                className="flex items-center gap-2 text-sm hover:text-primary transition-colors group"
-                                            >
-                                                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                                <span>Discord</span>
-                                            </Link>
-                                        </li>
-                                    </ul>
-                                </div>
+                            {/* Related links */}
+                            <div className="glass-subtle rounded-xl p-5">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Related</h4>
+                                <ul className="space-y-2">
+                                    <li>
+                                        <Link
+                                            href="/legal"
+                                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                                        >
+                                            <Scale className="h-3.5 w-3.5 shrink-0 group-hover:text-primary transition-colors" />
+                                            <span>Legal Hub</span>
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link
+                                            href="/contact"
+                                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                                        >
+                                            <MessageCircle className="h-3.5 w-3.5 shrink-0 group-hover:text-primary transition-colors" />
+                                            <span>Contact Support</span>
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link
+                                            href="/discord"
+                                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                                        >
+                                            <ExternalLink className="h-3.5 w-3.5 shrink-0 group-hover:text-primary transition-colors" />
+                                            <span>Discord</span>
+                                        </Link>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </aside>

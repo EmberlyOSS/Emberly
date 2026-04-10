@@ -24,6 +24,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/packages/components/ui/dropdown-menu'
 
@@ -49,14 +51,25 @@ interface SharedFile {
   pendingSuggestions: number
 }
 
+interface UserSquad {
+  id: string
+  name: string
+  myRole: string
+}
+
+type ViewMode =
+  | { type: 'my-files' }
+  | { type: 'shared' }
+  | { type: 'squad'; squadId: string; squadName: string }
+
 export function FileGrid() {
   const [files, setFiles] = useState<FileType[]>([])
   const [sharedFiles, setSharedFiles] = useState<SharedFile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [fileTypes, setFileTypes] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<'my-files' | 'shared' | 'squad'>('my-files')
+  const [viewMode, setViewMode] = useState<ViewMode>({ type: 'my-files' })
   const [sharedCount, setSharedCount] = useState(0)
-  const [squadCount, setSquadCount] = useState(0)
+  const [userSquads, setUserSquads] = useState<UserSquad[]>([])
   const [enableRichEmbeds, setEnableRichEmbeds] = useState(true)
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
     total: 0,
@@ -93,22 +106,16 @@ export function FileGrid() {
     async function fetchFileTypes() {
       try {
         const response = await fetch('/api/files/types')
-        if (!response.ok) {
-          console.error('Failed to fetch file types, status:', response.status)
-          setFileTypes([])
-          return
-        }
+        if (!response.ok) { setFileTypes([]); return }
         const data = await response.json()
         setFileTypes(Array.isArray(data.data.types) ? data.data.types : [])
-      } catch (error) {
-        console.error('Error fetching file types:', error)
+      } catch {
         setFileTypes([])
       }
     }
     fetchFileTypes()
   }, [])
 
-  // Fetch user's enableRichEmbeds setting on mount
   useEffect(() => {
     async function fetchUserSettings() {
       try {
@@ -117,14 +124,11 @@ export function FileGrid() {
           const data = await response.json()
           setEnableRichEmbeds(data.data?.enableRichEmbeds ?? true)
         }
-      } catch (error) {
-        console.error('Error fetching user settings:', error)
-      }
+      } catch { /* ignore */ }
     }
     fetchUserSettings()
   }, [])
 
-  // Fetch shared files count on mount
   useEffect(() => {
     async function fetchSharedCount() {
       try {
@@ -133,27 +137,23 @@ export function FileGrid() {
           const data = await response.json()
           setSharedCount(data.pagination?.total || 0)
         }
-      } catch (error) {
-        console.error('Error fetching shared count:', error)
-      }
+      } catch { /* ignore */ }
     }
     fetchSharedCount()
   }, [])
 
-  // Fetch squad files count on mount
+  // Fetch user's squads for the switcher
   useEffect(() => {
-    async function fetchSquadCount() {
+    async function fetchUserSquads() {
       try {
-        const response = await fetch('/api/files?squad=true&limit=1')
+        const response = await fetch('/api/discovery/squads?mine=true')
         if (response.ok) {
           const data = await response.json()
-          setSquadCount(data.pagination?.total || 0)
+          setUserSquads(data.data?.squads ?? [])
         }
-      } catch (error) {
-        console.error('Error fetching squad count:', error)
-      }
+      } catch { /* ignore */ }
     }
-    fetchSquadCount()
+    fetchUserSquads()
   }, [])
 
   useEffect(() => {
@@ -161,8 +161,7 @@ export function FileGrid() {
       try {
         setIsLoading(true)
 
-        if (viewMode === 'shared') {
-          // Fetch shared files
+        if (viewMode.type === 'shared') {
           const params = new URLSearchParams({
             page: filters.page.toString(),
             limit: filters.limit.toString(),
@@ -180,43 +179,29 @@ export function FileGrid() {
               limit: filters.limit,
             })
           }
-        } else if (viewMode === 'squad') {
-          // Fetch squad files
+        } else if (viewMode.type === 'squad') {
           const params = new URLSearchParams({
             page: filters.page.toString(),
             limit: filters.limit.toString(),
-            squad: 'true',
+            squadId: viewMode.squadId,
             search: filters.search,
             sortBy: filters.sortBy,
             ...(filters.types.length > 0 && { types: filters.types.join(',') }),
             ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
             ...(filters.dateTo && { dateTo: filters.dateTo }),
-            ...(filters.visibility.length > 0 && {
-              visibility: filters.visibility.join(','),
-            }),
+            ...(filters.visibility.length > 0 && { visibility: filters.visibility.join(',') }),
           })
           const response = await fetch(`/api/files?${params}`)
           if (!response.ok) throw new Error('Failed to fetch squad files')
           const apiResult = await response.json()
           setFiles(Array.isArray(apiResult.data) ? apiResult.data : [])
           setSharedFiles([])
-          if (apiResult.pagination) {
-            setPaginationInfo({
-              total: apiResult.pagination.total || 0,
-              pageCount: apiResult.pagination.pageCount || 0,
-              page: filters.page,
-              limit: filters.limit,
-            })
-          } else {
-            setPaginationInfo({
-              total: 0,
-              pageCount: 0,
-              page: filters.page,
-              limit: filters.limit,
-            })
-          }
+          setPaginationInfo(
+            apiResult.pagination
+              ? { total: apiResult.pagination.total || 0, pageCount: apiResult.pagination.pageCount || 0, page: filters.page, limit: filters.limit }
+              : { total: 0, pageCount: 0, page: filters.page, limit: filters.limit }
+          )
         } else {
-          // Fetch user's own files
           const params = new URLSearchParams({
             page: filters.page.toString(),
             limit: filters.limit.toString(),
@@ -225,30 +210,18 @@ export function FileGrid() {
             ...(filters.types.length > 0 && { types: filters.types.join(',') }),
             ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
             ...(filters.dateTo && { dateTo: filters.dateTo }),
-            ...(filters.visibility.length > 0 && {
-              visibility: filters.visibility.join(','),
-            }),
+            ...(filters.visibility.length > 0 && { visibility: filters.visibility.join(',') }),
           })
           const response = await fetch(`/api/files?${params}`)
           if (!response.ok) throw new Error('Failed to fetch files')
           const apiResult = await response.json()
           setFiles(Array.isArray(apiResult.data) ? apiResult.data : [])
           setSharedFiles([])
-          if (apiResult.pagination) {
-            setPaginationInfo({
-              total: apiResult.pagination.total || 0,
-              pageCount: apiResult.pagination.pageCount || 0,
-              page: filters.page,
-              limit: filters.limit,
-            })
-          } else {
-            setPaginationInfo({
-              total: 0,
-              pageCount: 0,
-              page: filters.page,
-              limit: filters.limit,
-            })
-          }
+          setPaginationInfo(
+            apiResult.pagination
+              ? { total: apiResult.pagination.total || 0, pageCount: apiResult.pagination.pageCount || 0, page: filters.page, limit: filters.limit }
+              : { total: 0, pageCount: 0, page: filters.page, limit: filters.limit }
+          )
         }
       } catch (error) {
         console.error('Error fetching files:', error)
@@ -269,19 +242,41 @@ export function FileGrid() {
     }))
   }
 
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    setPage(1)
+  }
+
   const dateRangeValue =
     filters.dateFrom || filters.dateTo
       ? {
-        from: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
-        to: filters.dateTo ? new Date(filters.dateTo) : undefined,
-      }
+          from: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+          to: filters.dateTo ? new Date(filters.dateTo) : undefined,
+        }
       : undefined
+
+  const currentLabel =
+    viewMode.type === 'my-files'
+      ? 'My Files'
+      : viewMode.type === 'shared'
+        ? 'Shared with Me'
+        : viewMode.squadName
+
+  const currentDescription =
+    viewMode.type === 'my-files'
+      ? 'View and manage your uploaded files'
+      : viewMode.type === 'shared'
+        ? 'Files others have shared with you'
+        : `Files uploaded to ${viewMode.squadName}`
+
+  const CurrentIcon =
+    viewMode.type === 'my-files' ? FolderOpen : viewMode.type === 'shared' ? Users : Shield
 
   const renderContent = () => {
     if (isLoading) {
       return (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
             {Array.from({ length: 24 }, (_, i) => (
               <FileCardSkeleton key={`skeleton-${Date.now()}-${i}`} />
             ))}
@@ -291,8 +286,7 @@ export function FileGrid() {
       )
     }
 
-    // Shared files view
-    if (viewMode === 'shared') {
+    if (viewMode.type === 'shared') {
       if (sharedFiles.length === 0) {
         return (
           <EmptyPlaceholder>
@@ -304,10 +298,9 @@ export function FileGrid() {
           </EmptyPlaceholder>
         )
       }
-
       return (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {sharedFiles.map((file) => (
               <SharedFileCard key={file.id} file={file} />
             ))}
@@ -317,33 +310,6 @@ export function FileGrid() {
       )
     }
 
-    // Squad files view
-    if (viewMode === 'squad') {
-      if (files.length === 0 && paginationInfo.total === 0) {
-        return (
-          <EmptyPlaceholder>
-            <EmptyPlaceholder.Icon name="users" />
-            <EmptyPlaceholder.Title>No squad files</EmptyPlaceholder.Title>
-            <EmptyPlaceholder.Description>
-              Files uploaded by your squad members will appear here.
-            </EmptyPlaceholder.Description>
-          </EmptyPlaceholder>
-        )
-      }
-
-      return (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {files.map((file) => (
-              <FileCard key={file.id} file={file} onDelete={handleDelete} enableRichEmbeds={enableRichEmbeds} />
-            ))}
-          </div>
-          <FileGridPagination paginationInfo={paginationInfo} setPage={setPage} />
-        </>
-      )
-    }
-
-    // User's own files view
     if (files.length === 0 && paginationInfo.total === 0) {
       const hasActiveFilters =
         filters.search ||
@@ -351,6 +317,20 @@ export function FileGrid() {
         filters.visibility.length > 0 ||
         filters.dateFrom ||
         filters.dateTo
+
+      if (viewMode.type === 'squad') {
+        return (
+          <EmptyPlaceholder>
+            <EmptyPlaceholder.Icon name="users" />
+            <EmptyPlaceholder.Title>No files in {viewMode.squadName}</EmptyPlaceholder.Title>
+            <EmptyPlaceholder.Description>
+              {hasActiveFilters
+                ? 'Try adjusting your filters.'
+                : 'No files have been uploaded to this squad yet.'}
+            </EmptyPlaceholder.Description>
+          </EmptyPlaceholder>
+        )
+      }
 
       return (
         <EmptyPlaceholder>
@@ -376,7 +356,7 @@ export function FileGrid() {
 
     return (
       <>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {files.map((file) => (
             <FileCard key={file.id} file={file} onDelete={handleDelete} enableRichEmbeds={enableRichEmbeds} />
           ))}
@@ -386,102 +366,84 @@ export function FileGrid() {
     )
   }
 
-  const handleViewModeChange = (mode: 'my-files' | 'shared' | 'squad') => {
-    setViewMode(mode)
-    setPage(1) // Reset to first page when switching views
-  }
-
-  const viewModeLabels = {
-    'my-files': { label: 'My Files', icon: FolderOpen, description: 'View and manage your uploaded files' },
-    shared: { label: 'Shared with Me', icon: Users, description: 'Files others have shared with you' },
-    squad: { label: 'Squad Files', icon: Shield, description: 'Files uploaded by your squad members' },
-  } as const
-
-  const currentMode = viewModeLabels[viewMode]
-  const CurrentIcon = currentMode.icon
-
   return (
     <div className="space-y-6">
-      {/* Header Card */}
       <div className="glass-card">
-        <div>
-          {/* Title and View Toggle */}
-          <div className="p-6 pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {currentMode.label}
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  {currentMode.description}
-                </p>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 shrink-0">
-                    <CurrentIcon className="h-4 w-4" />
-                    {currentMode.label}
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuItem
-                    onClick={() => handleViewModeChange('my-files')}
-                    className={viewMode === 'my-files' ? 'bg-secondary font-medium' : ''}
-                  >
-                    <FolderOpen className="h-4 w-4 mr-2" />
-                    My Files
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleViewModeChange('shared')}
-                    className={viewMode === 'shared' ? 'bg-secondary font-medium' : ''}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Shared with Me
-                    {sharedCount > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {sharedCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleViewModeChange('squad')}
-                    className={viewMode === 'squad' ? 'bg-secondary font-medium' : ''}
-                  >
-                    <Shield className="h-4 w-4 mr-2" />
-                    Squad Files
-                    {squadCount > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {squadCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-8 pb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{currentLabel}</h1>
+            <p className="text-muted-foreground mt-1">{currentDescription}</p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2 shrink-0">
+                <CurrentIcon className="h-4 w-4" />
+                {currentLabel}
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => handleViewModeChange({ type: 'my-files' })}
+                className={viewMode.type === 'my-files' ? 'bg-secondary font-medium' : ''}
+              >
+                <FolderOpen className="h-4 w-4 mr-2" />
+                My Files
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleViewModeChange({ type: 'shared' })}
+                className={viewMode.type === 'shared' ? 'bg-secondary font-medium' : ''}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Shared with Me
+                {sharedCount > 0 && (
+                  <Badge variant="secondary" className="ml-auto">
+                    {sharedCount}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
+              {userSquads.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1">
+                    Squads
+                  </DropdownMenuLabel>
+                  {userSquads.map((squad) => (
+                    <DropdownMenuItem
+                      key={squad.id}
+                      onClick={() => handleViewModeChange({ type: 'squad', squadId: squad.id, squadName: squad.name })}
+                      className={viewMode.type === 'squad' && viewMode.squadId === squad.id ? 'bg-secondary font-medium' : ''}
+                    >
+                      <Shield className="h-4 w-4 mr-2 shrink-0" />
+                      <span className="truncate">{squad.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {viewMode.type !== 'shared' && (
+          <div className="px-8 pb-8 pt-2 border-t border-border/40">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <SearchInput onSearch={setSearch} initialValue={filters.search} />
+              <FileFilters
+                sortBy={filters.sortBy as SortOption}
+                onSortChange={setSortBy}
+                selectedTypes={filters.types}
+                onTypesChange={setTypes}
+                fileTypes={fileTypes}
+                date={dateRangeValue}
+                onDateChange={handleDateChange}
+                visibility={filters.visibility}
+                onVisibilityChange={setVisibility}
+              />
             </div>
           </div>
-
-          {/* Filters - only show for user's own files and squad files */}
-          {(viewMode === 'my-files' || viewMode === 'squad') && (
-            <div className="px-6 pb-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <SearchInput onSearch={setSearch} initialValue={filters.search} />
-                <FileFilters
-                  sortBy={filters.sortBy as SortOption}
-                  onSortChange={setSortBy}
-                  selectedTypes={filters.types}
-                  onTypesChange={setTypes}
-                  fileTypes={fileTypes}
-                  date={dateRangeValue}
-                  onDateChange={handleDateChange}
-                  visibility={filters.visibility}
-                  onVisibilityChange={setVisibility}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
       {renderContent()}
     </div>
   )

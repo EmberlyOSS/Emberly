@@ -37,12 +37,15 @@ const inter = localFont({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://emberly.ca'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'),
   title: null,
   description: null,
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    shortcut: '/icon.svg',
   },
+  manifest: '/manifest.webmanifest',
 }
 
 export const dynamic = 'force-dynamic'

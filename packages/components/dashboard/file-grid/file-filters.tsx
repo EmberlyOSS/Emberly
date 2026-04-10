@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useState, useRef, useCallback } from 'react'
 
 import { SortOption } from '@/packages/types/components/file'
 import { format } from 'date-fns'
@@ -174,6 +174,61 @@ const getFileTypeCategory = (type: string): string => {
   return 'Other'
 }
 
+/**
+ * Delays opening by one animation frame so that a touch-scroll's `pointercancel`
+ * can fire and cancel the pending open before the dropdown appears.
+ * On mouse input the open is immediate (no rAF delay).
+ */
+function useScrollSafeOpen() {
+  const [open, setOpen] = useState(false)
+  const pendingRef = useRef(false)
+  const rafRef = useRef<number | undefined>(undefined)
+  const isTouchRef = useRef(false)
+
+  const cancelPending = useCallback(() => {
+    if (rafRef.current !== undefined) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = undefined
+    }
+    pendingRef.current = false
+  }, [])
+
+  const onOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (newOpen) {
+        if (!isTouchRef.current) {
+          // Mouse / keyboard: open immediately
+          setOpen(true)
+        } else {
+          // Touch: wait one frame so pointercancel (scroll start) can cancel
+          pendingRef.current = true
+          rafRef.current = requestAnimationFrame(() => {
+            if (pendingRef.current) {
+              setOpen(true)
+              pendingRef.current = false
+            }
+            rafRef.current = undefined
+          })
+        }
+      } else {
+        cancelPending()
+        setOpen(false)
+      }
+    },
+    [cancelPending]
+  )
+
+  const triggerProps = {
+    onPointerDown: (e: React.PointerEvent) => {
+      isTouchRef.current = e.pointerType === 'touch'
+    },
+    // If the browser cancels the pointer sequence (scroll took over), abort the pending open
+    onPointerCancel: cancelPending,
+  }
+
+  return { open, onOpenChange, triggerProps }
+}
+
 export const FileFilters = memo(function FileFilters({
   sortBy,
   onSortChange,
@@ -185,6 +240,11 @@ export const FileFilters = memo(function FileFilters({
   visibility,
   onVisibilityChange,
 }: FileFiltersProps) {
+  const sortMenu = useScrollSafeOpen()
+  const visibilityMenu = useScrollSafeOpen()
+  const fileTypeMenu = useScrollSafeOpen()
+  const dateMenu = useScrollSafeOpen()
+
   const { category, direction, label } = getSortInfo(sortBy)
   const SortIcon = direction === 'desc' ? ArrowDown : ArrowUp
 
@@ -208,11 +268,12 @@ export const FileFilters = memo(function FileFilters({
 
   return (
     <div className="flex flex-wrap gap-2 w-full">
-      <DropdownMenu>
+      <DropdownMenu open={sortMenu.open} onOpenChange={sortMenu.onOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
             className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200"
+            {...sortMenu.triggerProps}
           >
             <span>{label}</span>
             <SortIcon className="ml-2 h-4 w-4" />
@@ -366,11 +427,12 @@ export const FileFilters = memo(function FileFilters({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DropdownMenu>
+      <DropdownMenu open={visibilityMenu.open} onOpenChange={visibilityMenu.onOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
             className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200"
+            {...visibilityMenu.triggerProps}
           >
             <span>Visibility</span>
             {visibility.length > 0 ? (
@@ -450,11 +512,12 @@ export const FileFilters = memo(function FileFilters({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DropdownMenu>
+      <DropdownMenu open={fileTypeMenu.open} onOpenChange={fileTypeMenu.onOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
             className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200"
+            {...fileTypeMenu.triggerProps}
           >
             <span>File Type</span>
             {selectedTypes.length > 0 ? (
@@ -512,7 +575,7 @@ export const FileFilters = memo(function FileFilters({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Popover>
+      <Popover open={dateMenu.open} onOpenChange={dateMenu.onOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -520,6 +583,7 @@ export const FileFilters = memo(function FileFilters({
               'w-full sm:w-auto sm:min-w-[140px] justify-start text-left font-normal bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200',
               !date && 'text-muted-foreground'
             )}
+            {...dateMenu.triggerProps}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {date?.from ? (

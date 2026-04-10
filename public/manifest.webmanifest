@@ -1,0 +1,51 @@
+{
+  "name": "Emberly",
+  "short_name": "Emberly",
+  "description": "Open-source file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#F97316",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["productivity", "utilities", "developer tools"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Upload a file",
+      "short_name": "Upload",
+      "description": "Go straight to the file upload page",
+      "url": "/dashboard/upload",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Shorten a URL",
+      "short_name": "Short URL",
+      "description": "Create a short link instantly",
+      "url": "/dashboard/urls",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Pricing",
+      "short_name": "Pricing",
+      "description": "View plans and pricing",
+      "url": "/pricing",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ],
+  "screenshots": []
+}

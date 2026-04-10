@@ -113,6 +113,15 @@ export const configSchema = z.object({
         apiKey: z.string().optional().default(''),
         emailFrom: z.string().optional().default(''),
       }).passthrough().optional().default({}),
+      emailProvider: z.enum(['resend', 'smtp']).optional().default('resend'),
+      smtp: z.object({
+        host: z.string().optional().default(''),
+        port: z.number().optional().default(587),
+        secure: z.boolean().optional().default(false),
+        user: z.string().optional().default(''),
+        password: z.string().optional().default(''),
+        from: z.string().optional().default(''),
+      }).passthrough().optional().default({}),
     }).passthrough().optional().default({}),
   }).passthrough().optional().default({}),
 }).passthrough()
@@ -222,6 +231,15 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
       resend: {
         apiKey: '',
         emailFrom: '',
+      },
+      emailProvider: 'resend' as 'resend' | 'smtp',
+      smtp: {
+        host: '',
+        port: 587,
+        secure: false,
+        user: '',
+        password: '',
+        from: '',
       },
     },
   },

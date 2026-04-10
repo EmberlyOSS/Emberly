@@ -215,7 +215,7 @@ export async function buildSiteMetadata(overrides?: {
 
   const siteName = 'Emberly'
   const title = overrides?.title || siteName
-  const description = overrides?.description || 'Emberly is an open source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly with custom domains, expiring links, and squad (team) collaboration.'
+  const description = overrides?.description || SITE_DESCRIPTION
 
   const themeColor = config.settings.appearance.customColors?.primary
     ? `hsl(${config.settings.appearance.customColors.primary})`
@@ -228,6 +228,27 @@ export async function buildSiteMetadata(overrides?: {
       template: `%s | ${siteName}`,
     },
     description,
+    keywords: SITE_KEYWORDS,
+    authors: [{ name: 'Emberly', url: baseUrl }],
+    creator: 'Emberly',
+    publisher: 'Emberly',
+    category: 'technology',
+    classification: 'Software / Developer Tools',
+    referrer: 'origin-when-cross-origin',
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+    alternates: {
+      canonical: baseUrl,
+    },
     openGraph: {
       type: 'website',
       siteName,
@@ -240,16 +261,62 @@ export async function buildSiteMetadata(overrides?: {
       card: 'summary_large_image',
       title,
       description,
+      site: '@embrlyca',
+      creator: '@embrlyca',
     },
     other: {
       'theme-color': themeColor,
+      'msapplication-TileColor': '#09090b',
+      'msapplication-config': '/browserconfig.xml',
+      'mobile-web-app-capable': 'yes',
+      'apple-mobile-web-app-capable': 'yes',
+      'apple-mobile-web-app-status-bar-style': 'black-translucent',
+      'apple-mobile-web-app-title': siteName,
+      'format-detection': 'telephone=no',
+      'X-UA-Compatible': 'IE=edge',
     },
+    manifest: '/manifest.webmanifest',
   }
 }
+
+const SITE_DESCRIPTION =
+  'Emberly is an open-source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly — with custom domains, expiring links, password protection, and squad (team) collaboration.'
+
+const SITE_KEYWORDS = [
+  // Core product
+  'file sharing',
+  'file upload',
+  'url shortener',
+  'link shortener',
+  'short url',
+  'custom domain',
+  'expiring links',
+  'password protected files',
+  // Team / talent
+  'talent discovery',
+  'developer portfolio',
+  'squad collaboration',
+  'team file sharing',
+  'nexium',
+  // Tech descriptors
+  'open source',
+  'self hosted',
+  'privacy focused',
+  'developer tools',
+  's3 storage',
+  'cdn file hosting',
+  // Brand + alternatives
+  'emberly',
+  'embrly',
+  'file manager',
+  'link manager',
+  'cdn hosting',
+  'sharex host',
+]
 
 export function buildPageMetadata(options: { title: string; description?: string }): Metadata {
   return {
     title: options.title,
-    description: options.description || 'Emberly is an open source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly with custom domains, expiring links, and squad (team) collaboration.',
+    description: options.description || SITE_DESCRIPTION,
   }
 }

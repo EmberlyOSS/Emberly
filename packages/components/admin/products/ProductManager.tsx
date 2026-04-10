@@ -17,12 +17,28 @@ import {
 import PromoCodesManager from '@/packages/components/admin/payments/promo-codes-manager'
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
+import { Skeleton } from '@/packages/components/ui/skeleton'
 import { Switch } from '@/packages/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
 import { useToast } from '@/packages/hooks/use-toast'
 
 const SEED_SCRIPT_URL = 'https://github.com/EmberlyOSS/Emberly/blob/dev/scripts/seed-plans.ts'
 const PAGE_SIZE = 10
+
+function TypeBadge({ type }: { type: string }) {
+  switch (type) {
+    case 'plan':
+      return <Badge className="bg-blue-500/15 text-blue-400 border border-blue-400/30 font-mono text-[10px] py-0">plan</Badge>
+    case 'addon':
+      return <Badge className="bg-violet-500/15 text-violet-400 border border-violet-400/30 font-mono text-[10px] py-0">addon</Badge>
+    case 'nexium-plan':
+      return <Badge className="bg-orange-500/15 text-orange-400 border border-orange-400/30 font-mono text-[10px] py-0">nexium-plan</Badge>
+    case 'one-time':
+      return <Badge className="bg-slate-500/15 text-slate-400 border border-slate-400/30 font-mono text-[10px] py-0">one-time</Badge>
+    default:
+      return <Badge variant="outline" className="font-mono text-[10px] py-0">{type || 'plan'}</Badge>
+  }
+}
 
 export default function AdminProductManager() {
   const [products, setProducts] = useState<any[]>([])
@@ -160,13 +176,8 @@ export default function AdminProductManager() {
         </div>
 
         {/* Product list */}
-        {loading ? (
-          <div className="glass-card p-12 flex flex-col items-center gap-3 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-sm">Loading products…</span>
-          </div>
-        ) : sorted.length === 0 ? (
-          <div className="glass-card p-12 text-center">
+        {!loading && sorted.length === 0 ? (
+          <div className="glass-subtle rounded-xl border border-border/50 border-dashed p-12 text-center">
             <div className="flex justify-center mb-4">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                 <Package className="h-7 w-7 text-primary" />
@@ -186,78 +197,48 @@ export default function AdminProductManager() {
           </div>
         ) : (
           <>
-            <div className="glass-card overflow-hidden">
+            <div className="glass-subtle overflow-hidden rounded-xl border border-border/50">
               <div className="divide-y divide-border/50">
-                {paginated.map((p) => (
-                  <div key={p.id} className="p-5 group hover:bg-muted/20 transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      {/* Left: info */}
-                      <div className="space-y-2 min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold">{p.name}</span>
-                          {p.popular && (
-                            <Badge className="bg-amber-500/15 text-amber-500 border-amber-400/30 border">Popular</Badge>
-                          )}
-                          {!p.active && (
-                            <Badge variant="secondary" className="bg-muted/50 text-muted-foreground">Inactive</Badge>
-                          )}
-                          <Badge variant="outline" className="font-mono text-xs">{p.type || 'plan'}</Badge>
+                {loading
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-36" />
+                          <Skeleton className="h-4 w-14 rounded-full" />
                         </div>
-
-                        <p className="text-xs font-mono text-muted-foreground">{p.slug}</p>
-
-                        {p.description && (
-                          <p className="text-sm text-muted-foreground">{p.description}</p>
-                        )}
-
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground pt-0.5">
-                          <span>Stripe: <span className="font-mono">{p.stripeProductId || '—'}</span></span>
-                          <span>Billing: {p.billingInterval || 'n/a'}</span>
-                          <span>Price: {p.defaultPriceCents != null ? `$${(p.defaultPriceCents / 100).toFixed(2)}` : 'n/a'}</span>
-                          {p.storageQuotaGB != null && <span>Storage: {p.storageQuotaGB} GB</span>}
-                          {p.uploadSizeCapMB != null && (
-                            <span>Upload cap: {p.uploadSizeCapMB >= 1024 ? `${p.uploadSizeCapMB / 1024} GB` : `${p.uploadSizeCapMB} MB`}</span>
-                          )}
-                          {p.customDomainsLimit != null && <span>Domains: {p.customDomainsLimit}</span>}
-                        </div>
-
-                        {Array.isArray(p.features) && p.features.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {p.features.slice(0, 5).map((f: string, i: number) => (
-                              <Badge key={i} variant="outline" className="text-xs font-normal">{f}</Badge>
-                            ))}
-                            {p.features.length > 5 && (
-                              <Badge variant="outline" className="text-xs font-normal">+{p.features.length - 5} more</Badge>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-4 pt-1">
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground">
-                            <Switch
-                              checked={!!p.active}
-                              onCheckedChange={(v) => handleToggle(p.id, 'active', v)}
-                              disabled={toggling === `${p.id}:active`}
-                              className="scale-75"
-                            />
-                            Active
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground">
-                            <Switch
-                              checked={!!p.popular}
-                              onCheckedChange={(v) => handleToggle(p.id, 'popular', v)}
-                              disabled={toggling === `${p.id}:popular`}
-                              className="scale-75"
-                            />
-                            Popular
-                          </label>
+                        <div className="flex gap-1">
+                          <Skeleton className="h-7 w-7 rounded-md" />
+                          <Skeleton className="h-7 w-7 rounded-md" />
+                          <Skeleton className="h-7 w-7 rounded-md" />
                         </div>
                       </div>
-
-                      {/* Right: actions */}
-                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                      <Skeleton className="h-3 w-28" />
+                      <Skeleton className="h-4 w-64" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                        <Skeleton className="h-5 w-24 rounded-full" />
+                      </div>
+                    </div>
+                  ))
+                  : paginated.map((p) => (
+                  <div key={p.id} className="p-5 hover:bg-muted/20 transition-colors">
+                    {/* Header: name + type + status | actions */}
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="font-semibold text-sm">{p.name}</span>
+                        <TypeBadge type={p.type} />
+                        {!p.active && (
+                          <Badge variant="secondary" className="bg-muted/50 text-muted-foreground text-[10px] py-0">Inactive</Badge>
+                        )}
+                        {p.popular && (
+                          <Badge className="bg-amber-500/15 text-amber-500 border border-amber-400/30 text-[10px] py-0">Popular</Badge>
+                        )}
+                      </div>
+                      {/* Always-visible action buttons */}
+                      <div className="flex items-center gap-0.5 shrink-0">
                         {p.stripeProductId && (
-                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Open in Stripe">
+                          <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Open in Stripe">
                             <Link href={`https://dashboard.stripe.com/products/${p.stripeProductId}`} target="_blank">
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Link>
@@ -266,14 +247,14 @@ export default function AdminProductManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
                           onClick={() => handleSync(p.id, p.name)}
                           disabled={syncing === p.id}
                           title="Sync to Stripe"
                         >
                           <RefreshCw className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
                         </Button>
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Edit seed script">
+                        <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Edit seed script">
                           <Link href={SEED_SCRIPT_URL} target="_blank">
                             <FileCode className="h-3.5 w-3.5" />
                           </Link>
@@ -281,7 +262,7 @@ export default function AdminProductManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="h-7 w-7 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDelete(p.id)}
                           disabled={toggling === `${p.id}:delete`}
                           title="Delete product"
@@ -291,6 +272,70 @@ export default function AdminProductManager() {
                             : <Trash2 className="h-3.5 w-3.5" />}
                         </Button>
                       </div>
+                    </div>
+
+                    {/* Slug */}
+                    <p className="text-[11px] font-mono text-muted-foreground/60 mb-2">{p.slug}</p>
+
+                    {/* Description */}
+                    {p.description && (
+                      <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{p.description}</p>
+                    )}
+
+                    {/* Stats */}
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground mb-3">
+                      {p.defaultPriceCents != null && (
+                        <span>
+                          <span className="text-foreground font-medium">${(p.defaultPriceCents / 100).toFixed(2)}</span>
+                          {p.billingInterval && <span className="text-muted-foreground"> / {p.billingInterval}</span>}
+                        </span>
+                      )}
+                      {p.storageQuotaGB != null && (
+                        <span>Storage: <span className="text-foreground font-medium">{p.storageQuotaGB} GB</span></span>
+                      )}
+                      {p.uploadSizeCapMB != null && (
+                        <span>Upload cap: <span className="text-foreground font-medium">{p.uploadSizeCapMB >= 1024 ? `${p.uploadSizeCapMB / 1024} GB` : `${p.uploadSizeCapMB} MB`}</span></span>
+                      )}
+                      {p.customDomainsLimit != null && (
+                        <span>Domains: <span className="text-foreground font-medium">{p.customDomainsLimit}</span></span>
+                      )}
+                      {p.stripeProductId && (
+                        <span className="font-mono text-[10px] text-muted-foreground/50">{p.stripeProductId}</span>
+                      )}
+                    </div>
+
+                    {/* Features */}
+                    {Array.isArray(p.features) && p.features.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {p.features.slice(0, 4).map((f: string, i: number) => (
+                          <Badge key={i} variant="outline" className="text-[11px] font-normal max-w-[220px] truncate">{f}</Badge>
+                        ))}
+                        {p.features.length > 4 && (
+                          <Badge variant="outline" className="text-[11px] font-normal">+{p.features.length - 4} more</Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Controls */}
+                    <div className="flex items-center gap-5 pt-3 border-t border-border/30">
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground">
+                        <Switch
+                          checked={!!p.active}
+                          onCheckedChange={(v) => handleToggle(p.id, 'active', v)}
+                          disabled={toggling === `${p.id}:active`}
+                          aria-label="Active"
+                        />
+                        Active
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground">
+                        <Switch
+                          checked={!!p.popular}
+                          onCheckedChange={(v) => handleToggle(p.id, 'popular', v)}
+                          disabled={toggling === `${p.id}:popular`}
+                          aria-label="Popular"
+                        />
+                        Popular
+                      </label>
                     </div>
                   </div>
                 ))}

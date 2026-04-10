@@ -132,7 +132,7 @@ export function UploadForm({
       </Card>
 
       {files.length > 0 && (
-        <div className="space-y-4">
+        <div className="glass-card p-6 space-y-4">
           <h2 className="text-lg font-semibold">Selected Files</h2>
           <div className="space-y-2">
             {files.map((file: FileWithPreview, index) => (
@@ -216,7 +216,7 @@ export function UploadForm({
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="glass-card p-6 space-y-5">
         <div className="space-y-2">
           <Label className="text-sm font-medium">Visibility</Label>
           <Select

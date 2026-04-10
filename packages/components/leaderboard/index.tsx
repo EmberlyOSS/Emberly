@@ -108,14 +108,14 @@ function PodiumCard({
         <RankBadge rank={rank} />
       </div>
       <div className={`${isFirst ? 'p-8 pt-12' : 'p-6 pt-10'} text-center flex flex-col items-center h-full`}>
-        <div className={`relative ${isFirst ? 'w-24 h-24' : 'w-20 h-20'} mb-4`}>
+        <div className={`relative ${isFirst ? 'w-24 h-24' : 'w-20 h-20'} mb-4 overflow-hidden rounded-full`}>
           {isFirst && <div className="absolute -inset-1 bg-gradient-to-br from-yellow-300 to-amber-500 rounded-full blur-sm opacity-50 animate-pulse" />}
           {user.image ? (
             <Image
               src={user.image}
               alt={user.name || 'User'}
               fill
-              className={`rounded-full object-cover border-4 ${colors.ring} ${isFirst ? 'relative z-10' : ''}`}
+              className={`rounded-full object-cover border-4 ${colors.ring} ${isFirst ? 'z-10' : ''}`}
             />
           ) : (
             <div className={`${isFirst ? 'relative z-10' : ''} w-full h-full rounded-full bg-gradient-to-br ${colors.glow} flex items-center justify-center text-white ${isFirst ? 'text-3xl' : 'text-2xl'} font-bold`}>
@@ -144,8 +144,8 @@ function ContributorRow({ user }: { user: ContributorUser }) {
         </div>
         <div className="flex-shrink-0">
           {user.image ? (
-            <div className="relative w-12 h-12">
-              <Image src={user.image} alt={user.name || 'User'} fill className="rounded-full object-cover" />
+            <div className="relative w-12 h-12 rounded-full overflow-hidden">
+              <Image src={user.image} alt={user.name || 'User'} fill className="object-cover" />
             </div>
           ) : (
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 text-primary font-bold text-lg">
@@ -195,8 +195,8 @@ function DiscoveryRow({ user }: { user: DiscoveryUser }) {
         </div>
         <div className="flex-shrink-0">
           {user.image ? (
-            <div className="relative w-12 h-12">
-              <Image src={user.image} alt={user.name || 'User'} fill className="rounded-full object-cover" />
+            <div className="relative w-12 h-12 rounded-full overflow-hidden">
+              <Image src={user.image} alt={user.name || 'User'} fill className="object-cover" />
             </div>
           ) : (
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 text-primary font-bold text-lg">
@@ -322,7 +322,7 @@ export function Leaderboard() {
   )
 
   return (
-    <div className="max-w-5xl mx-auto pb-20">
+    <div className="pb-20">
       {/* Header */}
       <div className="text-center mb-12 space-y-4 animate-fade-up">
         <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/10 mb-4 animate-float">

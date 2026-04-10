@@ -217,8 +217,10 @@ export function PasteForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Language and Filename row */}
-      <div className="grid gap-4 md:grid-cols-2 items-end">
+      {/* Language, Filename and Editor */}
+      <div className="glass-card p-6 space-y-6">
+        {/* Language and Filename row */}
+        <div className="grid gap-4 md:grid-cols-2 items-end">
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <FileCode className="h-4 w-4 text-muted-foreground" />
@@ -374,9 +376,12 @@ export function PasteForm() {
           </div>
         )}
       </div>
+      </div>
 
-      {/* Visibility and Password row */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Visibility, Password and Collaboration */}
+      <div className="glass-card p-6 space-y-6">
+        {/* Visibility and Password row */}
+        <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             {visibility === 'PUBLIC' ? (
@@ -439,26 +444,27 @@ export function PasteForm() {
       </div>
 
       {/* Collaboration Settings */}
-      <div className="glass-subtle p-4 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          Collaboration Settings
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="allowSuggestions" className="text-sm font-medium">
-              Allow Edit Suggestions
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Other users can suggest edits to this paste that you can review and approve
-            </p>
+        <div className="border-t border-border/40 pt-6 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            Collaboration Settings
           </div>
-          <Switch
-            id="allowSuggestions"
-            checked={allowSuggestions}
-            onCheckedChange={setAllowSuggestions}
-          />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="allowSuggestions" className="text-sm font-medium">
+                Allow Edit Suggestions
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Other users can suggest edits to this paste that you can review and approve
+              </p>
+            </div>
+            <Switch
+              id="allowSuggestions"
+              checked={allowSuggestions}
+              onCheckedChange={setAllowSuggestions}
+            />
+          </div>
         </div>
       </div>
 

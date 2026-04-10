@@ -6,6 +6,7 @@ import {
   BadgePercent,
   Copy,
   DollarSign,
+  EyeOff,
   Loader2,
   Plus,
   RefreshCw,
@@ -31,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/packages/components/ui/select'
+import { Switch } from '@/packages/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -54,6 +56,7 @@ interface PromoCode {
   maxRedemptions: number | null
   expiresAt: number | null
   createdAt: number
+  isPrivate: boolean
 }
 
 const DEFAULT_FORM = {
@@ -64,6 +67,7 @@ const DEFAULT_FORM = {
   currency: 'usd',
   maxRedemptions: '',
   expiresAt: '',
+  isPrivate: false,
 }
 
 export default function PromoCodesManager() {
@@ -108,6 +112,7 @@ export default function PromoCodesManager() {
       }
       if (form.maxRedemptions) body.maxRedemptions = Number(form.maxRedemptions)
       if (form.expiresAt) body.expiresAt = Math.floor(new Date(form.expiresAt).getTime() / 1000)
+      if (form.isPrivate) body.isPrivate = true
 
       const res = await fetch('/api/admin/promo-codes', {
         method: 'POST',
@@ -162,7 +167,7 @@ export default function PromoCodesManager() {
         <div>
           <h2 className="text-xl font-bold">Promo Codes</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Manage Stripe promotion codes displayed on the pricing page.
+            Manage Stripe promotion codes. Mark a code as private to hide it from the public pricing page.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -216,6 +221,12 @@ export default function PromoCodesManager() {
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
+                    {pc.isPrivate && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/50 border border-border/40 rounded px-1.5 py-0.5">
+                        <EyeOff className="h-2.5 w-2.5" />
+                        Private
+                      </span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -377,6 +388,22 @@ export default function PromoCodesManager() {
                     onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isPrivate" className="text-sm font-medium cursor-pointer">
+                    Private code
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Hide from the public Discounts tab on the pricing page.
+                  </p>
+                </div>
+                <Switch
+                  id="isPrivate"
+                  checked={form.isPrivate}
+                  onCheckedChange={(v) => setForm({ ...form, isPrivate: v })}
+                />
               </div>
             </div>
             <DialogFooter>

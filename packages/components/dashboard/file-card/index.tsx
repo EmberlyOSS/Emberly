@@ -19,8 +19,12 @@ import {
   Link as LinkIcon,
   Lock,
   ScanText,
+  Share2,
   Timer,
   Trash2,
+  UserPlus,
+  Users,
+  X,
 } from 'lucide-react'
 
 import { EmbedPreviewDialog } from '@/packages/components/dashboard/file-card/embed-preview-dialog'
@@ -28,6 +32,8 @@ import { getFileIcon } from '@/packages/components/dashboard/file-card/utils'
 import { ExpiryModal } from '@/packages/components/shared/expiry-modal'
 import { Icons } from '@/packages/components/shared/icons'
 import { OcrDialog } from '@/packages/components/shared/ocr-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/packages/components/ui/avatar'
+import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
 import { Card } from '@/packages/components/ui/card'
 import {
@@ -38,6 +44,13 @@ import {
 } from '@/packages/components/ui/dialog'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/packages/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/packages/components/ui/radio-group'
 import {
   Tooltip,
@@ -76,6 +89,75 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
   const [ocrError, setOcrError] = useState<string | null>(null)
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
   const [isExpiryModalOpen, setIsExpiryModalOpen] = useState(false)
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [collaborators, setCollaborators] = useState<Array<{
+    id: string
+    role: string
+    user: { id: string; name: string | null; urlId: string | null; image: string | null }
+  }>>([])
+  const [shareInput, setShareInput] = useState('')
+  const [shareRole, setShareRole] = useState<'EDITOR' | 'SUGGESTER'>('EDITOR')
+  const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false)
+  const [isAddingCollaborator, setIsAddingCollaborator] = useState(false)
+
+  const fetchCollaborators = async () => {
+    setIsLoadingCollaborators(true)
+    try {
+      const response = await fetch(`/api/files/${file.id}/collaborators`)
+      if (response.ok) {
+        const data = await response.json()
+        setCollaborators(data.data ?? [])
+      }
+    } catch { /* ignore */ } finally {
+      setIsLoadingCollaborators(false)
+    }
+  }
+
+  const handleOpenShareDialog = () => {
+    setIsShareDialogOpen(true)
+    fetchCollaborators()
+  }
+
+  const handleAddCollaborator = async () => {
+    if (!shareInput.trim()) return
+    setIsAddingCollaborator(true)
+    try {
+      const response = await fetch(`/api/files/${file.id}/collaborators`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail: shareInput.trim(), role: shareRole }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to share file')
+      }
+      setShareInput('')
+      await fetchCollaborators()
+      toast({ title: 'File shared', description: 'Collaborator has been added' })
+    } catch (error) {
+      toast({
+        title: 'Failed to share file',
+        description: error instanceof Error ? error.message : 'Please try again',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsAddingCollaborator(false)
+    }
+  }
+
+  const handleRemoveCollaborator = async (collaboratorId: string) => {
+    try {
+      const response = await fetch(
+        `/api/files/${file.id}/collaborators?collaboratorId=${collaboratorId}`,
+        { method: 'DELETE' }
+      )
+      if (!response.ok) throw new Error()
+      setCollaborators((prev) => prev.filter((c) => c.id !== collaboratorId))
+      toast({ title: 'Collaborator removed' })
+    } catch {
+      toast({ title: 'Failed to remove collaborator', variant: 'destructive' })
+    }
+  }
 
   const handleCopyLink = () => {
     const safeUrl = sanitizeUrl(file.urlPath)
@@ -310,7 +392,7 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
           </Button>
 
           {/* Action buttons */}
-          <div className="flex gap-1">
+          <div className="flex flex-wrap justify-center gap-1 px-2">
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -417,6 +499,20 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Embed preview</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
+                    onClick={handleOpenShareDialog}
+                    aria-label="Share file"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Share</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -698,6 +794,92 @@ export function FileCard({ file: initialFile, onDelete, enableRichEmbeds = true 
         file={file}
         enableRichEmbeds={enableRichEmbeds}
       />
+
+      {/* Share Dialog */}
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="h-4 w-4" />
+              Share File
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground truncate">{file.name}</p>
+            {/* Add collaborator */}
+            <div className="space-y-2">
+              <Label>Add collaborator</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Email or username"
+                  value={shareInput}
+                  onChange={(e) => setShareInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCollaborator()}
+                  className="flex-1"
+                />
+                <Select value={shareRole} onValueChange={(v) => setShareRole(v as 'EDITOR' | 'SUGGESTER')}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EDITOR">Editor</SelectItem>
+                    <SelectItem value="SUGGESTER">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="icon"
+                  onClick={handleAddCollaborator}
+                  disabled={!shareInput.trim() || isAddingCollaborator}
+                  aria-label="Add collaborator"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Collaborators list */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                Collaborators
+              </Label>
+              {isLoadingCollaborators ? (
+                <p className="text-sm text-muted-foreground py-2">Loading...</p>
+              ) : collaborators.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No collaborators yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-52 overflow-y-auto">
+                  {collaborators.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2 py-1">
+                      <Avatar className="h-7 w-7 shrink-0">
+                        <AvatarImage src={c.user.image ?? undefined} alt={c.user.name ?? 'User'} />
+                        <AvatarFallback className="text-xs">
+                          {(c.user.name ?? c.user.urlId ?? '?')[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{c.user.name ?? c.user.urlId ?? 'Unknown'}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs shrink-0">
+                        {c.role === 'EDITOR' ? 'Editor' : 'Viewer'}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveCollaborator(c.id)}
+                        aria-label="Remove collaborator"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

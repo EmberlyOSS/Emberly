@@ -202,7 +202,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
           orderBy: { sortOrder: 'asc' },
         },
         signals: {
-          select: { id: true, type: true, title: true, url: true, description: true, verified: true },
+          select: { id: true, type: true, title: true, url: true, description: true, imageUrl: true, metadata: true, verified: true },
           orderBy: { sortOrder: 'asc' },
         },
       },

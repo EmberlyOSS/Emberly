@@ -104,7 +104,7 @@ function GitHubRepoCard({ signal }: { signal: SignalCardData }) {
   const langColor = language ? (LANGUAGE_COLORS[language] ?? 'hsl(var(--muted-foreground))') : null
 
   const card = (
-    <div className="group relative flex flex-col gap-3 rounded-xl border border-border/50 bg-card p-4 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 overflow-hidden">
+    <div className="group relative flex flex-col gap-3 rounded-xl border border-border/50 bg-card p-4 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 overflow-hidden h-full">
       {/* Subtle top accent line */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
@@ -165,7 +165,7 @@ function GitHubRepoCard({ signal }: { signal: SignalCardData }) {
 
       {/* Footer stats */}
       {(language || stars !== null || forks !== null) && (
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5 border-t border-border/40">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5 border-t border-border/40 mt-auto">
           {language && langColor && (
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: langColor }} />
@@ -191,7 +191,7 @@ function GitHubRepoCard({ signal }: { signal: SignalCardData }) {
 
   if (signal.url) {
     return (
-      <a href={signal.url} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={signal.url} target="_blank" rel="noopener noreferrer" className="block h-full">
         {card}
       </a>
     )
@@ -207,7 +207,7 @@ function GenericSignalCard({ signal }: { signal: SignalCardData }) {
   const imageUrl = signal.imageUrl ?? (typeof signal.metadata?.imageUrl === 'string' ? signal.metadata.imageUrl : null)
 
   const card = (
-    <div className="group relative flex items-start gap-3.5 rounded-xl border border-border/50 bg-card p-4 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 overflow-hidden">
+    <div className="group relative flex items-start gap-3.5 rounded-xl border border-border/50 bg-card p-4 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 overflow-hidden h-full">
       {/* Subtle top accent */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
@@ -253,7 +253,7 @@ function GenericSignalCard({ signal }: { signal: SignalCardData }) {
 
   if (signal.url) {
     return (
-      <a href={signal.url} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={signal.url} target="_blank" rel="noopener noreferrer" className="block h-full">
         {card}
       </a>
     )

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/packages/lib/auth/api-auth'
 
-
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
+import { sendTemplateEmail, FileSharedEmail } from '@/packages/lib/emails'
 
 const logger = loggers.files
 
@@ -14,8 +14,8 @@ export async function GET(
 ) {
     try {
         const { id } = await params
-        const { user, response } = await requireAuth(req)
-    if (response) return response
+        const { user, response } = await requireAuth(request)
+        if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
@@ -67,12 +67,12 @@ export async function POST(
 ) {
     try {
         const { id } = await params
-        const { user, response } = await requireAuth(req)
-    if (response) return response
+        const { user, response } = await requireAuth(request)
+        if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
-            select: { userId: true },
+            select: { userId: true, name: true, urlPath: true },
         })
 
         if (!file) {
@@ -154,6 +154,29 @@ export async function POST(
             role,
         })
 
+        // Send notification email to the newly added collaborator (fire-and-forget)
+        if (targetUser.email) {
+            const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'https://embrly.ca'
+            const fileUrl = `${baseUrl}${file.urlPath}`
+            const dashboardUrl = `${baseUrl}/dashboard/files`
+
+            sendTemplateEmail({
+                to: targetUser.email,
+                subject: `${user.name || 'Someone'} shared a file with you`,
+                template: FileSharedEmail,
+                props: {
+                    recipientName: targetUser.name ?? undefined,
+                    ownerName: user.name || 'A user',
+                    fileName: file.name,
+                    fileUrl,
+                    role: role === 'SUGGESTER' ? 'SUGGESTER' : 'EDITOR',
+                    dashboardUrl,
+                },
+                skipTracking: false,
+                templateName: 'file-shared',
+            }).catch((err) => logger.error('Failed to send file-shared email', err as Error))
+        }
+
         return NextResponse.json({ collaborator })
     } catch (error) {
         logger.error('Failed to add collaborator', error as Error)
@@ -171,8 +194,8 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params
-        const { user, response } = await requireAuth(req)
-    if (response) return response
+        const { user, response } = await requireAuth(request)
+        if (response) return response
 
         const file = await prisma.file.findUnique({
             where: { id },
@@ -217,8 +240,8 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params
-        const { user, response } = await requireAuth(req)
-    if (response) return response
+        const { user, response } = await requireAuth(request)
+        if (response) return response
 
         const { searchParams } = new URL(request.url)
         const collaboratorId = searchParams.get('collaboratorId')
@@ -261,3 +284,4 @@ export async function DELETE(
         )
     }
 }
+

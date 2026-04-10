@@ -24,6 +24,8 @@ const CreatePromoSchema = z.object({
   maxRedemptions: z.number().int().min(1).optional(),
   /** Unix timestamp when this code expires (null = never) */
   expiresAt: z.number().int().optional(),
+  /** Whether to hide this code from the public pricing page */
+  isPrivate: z.boolean().optional(),
 })
 
 /**
@@ -62,6 +64,7 @@ export async function GET(req: Request) {
         maxRedemptions: pc.max_redemptions ?? null,
         expiresAt: pc.expires_at ?? null,
         createdAt: pc.created,
+        isPrivate: pc.metadata?.['private'] === 'true',
       }
     })
 
@@ -91,7 +94,7 @@ export async function POST(req: Request) {
       return apiError(parsed.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
 
-    const { code, percentOff, amountOff, currency, maxRedemptions, expiresAt } = parsed.data
+    const { code, percentOff, amountOff, currency, maxRedemptions, expiresAt, isPrivate } = parsed.data
 
     if (!percentOff && !amountOff) {
       return apiError('Either percentOff or amountOff is required', HTTP_STATUS.BAD_REQUEST)
@@ -121,6 +124,7 @@ export async function POST(req: Request) {
         code,
         ...(maxRedemptions ? { max_redemptions: maxRedemptions } : {}),
         ...(expiresAt ? { expires_at: expiresAt } : {}),
+        ...(isPrivate ? { metadata: { private: 'true' } } : {}),
       })
     } catch (promoErr: any) {
       // Roll back the coupon so we don't leave orphans in Stripe

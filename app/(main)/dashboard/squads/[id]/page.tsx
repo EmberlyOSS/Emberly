@@ -32,7 +32,7 @@ export default async function SquadDashboardPage({ params }: { params: Promise<{
     select: { role: true },
   })
 
-  if (!membership) redirect('/dashboard/discovery')
+  if (!membership) redirect('/dashboard/squads')
 
   return <SquadDashboardClient squadId={id} role={membership.role} />
 }
