@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { getServerSession } from 'next-auth'
 
+import { AdminShell } from '@/packages/components/admin/admin-shell'
 import { authOptions } from '@/packages/lib/auth'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
@@ -23,15 +24,15 @@ export default async function AdminEmailPage() {
     }
 
     return (
-        <div className="container space-y-6">
+        <AdminShell header={
             <div className="glass-card">
                 <div className="p-8">
                     <h1 className="text-3xl font-bold tracking-tight">Email Broadcasts</h1>
                     <p className="text-muted-foreground mt-2">Send announcements and operational emails to users.</p>
                 </div>
             </div>
-
+        }>
             <AdminEmailManager />
-        </div>
+        </AdminShell>
     )
 }

@@ -176,8 +176,8 @@ export async function proxy(request: NextRequest) {
 
   // PASSWORD BREACH CHECK - Redirect to security tab if breach detected
   // Users with detected password breaches are redirected to profile security tab
-  const isProfileSecurityTab = pathname === '/dashboard/profile' && request.nextUrl.searchParams.get('tab') === 'security'
-  const isProfilePath = pathname === '/dashboard/profile'
+  const isProfileSecurityTab = pathname === '/me' && request.nextUrl.searchParams.get('tab') === 'security'
+  const isProfilePath = pathname === '/me'
   const isDashboardRoot = pathname === '/dashboard'
 
   if (token && token.passwordBreachDetectedAt) {
@@ -188,12 +188,12 @@ export async function proxy(request: NextRequest) {
     // If on dashboard root, redirect to profile security
     if (isDashboardRoot) {
       console.log(`[Proxy] User ${token.email} with password breach detected, redirecting from dashboard to profile security`)
-      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', baseUrl))
+      return NextResponse.redirect(new URL('/me?tab=security', baseUrl))
     }
     // If on profile but not security tab, redirect to security tab
     if (isProfilePath && !request.nextUrl.searchParams.get('tab')) {
       console.log(`[Proxy] User ${token.email} with password breach detected, redirecting to security tab`)
-      return NextResponse.redirect(new URL('/dashboard/profile?tab=security', baseUrl))
+      return NextResponse.redirect(new URL('/me?tab=security', baseUrl))
     }
   }
 

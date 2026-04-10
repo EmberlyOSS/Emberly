@@ -90,7 +90,7 @@ export function EmailChangedNewEmail({
               <Row className="mt-8">
                 <Column align="center">
                   <Button
-                    href="https://embrly.ca/dashboard/profile"
+                    href="https://embrly.ca/me"
                     className="rounded-lg bg-orange-600 px-6 py-3 text-center text-base font-semibold text-white no-underline"
                   >
                     Go to Dashboard

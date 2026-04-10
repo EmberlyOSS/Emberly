@@ -95,7 +95,7 @@ async function sendEmail(options: {
             props: {
                 userName: typeof variables.userName === 'string' ? variables.userName : undefined,
                 changes,
-                manageUrl: `${baseUrl}/dashboard/profile`,
+                manageUrl: `${baseUrl}/me`,
                 supportUrl: `${baseUrl}/contact`,
             },
             skipTracking: true,
@@ -114,7 +114,7 @@ async function sendEmail(options: {
                 perkDescription: typeof variables.perkDescription === 'string' ? variables.perkDescription : undefined,
                 perkIcon: typeof variables.perkIcon === 'string' ? variables.perkIcon : '🎉',
                 expiresAt: typeof variables.expiresAt === 'string' ? variables.expiresAt : null,
-                viewUrl: typeof variables.viewUrl === 'string' ? variables.viewUrl : 'https://embrly.ca/dashboard/profile',
+                viewUrl: typeof variables.viewUrl === 'string' ? variables.viewUrl : 'https://embrly.ca/me',
             },
             skipTracking: true,
         })
@@ -378,7 +378,7 @@ async function sendEmail(options: {
             template: DeletionRequestedEmail,
             props: {
                 scheduledAt: String(variables.scheduledAt || ''),
-                cancelUrl: String(variables.cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://embrly.ca'}/dashboard/profile`),
+                cancelUrl: String(variables.cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://embrly.ca'}/me`),
             },
             skipTracking: true,
         })

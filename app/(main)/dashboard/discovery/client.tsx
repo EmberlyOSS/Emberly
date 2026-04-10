@@ -10,16 +10,10 @@ import {
   Globe,
   Key,
   HardDrive,
-  User,
   Sparkles,
-  Layers,
-  FolderOpen,
   ArrowLeft,
   Settings,
   Upload,
-  Zap,
-  Briefcase,
-  ClipboardList,
   Bell,
   Check,
   X,
@@ -28,7 +22,6 @@ import {
 import { Button } from '@/packages/components/ui/button'
 import { Badge } from '@/packages/components/ui/badge'
 import { Input } from '@/packages/components/ui/input'
-import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 import { useToast } from '@/packages/hooks/use-toast'
 import { NexiumDashboard, type NexiumSection } from '@/packages/components/profile/nexium-dashboard'
 import { SquadDashboardClient } from './squads/[id]/client'
@@ -73,22 +66,7 @@ const STATUS_COLORS: Record<string, string> = {
   DISBANDED: 'bg-destructive/20 text-destructive border-destructive/30',
 }
 
-// Top-level sidebar items
-const topLevelSections = [
-  { value: 'talent', label: 'Talent Profile', icon: User },
-  { value: 'squads', label: 'Squads', icon: Users },
-]
-
-// Talent profile sub-sections — replaces the internal ScrollIndicator in desktop sidebar
-const talentSubSections: { value: NexiumSection; label: string; icon: React.ElementType }[] = [
-  { value: 'profile', label: 'Profile', icon: User },
-  { value: 'skills', label: 'Skills', icon: Sparkles },
-  { value: 'signals', label: 'Signals', icon: Zap },
-  { value: 'opportunities', label: 'Opportunities', icon: Briefcase },
-  { value: 'applications', label: 'Applications', icon: ClipboardList },
-]
-
-// Squad sub-sections
+// Squad sub-sections (used when viewing a specific squad)
 const squadTabs = [
   { value: 'overview', label: 'Overview', icon: Settings },
   { value: 'members', label: 'Members', icon: Users },
@@ -385,38 +363,6 @@ function SquadsList({ onSquadSelect }: { onSquadSelect: (squad: Squad) => void }
   )
 }
 
-// -- Sidebar button helpers --------------------------------------------------
-
-function SidebarBtn({
-  isActive,
-  onClick,
-  icon: Icon,
-  label,
-  indent = false,
-}: {
-  isActive: boolean
-  onClick: () => void
-  icon: React.ElementType
-  label: string
-  indent?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
-        indent ? 'pl-4' : ''
-      } ${
-        isActive
-          ? 'bg-primary/10 text-primary font-medium shadow-sm border border-primary/20'
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-      }`}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      {label}
-    </button>
-  )
-}
-
 // -- Main exported client ----------------------------------------------------
 
 export function NexiumDashboardClient() {
@@ -426,20 +372,17 @@ export function NexiumDashboardClient() {
   const [selectedSquad, setSelectedSquad] = useState<{ id: string; role: string; name: string } | null>(null)
   const [squadTab, setSquadTab] = useState('overview')
 
-  // Set initial tab from URL query param
+  // Sync from URL search params
   useEffect(() => {
     const tabParam = searchParams.get('tab')
     if (tabParam === 'squads') setSelectedTab('squads')
-  }, [searchParams])
+    else setSelectedTab('talent')
 
-  // Update URL when top-level tab changes
-  const handleTabChange = useCallback((value: 'talent' | 'squads') => {
-    setSelectedTab(value)
-    setSelectedSquad(null)
-    const url = new URL(window.location.href)
-    url.searchParams.set('tab', value)
-    window.history.pushState({}, '', url.toString())
-  }, [])
+    const sectionParam = searchParams.get('section') as NexiumSection | null
+    if (sectionParam && ['profile', 'skills', 'signals', 'opportunities', 'applications'].includes(sectionParam)) {
+      setTalentSection(sectionParam)
+    }
+  }, [searchParams])
 
   const handleSquadSelect = useCallback((squad: Squad) => {
     setSelectedSquad({ id: squad.id, role: squad.myRole, name: squad.name })
@@ -451,170 +394,21 @@ export function NexiumDashboardClient() {
     setSquadTab('overview')
   }, [])
 
-  // Determine which sidebar mode we're in
+  // Determine which view mode we're in
   const mode = selectedSquad
     ? 'squad'
     : selectedTab === 'talent'
       ? 'talent'
       : 'top'
 
-  // Mobile strip items
-  const mobileItems = (() => {
-    if (mode === 'squad') return squadTabs
-    if (mode === 'talent') return talentSubSections
-    return topLevelSections
-  })()
-
   return (
-    <div className="flex flex-col lg:flex-row gap-6 overflow-hidden lg:items-start">
-      {/* Sidebar Navigation */}
-      <nav className="lg:w-56 shrink-0">
-
-        {/* Mobile: horizontal scrollable strip */}
-        <ScrollIndicator className="lg:hidden glass-subtle rounded-xl p-1.5">
-          <div className="flex gap-1 w-max">
-            {(mode === 'squad' || mode === 'talent') && (
-              <button
-                onClick={mode === 'squad' ? handleBackToSquads : () => handleTabChange('squads')}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all duration-150"
-              >
-                <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
-                {mode === 'squad' ? 'Squads' : 'Back'}
-              </button>
-            )}
-            {mobileItems.map((item) => {
-              const Icon = item.icon
-              const isActive =
-                mode === 'squad'
-                  ? squadTab === item.value
-                  : mode === 'talent'
-                    ? talentSection === item.value
-                    : selectedTab === item.value
-              const handleClick = () => {
-                if (mode === 'squad') setSquadTab(item.value)
-                else if (mode === 'talent') setTalentSection(item.value as NexiumSection)
-                else handleTabChange(item.value as 'talent' | 'squads')
-              }
-              return (
-                <button
-                  key={item.value}
-                  onClick={handleClick}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
-                    isActive
-                      ? 'bg-primary/10 text-primary font-medium border border-primary/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  {isActive && item.label}
-                </button>
-              )
-            })}
-          </div>
-        </ScrollIndicator>
-
-        {/* Desktop: full grouped sidebar */}
-        <div className="hidden lg:block glass-subtle rounded-xl p-2 lg:sticky lg:top-24 space-y-3">
-
-          {/* ── Squad detail mode ── */}
-          {mode === 'squad' && (
-            <>
-              <SidebarBtn
-                isActive={false}
-                onClick={handleBackToSquads}
-                icon={ArrowLeft}
-                label="Back to Squads"
-              />
-              <div className="px-3 py-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                  {selectedSquad!.name}
-                </p>
-              </div>
-              <div className="space-y-0.5">
-                {squadTabs.map((item) => (
-                  <SidebarBtn
-                    key={item.value}
-                    isActive={squadTab === item.value}
-                    onClick={() => setSquadTab(item.value)}
-                    icon={item.icon}
-                    label={item.label}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* ── Talent profile mode ── */}
-          {mode === 'talent' && (
-            <>
-              <div className="space-y-0.5">
-                {/* Top-level items — Talent Profile stays active, Squads navigates away */}
-                {topLevelSections.map((item) => {
-                  const Icon = item.icon
-                  const isActive = item.value === 'talent'
-                  return (
-                    <button
-                      key={item.value}
-                      onClick={() => handleTabChange(item.value as 'talent' | 'squads')}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
-                        isActive
-                          ? 'bg-primary/10 text-primary font-medium shadow-sm border border-primary/20'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {item.label}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Talent sub-sections indented below */}
-              <div className="space-y-0.5 pl-2 border-l border-border/40 ml-3">
-                {talentSubSections.map((item) => (
-                  <SidebarBtn
-                    key={item.value}
-                    isActive={talentSection === item.value}
-                    onClick={() => setTalentSection(item.value)}
-                    icon={item.icon}
-                    label={item.label}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* ── Top-level mode (squads list) ── */}
-          {mode === 'top' && (
-            <div className="space-y-0.5">
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Discovery
-              </p>
-              {topLevelSections.map((item) => {
-                const Icon = item.icon
-                return (
-                  <button
-                    key={item.value}
-                    onClick={() => handleTabChange(item.value as 'talent' | 'squads')}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
-                      selectedTab === item.value
-                        ? 'bg-primary/10 text-primary font-medium shadow-sm border border-primary/20'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {item.label}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* Content Area */}
-      <div className="flex-1 min-w-0 space-y-6">
-        {mode === 'squad' && (
+    <div className="space-y-6">
+      {mode === 'squad' && (
+        <>
+          <Button variant="ghost" size="sm" onClick={handleBackToSquads} className="gap-1.5">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to Squads
+          </Button>
           <SquadDashboardClient
             squadId={selectedSquad!.id}
             role={selectedSquad!.role}
@@ -622,32 +416,32 @@ export function NexiumDashboardClient() {
             activeTab={squadTab}
             onTabChange={setSquadTab}
           />
-        )}
+        </>
+      )}
 
-        {mode === 'talent' && (
-          <GlassCard>
-            <GlassCardHeader>
-              <GlassCardTitle>Talent Profile</GlassCardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Set up your talent profile to get discovered for opportunities, collaborations, and squads
-              </p>
-            </GlassCardHeader>
-            <GlassCardContent>
-              <NexiumDashboard
-                activeSection={talentSection}
-                onSectionChange={setTalentSection}
-              />
-            </GlassCardContent>
-          </GlassCard>
-        )}
+      {mode === 'talent' && (
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle>Talent Profile</GlassCardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Set up your talent profile to get discovered for opportunities, collaborations, and squads
+            </p>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <NexiumDashboard
+              activeSection={talentSection}
+              onSectionChange={setTalentSection}
+            />
+          </GlassCardContent>
+        </GlassCard>
+      )}
 
-        {mode === 'top' && (
-          <>
-            <IncomingInvites />
-            <SquadsList onSquadSelect={handleSquadSelect} />
-          </>
-        )}
-      </div>
+      {mode === 'top' && (
+        <>
+          <IncomingInvites />
+          <SquadsList onSquadSelect={handleSquadSelect} />
+        </>
+      )}
     </div>
   )
 }

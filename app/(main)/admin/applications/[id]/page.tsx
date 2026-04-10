@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CalendarDays, ClipboardCheck, Hash, MessageSquare } from 'lucide-react'
 
+import { AdminShell } from '@/packages/components/admin/admin-shell'
 import { ApplicationReviewForm } from '@/packages/components/admin/applications/review-form'
 import { ApplicationReplies } from '@/packages/components/applications/application-replies'
 import { Badge } from '@/packages/components/ui/badge'
@@ -56,7 +57,7 @@ export default async function AdminApplicationDetailPage({
   const answers = application.answers as Record<string, unknown>
 
   return (
-    <div className="container space-y-6">
+    <AdminShell>
       {/* Header */}
       <div className="glass-card overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-accent" />
@@ -239,6 +240,6 @@ export default async function AdminApplicationDetailPage({
           </div>
         </div>
       </div>
-    </div>
+    </AdminShell>
   )
 }

@@ -13,7 +13,7 @@ export const metadata = buildPageMetadata({
   description: 'Administrative dashboard for managing Emberly settings and users.',
 })
 
-export default async function DashboardLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
@@ -34,7 +34,9 @@ export default async function DashboardLayout({
       showFooter={config.settings.general.credits.showFooter}
       maxUploadSize={maxSizeBytes}
     >
-      {children}
+      <div className="container space-y-6">
+        {children}
+      </div>
     </DashboardWrapper>
   )
 }

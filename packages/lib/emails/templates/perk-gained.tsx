@@ -28,7 +28,7 @@ export function PerkGainedEmail({
   perkDescription,
   perkIcon = '🎉',
   expiresAt,
-  viewUrl = 'https://embrly.ca/dashboard/profile',
+  viewUrl = 'https://embrly.ca/me',
 }: PerkGainedEmailProps) {
   const expiryDate = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', {
     year: 'numeric',

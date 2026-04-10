@@ -112,7 +112,7 @@ export default async function ProfilePage() {
   const usagePercentage = quotasEnabled ? (user.storageUsed / quotaMB) * 100 : 0
 
   return (
-    <div className="container space-y-6">
+    <div className="space-y-6">
       <div className="glass-card">
         <div className="p-8">
           <div className="flex items-start justify-between">

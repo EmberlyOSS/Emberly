@@ -114,7 +114,7 @@ export function ProfileClient({
         description: decodeURIComponent(success),
       })
       // Clear query params
-      window.history.replaceState({}, '', '/dashboard/profile')
+      window.history.replaceState({}, '', '/me')
     }
 
     if (error) {
@@ -124,7 +124,7 @@ export function ProfileClient({
         variant: 'destructive',
       })
       // Clear query params
-      window.history.replaceState({}, '', '/dashboard/profile')
+      window.history.replaceState({}, '', '/me')
     }
   }, [searchParams, toast])
 

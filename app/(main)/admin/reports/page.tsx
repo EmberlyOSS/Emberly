@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { AdminShell } from '@/packages/components/admin/admin-shell'
 import { Badge } from '@/packages/components/ui/badge'
 import {
   Table,
@@ -92,7 +93,7 @@ export default async function AdminReportsPage({
   ])
 
   return (
-    <div className="container space-y-6">
+    <AdminShell header={
       <div className="glass-card">
         <div className="p-8">
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
@@ -101,7 +102,7 @@ export default async function AdminReportsPage({
           </p>
         </div>
       </div>
-
+    }>
       <div>
           {/* Type tabs */}
           <div className="flex gap-2 mb-4">
@@ -425,6 +426,6 @@ export default async function AdminReportsPage({
             </>
           )}
         </div>
-    </div>
+    </AdminShell>
   )
 }

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         return response
     } catch (error) {
         console.error('[GET /api/auth/link/github]', error)
-        return NextResponse.redirect(new URL('/dashboard/profile?error=github_link_failed', baseUrl))
+        return NextResponse.redirect(new URL('/me?error=github_link_failed', baseUrl))
     }
 }
 

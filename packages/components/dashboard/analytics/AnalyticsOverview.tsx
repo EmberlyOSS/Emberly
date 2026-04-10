@@ -244,43 +244,31 @@ export default function AnalyticsOverview() {
 
     return (
         <div className="space-y-4 sm:space-y-6">
-            {/* Header */}
-            <GlassCard>
-                <div className="p-4 sm:p-6 lg:p-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold">Analytics</h1>
-                            <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                                Overview of your account activity and traffic.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleRefresh}
-                                disabled={refreshing}
-                            >
-                                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </Button>
-                            {data.allowed?.exportCSV ? (
-                                <Button size="sm" onClick={handleExport}>
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Export
-                                </Button>
-                            ) : (
-                                <Button size="sm" variant="secondary" asChild>
-                                    <a href="/pricing">
-                                        <Zap className="h-4 w-4 mr-2" />
-                                        Upgrade
-                                    </a>
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </GlassCard>
+            {/* Actions */}
+            <div className="flex items-center gap-2 justify-end">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    Refresh
+                </Button>
+                {data.allowed?.exportCSV ? (
+                    <Button size="sm" onClick={handleExport}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                    </Button>
+                ) : (
+                    <Button size="sm" variant="secondary" asChild>
+                        <a href="/pricing">
+                            <Zap className="h-4 w-4 mr-2" />
+                            Upgrade
+                        </a>
+                    </Button>
+                )}
+            </div>
 
             {/* Main Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

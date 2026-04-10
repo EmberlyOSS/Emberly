@@ -6,8 +6,8 @@ import BaseNav from './base-nav'
 
 export default function ConditionalBaseNav() {
   const pathname = usePathname() || ''
-  // Hide base nav for dashboard routes and api routes
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api')) {
+  // Hide base nav for dashboard routes, admin routes, me routes, and api routes
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/me') || pathname.startsWith('/api')) {
     return null
   }
 

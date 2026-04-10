@@ -4,6 +4,7 @@ import { Code2 } from 'lucide-react'
 import { getServerSession } from 'next-auth'
 
 import { EditPasteForm } from '@/packages/components/dashboard/edit-paste-form'
+import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
 
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -52,7 +53,7 @@ export default async function EditPastePage({ params }: EditPastePageProps) {
     const content = buffer.toString('utf-8')
 
     return (
-        <div className="container max-w-5xl space-y-6">
+        <DashboardShell>
             <div className="glass-card overflow-hidden">
                 <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50 bg-muted/30">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
@@ -69,6 +70,6 @@ export default async function EditPastePage({ params }: EditPastePageProps) {
                     <EditPasteForm file={file} initialContent={content} />
                 </div>
             </div>
-        </div>
+        </DashboardShell>
     )
 }

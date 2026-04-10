@@ -26,7 +26,7 @@ export function NewLoginEmail({
   loginLocation = 'Unknown location',
   loginTime = new Date().toLocaleString(),
   loginDevice = 'Unknown device',
-  reviewUrl = 'https://embrly.ca/dashboard/profile?tab=security',
+  reviewUrl = 'https://embrly.ca/me?tab=security',
 }: NewLoginEmailProps) {
   return (
     <Html>

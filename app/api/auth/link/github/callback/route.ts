@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
         if (error) {
             console.warn('[GitHub OAuth callback] Error from GitHub:', error)
             return NextResponse.redirect(
-                new URL(`/dashboard/profile?error=GitHub authorization failed: ${error}`, baseUrl)
+                new URL(`/me?error=GitHub authorization failed: ${error}`, baseUrl)
             )
         }
 
         if (!code) {
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Missing authorization code', baseUrl)
+                new URL('/me?error=Missing authorization code', baseUrl)
             )
         }
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             console.error('[GitHub OAuth callback] Token exchange failed:', tokenData.error)
             return NextResponse.redirect(
                 new URL(
-                    `/dashboard/profile?error=Failed to exchange GitHub code: ${tokenData.error}`,
+                    `/me?error=Failed to exchange GitHub code: ${tokenData.error}`,
                     baseUrl
                 )
             )
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
         if (!userInfo) {
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Failed to retrieve GitHub user info', baseUrl)
+                new URL('/me?error=Failed to retrieve GitHub user info', baseUrl)
             )
         }
 
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         if (existingLink && existingLink.userId !== session.user.id) {
             return NextResponse.redirect(
                 new URL(
-                    `/dashboard/profile?error=This GitHub account is already linked to another user`,
+                    `/me?error=This GitHub account is already linked to another user`,
                     baseUrl
                 )
             )
@@ -159,11 +159,11 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        return NextResponse.redirect(new URL('/dashboard/profile?success=GitHub%20account%20linked', baseUrl))
+        return NextResponse.redirect(new URL('/me?success=GitHub%20account%20linked', baseUrl))
     } catch (error) {
         console.error('[GitHub OAuth callback]', error)
         return NextResponse.redirect(
-            new URL('/dashboard/profile?error=Failed to link GitHub account', baseUrl)
+            new URL('/me?error=Failed to link GitHub account', baseUrl)
         )
     }
 }

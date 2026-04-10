@@ -32,6 +32,8 @@ import {
   ClipboardList,
   ShieldAlert,
   Database,
+  LayoutDashboard,
+  Shield,
 } from 'lucide-react'
 
 import { Icons } from '@/packages/components/shared/icons'
@@ -59,7 +61,8 @@ const baseRoutes = [
 ]
 
 const dashboardRoutes = [
-  { href: '/dashboard', label: 'Files', icon: FolderOpen },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/files', label: 'Files', icon: FolderOpen },
   { href: '/dashboard/upload', label: 'Upload', icon: Upload },
   { href: '/dashboard/paste', label: 'Paste', icon: Clipboard },
   { href: '/dashboard/urls', label: 'Links', icon: LinkIcon },
@@ -77,6 +80,7 @@ const extrasRoutes = [
 ]
 
 const adminRoutesBase = [
+  { href: '/admin', label: 'Admin', icon: Shield },
   { href: '/admin/blog', label: 'Blogs', icon: BookOpen },
   { href: '/admin/legal', label: 'Legal', icon: Gavel },
   { href: '/admin/users', label: 'Users', icon: Users },
@@ -92,7 +96,7 @@ const adminRoutesBase = [
 
 const sectionsTemplate = [
   { id: 'base', title: 'Base', icon: House, items: baseRoutes },
-  { id: 'dashboard', title: 'Dashboard', icon: FolderOpen, items: dashboardRoutes },
+  { id: 'dashboard', title: 'Dashboard', icon: LayoutDashboard, items: dashboardRoutes },
   { id: 'admin', title: 'Administration', icon: Settings, items: adminRoutesBase },
   { id: 'extras', title: 'Extras', icon: GitGraph, items: extrasRoutes },
 ]
@@ -101,7 +105,7 @@ const sectionsTemplate = [
 
 function isActive(pathname: string, href: string) {
   if (!href || href.startsWith('http')) return false
-  if (href === '/') return pathname === '/'
+  if (href === '/' || href === '/dashboard' || href === '/admin') return pathname === href
   return pathname === href || pathname.startsWith(href + '/') || pathname.startsWith(href)
 }
 
@@ -148,7 +152,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sectionsTemplate.map((s) => [s.id, s.id === 'base']))
+    Object.fromEntries(sectionsTemplate.map((s) => [s.id, s.id === 'base' || s.id === 'extras']))
   )
 
   const toggleSection = (id: string) =>
@@ -201,6 +205,28 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
         <div className="flex items-center space-x-0.5 bg-background/80 backdrop-blur-lg rounded-2xl p-1.5 border border-border/50 shadow-lg shadow-black/5">
           {sections.map((sec) => {
             const SectionIcon = sec.icon
+
+            // Dashboard and Admin render as simple links on desktop
+            if (sec.id === 'dashboard' || sec.id === 'admin') {
+              const href = sec.items[0].href
+              const active = isActive(pathname, href)
+              return (
+                <Button
+                  key={sec.id}
+                  variant="ghost"
+                  className={`h-9 px-4 rounded-xl font-medium transition-all duration-200 hover:bg-background/90 focus-visible:ring-0 ${
+                    active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  asChild
+                >
+                  <Link href={href}>
+                    <SectionIcon className="h-4 w-4" />
+                    <span className="mx-1.5">{sec.title}</span>
+                  </Link>
+                </Button>
+              )
+            }
+
             return (
               <DropdownMenu
                 key={sec.id}
@@ -254,7 +280,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
       <div className="hidden md:flex ml-auto items-center gap-3 shrink-0">
         {session ? (
           <Button variant="ghost" className="h-9 w-9 rounded-full p-0" asChild>
-            <Link href="/dashboard/profile">
+            <Link href="/me">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? ''} />
                 <AvatarFallback className="text-xs">{initials}</AvatarFallback>
@@ -301,7 +327,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
             </div>
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             <div className="flex-1 overflow-auto px-4 pb-6 space-y-2">
-              {sections.map((sec) => {
+              {sections.filter(s => s.id !== 'dashboard' && s.id !== 'admin').map((sec) => {
                 const SectionIcon = sec.icon
                 const isOpen = openSections[sec.id]
                 return (
@@ -355,7 +381,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
               {session ? (
                 <div className="space-y-0.5">
                   <Link
-                    href="/dashboard/profile"
+                    href="/me"
                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg hover:bg-background/60 transition-colors"
                     onClick={() => setSheetOpen(false)}
                   >
@@ -370,9 +396,19 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg hover:bg-background/60 transition-colors"
                     onClick={() => setSheetOpen(false)}
                   >
-                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                    <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
                     Dashboard
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg hover:bg-background/60 transition-colors"
+                      onClick={() => setSheetOpen(false)}
+                    >
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      Admin
+                    </Link>
+                  )}
                   <button
                     type="button"
                     className="w-full flex items-center gap-2.5 text-left px-3 py-2.5 text-sm text-destructive rounded-lg hover:bg-destructive/10 transition-colors"

@@ -190,7 +190,7 @@ export function registerAccountHandlers(): void {
                 variables: {
                     email: payload.email,
                     scheduledAt: payload.scheduledAt.toISOString(),
-                    cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/profile?cancel-deletion=true`,
+                    cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/me?cancel-deletion=true`,
                 },
                 userId: payload.userId,
                 priority: 'high',

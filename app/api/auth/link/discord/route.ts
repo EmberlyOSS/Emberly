@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         return response
     } catch (error) {
         console.error('[GET /api/auth/link/discord]', error)
-        return NextResponse.redirect(new URL('/dashboard/profile?error=discord_link_failed', baseUrl))
+        return NextResponse.redirect(new URL('/me?error=discord_link_failed', baseUrl))
     }
 }
 

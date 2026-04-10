@@ -5,7 +5,7 @@ import type {
   PaginationInfo,
   SortOption,
 } from '@/packages/types/components/file'
-import { Users } from 'lucide-react'
+import { Users, FolderOpen, ChevronDown, Shield } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 
 import { FileCard } from '@/packages/components/dashboard/file-card'
@@ -20,6 +20,12 @@ import { SharedFileCard } from '@/packages/components/dashboard/shared-file-card
 import { EmptyPlaceholder } from '@/packages/components/shared/empty-placeholder'
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/packages/components/ui/dropdown-menu'
 
 import { useFileFilters } from '@/packages/hooks/use-file-filters'
 
@@ -48,8 +54,9 @@ export function FileGrid() {
   const [sharedFiles, setSharedFiles] = useState<SharedFile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [fileTypes, setFileTypes] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<'my-files' | 'shared'>('my-files')
+  const [viewMode, setViewMode] = useState<'my-files' | 'shared' | 'squad'>('my-files')
   const [sharedCount, setSharedCount] = useState(0)
+  const [squadCount, setSquadCount] = useState(0)
   const [enableRichEmbeds, setEnableRichEmbeds] = useState(true)
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
     total: 0,
@@ -133,6 +140,22 @@ export function FileGrid() {
     fetchSharedCount()
   }, [])
 
+  // Fetch squad files count on mount
+  useEffect(() => {
+    async function fetchSquadCount() {
+      try {
+        const response = await fetch('/api/files?squad=true&limit=1')
+        if (response.ok) {
+          const data = await response.json()
+          setSquadCount(data.pagination?.total || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching squad count:', error)
+      }
+    }
+    fetchSquadCount()
+  }, [])
+
   useEffect(() => {
     async function fetchFiles() {
       try {
@@ -153,6 +176,41 @@ export function FileGrid() {
             setPaginationInfo({
               total: apiResult.pagination.total || 0,
               pageCount: apiResult.pagination.pageCount || 0,
+              page: filters.page,
+              limit: filters.limit,
+            })
+          }
+        } else if (viewMode === 'squad') {
+          // Fetch squad files
+          const params = new URLSearchParams({
+            page: filters.page.toString(),
+            limit: filters.limit.toString(),
+            squad: 'true',
+            search: filters.search,
+            sortBy: filters.sortBy,
+            ...(filters.types.length > 0 && { types: filters.types.join(',') }),
+            ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
+            ...(filters.dateTo && { dateTo: filters.dateTo }),
+            ...(filters.visibility.length > 0 && {
+              visibility: filters.visibility.join(','),
+            }),
+          })
+          const response = await fetch(`/api/files?${params}`)
+          if (!response.ok) throw new Error('Failed to fetch squad files')
+          const apiResult = await response.json()
+          setFiles(Array.isArray(apiResult.data) ? apiResult.data : [])
+          setSharedFiles([])
+          if (apiResult.pagination) {
+            setPaginationInfo({
+              total: apiResult.pagination.total || 0,
+              pageCount: apiResult.pagination.pageCount || 0,
+              page: filters.page,
+              limit: filters.limit,
+            })
+          } else {
+            setPaginationInfo({
+              total: 0,
+              pageCount: 0,
               page: filters.page,
               limit: filters.limit,
             })
@@ -259,6 +317,32 @@ export function FileGrid() {
       )
     }
 
+    // Squad files view
+    if (viewMode === 'squad') {
+      if (files.length === 0 && paginationInfo.total === 0) {
+        return (
+          <EmptyPlaceholder>
+            <EmptyPlaceholder.Icon name="users" />
+            <EmptyPlaceholder.Title>No squad files</EmptyPlaceholder.Title>
+            <EmptyPlaceholder.Description>
+              Files uploaded by your squad members will appear here.
+            </EmptyPlaceholder.Description>
+          </EmptyPlaceholder>
+        )
+      }
+
+      return (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {files.map((file) => (
+              <FileCard key={file.id} file={file} onDelete={handleDelete} enableRichEmbeds={enableRichEmbeds} />
+            ))}
+          </div>
+          <FileGridPagination paginationInfo={paginationInfo} setPage={setPage} />
+        </>
+      )
+    }
+
     // User's own files view
     if (files.length === 0 && paginationInfo.total === 0) {
       const hasActiveFilters =
@@ -302,10 +386,19 @@ export function FileGrid() {
     )
   }
 
-  const handleViewModeChange = (mode: 'my-files' | 'shared') => {
+  const handleViewModeChange = (mode: 'my-files' | 'shared' | 'squad') => {
     setViewMode(mode)
     setPage(1) // Reset to first page when switching views
   }
+
+  const viewModeLabels = {
+    'my-files': { label: 'My Files', icon: FolderOpen, description: 'View and manage your uploaded files' },
+    shared: { label: 'Shared with Me', icon: Users, description: 'Files others have shared with you' },
+    squad: { label: 'Squad Files', icon: Shield, description: 'Files uploaded by your squad members' },
+  } as const
+
+  const currentMode = viewModeLabels[viewMode]
+  const CurrentIcon = currentMode.icon
 
   return (
     <div className="space-y-6">
@@ -317,32 +410,59 @@ export function FileGrid() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">
-                  {viewMode === 'shared' ? 'Shared with Me' : 'Your Files'}
+                  {currentMode.label}
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                  {viewMode === 'shared'
-                    ? 'Files others have shared with you'
-                    : 'View and manage your uploaded files'}
+                  {currentMode.description}
                 </p>
               </div>
-              <Button
-                variant={viewMode === 'shared' ? 'default' : 'outline'}
-                onClick={() => handleViewModeChange(viewMode === 'shared' ? 'my-files' : 'shared')}
-                className="flex items-center gap-2 shrink-0"
-              >
-                <Users className="h-4 w-4" />
-                {viewMode === 'shared' ? 'My Files' : 'Shared with Me'}
-                {sharedCount > 0 && viewMode !== 'shared' && (
-                  <Badge variant="secondary" className="ml-1">
-                    {sharedCount}
-                  </Badge>
-                )}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 shrink-0">
+                    <CurrentIcon className="h-4 w-4" />
+                    {currentMode.label}
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    onClick={() => handleViewModeChange('my-files')}
+                    className={viewMode === 'my-files' ? 'bg-secondary font-medium' : ''}
+                  >
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    My Files
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleViewModeChange('shared')}
+                    className={viewMode === 'shared' ? 'bg-secondary font-medium' : ''}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Shared with Me
+                    {sharedCount > 0 && (
+                      <Badge variant="secondary" className="ml-auto">
+                        {sharedCount}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleViewModeChange('squad')}
+                    className={viewMode === 'squad' ? 'bg-secondary font-medium' : ''}
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Squad Files
+                    {squadCount > 0 && (
+                      <Badge variant="secondary" className="ml-auto">
+                        {squadCount}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
-          {/* Filters - only show for user's own files */}
-          {viewMode === 'my-files' && (
+          {/* Filters - only show for user's own files and squad files */}
+          {(viewMode === 'my-files' || viewMode === 'squad') && (
             <div className="px-6 pb-6">
               <div className="flex flex-col sm:flex-row gap-4">
                 <SearchInput onSearch={setSearch} initialValue={filters.search} />

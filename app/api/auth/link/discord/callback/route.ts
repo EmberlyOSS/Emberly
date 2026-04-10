@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
         if (error) {
             console.warn('[Discord OAuth callback] Error from Discord:', error)
             return NextResponse.redirect(
-                new URL(`/dashboard/profile?error=Discord authorization failed: ${error}`, baseUrl)
+                new URL(`/me?error=Discord authorization failed: ${error}`, baseUrl)
             )
         }
 
         if (!code) {
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Missing authorization code', baseUrl)
+                new URL('/me?error=Missing authorization code', baseUrl)
             )
         }
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
             console.error('[Discord OAuth callback] Token exchange failed:', tokenData.error)
             return NextResponse.redirect(
                 new URL(
-                    `/dashboard/profile?error=Failed to exchange Discord code: ${tokenData.error}`,
+                    `/me?error=Failed to exchange Discord code: ${tokenData.error}`,
                     request.url
                 )
             )
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         if (!userInfo.id) {
             console.error('[Discord OAuth callback] Failed to get user info:', userInfo.error)
             return NextResponse.redirect(
-                new URL('/dashboard/profile?error=Failed to retrieve Discord user info', request.url)
+                new URL('/me?error=Failed to retrieve Discord user info', request.url)
             )
         }
 
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
         if (existingLink && existingLink.userId !== session.user.id) {
             return NextResponse.redirect(
                 new URL(
-                    `/dashboard/profile?error=This Discord account is already linked to another user`,
+                    `/me?error=This Discord account is already linked to another user`,
                     request.url
                 )
             )
@@ -168,11 +168,11 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        return NextResponse.redirect(new URL('/dashboard/profile?success=Discord%20account%20linked', baseUrl))
+        return NextResponse.redirect(new URL('/me?success=Discord%20account%20linked', baseUrl))
     } catch (error) {
         console.error('[Discord OAuth callback]', error)
         return NextResponse.redirect(
-            new URL('/dashboard/profile?error=Failed to link Discord account', baseUrl)
+            new URL('/me?error=Failed to link Discord account', baseUrl)
         )
     }
 }

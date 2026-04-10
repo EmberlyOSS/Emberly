@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, ClipboardList, Clock, FileSearch } from 'lucide-react'
 
+import { AdminShell } from '@/packages/components/admin/admin-shell'
 import { Badge } from '@/packages/components/ui/badge'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
@@ -75,8 +76,7 @@ export default async function AdminApplicationsPage({
   }
 
   return (
-    <div className="container space-y-6">
-      {/* Header */}
+    <AdminShell header={
       <div className="glass-card overflow-hidden">
         <div className="p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -110,7 +110,7 @@ export default async function AdminApplicationsPage({
           </div>
         </div>
       </div>
-
+    }>
       {/* Filters */}
       <div className="flex flex-col gap-3">
         <div>
@@ -219,6 +219,6 @@ export default async function AdminApplicationsPage({
           ))}
         </div>
       )}
-    </div>
+    </AdminShell>
   )
 }

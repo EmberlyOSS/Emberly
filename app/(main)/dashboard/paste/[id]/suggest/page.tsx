@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { SuggestEditForm } from '@/packages/components/dashboard/suggest-edit-form'
+import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
 
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -61,7 +62,7 @@ export default async function SuggestEditPage({ params }: SuggestEditPageProps) 
     }
 
     return (
-        <div className="container max-w-5xl space-y-6 py-6">
+        <DashboardShell>
             <div className="glass-card overflow-hidden">
                 <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50 bg-muted/30">
                     <div>
@@ -75,6 +76,6 @@ export default async function SuggestEditPage({ params }: SuggestEditPageProps) 
                     <SuggestEditForm file={file} initialContent={content} />
                 </div>
             </div>
-        </div>
+        </DashboardShell>
     )
 }

@@ -467,7 +467,7 @@ export function SquadDashboardClient({
 
   if (loading) {
     return (
-      <div className={embedded ? '' : 'container'}>
+      <div>
         <div className="py-8 text-center text-muted-foreground">Loading…</div>
       </div>
     )
@@ -475,7 +475,7 @@ export function SquadDashboardClient({
 
   if (!squad) {
     return (
-      <div className={embedded ? '' : 'container'}>
+      <div>
         <div className="py-8 text-center text-muted-foreground">Squad not found</div>
       </div>
     )
@@ -1026,7 +1026,7 @@ export function SquadDashboardClient({
   if (embedded) return tabsContent
 
   return (
-    <div className="container space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="glass-card">
         <div className="p-8">

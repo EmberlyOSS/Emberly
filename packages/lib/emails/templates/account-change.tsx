@@ -25,7 +25,7 @@ interface AccountChangeEmailProps {
 export function AccountChangeEmail({
   userName,
   changes,
-  manageUrl = 'https://embrly.ca/dashboard/profile',
+  manageUrl = 'https://embrly.ca/me',
   supportUrl = 'https://embrly.ca/contact',
 }: AccountChangeEmailProps) {
   return (

@@ -7,7 +7,8 @@ import { authOptions } from '@/packages/lib/auth'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { prisma } from '@/packages/lib/database/prisma'
 
-import { LogoutButton } from '../profile/logout-button'
+import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
+import { LogoutButton } from '../../../me/logout-button'
 import { NexiumDashboardClient } from './client'
 
 export const metadata = buildPageMetadata({
@@ -25,7 +26,7 @@ export default async function NexiumDashboardPage() {
   })
 
   return (
-    <div className="container space-y-6">
+    <DashboardShell header={
       <div className="glass-card">
         <div className="p-8">
           <div className="flex items-start justify-between">
@@ -44,7 +45,7 @@ export default async function NexiumDashboardPage() {
                   </Link>
                 )}
                 <Link
-                  href="/dashboard/profile"
+                  href="/me"
                   className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   Profile Settings ↗
@@ -61,8 +62,8 @@ export default async function NexiumDashboardPage() {
           </div>
         </div>
       </div>
-
+    }>
       <NexiumDashboardClient />
-    </div>
+    </DashboardShell>
   )
 }

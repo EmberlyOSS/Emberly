@@ -5,6 +5,7 @@ import { AlertTriangle, Copy, Key, Server } from 'lucide-react'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
 
 export const metadata = buildPageMetadata({
   title: 'Storage Bucket',
@@ -48,8 +49,7 @@ export default async function BucketPage() {
 
   if (!bucket) {
     return (
-      <div className="container space-y-6">
-        {/* Header */}
+      <DashboardShell header={
         <div className="glass-card">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-2">
@@ -63,7 +63,7 @@ export default async function BucketPage() {
             </p>
           </div>
         </div>
-
+      }>
         {/* No bucket assigned */}
         <div className="glass-card">
           <div className="p-10 flex flex-col items-center text-center gap-4">
@@ -83,7 +83,7 @@ export default async function BucketPage() {
             </div>
           </div>
         </div>
-      </div>
+      </DashboardShell>
     )
   }
 
@@ -94,8 +94,7 @@ export default async function BucketPage() {
       : `${bucket.s3AccessKeyId.slice(0, 4)}••••`
 
   return (
-    <div className="container space-y-6">
-      {/* Header */}
+    <DashboardShell header={
       <div className="glass-card">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-2">
@@ -112,7 +111,7 @@ export default async function BucketPage() {
           </p>
         </div>
       </div>
-
+    }>
       {/* Security notice */}
       <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-sm text-amber-700 dark:text-amber-400">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -159,6 +158,6 @@ export default async function BucketPage() {
           </p>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   )
 }

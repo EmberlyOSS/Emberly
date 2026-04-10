@@ -1,4 +1,5 @@
 import { UploadForm } from '@/packages/components/file/upload-form'
+import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
 
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { getConfig } from '@/packages/lib/config'
@@ -36,16 +37,18 @@ export default async function UploadPage() {
   const formattedMaxSize = formatBytes(maxSizeBytes)
 
   return (
-    <div className="container space-y-6">
-      <div className="glass-card">
-        <div className="p-8">
-          <h1 className="text-3xl font-bold tracking-tight">Upload Files</h1>
-          <p className="text-muted-foreground mt-2">
-            Upload and share files with optional password protection
-          </p>
+    <DashboardShell
+      header={
+        <div className="glass-card">
+          <div className="p-8">
+            <h1 className="text-3xl font-bold tracking-tight">Upload Files</h1>
+            <p className="text-muted-foreground mt-2">
+              Upload and share files with optional password protection
+            </p>
+          </div>
         </div>
-      </div>
-
+      }
+    >
       <UploadForm
             user={{
               id: user.id,
@@ -55,6 +58,6 @@ export default async function UploadPage() {
             maxSize={maxSizeBytes}
             formattedMaxSize={formattedMaxSize}
           />
-    </div>
+    </DashboardShell>
   )
 }
