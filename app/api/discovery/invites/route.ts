@@ -14,9 +14,9 @@ export async function GET(req: Request) {
         select: {
           id: true,
           name: true,
-          urlId: true,
+          slug: true,
           description: true,
-          avatarUrl: true,
+          logo: true,
           _count: { select: { members: true } },
           maxSize: true,
         },

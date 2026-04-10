@@ -8,7 +8,7 @@ import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { prisma } from '@/packages/lib/database/prisma'
 
 import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
-import { LogoutButton } from '../../../me/logout-button'
+import { LogoutButton } from '../../me/logout-button'
 import { NexiumDashboardClient } from './client'
 
 export const metadata = buildPageMetadata({

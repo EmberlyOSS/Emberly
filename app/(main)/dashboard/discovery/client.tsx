@@ -17,7 +17,10 @@ import {
   Bell,
   Check,
   X,
+  User,
 } from 'lucide-react'
+
+import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 
 import { Button } from '@/packages/components/ui/button'
 import { Badge } from '@/packages/components/ui/badge'
@@ -36,9 +39,9 @@ type SquadIncomingInvite = {
   squad: {
     id: string
     name: string
-    urlId: string
+    slug: string
     description: string | null
-    avatarUrl: string | null
+    logo: string | null
     _count: { members: number }
     maxSize: number
   }
@@ -403,6 +406,63 @@ export function NexiumDashboardClient() {
 
   return (
     <div className="space-y-6">
+      {/* Mobile tab navigation — hidden on lg+ where sidebar handles this */}
+      {mode !== 'squad' && (
+        <div className="lg:hidden space-y-2">
+          <ScrollIndicator className="glass-subtle rounded-xl p-1.5">
+            <div className="flex gap-1 w-max">
+              {(
+                [
+                  { value: 'talent', label: 'Talent Profile', Icon: User },
+                  { value: 'squads', label: 'Squads', Icon: Users },
+                ] as const
+              ).map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setSelectedTab(value)}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
+                    selectedTab === value
+                      ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </ScrollIndicator>
+
+          {selectedTab === 'talent' && (
+            <ScrollIndicator className="glass-subtle rounded-xl p-1.5">
+              <div className="flex gap-1 w-max">
+                {(
+                  [
+                    { value: 'profile', label: 'Profile' },
+                    { value: 'skills', label: 'Skills' },
+                    { value: 'signals', label: 'Signals' },
+                    { value: 'opportunities', label: 'Opportunities' },
+                    { value: 'applications', label: 'Applications' },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setTalentSection(value)}
+                    className={`px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
+                      talentSection === value
+                        ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </ScrollIndicator>
+          )}
+        </div>
+      )}
+
       {mode === 'squad' && (
         <>
           <Button variant="ghost" size="sm" onClick={handleBackToSquads} className="gap-1.5">

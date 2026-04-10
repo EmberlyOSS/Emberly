@@ -23,7 +23,7 @@ export async function GET(
   const invite = await prisma.nexiumSquadInvite.findUnique({
     where: { token },
     include: {
-      squad: { select: { id: true, name: true, ownerUserId: true, urlId: true, maxSize: true, status: true, _count: { select: { members: true } } } },
+      squad: { select: { id: true, name: true, ownerUserId: true, slug: true, maxSize: true, status: true, _count: { select: { members: true } } } },
       invitedBy: { select: { id: true, name: true, email: true } },
     },
   })
