@@ -214,4 +214,18 @@ export async function getCustomHostname(hostnameId: string) {
     }
 }
 
-export default { createCustomHostname, getCustomHostname, createDnsRecord, deleteDnsRecord }
+/** Returns the zone's root domain name (e.g. 'emberly.site') by querying GET /zones/{zoneId} */
+export async function getZoneName(): Promise<string> {
+    const { zoneId, apiToken } = await getCfCredentials()
+    if (!zoneId || !apiToken) throw new Error('Cloudflare zone credentials not configured')
+    const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+    })
+    const json = await res.json().catch(() => null)
+    if (!res.ok || json?.success === false) {
+        throw new CloudflareError('Failed to fetch zone name', res.status, json?.errors ?? json, `/zones/${zoneId}`)
+    }
+    return json.result.name as string
+}
+
+export default { createCustomHostname, getCustomHostname, createDnsRecord, deleteDnsRecord, getZoneName }

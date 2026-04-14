@@ -38,6 +38,7 @@ const REGION_META: Record<string, { city: string; country: string; countryCode: 
     mex: { city: 'Mexico City',   country: 'Mexico',         countryCode: 'MX', dc: 'MEX' },
     sao: { city: 'Sao Paulo',     country: 'Brazil',         countryCode: 'BR', dc: 'SAO' },
     yto: { city: 'Toronto',       country: 'Canada',         countryCode: 'CA', dc: 'YTO' },
+    sjc: { city: 'Silicon Valley',country: 'United States',  countryCode: 'US', dc: 'SJC' },
 }
 
 const TIER_META: Record<string, { description: string; features: string[]; popular?: boolean }> = {
@@ -86,6 +87,7 @@ interface Props {
 export default function S3Section({ tiers }: Props) {
     const defaultTier = tiers.find((t) => t.availableRegions.length > 0) ?? tiers[0]
     const [selectedSlug, setSelectedSlug] = useState<string>(defaultTier?.slug ?? '')
+    const [selectedRegion, setSelectedRegion] = useState<string>(defaultTier?.availableRegions[0] ?? '')
 
     const selectedTier = tiers.find((t) => t.slug === selectedSlug) ?? tiers[0]
 
@@ -95,10 +97,10 @@ export default function S3Section({ tiers }: Props) {
             if (!meta) return null
             return { id, ...meta }
         })
-    .filter(Boolean) as Array<{ id: string; city: string; country: string; countryCode: string; dc: string }>
+        .filter(Boolean) as Array<{ id: string; city: string; country: string; countryCode: string; dc: string }>
 
-    const effectiveLocation = locations.find((l) => l.id === location) ? location : (locations[0]?.id ?? '')
-    const selectedLocation = locations.find((l) => l.id === effectiveLocation) ?? locations[0]
+    const effectiveRegion = locations.find((l) => l.id === selectedRegion) ? selectedRegion : (locations[0]?.id ?? '')
+    const selectedLocation = locations.find((l) => l.id === effectiveRegion) ?? locations[0]
 
     const tierWord = selectedSlug.replace('storage-bucket-', '')
 
@@ -176,7 +178,7 @@ export default function S3Section({ tiers }: Props) {
                             onClick={() => {
                                 if (noRegions) return
                                 setSelectedSlug(tier.slug)
-                                setLocation(tier.availableRegions[0] ?? '')
+                                setSelectedRegion(tier.availableRegions[0] ?? '')
                             }}
                         >
                             {isSelected && (
@@ -258,14 +260,14 @@ export default function S3Section({ tiers }: Props) {
                                     <button
                                         key={loc.id}
                                         type="button"
-                                        onClick={() => setLocation(loc.id)}
+                                        onClick={() => setSelectedRegion(loc.id)}
                                         className={`relative text-left p-4 rounded-xl border transition-all duration-200 ${
-                                            effectiveLocation === loc.id
+                                            effectiveRegion === loc.id
                                                 ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
                                                 : 'border-border/50 bg-background/30 hover:border-primary/40 hover:bg-primary/5'
                                         }`}
                                     >
-                                        {effectiveLocation === loc.id && (
+                                        {effectiveRegion === loc.id && (
                                             <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary" />
                                         )}
                                         <FlagSVG countryCode={loc.countryCode} className="h-8 w-12 mb-2 rounded-sm" />

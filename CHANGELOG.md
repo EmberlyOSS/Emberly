@@ -22,12 +22,39 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - Duplicated partner list drives a seamless CSS loop; pauses on hover.
   - Edge fade masks (`mask-image` gradient) soften the left/right boundaries.
   - `animate-marquee` keyframe added to `tailwind.config.ts` (`translateX(-50%)`, 30 s linear infinite).
+- **Vultr Object Storage Admin Panel** — Admins can now provision, manage, and sync Vultr Object Storage instances directly from Admin → Storage.
+  - New `VultrObjectStorage` Prisma model tracking `vultrId`, `region`, `clusterId`, `s3Hostname`, credentials, `tier`, `status`, `cfHostname`, and `cfDnsRecordId`.
+  - `packages/lib/vultr/index.ts` — new typed Vultr API client: `listObjectStorages()`, `createObjectStorage()`, `getObjectStorage()`, `deleteObjectStorage()`, `listClusters()`, `listTiers()`, `createObjectStorageBucket()`, `deleteObjectStorageBucket()`.
+  - `POST /api/admin/storage/vultr` — provisions a new instance via Vultr API, saves to DB, auto-creates a Cloudflare CNAME record.
+  - `GET /api/admin/storage/vultr` — lists all tracked instances; syncs stale `status` and credentials back to DB on every fetch.
+  - `GET/DELETE /api/admin/storage/vultr/[id]` — fetches/deletes a single instance; DELETE removes the Vultr instance, CF DNS record, and DB row.
+  - `POST /api/admin/storage/vultr/sync` — imports new Vultr instances not yet in the DB **and** updates status + credentials for existing stale records; response includes `imported`, `updated`, and `skipped` counts.
+  - `packages/components/admin/settings/vultr-instance-manager.tsx` — full admin UI: cluster/tier picker, region selector with SVG country flags, instance list with live status badges, delete with toast confirmation.
+  - Prisma migrations: `20260414071251_add_block_storage_management` (VultrObjectStorage table, StorageBucket Vultr fields), `20260414084547_add_cf_hostname_to_vultr_storage` (cfHostname, cfDnsRecordId columns).
+- **Cloudflare DNS Auto-Provisioning** — When an admin provisions a Vultr Object Storage instance, a DNS-only CNAME record is automatically created in Cloudflare pointing at the Vultr S3 hostname.
+  - `createDnsRecord()` and `deleteDnsRecord()` added to `packages/lib/cloudflare/client.ts`; record ID stored as `cfDnsRecordId` on the instance for reliable cleanup on delete.
+  - Record is DNS-only (`proxied: false`) since Vultr TLS certificates only cover `*.vultrobjects.com`; Cloudflare proxying would break S3 signature authentication.
+- **Automatic Storage Bucket Provisioning** — Purchasing a storage-bucket subscription now automatically creates a dedicated Vultr bucket for the user with no manual admin intervention required.
+  - Stripe `checkout.session.completed` webhook reads `metadata.type === 'storage-bucket'` and `metadata.location` to select the correct Vultr pool and call `createObjectStorageBucket()`.
+  - On subscription cancellation, the webhook calls `deleteObjectStorageBucket()`, clears the `StorageBucket` record, and unlinks the user — keeping costs proportional to active subscribers.
+  - Per-user bucket name is DNS-safe and scoped to the user ID (`emberly-{userId slice}`).
+  - `user.bucket-provisioned` and `user.bucket-deprovisioned` events wired into email and Discord notification preference maps.
+- **Tiered Storage Bucket Products** — The S3/Object Storage tab on the pricing page now supports five tiers: Standard, Archival, Premium, Performance, and Accelerated.
+  - Pricing page queries `VultrObjectStorage` for active instances, groups by `tier` keyword, and passes per-tier `availableRegions` to `S3Section`.
+  - `StorageTier` type exported from `S3Section.tsx` carries `slug`, `name`, `priceId`, `priceCents`, and `availableRegions`.
+  - `EXCLUDED_ADDON_KEYS` in `AddOnsSection.tsx` expanded to cover all `storage-bucket-*` slugs so tier products never appear in the generic add-ons list.
+- **Vultr API Key in Integrations Config** — `vultr.apiKey` added to the config schema (`packages/lib/config/index.ts`) and `DEFAULT_CONFIG`; the Vultr client reads from this field with a fallback to the `VULTR_API_KEY` environment variable.
 
 ### Changed
 - **Profile API Tab** — Upload token and API key management moved out of the Uploads tab into a new dedicated **API** tab in `/me`.
   - `KeyRound` icon; tab inserted between Uploads and Applications in the Content group.
   - Upload Host domain selector remains in the Uploads tab (upload config, not key management).
   - `packages/components/profile/tools/upload-host.tsx` extracted as a standalone component and restored to `ProfileTools`.
+- **S3 Pricing Section Redesigned** — `S3Section.tsx` completely rebuilt around the new tier + region model.
+  - Location picker shows SVG country flags (`country-flag-icons/react/3x2`) instead of emoji for consistent cross-platform rendering.
+  - Tier cards replace the old single-product layout; each tier displays its price, region availability, and a "Choose location" picker that is only shown when the admin has provisioned that tier in at least one region.
+  - Checkout flow passes `metadata.type`, `metadata.location`, and `metadata.tier` to the Stripe session so the webhook can auto-provision the correct bucket.
+- **Dashboard Storage Tracker Reading Correct Source** — The overview storage card now reads `user.storageUsed` (the denormalized MB field updated on every upload/delete) instead of aggregating raw bytes from the `File` table, which excluded S3-backed objects and caused near-zero or incorrect totals.
 
 ### Fixed
 - **Storage Usage Inconsistencies** — Several parts of the site were displaying incorrect or near-zero storage values due to unit mismatches across the storage pipeline.
@@ -36,6 +63,15 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
   - `StorageMetrics.tsx` — removed manual `/ 1024 / 1024` division; now reads `data.totalMB` and calls `formatFileSize(mb)` directly.
   - `AnalyticsOverview.tsx` — `storageTotalBytes` → `storageTotalMB` throughout; `storageDay?.bytes` → `storageDay?.mb`; `item.bytes` → `item.mb` in breakdown render.
   - `POST /api/files` — squad `storageUsed` was being incremented with raw bytes (`uploadedFile.size`) instead of MB; fixed to `bytesToMB(uploadedFile.size)`.
+- **Storage Quota Matching All Tiered Bucket Slugs** — `getPlanLimits()` was only checking for an active `storage-bucket` subscription; users who purchased a tiered variant (e.g. `storage-bucket-archival`) still had quota enforced. Fixed to match any slug that `startsWith('storage-bucket')`.
+- **File Privacy: Direct URLs Never Expose Storage Hostnames** — The `/direct` endpoint for raw file access and both `GET`/`POST` variants of the download route were returning pre-signed Vultr URLs or redirect responses that exposed `*.vultrobjects.com` hostnames to clients.
+  - All paths now route through Emberly's own proxy (`buildRawUrl()`); storage provider URLs are never returned to the browser.
+- **Admin Vultr Sync Updates Existing Instances** — The "Sync Vultr" button previously only imported instances not yet tracked in the database; instances that had drifted (status changed from `pending` → `active`, or credentials populated after instance activation) were skipped silently.
+  - Sync endpoint now splits results into `toImport` (new) and `toUpdate` (existing with stale status or blank credentials) and runs both in parallel; toast shows `imported`, `updated`, and `skipped` counts.
+- **Admin Vultr Status Not Synced Back to DB** — Vultr instances provisioned while still `pending` were never updated to `active` in the database, causing the pricing page to show no available regions.
+  - Both the list and single-instance GET handlers now detect drift (live status ≠ DB status, or blank credentials now populated) and write the updated values back to the database; list endpoint fires-and-forgets, single-instance endpoint awaits before responding.
+- **Destructive Confirmations Use Toast Actions** — All destructive confirmation dialogs across the admin and profile UI previously used the browser's native `confirm()`, which blocks the UI thread and cannot be styled.
+  - Replaced with `toast({ variant: 'destructive', action: <ToastAction> })` pattern in 9 component files: `vultr-instance-manager.tsx`, `storage-bucket-manager.tsx`, `settings-manager.tsx`, `partner-list.tsx`, `blog-list.tsx`, `legal-list.tsx`, `ProductManager.tsx`, `testimonial-list.tsx`, and `profile/testimonials.tsx`.
 - **Storage Bucket Appearing in Add-Ons List** — The Storage Bucket product was falling through the `ADDON_META` lookup as an unmatched add-on and rendering in the generic add-ons section despite the code comment saying it was excluded.
   - Added `EXCLUDED_ADDON_KEYS` set (`'storage-bucket'`) to `AddOnsSection.tsx`; keys in this set are skipped before reaching the ungrouped fallback renderer.
 - **Verification Codes Removed** — The verification codes panel has been fully removed.

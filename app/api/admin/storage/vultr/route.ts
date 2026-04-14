@@ -1,6 +1,6 @@
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
-import { createDnsRecord } from '@/packages/lib/cloudflare/client'
+import { createDnsRecord, listDnsRecords, getZoneName } from '@/packages/lib/cloudflare/client'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import {
@@ -184,23 +184,52 @@ export async function POST(req: Request) {
         // Auto-create a DNS-only CNAME in Cloudflare (non-fatal — not proxied for S3 API compat)
         let cfHostname: string | null = null
         try {
-            const baseDomain = new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca').hostname
+            // Use the actual zone name from CF (e.g. 'emberly.site') — NOT NEXT_PUBLIC_BASE_URL
+            // which may be a different domain than the one the zone covers.
+            const zoneName = await getZoneName()
             const cnameLabel = `storage-${vultrInstance.region}`
-            const record = await createDnsRecord({
-                type: 'CNAME',
-                name: cnameLabel,
-                content: vultrInstance.s3_hostname,
-                proxied: false,
-                ttl: 1,
-            })
-            cfHostname = `${cnameLabel}.${baseDomain}`
+            cfHostname = `${cnameLabel}.${zoneName}`
+
+            let record: { id: string; name: string }
+            try {
+                record = await createDnsRecord({
+                    type: 'CNAME',
+                    name: cnameLabel,
+                    content: vultrInstance.s3_hostname,
+                    proxied: false,
+                    ttl: 1,
+                })
+                logger.info(`[Admin] Created Cloudflare DNS record ${record.id} → ${cfHostname}`)
+            } catch (createErr: any) {
+                // cfFetch throws CloudflareError with body = full CF response JSON object.
+                // Error 81053 = "Record already exists." — extract from body.errors array.
+                const cfErrors: any[] = Array.isArray(createErr?.body)
+                    ? createErr.body
+                    : Array.isArray(createErr?.body?.errors)
+                        ? createErr.body.errors
+                        : []
+                const isConflict = createErr?.status === 400 && cfErrors.some((e: any) => e.code === 81053)
+
+                if (!isConflict) throw createErr
+
+                logger.info(`[Admin] CNAME ${cnameLabel} already exists in Cloudflare — looking up existing record`)
+                const existing = await listDnsRecords({ type: 'CNAME', name: cfHostname })
+                const match = existing?.[0]
+                if (!match?.id) throw new Error(`CNAME ${cnameLabel} conflict but no matching record found in zone`)
+                record = { id: match.id, name: match.name }
+                logger.info(`[Admin] Reusing existing Cloudflare DNS record ${record.id} → ${cfHostname}`)
+            }
+
             await prisma.vultrObjectStorage.update({
                 where: { id: dbInstance.id },
                 data: { cfHostname, cfDnsRecordId: record.id },
             })
-            logger.info(`[Admin] Created Cloudflare DNS record ${record.id} → ${cfHostname}`)
-        } catch (cfErr) {
-            logger.warn('[Admin] Cloudflare DNS record creation failed (non-fatal)', cfErr as Error)
+        } catch (cfErr: any) {
+            // Embed details in the message string — dev logger formatter drops structured context
+            const detail = cfErr?.body
+                ? `status=${cfErr.status} body=${JSON.stringify(cfErr.body)}`
+                : String(cfErr?.message ?? cfErr)
+            logger.warn(`[Admin] Cloudflare DNS record creation failed (non-fatal): ${detail}`)
         }
 
         return apiResponse(
