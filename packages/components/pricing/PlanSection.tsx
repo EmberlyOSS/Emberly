@@ -253,7 +253,7 @@ export default function PlanSection({ plans, activePlanKey, billingCycle }: Prop
             )}
 
             {/* Plans Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
                 {otherPlans.map((plan) => (
                     <PlanCard 
                         key={plan.key}

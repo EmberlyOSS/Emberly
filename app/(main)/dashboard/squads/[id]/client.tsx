@@ -29,6 +29,13 @@ import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Separator } from '@/packages/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/packages/components/ui/select'
 import { useToast } from '@/packages/hooks/use-toast'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -167,7 +174,7 @@ export function SquadDashboardClient({
 
   const fetchSquad = useCallback(async () => {
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}`)
+      const res = await fetch(`/api/discovery/squads/${squadId}?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       // API returns apiResponse(squad) → data.data is the squad directly
@@ -181,7 +188,7 @@ export function SquadDashboardClient({
 
   const fetchApiKeys = useCallback(async () => {
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}/keys`)
+      const res = await fetch(`/api/discovery/squads/${squadId}/keys?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setApiKeys(data.data?.keys ?? [])
@@ -192,7 +199,7 @@ export function SquadDashboardClient({
 
   const fetchDomains = useCallback(async () => {
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}/domains`)
+      const res = await fetch(`/api/discovery/squads/${squadId}/domains?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setDomains(data.data?.domains ?? [])
@@ -204,7 +211,7 @@ export function SquadDashboardClient({
   const fetchInvites = useCallback(async () => {
     if (!isOwner) return
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}/invites`)
+      const res = await fetch(`/api/discovery/squads/${squadId}/invites?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setInvites(data.data?.invites ?? [])
@@ -215,7 +222,7 @@ export function SquadDashboardClient({
 
   const fetchQuota = useCallback(async () => {
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}/quota`)
+      const res = await fetch(`/api/discovery/squads/${squadId}/quota?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setQuota(data.data)
@@ -227,7 +234,7 @@ export function SquadDashboardClient({
   const fetchToken = useCallback(async () => {
     if (!isOwner) return
     try {
-      const res = await fetch(`/api/discovery/squads/${squadId}/token`)
+      const res = await fetch(`/api/discovery/squads/${squadId}/token?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setUploadToken(data.data?.uploadToken ?? null)
@@ -702,15 +709,19 @@ export function SquadDashboardClient({
                     <div className="flex items-center gap-2">
                       {/* Role badge / selector */}
                       {isOwner && m.role !== 'OWNER' ? (
-                        <select
+                        <Select
                           value={m.role}
                           disabled={updatingRole === m.userId}
-                          onChange={(e) => setMemberRole(m.userId, e.target.value)}
-                          className="text-xs rounded-lg px-2 py-1 bg-muted/40 border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                          onValueChange={(v) => setMemberRole(m.userId, v)}
                         >
-                          <option value="MEMBER">Member</option>
-                          <option value="OBSERVER">Observer</option>
-                        </select>
+                          <SelectTrigger className="h-7 text-xs w-[110px] bg-muted/40 border-border/50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MEMBER">Member</SelectItem>
+                            <SelectItem value="OBSERVER">Observer</SelectItem>
+                          </SelectContent>
+                        </Select>
                       ) : (
                         <Badge variant="outline" className={`text-xs ${ROLE_COLORS[m.role] || ''}`}>
                           {m.role}

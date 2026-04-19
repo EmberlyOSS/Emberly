@@ -1,6 +1,6 @@
-﻿'use client'
+'use client'
 
-import { NexiumDashboard } from '@/packages/components/profile/nexium-dashboard'
+import { NexiumDashboard } from '@/packages/components/profile/nexium'
 
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`glass-card transition-all duration-300 ${className}`}>{children}</div>

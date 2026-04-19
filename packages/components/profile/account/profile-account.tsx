@@ -14,7 +14,8 @@ import { Label } from '@/packages/components/ui/label'
 import { Textarea } from '@/packages/components/ui/textarea'
 
 import { useToast } from '@/packages/hooks/use-toast'
-import { Github, Twitter, Globe, MessageCircle, Image as ImageIcon } from 'lucide-react'
+import { Github, Twitter, Globe, Image as ImageIcon } from 'lucide-react'
+import { SiDiscord } from 'react-icons/si'
 
 export function ProfileAccount({ user, onUpdate }: ProfileAccountProps) {
   const { update: updateSession } = useSession()
@@ -249,7 +250,7 @@ export function ProfileAccount({ user, onUpdate }: ProfileAccountProps) {
           {discordLinked && (
             <div className="space-y-2">
               <Label htmlFor="discord" className="flex items-center gap-1.5 text-sm">
-                <MessageCircle className="w-3.5 h-3.5" /> Discord
+                <SiDiscord className="w-3.5 h-3.5" style={{ color: '#5865F2' }} /> Discord
               </Label>
               <Input id="discord" ref={discordRef}
                 defaultValue={(user as any).discord || ''} placeholder="username or handle" />
