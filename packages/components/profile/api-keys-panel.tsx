@@ -36,7 +36,7 @@ export function ApiKeysPanel() {
 
   const loadKeys = useCallback(async () => {
     try {
-      const res = await fetch('/api/profile/api-keys')
+      const res = await fetch(`/api/profile/api-keys?t=${Date.now()}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       setKeys(data.keys ?? [])

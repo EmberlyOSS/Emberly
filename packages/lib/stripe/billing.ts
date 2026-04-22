@@ -80,11 +80,14 @@ export async function createCheckoutSession(
     const stripe = await getStripeClient()
     const customerId = await ensureStripeCustomer(userId, email, stripe)
 
+    let creditsAppliedCents = 0
+
     if (applyCredits) {
         const creditsResult = await applyReferralCreditsToStripe(userId, stripe, {
             relatedOrderId: priceId,
         })
         if (creditsResult.applied) {
+            creditsAppliedCents = Math.round(creditsResult.creditAmount * 100)
             logger.info(
                 `[Billing] Applied $${creditsResult.creditAmount} referral credits for user ${userId}`
             )
@@ -97,7 +100,11 @@ export async function createCheckoutSession(
         line_items: [{ price: priceId, quantity }],
         allow_promotion_codes: true,
         client_reference_id: userId,
-        metadata: { userId, ...metadata },
+        metadata: {
+            userId,
+            ...metadata,
+            ...(creditsAppliedCents > 0 ? { creditsAppliedCents: String(creditsAppliedCents) } : {}),
+        },
         success_url: successUrl,
         cancel_url: cancelUrl,
     })

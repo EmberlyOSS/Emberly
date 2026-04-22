@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { prisma } from '@/packages/lib/database/prisma'
+import {
+  hasValidInternalApiSecret,
+  internalApiSecretConfigured,
+} from '@/packages/lib/security/internal-api'
 
 /**
  * Internal API endpoint to fetch file settings for middleware use.
  * This is needed because middleware runs on Edge runtime and can't use Prisma directly.
  */
 export async function GET(request: NextRequest) {
-  // Verify this is an internal request
-  const internalHeader = request.headers.get('x-internal-request')
-  if (internalHeader !== 'true') {
+  if (!internalApiSecretConfigured()) {
+    return NextResponse.json({ error: 'Internal API secret is not configured' }, { status: 503 })
+  }
+
+  if (!hasValidInternalApiSecret(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

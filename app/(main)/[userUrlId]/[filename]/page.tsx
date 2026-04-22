@@ -314,7 +314,7 @@ export default async function FilePage({
           </Link>
         </div>
 
-        <Link href={`/${serializedFile.user.urlId}`} className="glass glass-hover rounded-xl px-3 py-2 sm:px-4 transition-all">
+        <Link href={`/user/${serializedFile.user.name}`} className="glass glass-hover rounded-xl px-3 py-2 sm:px-4 transition-all">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Avatar className="h-6 w-6 sm:h-7 sm:w-7 ring-1 ring-white/10">
               <AvatarImage

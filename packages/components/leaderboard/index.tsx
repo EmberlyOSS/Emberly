@@ -322,7 +322,7 @@ export function Leaderboard() {
   )
 
   return (
-    <div className="pb-20">
+    <div className="pb-32">
       {/* Header */}
       <div className="text-center mb-12 space-y-4 animate-fade-up">
         <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/10 mb-4 animate-float">
@@ -337,18 +337,27 @@ export function Leaderboard() {
       </div>
 
       <Tabs defaultValue="contributors" onValueChange={handleTabChange} className="w-full">
-        <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-8">
-          <TabsTrigger value="contributors" className="gap-1.5">
+        <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-12 h-auto p-1.5 gap-1 rounded-xl bg-muted/50">
+          <TabsTrigger
+            value="contributors"
+            className="gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none"
+          >
             <TrendingUp className="w-4 h-4" />
             <span className="hidden sm:inline">Contributors</span>
             <span className="sm:hidden">Top</span>
           </TabsTrigger>
-          <TabsTrigger value="discovery" className="gap-1.5">
+          <TabsTrigger
+            value="discovery"
+            className="gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none"
+          >
             <Compass className="w-4 h-4" />
             <span className="hidden sm:inline">Discovery</span>
             <span className="sm:hidden">Talent</span>
           </TabsTrigger>
-          <TabsTrigger value="squads" className="gap-1.5">
+          <TabsTrigger
+            value="squads"
+            className="gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none"
+          >
             <Users className="w-4 h-4" />
             Squads
           </TabsTrigger>

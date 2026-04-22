@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ArrowLeft, Calendar, Scale, BookOpen, ExternalLink, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Calendar, Scale, BookOpen, MessageCircle } from 'lucide-react'
+import { SiDiscord } from 'react-icons/si'
 import { formatDistanceToNow } from 'date-fns'
 
 import MarkdownRenderer from '@/packages/components/shared/MarkdownRenderer'
@@ -145,7 +146,7 @@ export default function LegalArticle({
                                             href="/discord"
                                             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
                                         >
-                                            <ExternalLink className="h-3.5 w-3.5 shrink-0 group-hover:text-primary transition-colors" />
+                                            <SiDiscord className="h-3.5 w-3.5 shrink-0 group-hover:text-primary transition-colors" style={{ color: '#5865F2' }} />
                                             <span>Discord</span>
                                         </Link>
                                     </li>

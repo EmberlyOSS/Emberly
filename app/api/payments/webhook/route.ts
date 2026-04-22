@@ -14,6 +14,62 @@ import {
 
 const logger = loggers.api
 
+async function settleAppliedCredits(
+    userId: string,
+    amountCents: number,
+    relatedOrderId: string,
+    description: string,
+    metadata?: Record<string, unknown>,
+) {
+    if (amountCents <= 0) return
+
+    await prisma.$transaction(async (tx) => {
+        const existing = await tx.creditTransaction.findFirst({
+            where: {
+                userId,
+                type: { in: ['applied_checkout', 'applied_purchase'] },
+                relatedOrderId,
+            },
+            select: { id: true },
+        })
+
+        if (existing) return
+
+        const user = await tx.user.findUnique({
+            where: { id: userId },
+            select: { referralCredits: true },
+        })
+
+        const availableCreditCents = Math.max(0, Math.round((user?.referralCredits || 0) * 100))
+        const deductionCents = Math.min(amountCents, availableCreditCents)
+
+        if (deductionCents > 0) {
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    referralCredits: {
+                        decrement: deductionCents / 100,
+                    },
+                },
+            })
+        }
+
+        await tx.creditTransaction.create({
+            data: {
+                userId,
+                type: 'applied_purchase',
+                amountCents: -amountCents,
+                description,
+                relatedOrderId,
+                metadata: {
+                    ...(metadata || {}),
+                    settledFromReferralCreditsCents: deductionCents,
+                },
+            },
+        })
+    })
+}
+
 export async function POST(req: Request) {
     const integrations = await getIntegrations()
     const webhookSecret = integrations.stripe?.webhookSecret || process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK
@@ -105,6 +161,19 @@ export async function POST(req: Request) {
                             })
                         }
 
+                        const creditsApplied = sessionMetadata.creditsAppliedCents
+                            ? parseInt(sessionMetadata.creditsAppliedCents as string)
+                            : 0
+                        if (creditsApplied > 0) {
+                            await settleAppliedCredits(
+                                user.id,
+                                creditsApplied,
+                                subId,
+                                `Applied $${creditsApplied / 100} credit to subscription checkout`,
+                                { subscriptionId: subId, checkoutSessionId: session.id }
+                            )
+                        }
+
                         logger.info(`[Webhook] Subscription created for user ${user.id}: ${subId}`)
                     }
                 } else {
@@ -117,40 +186,80 @@ export async function POST(req: Request) {
                         user = await prisma.user.findFirst({ where: { stripeCustomerId: customer } })
                     }
                     if (user) {
-                        const purchase = await prisma.oneOffPurchase.create({
-                            data: {
-                                userId: user.id,
-                                type: metadata?.type || 'one_off',
-                                quantity: metadata?.quantity ? parseInt(metadata.quantity) : 1,
-                                amountCents: session.amount_total || 0,
-                                stripePaymentIntentId: session.payment_intent || undefined,
-                                metadata: metadata || {},
-                            },
-                        })
+                        const purchaseType = metadata?.type || 'one_off'
+                        const qty = metadata?.quantity ? parseInt(metadata.quantity) : 1
+                        const paymentIntentId = typeof session.payment_intent === 'string'
+                            ? session.payment_intent
+                            : undefined
 
-                        // Log purchase completion and credit transaction if credits were applied
-                        const amountPaid = session.amount_total || 0
-                        const originalAmount = metadata?.originalAmountCents ? parseInt(metadata.originalAmountCents) : amountPaid
-                        const creditsApplied = originalAmount - amountPaid
-
-                        if (creditsApplied > 0) {
-                            await prisma.creditTransaction.create({
-                                data: {
+                        if (paymentIntentId) {
+                            await prisma.oneOffPurchase.upsert({
+                                where: { stripePaymentIntentId: paymentIntentId },
+                                update: {
                                     userId: user.id,
-                                    type: 'applied_purchase',
-                                    amountCents: -creditsApplied, // Negative = credits spent
-                                    description: `Applied $${creditsApplied / 100} credit to ${metadata?.type || 'purchase'}`,
-                                    relatedOrderId: session.payment_intent || session.id,
-                                    metadata: { purchaseType: metadata?.type, quantity: metadata?.quantity },
+                                    type: purchaseType,
+                                    quantity: qty,
+                                    amountCents: session.amount_total || 0,
+                                    metadata: metadata || {},
+                                },
+                                create: {
+                                    userId: user.id,
+                                    type: purchaseType,
+                                    quantity: qty,
+                                    amountCents: session.amount_total || 0,
+                                    stripePaymentIntentId: paymentIntentId,
+                                    metadata: metadata || {},
                                 },
                             })
+                        } else {
+                            const existingPurchase = await prisma.oneOffPurchase.findFirst({
+                                where: {
+                                    userId: user.id,
+                                    type: purchaseType,
+                                    createdAt: {
+                                        gte: new Date(Date.now() - 1000 * 60 * 10),
+                                    },
+                                    metadata: {
+                                        path: ['checkoutSessionId'],
+                                        equals: session.id,
+                                    },
+                                },
+                                select: { id: true },
+                            })
+
+                            if (!existingPurchase) {
+                                await prisma.oneOffPurchase.create({
+                                    data: {
+                                        userId: user.id,
+                                        type: purchaseType,
+                                        quantity: qty,
+                                        amountCents: session.amount_total || 0,
+                                        metadata: {
+                                            ...(metadata || {}),
+                                            checkoutSessionId: session.id,
+                                        },
+                                    },
+                                })
+                            }
+                        }
+
+                        // Log purchase completion and credit transaction if credits were applied
+                        const creditsApplied = metadata?.creditsAppliedCents
+                            ? parseInt(metadata.creditsAppliedCents)
+                            : 0
+
+                        if (creditsApplied > 0) {
+                            await settleAppliedCredits(
+                                user.id,
+                                creditsApplied,
+                                String(session.payment_intent || session.id),
+                                `Applied $${creditsApplied / 100} credit to ${metadata?.type || 'purchase'}`,
+                                { purchaseType: metadata?.type, quantity: metadata?.quantity, checkoutSessionId: session.id }
+                            )
                             console.log(`[Webhook] Applied $${creditsApplied / 100} credit to user ${user.id} for purchase`)
                         }
 
                         // apply side-effects for specific one-off purchases
-                        const purchaseType = metadata?.type || 'one_off'
-                        const qty = metadata?.quantity ? parseInt(metadata.quantity) : 1
-
                         if (purchaseType === 'extra_storage') {
                             // qty is in GB; convert to MB
                             const addMB = qty * 1024
@@ -419,6 +528,38 @@ async function provisionUserStorageBucket(
     stripeSubscriptionId: string,
     tierSlug?: string,
 ): Promise<void> {
+    const existingUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+            storageBucketId: true,
+        },
+    })
+
+    if (existingUser?.storageBucketId) {
+        const assignedBucket = await prisma.storageBucket.findUnique({
+            where: { id: existingUser.storageBucketId },
+            select: { id: true, stripeSubscriptionId: true, provisionStatus: true },
+        })
+
+        if (assignedBucket) {
+            await prisma.storageBucket.update({
+                where: { id: assignedBucket.id },
+                data: {
+                    stripeSubscriptionId,
+                    provisionStatus: 'active',
+                },
+            })
+            logger.info(`[Provision] User ${user.id} already has bucket ${existingUser.storageBucketId}; kept assignment in place`)
+            return
+        }
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { storageBucketId: null },
+        })
+        logger.warn(`[Provision] Cleared stale bucket assignment ${existingUser.storageBucketId} for user ${user.id}`)
+    }
+
     // Find an active Vultr instance pool for this region, preferring one whose
     // tier matches the product the user purchased (e.g. 'standard', 'archival').
     // Falls back to any active instance in the region for backwards compatibility.
@@ -447,13 +588,79 @@ async function provisionUserStorageBucket(
     // Bucket name: lowercase, DNS-safe, unique per user
     const bucketName = `emberly-${user.id.slice(0, 20).toLowerCase().replace(/[^a-z0-9]/g, '')}`
 
+    const existingBucket = await prisma.storageBucket.findFirst({
+        where: {
+            OR: [
+                { stripeSubscriptionId },
+                { vultrBucketName: bucketName },
+                { s3Bucket: bucketName },
+            ],
+        },
+        select: { id: true },
+    })
+
+    if (existingBucket) {
+        await prisma.$transaction([
+            prisma.storageBucket.update({
+                where: { id: existingBucket.id },
+                data: {
+                    stripeSubscriptionId,
+                    vultrObjectStorageId: vultrInstance.id,
+                    provisionStatus: 'active',
+                },
+            }),
+            prisma.user.update({
+                where: { id: user.id },
+                data: { storageBucketId: existingBucket.id },
+            }),
+        ])
+        logger.info(`[Provision] Reused existing bucket ${existingBucket.id} for user ${user.id}`)
+        return
+    }
+
     // Create the bucket inside the shared Vultr instance
-    await createObjectStorageBucket(vultrInstance.vultrId, bucketName)
-    logger.info(`[Provision] Created Vultr bucket '${bucketName}' in instance ${vultrInstance.vultrId}`)
+    try {
+        await createObjectStorageBucket(vultrInstance.vultrId, bucketName)
+        logger.info(`[Provision] Created Vultr bucket '${bucketName}' in instance ${vultrInstance.vultrId}`)
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        if (!message.toLowerCase().includes('already exists')) {
+            throw err
+        }
+        logger.warn(`[Provision] Vultr bucket '${bucketName}' already exists; continuing with DB assignment`)
+    }
 
     // Persist the StorageBucket record and assign it to the user atomically
-    await prisma.$transaction(async (tx) => {
-        const storageBucket = await tx.storageBucket.create({
+    const storageBucket = await prisma.$transaction(async (tx) => {
+        const foundBucket = await tx.storageBucket.findFirst({
+            where: {
+                OR: [
+                    { stripeSubscriptionId },
+                    { vultrBucketName: bucketName },
+                    { s3Bucket: bucketName },
+                ],
+            },
+        })
+
+        const storageBucket = foundBucket
+            ? await tx.storageBucket.update({
+                where: { id: foundBucket.id },
+                data: {
+                    name: `${user.name || user.email || user.id}'s Bucket (${region.toUpperCase()})`,
+                    provider: 's3',
+                    s3Bucket: bucketName,
+                    s3Region: vultrInstance.region,
+                    s3AccessKeyId: vultrInstance.s3AccessKey,
+                    s3SecretKey: vultrInstance.s3SecretKey,
+                    s3Endpoint: `https://${vultrInstance.s3Hostname}`,
+                    s3ForcePathStyle: false,
+                    vultrObjectStorageId: vultrInstance.id,
+                    vultrBucketName: bucketName,
+                    stripeSubscriptionId,
+                    provisionStatus: 'active',
+                },
+            })
+            : await tx.storageBucket.create({
             data: {
                 name: `${user.name || user.email || user.id}'s Bucket (${region.toUpperCase()})`,
                 provider: 's3',
@@ -468,7 +675,7 @@ async function provisionUserStorageBucket(
                 stripeSubscriptionId,
                 provisionStatus: 'active',
             },
-        })
+            })
 
         await tx.user.update({
             where: { id: user.id },
@@ -484,7 +691,7 @@ async function provisionUserStorageBucket(
         region,
         bucketName,
         s3Hostname: vultrInstance.s3Hostname,
-        storageBucketId: '',  // populated below — emitting for notification only
+        storageBucketId: storageBucket.id,
     })
 
     logger.info(`[Provision] Bucket provisioned and assigned to user ${user.id}`)

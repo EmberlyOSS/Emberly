@@ -11,11 +11,11 @@ import {
   Github,
   Twitter,
   Globe,
-  MessageCircle,
   Copy,
   CheckCircle2,
   Loader2,
 } from 'lucide-react'
+import { SiDiscord } from 'react-icons/si'
 import Link from 'next/link'
 
 interface PublicProfileEditorProps {
@@ -247,7 +247,7 @@ export function PublicProfileEditor({ user, onSave }: PublicProfileEditorProps) 
           {/* Discord */}
           <div>
             <Label htmlFor="discord" className="flex items-center gap-2 mb-2">
-              <MessageCircle className="w-4 h-4" />
+              <SiDiscord className="w-4 h-4" style={{ color: '#5865F2' }} />
               Discord
             </Label>
             <Input
