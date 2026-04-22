@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { getStorageProvider } from '@/packages/lib/storage'
 
 function mapAwsErrorToStatus(errAny: any): number | null {
@@ -13,6 +14,9 @@ function mapAwsErrorToStatus(errAny: any): number | null {
 }
 
 export async function GET(req: Request) {
+    const { response } = await requireAdmin(req)
+    if (response) return response
+
     const url = new URL(req.url)
     const key = url.searchParams.get('key')
 
@@ -28,14 +32,11 @@ export async function GET(req: Request) {
             return NextResponse.json({ exists: true, size, provider: storageProvider.constructor.name })
         } catch (err) {
             const status = mapAwsErrorToStatus(err as any)
-            const awsMetadata = (err as any)?.$metadata
-            const message = (err as any)?.message || String(err)
-            const payload: any = { exists: false, message }
-            if (awsMetadata) payload.awsMetadata = awsMetadata
+            const payload = { exists: false }
             if (status) return NextResponse.json(payload, { status })
             return NextResponse.json(payload, { status: 502 })
         }
     } catch (error) {
-        return NextResponse.json({ error: 'Storage initialization failed', message: (error as any)?.message || String(error) }, { status: 500 })
+        return NextResponse.json({ error: 'Storage initialization failed' }, { status: 500 })
     }
 }
