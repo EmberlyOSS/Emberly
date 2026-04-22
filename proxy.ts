@@ -6,6 +6,7 @@ import { getToken } from 'next-auth/jwt'
 import { handleBotRequest } from './packages/lib/middleware/bot-handler'
 import { PROTECTED_PAGE_PATHS, SUPERADMIN_PATHS } from './packages/lib/middleware/constants'
 import { hasPermission, Permission } from './packages/lib/permissions'
+import { getInternalApiHeaders, internalApiSecretConfigured } from './packages/lib/security/internal-api'
 
 // Global store for login context (IP, UserAgent, Geo)
 // Used to pass request context to NextAuth callbacks
@@ -73,11 +74,15 @@ export async function proxy(request: NextRequest) {
     // Only rewrite the root path — everything else (files, short URLs, assets) passes through
     if (pathname === '/') {
       try {
+        if (!internalApiSecretConfigured()) {
+          return NextResponse.next()
+        }
+
         const lookupUrl = new URL('/api/internal/domain-lookup', request.url)
         lookupUrl.searchParams.set('hostname', incomingHost)
 
         const res = await fetch(lookupUrl.toString(), {
-          headers: { 'x-internal-request': 'true' },
+          headers: getInternalApiHeaders(),
         })
 
         if (res.ok) {

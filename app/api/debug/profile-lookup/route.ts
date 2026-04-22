@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/packages/lib/auth'
+
+import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
@@ -8,14 +8,11 @@ const logger = loggers.api
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user: adminUser, response } = await requireAdmin(req)
+    if (response) return response
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: adminUser.id },
       select: {
         id: true,
         name: true,

@@ -976,7 +976,8 @@ model StorageBucket {
 
   @@index([provider])
   @@index([vultrObjectStorageId])
-  @@index([stripeSubscriptionId])
+  @@unique([vultrBucketName])
+  @@unique([stripeSubscriptionId])
 }
 
 enum ContentReportType {

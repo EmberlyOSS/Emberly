@@ -6,33 +6,6 @@ import Stripe from 'stripe'
 import { prisma } from '@/packages/lib/database/prisma'
 
 /**
- * Log a credit transaction for audit trail
- */
-async function logCreditTransaction(
-  userId: string,
-  type: 'earned_referral' | 'applied_checkout' | 'applied_purchase' | 'manual_adjustment',
-  amountCents: number,
-  description: string,
-  metadata?: { relatedUserId?: string; relatedOrderId?: string; [key: string]: any }
-) {
-  try {
-    await prisma.creditTransaction.create({
-      data: {
-        userId,
-        type,
-        amountCents,
-        description,
-        relatedUserId: metadata?.relatedUserId,
-        relatedOrderId: metadata?.relatedOrderId,
-        metadata: metadata || {},
-      },
-    })
-  } catch (error) {
-    console.error('[Credit Transaction Log] Failed to log transaction:', error)
-  }
-}
-
-/**
  * Apply referral credits to a Stripe customer as account balance
  * Stripe supports negative balances (credits) via the customer's account balance
  */
@@ -41,6 +14,9 @@ export async function applyReferralCreditsToStripe(
   stripeClient: Stripe,
   metadata?: { relatedOrderId?: string }
 ): Promise<{ applied: boolean; creditAmount: number; newBalance: number }> {
+  let customerId: string | null = null
+  let originalBalance = 0
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -58,7 +34,9 @@ export async function applyReferralCreditsToStripe(
       }
     }
 
-    if (!user.stripeCustomerId) {
+    customerId = user.stripeCustomerId
+
+    if (!customerId) {
       console.warn(`[Stripe Credits] User ${userId} has no Stripe customer ID`)
       return {
         applied: false,
@@ -72,11 +50,11 @@ export async function applyReferralCreditsToStripe(
 
     // Update customer balance (negative balance = customer credit)
     // Stripe's balance field: positive = customer owes money, negative = customer has credit
-    const customer = await stripeClient.customers.retrieve(user.stripeCustomerId)
-    const currentBalance = (customer as any).balance || 0
-    const newBalance = currentBalance - creditCents // Subtract (which adds credit)
+    const customer = await stripeClient.customers.retrieve(customerId)
+    originalBalance = (customer as any).balance || 0
+    const newBalance = originalBalance - creditCents // Subtract (which adds credit)
 
-    const updatedCustomer = await stripeClient.customers.update(user.stripeCustomerId, {
+    await stripeClient.customers.update(customerId, {
       balance: newBalance,
       metadata: {
         referralCredits: user.referralCredits.toString(),
@@ -84,22 +62,27 @@ export async function applyReferralCreditsToStripe(
       },
     })
 
-    // Update user: mark credits as applied to Stripe
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        referralCredits: 0, // Clear the credits since they're now in Stripe
-      },
-    })
+    // Persist the credit removal and audit trail together. If this fails, roll
+    // the Stripe balance back so credits cannot exist in both systems.
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          referralCredits: 0,
+        },
+      })
 
-    // Log the credit application
-    await logCreditTransaction(
-      userId,
-      'applied_checkout',
-      -creditCents, // Negative because credits were applied (spent)
-      `Applied $${user.referralCredits} to Stripe account balance`,
-      { relatedOrderId: metadata?.relatedOrderId }
-    )
+      await tx.creditTransaction.create({
+        data: {
+          userId,
+          type: 'applied_checkout',
+          amountCents: -creditCents,
+          description: `Applied $${user.referralCredits} to Stripe account balance`,
+          relatedOrderId: metadata?.relatedOrderId,
+          metadata: metadata || {},
+        },
+      })
+    })
 
     console.log(
       `[Stripe Credits] Applied $${user.referralCredits} credit to user ${userId}, Stripe balance: $${newBalance / 100}`
@@ -111,6 +94,14 @@ export async function applyReferralCreditsToStripe(
       newBalance: newBalance / 100, // Convert back to dollars for response
     }
   } catch (error) {
+    if (customerId) {
+      try {
+        await stripeClient.customers.update(customerId, { balance: originalBalance })
+      } catch (rollbackError) {
+        console.error('[Stripe Credits] Failed to roll back Stripe balance:', rollbackError)
+      }
+    }
+
     console.error('[Stripe Credits] Failed to apply referral credits:', error)
     return {
       applied: false,
