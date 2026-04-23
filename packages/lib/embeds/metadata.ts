@@ -51,7 +51,10 @@ export async function buildRichMetadata({
 }: BuildMetadataOptions): Promise<Metadata> {
   const classification = classifyMimeType(mimeType)
   const fileUrl = new URL(fileUrlPath, baseUrl).toString()
-  const ogImageUrl = new URL(`${fileUrlPath}/opengraph-image`, baseUrl).toString()
+  const ogImageUrl = new URL(
+    `${fileUrlPath}/opengraph-image`,
+    baseUrl
+  ).toString()
   const uploadDate = uploadedAt.toISOString()
   const formattedSize = formatFileSize(size)
 
@@ -77,26 +80,32 @@ export async function buildRichMetadata({
   // We point to /player which is a minimal iframe-compatible video page.
   // On unwhitelisted domains Twitter silently degrades to summary_large_image.
   let twitterCard: string = 'summary_large_image'
-  let twitterPlayer: { playerUrl: string; streamUrl: string; width: number; height: number } | undefined
+  let twitterPlayer:
+    | { playerUrl: string; streamUrl: string; width: number; height: number }
+    | undefined
 
   if (classification.isVideo) {
     ogType = 'video.other'
     // og:video for Discord/Telegram/Slack inline playback.
     // Do NOT also set other['og:video'] — that creates duplicate tags that confuse crawlers.
-    openGraphVideos = [{
-      url: rawUrl,
-      secureUrl: rawUrl,
-      type: mimeType || 'video/mp4',
-      width: 1280,
-      height: 720,
-    }]
+    openGraphVideos = [
+      {
+        url: rawUrl,
+        secureUrl: rawUrl,
+        type: mimeType || 'video/mp4',
+        width: 1280,
+        height: 720,
+      },
+    ]
     // Poster thumbnail — Discord shows this as the card thumbnail before and during playback.
-    openGraphImages = [{
-      url: ogImageUrl,
-      alt: fileName,
-      width: 1200,
-      height: 630,
-    }]
+    openGraphImages = [
+      {
+        url: ogImageUrl,
+        alt: fileName,
+        width: 1200,
+        height: 630,
+      },
+    ]
     // Twitter player card: /player is a minimal HTML iframe page with just the <video> element.
     twitterCard = 'player'
     const playerUrl = new URL(`${fileUrlPath}/player`, baseUrl).toString()
@@ -110,33 +119,41 @@ export async function buildRichMetadata({
     // Use the raw image URL directly — Discord and Twitter render the actual image
     // in the embed rather than a generic branded card, which is far better UX.
     ogType = 'website'
-    openGraphImages = [{
-      url: rawUrl,
-      alt: fileName,
-    }]
+    openGraphImages = [
+      {
+        url: rawUrl,
+        alt: fileName,
+      },
+    ]
     twitterCard = 'summary_large_image'
   } else if (classification.isAudio || classification.isMusic) {
     ogType = classification.isMusic ? 'music.song' : 'website'
-    openGraphAudio = [{
-      url: rawUrl,
-      type: mimeType || 'audio/mpeg',
-    }]
+    openGraphAudio = [
+      {
+        url: rawUrl,
+        type: mimeType || 'audio/mpeg',
+      },
+    ]
     // Cover art card so platforms that don't render audio still show something meaningful.
-    openGraphImages = [{
-      url: ogImageUrl,
-      alt: fileName,
-      width: 1200,
-      height: 630,
-    }]
+    openGraphImages = [
+      {
+        url: ogImageUrl,
+        alt: fileName,
+        width: 1200,
+        height: 630,
+      },
+    ]
     twitterCard = 'summary_large_image'
   } else {
     // Generic file — branded preview card
-    openGraphImages = [{
-      url: ogImageUrl,
-      alt: `${fileName} — shared via Emberly`,
-      width: 1200,
-      height: 630,
-    }]
+    openGraphImages = [
+      {
+        url: ogImageUrl,
+        alt: `${fileName} — shared via Emberly`,
+        width: 1200,
+        height: 630,
+      },
+    ]
     twitterCard = 'summary_large_image'
   }
 
@@ -175,12 +192,27 @@ export async function buildRichMetadata({
 /**
  * Build minimal metadata for files when rich embeds are disabled or inaccessible.
  * Returns NO embed metadata - no og:image, no twitter cards, no preview cards.
+ * Also adds robots: noindex to prevent crawlers from indexing or embedding this page.
  * This ensures Discord/Twitter show plain links without any embed preview.
  */
-export function buildMinimalMetadata(fileName: string, rawUrl?: string): Metadata {
+export function buildMinimalMetadata(
+  fileName: string,
+  _rawUrl?: string
+): Metadata {
   return {
     title: fileName,
     description: 'Shared via Emberly',
+    robots: {
+      index: false,
+      follow: false,
+      noarchive: true,
+      nosnippet: true,
+      noimageindex: true,
+    },
+    other: {
+      googlebot: 'noindex, nofollow',
+      'googlebot-news': 'nosnippet',
+    },
   }
 }
 
@@ -199,7 +231,11 @@ export async function getBaseUrl(): Promise<string> {
   } catch {
     // headers() not available outside request context
   }
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    'http://localhost:3000'
+  )
 }
 
 /**
@@ -314,7 +350,10 @@ const SITE_KEYWORDS = [
   'sharex host',
 ]
 
-export function buildPageMetadata(options: { title: string; description?: string }): Metadata {
+export function buildPageMetadata(options: {
+  title: string
+  description?: string
+}): Metadata {
   return {
     title: options.title,
     description: options.description || SITE_DESCRIPTION,
