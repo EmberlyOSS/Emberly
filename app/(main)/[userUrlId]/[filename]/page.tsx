@@ -19,7 +19,11 @@ import { Input } from '@/packages/components/ui/input'
 import { authOptions } from '@/packages/lib/auth'
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
-import { buildMinimalMetadata, buildRichMetadata } from '@/packages/lib/embeds/metadata'
+import {
+  buildDirectMediaMetadata,
+  buildMinimalMetadata,
+  buildRichMetadata,
+} from '@/packages/lib/embeds/metadata'
 import { findFileByUrlPath } from '@/packages/lib/files/lookup'
 import { formatFileSize } from '@/packages/lib/utils'
 
@@ -123,9 +127,13 @@ export async function generateMetadata({
   }
 
   // When rich embeds are disabled, point crawlers to the raw file URL
-  // This makes Discord/Twitter embed the raw file directly (like sharing /raw URL)
+  // This preserves media inline behavior (video/image/audio) without branded cards.
   if (file.user.enableRichEmbeds === false) {
-    return buildMinimalMetadata(file.name, rawUrl)
+    return buildDirectMediaMetadata({
+      fileName: file.name,
+      rawUrl,
+      mimeType: file.mimeType,
+    })
   }
 
   // Build rich metadata for accessible files with rich embeds enabled
