@@ -217,6 +217,87 @@ export function buildMinimalMetadata(
 }
 
 /**
+ * Build lightweight metadata that mirrors "raw endpoint" behavior for media.
+ * Used when rich embeds are disabled so platforms can still inline media
+ * without branded Open Graph cards.
+ */
+export function buildDirectMediaMetadata(options: {
+  fileName: string
+  rawUrl: string
+  mimeType: string
+}): Metadata {
+  const { fileName, rawUrl, mimeType } = options
+  const normalizedMime = mimeType.toLowerCase().split(';')[0].trim()
+  const isImage = normalizedMime.startsWith('image/')
+  const isVideo = normalizedMime.startsWith('video/')
+  const isAudio = normalizedMime.startsWith('audio/')
+
+  if (!isImage && !isVideo && !isAudio) {
+    return buildMinimalMetadata(fileName)
+  }
+
+  const other: Record<string, string> = {}
+  if (isVideo) {
+    other['og:video'] = rawUrl
+    other['og:video:secure_url'] = rawUrl
+    other['og:video:type'] = normalizedMime || 'video/mp4'
+  } else if (isAudio) {
+    other['og:audio'] = rawUrl
+    other['og:audio:type'] = normalizedMime || 'audio/mpeg'
+  }
+
+  return {
+    title: fileName,
+    description: 'Shared via Emberly',
+    openGraph: {
+      title: fileName,
+      description: 'Shared via Emberly',
+      type: isVideo ? ('video.other' as any) : 'website',
+      images: isImage
+        ? [
+            {
+              url: rawUrl,
+              alt: fileName,
+            },
+          ]
+        : undefined,
+      videos: isVideo
+        ? [
+            {
+              url: rawUrl,
+              secureUrl: rawUrl,
+              type: normalizedMime || 'video/mp4',
+              width: 1280,
+              height: 720,
+            },
+          ]
+        : undefined,
+      audio: isAudio
+        ? [
+            {
+              url: rawUrl,
+              type: normalizedMime || 'audio/mpeg',
+            },
+          ]
+        : undefined,
+    },
+    twitter: isImage
+      ? {
+          card: 'summary_large_image',
+          title: fileName,
+          description: 'Shared via Emberly',
+          images: [rawUrl],
+        }
+      : {
+          card: 'summary',
+          title: fileName,
+          description: 'Shared via Emberly',
+        },
+    other,
+  }
+}
+
+/**
  * Get the base URL from headers or environment.
  */
 export async function getBaseUrl(): Promise<string> {
