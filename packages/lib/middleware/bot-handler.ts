@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { FILE_URL_PATTERN, VIDEO_EXTENSIONS } from './constants'
-import { getInternalApiHeaders, internalApiSecretConfigured } from '@/packages/lib/security/internal-api'
 
 export function isBotRequest(userAgent: string): boolean {
   userAgent = userAgent.toLowerCase()
@@ -15,7 +14,9 @@ export function isBotRequest(userAgent: string): boolean {
   )
 }
 
-export async function handleBotRequest(request: NextRequest): Promise<NextResponse | null> {
+export async function handleBotRequest(
+  request: NextRequest
+): Promise<NextResponse | null> {
   const userAgent = request.headers.get('user-agent')?.toLowerCase() || ''
 
   if (
@@ -44,13 +45,10 @@ export async function handleBotRequest(request: NextRequest): Promise<NextRespon
   let enableRichEmbeds = true // default to true
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
-    if (!internalApiSecretConfigured()) {
-      return NextResponse.next()
-    }
 
-    const response = await fetch(`${baseUrl}/api/internal/file-settings?urlPath=${encodeURIComponent(urlPath)}`, {
-      headers: getInternalApiHeaders(),
-    })
+    const response = await fetch(
+      `${baseUrl}/api/internal/file-settings?urlPath=${encodeURIComponent(urlPath)}`
+    )
     if (response.ok) {
       const data = await response.json()
       enableRichEmbeds = data.enableRichEmbeds !== false

@@ -106,7 +106,10 @@ export function isMusic(mimeType: string): boolean {
 }
 
 export function classifyMimeType(mimeType: string | undefined | null): FileClassification {
-  const safeMimeType = mimeType || 'application/octet-stream'
+  const safeMimeType = (mimeType || 'application/octet-stream')
+    .toLowerCase()
+    .split(';')[0]
+    .trim()
   return {
     isImage: isImage(safeMimeType),
     isVideo: isVideo(safeMimeType),
