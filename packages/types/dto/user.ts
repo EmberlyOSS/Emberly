@@ -8,7 +8,7 @@ export enum UserRole {
 
 // Schema for creating a new user (all fields required)
 export const CreateUserSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long').trim(),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long').trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces'),
   email: z.string().email('Invalid email address').max(255, 'Email too long').trim(),
   password: z.string().min(8).optional(),
   role: z.enum(['SUPERADMIN', 'ADMIN', 'USER']),
@@ -21,7 +21,7 @@ export const CreateUserSchema = z.object({
 // Schema for updating a user (fields are optional, id required)
 export const UpdateUserSchema = z.object({
   id: z.string(),
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long').trim().optional(),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long').trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
   email: z.string().email('Invalid email address').max(255, 'Email too long').trim().optional(),
   password: z.string().min(8).optional().or(z.literal('').transform(() => undefined)),
   role: z.enum(['SUPERADMIN', 'ADMIN', 'USER']).optional(),
