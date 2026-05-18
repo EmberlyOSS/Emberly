@@ -8,9 +8,9 @@ import { upsertSubscriptionRecord } from '@/packages/lib/stripe/billing'
 import { getStripeClient, isStripeConfigured } from '@/packages/lib/stripe/client'
 import { getIntegrations } from '@/packages/lib/config'
 import {
-    createObjectStorageBucket,
     deleteObjectStorageBucket,
 } from '@/packages/lib/vultr'
+import { provisionBucketForUserSubscription } from '@/packages/lib/storage/bucket-provisioning'
 
 const logger = loggers.api
 
@@ -148,7 +148,10 @@ export async function POST(req: Request) {
                         })
 
                         // Auto-provision Vultr Object Storage bucket for storage-bucket subscriptions
-                        const sessionMetadata = session.metadata || {}
+                        const sessionMetadata = {
+                            ...(stripeSub.metadata || {}),
+                            ...(session.metadata || {}),
+                        }
                         if (sessionMetadata.type === 'storage-bucket' && sessionMetadata.location) {
                             await provisionUserStorageBucket(
                                 user,
@@ -314,6 +317,26 @@ export async function POST(req: Request) {
                             currentPeriodEnd,
                             metadata: stripeSub.metadata || {},
                         })
+
+                        const existingBucket = await prisma.storageBucket.findUnique({
+                            where: { stripeSubscriptionId: subscriptionId },
+                            select: { id: true },
+                        })
+                        const isStorageBucketSub = (dbProduct?.slug || '').startsWith('storage-bucket')
+                        if (!existingBucket && isStorageBucketSub) {
+                            const tierFromSlug = dbProduct?.slug?.replace('storage-bucket-', '')
+                            const recoveryRegion = (stripeSub.metadata?.location as string | undefined) || ''
+                            const recoveryTier = (stripeSub.metadata?.tier as string | undefined) || tierFromSlug
+
+                            await provisionUserStorageBucket(
+                                user,
+                                recoveryRegion,
+                                subscriptionId,
+                                recoveryTier,
+                            ).catch((err) => {
+                                logger.error(`[Webhook] Invoice recovery provisioning failed for user ${user.id}`, err)
+                            })
+                        }
 
                         // Log invoice payment
                         const amountPaid = invoice.amount_paid || 0
@@ -528,173 +551,14 @@ async function provisionUserStorageBucket(
     stripeSubscriptionId: string,
     tierSlug?: string,
 ): Promise<void> {
-    const existingUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: {
-            storageBucketId: true,
-        },
-    })
-
-    if (existingUser?.storageBucketId) {
-        const assignedBucket = await prisma.storageBucket.findUnique({
-            where: { id: existingUser.storageBucketId },
-            select: { id: true, stripeSubscriptionId: true, provisionStatus: true },
-        })
-
-        if (assignedBucket) {
-            await prisma.storageBucket.update({
-                where: { id: assignedBucket.id },
-                data: {
-                    stripeSubscriptionId,
-                    provisionStatus: 'active',
-                },
-            })
-            logger.info(`[Provision] User ${user.id} already has bucket ${existingUser.storageBucketId}; kept assignment in place`)
-            return
-        }
-
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { storageBucketId: null },
-        })
-        logger.warn(`[Provision] Cleared stale bucket assignment ${existingUser.storageBucketId} for user ${user.id}`)
-    }
-
-    // Find an active Vultr instance pool for this region, preferring one whose
-    // tier matches the product the user purchased (e.g. 'standard', 'archival').
-    // Falls back to any active instance in the region for backwards compatibility.
-    const tierWord = tierSlug ?? null  // e.g. 'standard', 'archival', or null
-
-    let vultrInstance = tierWord
-        ? await prisma.vultrObjectStorage.findFirst({
-              where: { region, status: 'active', tier: { contains: tierWord, mode: 'insensitive' } },
-              orderBy: { createdAt: 'asc' },
-          })
-        : null
-
-    if (!vultrInstance) {
-        vultrInstance = await prisma.vultrObjectStorage.findFirst({
-            where: { region, status: 'active' },
-            orderBy: { createdAt: 'asc' },
-        })
-    }
-
-    if (!vultrInstance) {
-        logger.error(`[Provision] No active Vultr Object Storage pool for region '${region}'. ` +
-            `Admin must provision one at Admin → Storage → Vultr before users can purchase in this region.`)
-        return
-    }
-
-    // Bucket name: lowercase, DNS-safe, unique per user
-    const bucketName = `emberly-${user.id.slice(0, 20).toLowerCase().replace(/[^a-z0-9]/g, '')}`
-
-    const existingBucket = await prisma.storageBucket.findFirst({
-        where: {
-            OR: [
-                { stripeSubscriptionId },
-                { vultrBucketName: bucketName },
-                { s3Bucket: bucketName },
-            ],
-        },
-        select: { id: true },
-    })
-
-    if (existingBucket) {
-        await prisma.$transaction([
-            prisma.storageBucket.update({
-                where: { id: existingBucket.id },
-                data: {
-                    stripeSubscriptionId,
-                    vultrObjectStorageId: vultrInstance.id,
-                    provisionStatus: 'active',
-                },
-            }),
-            prisma.user.update({
-                where: { id: user.id },
-                data: { storageBucketId: existingBucket.id },
-            }),
-        ])
-        logger.info(`[Provision] Reused existing bucket ${existingBucket.id} for user ${user.id}`)
-        return
-    }
-
-    // Create the bucket inside the shared Vultr instance
-    try {
-        await createObjectStorageBucket(vultrInstance.vultrId, bucketName)
-        logger.info(`[Provision] Created Vultr bucket '${bucketName}' in instance ${vultrInstance.vultrId}`)
-    } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        if (!message.toLowerCase().includes('already exists')) {
-            throw err
-        }
-        logger.warn(`[Provision] Vultr bucket '${bucketName}' already exists; continuing with DB assignment`)
-    }
-
-    // Persist the StorageBucket record and assign it to the user atomically
-    const storageBucket = await prisma.$transaction(async (tx) => {
-        const foundBucket = await tx.storageBucket.findFirst({
-            where: {
-                OR: [
-                    { stripeSubscriptionId },
-                    { vultrBucketName: bucketName },
-                    { s3Bucket: bucketName },
-                ],
-            },
-        })
-
-        const storageBucket = foundBucket
-            ? await tx.storageBucket.update({
-                where: { id: foundBucket.id },
-                data: {
-                    name: `${user.name || user.email || user.id}'s Bucket (${region.toUpperCase()})`,
-                    provider: 's3',
-                    s3Bucket: bucketName,
-                    s3Region: vultrInstance.region,
-                    s3AccessKeyId: vultrInstance.s3AccessKey,
-                    s3SecretKey: vultrInstance.s3SecretKey,
-                    s3Endpoint: `https://${vultrInstance.s3Hostname}`,
-                    s3ForcePathStyle: false,
-                    vultrObjectStorageId: vultrInstance.id,
-                    vultrBucketName: bucketName,
-                    stripeSubscriptionId,
-                    provisionStatus: 'active',
-                },
-            })
-            : await tx.storageBucket.create({
-            data: {
-                name: `${user.name || user.email || user.id}'s Bucket (${region.toUpperCase()})`,
-                provider: 's3',
-                s3Bucket: bucketName,
-                s3Region: vultrInstance.region,
-                s3AccessKeyId: vultrInstance.s3AccessKey,
-                s3SecretKey: vultrInstance.s3SecretKey,
-                s3Endpoint: `https://${vultrInstance.s3Hostname}`,
-                s3ForcePathStyle: false,
-                vultrObjectStorageId: vultrInstance.id,
-                vultrBucketName: bucketName,
-                stripeSubscriptionId,
-                provisionStatus: 'active',
-            },
-            })
-
-        await tx.user.update({
-            where: { id: user.id },
-            data: { storageBucketId: storageBucket.id },
-        })
-
-        return storageBucket
-    })
-
-    await events.emit('user.bucket-provisioned', {
+    await provisionBucketForUserSubscription({
         userId: user.id,
-        email: user.email || '',
-        region,
-        bucketName,
-        s3Hostname: vultrInstance.s3Hostname,
-        storageBucketId: storageBucket.id,
+        email: user.email,
+        name: user.name,
+        stripeSubscriptionId,
+        region: region?.trim() || null,
+        tierSlug: tierSlug || null,
     })
-
-    logger.info(`[Provision] Bucket provisioned and assigned to user ${user.id}`)
 }
 
 /**

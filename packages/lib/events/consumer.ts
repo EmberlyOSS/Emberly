@@ -9,7 +9,7 @@ import type {
 import { EventStatus } from '@/packages/types/events'
 
 import { eventCache } from '@/packages/lib/cache/event-cache'
-import { prisma } from '@/packages/lib/database/prisma'
+import { prisma, isDatabaseConnectionError } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
 import { eventEmitter } from './emitter'
@@ -107,7 +107,8 @@ export class EventConsumer {
     let dbSynced = 0
     let dbErrors = 0
 
-    for (const h of handlersToSync) {
+    for (let i = 0; i < handlersToSync.length; i++) {
+      const h = handlersToSync[i]
       try {
         await prisma.eventHandler.upsert({
           where: {
@@ -128,6 +129,14 @@ export class EventConsumer {
         })
         dbSynced++
       } catch (error) {
+        if (isDatabaseConnectionError(error)) {
+          dbErrors++
+          // Requeue this and all remaining handlers for a later retry.
+          this.pendingDbSync.unshift(...handlersToSync.slice(i))
+          logger.warn('Event handler DB sync deferred: database unavailable')
+          break
+        }
+
         dbErrors++
         logger.warn(`Failed to sync handler ${h.eventType}:${h.handler} to DB`, {
           error: (error as Error).message,

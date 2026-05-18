@@ -94,20 +94,30 @@ export async function createCheckoutSession(
         }
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const checkoutMetadata: Record<string, string> = {
+        userId,
+        ...metadata,
+        ...(creditsAppliedCents > 0 ? { creditsAppliedCents: String(creditsAppliedCents) } : {}),
+    }
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode,
         customer: customerId,
         line_items: [{ price: priceId, quantity }],
         allow_promotion_codes: true,
         client_reference_id: userId,
-        metadata: {
-            userId,
-            ...metadata,
-            ...(creditsAppliedCents > 0 ? { creditsAppliedCents: String(creditsAppliedCents) } : {}),
-        },
+        metadata: checkoutMetadata,
         success_url: successUrl,
         cancel_url: cancelUrl,
-    })
+    }
+
+    // Keep storage-bucket metadata on the subscription itself so invoice-based
+    // webhook recovery can still provision by region/tier if checkout events are missed.
+    if (mode === 'subscription' && Object.keys(checkoutMetadata).length > 0) {
+        sessionParams.subscription_data = { metadata: checkoutMetadata }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
 
     logger.info(`[Billing] Checkout session created`, {
         userId,

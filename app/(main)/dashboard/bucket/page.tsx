@@ -5,6 +5,7 @@ import { AlertTriangle, Copy, Key, Server } from 'lucide-react'
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+import { provisionBucketForUserSubscription } from '@/packages/lib/storage/bucket-provisioning'
 import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
 
 export const metadata = buildPageMetadata({
@@ -30,6 +31,9 @@ export default async function BucketPage() {
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
+      id: true,
+      email: true,
+      name: true,
       storageBucket: {
         select: {
           id: true,
@@ -42,10 +46,74 @@ export default async function BucketPage() {
           s3ForcePathStyle: true,
         },
       },
+      subscriptions: {
+        where: {
+          stripeSubscriptionId: { not: null },
+          status: { in: ['active', 'trialing', 'past_due'] },
+          product: {
+            slug: {
+              startsWith: 'storage-bucket',
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          stripeSubscriptionId: true,
+          metadata: true,
+          product: {
+            select: {
+              slug: true,
+            },
+          },
+        },
+      },
     },
   })
 
-  const bucket = user?.storageBucket
+  let bucket = user?.storageBucket
+  const activeStorageSub = user?.subscriptions?.[0]
+  const hasStorageSubscription = Boolean(activeStorageSub)
+  let autoProvisionFailed = false
+
+  if (!bucket && user && activeStorageSub?.stripeSubscriptionId) {
+    const metadata = (activeStorageSub.metadata || {}) as Record<string, unknown>
+    const region = typeof metadata.location === 'string' ? metadata.location : null
+    const tierFromMetadata = typeof metadata.tier === 'string' ? metadata.tier : null
+    const tierFromSlug = activeStorageSub.product.slug?.replace('storage-bucket-', '') || null
+
+    try {
+      await provisionBucketForUserSubscription({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        stripeSubscriptionId: activeStorageSub.stripeSubscriptionId,
+        region,
+        tierSlug: tierFromMetadata || tierFromSlug,
+      })
+
+      const refreshedUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          storageBucket: {
+            select: {
+              id: true,
+              name: true,
+              provider: true,
+              s3Bucket: true,
+              s3Region: true,
+              s3AccessKeyId: true,
+              s3Endpoint: true,
+              s3ForcePathStyle: true,
+            },
+          },
+        },
+      })
+
+      bucket = refreshedUser?.storageBucket || null
+    } catch {
+      autoProvisionFailed = true
+    }
+  }
 
   if (!bucket) {
     return (
@@ -72,14 +140,23 @@ export default async function BucketPage() {
             </div>
             <div>
               <p className="text-lg font-semibold">No bucket assigned yet</p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                You don&apos;t have a dedicated storage bucket assigned to your account. Purchase the
-                Storage Bucket add-on on the{' '}
-                <a href="/pricing#user-add-ons" className="text-primary underline underline-offset-2">
-                  pricing page
-                </a>{' '}
-                and our team will set it up within 12–24 hours.
-              </p>
+              {hasStorageSubscription ? (
+                <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                  Your storage subscription is active, but your bucket credentials are not visible yet.
+                  {autoProvisionFailed
+                    ? ' Automatic provisioning is still pending. Please refresh in a minute, and contact support if it remains unavailable.'
+                    : ' We attempted automatic provisioning for this page load. Please refresh in a few seconds.'}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                  You don&apos;t have a dedicated storage bucket assigned to your account. Purchase the
+                  Storage Bucket add-on on the{' '}
+                  <a href="/pricing#user-add-ons" className="text-primary underline underline-offset-2">
+                    pricing page
+                  </a>{' '}
+                  to instantly provision your bucket.
+                </p>
+              )}
             </div>
           </div>
         </div>

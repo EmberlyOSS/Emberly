@@ -134,6 +134,17 @@ export const THEME_METADATA_MAP: Record<string, ThemeMetadata> = {
     isGaming: false,
     emoji: '🙃',
   },
+  'tales-from-86': {
+    id: 'tales-from-86',
+    name: 'Tales from 86',
+    description: 'Neon retro horror with hot pink, amber, and toxic green glow',
+    type: 'animated',
+    backgroundEffect: 'gradient-shift',
+    animationSpeed: 'slow',
+    supportsFx: true,
+    isGaming: false,
+    emoji: '📼',
+  },
   'holly-jolly': {
     id: 'holly-jolly',
     name: 'Holly Jolly',

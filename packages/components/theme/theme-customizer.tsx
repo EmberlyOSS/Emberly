@@ -177,6 +177,28 @@ const UPSIDE_DOWN_THEME: ColorConfig = {
   ring: '354 70% 50%',
 }
 
+const TALES_FROM_86_THEME: ColorConfig = {
+  background: '232 38% 5%',
+  foreground: '52 90% 94%',
+  card: '232 34% 8%',
+  cardForeground: '52 90% 94%',
+  popover: '232 34% 8%',
+  popoverForeground: '52 90% 94%',
+  primary: '326 96% 58%',
+  primaryForeground: '232 38% 8%',
+  secondary: '38 98% 54%',
+  secondaryForeground: '232 38% 8%',
+  muted: '232 26% 16%',
+  mutedForeground: '80 34% 74%',
+  accent: '78 92% 50%',
+  accentForeground: '232 38% 8%',
+  destructive: '0 80% 52%',
+  destructiveForeground: '210 40% 98%',
+  border: '232 24% 18%',
+  input: '232 24% 18%',
+  ring: '326 96% 62%',
+}
+
 const CHRISTMAS_THEME: ColorConfig = {
   background: '140 40% 6%',
   foreground: '210 40% 98%',
@@ -454,6 +476,16 @@ export const THEME_PRESETS: Array<{
       isGaming: false,
       themeId: 'upside-down',
       backgroundEffect: 'particles',
+      animationSpeed: 'slow',
+    },
+    {
+      name: '📼 Tales from 86',
+      colors: TALES_FROM_86_THEME,
+      description: 'Retro horror neon inspired by 80s title-card glow gradients.',
+      category: 'animated',
+      isGaming: false,
+      themeId: 'tales-from-86',
+      backgroundEffect: 'gradient-shift',
       animationSpeed: 'slow',
     },
     // Seasonal themes

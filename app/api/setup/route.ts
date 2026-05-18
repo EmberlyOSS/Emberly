@@ -23,12 +23,17 @@ const setupSchema = z.object({
     name: z.string()
       .min(2, 'Username must be at least 2 characters')
       .max(50, 'Username must be at most 50 characters')
+      .trim()
       .refine(
         (name) => !name.includes('@'),
         'Username cannot contain @ symbol (looks like an email)'
       )
       .refine(
-        (name) => name.trim().length >= 2,
+        (name) => !name.includes(' '),
+        'Username cannot contain spaces'
+      )
+      .refine(
+        (name) => name.length >= 2,
         'Username cannot be only whitespace'
       ),
     email: z.string().email(),

@@ -31,8 +31,10 @@ if (process.env.NODE_ENV !== 'production') {
 export async function withRetry<T>(
     operation: () => Promise<T>,
     maxRetries = 3,
-    delay = 1000
+    delay = 1000,
+    options: { logRetries?: boolean } = {}
 ): Promise<T> {
+    const { logRetries = true } = options
     let lastError: Error | undefined
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -40,15 +42,8 @@ export async function withRetry<T>(
             return await operation()
         } catch (error) {
             lastError = error as Error
-            const message = lastError.message?.toLowerCase() ?? ''
-
             // Only retry on connection-related errors
-            const isConnectionError =
-                message.includes('connection') ||
-                message.includes('terminated') ||
-                message.includes('timeout') ||
-                message.includes('econnrefused') ||
-                message.includes('econnreset')
+            const isConnectionError = isDatabaseConnectionError(lastError)
 
             if (!isConnectionError || attempt === maxRetries) {
                 throw error
@@ -56,12 +51,30 @@ export async function withRetry<T>(
 
             // Exponential backoff
             const waitTime = delay * Math.pow(2, attempt - 1)
-            console.warn(`[prisma] Connection error, retrying in ${waitTime}ms (attempt ${attempt}/${maxRetries})`)
+            if (logRetries) {
+                console.warn(`[prisma] Connection error, retrying in ${waitTime}ms (attempt ${attempt}/${maxRetries})`)
+            }
             await new Promise((r) => setTimeout(r, waitTime))
         }
     }
 
     throw lastError
+}
+
+/**
+ * Returns true when the Prisma error indicates an unreachable or unstable DB connection.
+ */
+export function isDatabaseConnectionError(error: unknown): boolean {
+    const message = (error instanceof Error ? error.message : String(error)).toLowerCase()
+
+    return (
+        message.includes("can't reach database server") ||
+        message.includes('connection') ||
+        message.includes('terminated') ||
+        message.includes('timeout') ||
+        message.includes('econnrefused') ||
+        message.includes('econnreset')
+    )
 }
 
 export default prisma

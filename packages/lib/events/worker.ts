@@ -2,7 +2,7 @@ import type { BaseEvent, EventWorkerOptions } from '@/packages/types/events'
 import { EventStatus } from '@/packages/types/events'
 
 import { eventCache } from '@/packages/lib/cache/event-cache'
-import { withRetry } from '@/packages/lib/database/prisma'
+import { withRetry, isDatabaseConnectionError } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 
 import { eventConsumer } from './consumer'
@@ -226,7 +226,8 @@ export class EventWorker {
           limit: batchSize,
         }),
         3,
-        1000
+        1000,
+        { logRetries: false }
       )
 
       if (events.length > 0) {
@@ -282,6 +283,10 @@ export class EventWorker {
         logger.debug(`Activated ${activatedCount} scheduled events`)
       }
     } catch (error) {
+      if (isDatabaseConnectionError(error)) {
+        logger.warn('Skipping scheduled event activation: database unavailable')
+        return
+      }
       logger.error('Error activating scheduled events', error as Error)
     }
   }

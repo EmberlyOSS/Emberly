@@ -44,6 +44,15 @@ const NEXTAUTH_TRUSTED_ORIGINS = (process.env.NEXTAUTH_TRUSTED_ORIGINS || '')
   .map(origin => origin.trim())
   .filter(origin => origin.length > 0)
 
+// Keep JWT/JWE decryption stable in local dev even when env vars are missing.
+// In production, this must come from AUTH_SECRET or NEXTAUTH_SECRET.
+const NEXTAUTH_SECRET =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  (process.env.NODE_ENV !== 'production'
+    ? 'emberly-dev-nextauth-secret-please-set-auth-secret-in-env'
+    : undefined)
+
 type UserWithSession = Prisma.UserGetPayload<{ select: typeof userSelect }>
 
 declare module 'next-auth' {
@@ -79,6 +88,7 @@ declare module 'next-auth/jwt' {
 }
 
 export const authOptions: NextAuthOptions = {
+  secret: NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: 'credentials',
