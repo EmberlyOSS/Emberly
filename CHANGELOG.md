@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.3] - 2026-05-18
+
+### Added
+- **Admin Username Repair Endpoint** — New superadmin-only endpoint to detect and patch usernames that contain whitespace.
+  - `POST /api/admin/users/repair-usernames` supports dry-run and apply modes.
+  - Repair strategies: replace spaces with hyphens, replace with underscores, or remove spaces entirely.
+  - Includes duplicate/conflict protection so unsafe renames are skipped with explicit reasons.
+- **Shared Bucket Provisioning Helper** — `packages/lib/storage/bucket-provisioning.ts` centralizes idempotent provisioning logic for storage-bucket subscriptions.
+  - Reuses existing subscription-linked buckets when present and ensures user assignment is restored.
+  - Handles "already exists" Vultr bucket responses gracefully and continues DB reconciliation.
+  - Emits provision events and sends the bucket credentials email when assignment succeeds.
+
+### Changed
+- **Stripe Subscription Metadata Persistence** — Checkout session creation now mirrors metadata onto `subscription_data.metadata` for subscription mode.
+  - Ensures downstream webhook events (including invoice-based recovery flows) retain `type`, `location`, and `tier` context.
+- **Bucket Dashboard Recovery Behavior** — `/dashboard/bucket` now attempts automatic self-healing when a user has an active storage-bucket subscription but no assigned bucket record.
+  - Page messaging updated to reflect automatic provisioning status instead of manual 12-24 hour setup expectations.
+
+### Fixed
+- **Username Whitespace Validation Gaps** — Setup/admin username validation now blocks whitespace-containing usernames consistently.
+  - Validation rules were aligned to prevent creating handles like `Eli Frost` in setup flows.
+- **Storage Bucket Purchase Reliability** — Webhook provisioning now merges checkout + subscription metadata and includes an invoice recovery path.
+  - If `checkout.session.completed` is missed, `invoice.payment_succeeded` can provision the bucket for storage-bucket subscriptions.
+  - Recovery logic checks existing `stripeSubscriptionId`-linked buckets before provisioning to preserve idempotency.
+- **Event System DB Outage Spam** — Event consumer/worker paths now fail soft when the database is unreachable.
+  - Connection errors are classified centrally in `packages/lib/database/prisma.ts`.
+  - Handler sync defers and requeues instead of logging one warning per handler during outages.
+  - Worker retry logging is quieter in DB outage scenarios, reducing repetitive dev-console noise.
+
 ## [2.4.2] - 2026-04-14
 
 ### Added
