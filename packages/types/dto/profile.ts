@@ -13,7 +13,7 @@ export type EmailPreferences = z.infer<typeof EmailPreferencesSchema>
 export type DiscordPreferences = z.infer<typeof EmailPreferencesSchema>
 
 export const UpdateProfileSchema = z.object({
-  name: z.string().min(2).optional(),
+  name: z.string().min(2).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
   fullName: z.string().max(100).nullable().optional(),
   email: z.string().email('Invalid email address').max(255, 'Email too long').trim().optional(),
   currentPassword: z.string().optional(),

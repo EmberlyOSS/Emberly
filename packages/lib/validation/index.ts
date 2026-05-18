@@ -21,7 +21,9 @@ export const auth = {
       .string()
       .min(2, 'Username must be at least 2 characters')
       .max(50, 'Username must be at most 50 characters')
-      .refine((name) => !name.includes('@'), 'Username cannot contain @ symbol'),
+      .trim()
+      .refine((name) => !name.includes('@'), 'Username cannot contain @ symbol')
+      .refine((name) => !name.includes(' '), 'Username cannot contain spaces'),
     email: z.string().email('Invalid email'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
   }),
@@ -93,7 +95,7 @@ export const auth = {
 
 export const users = {
   create: z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+    name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces'),
     email: z.string().email('Invalid email'),
     password: z.string().min(8).optional(),
     role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']),
@@ -103,7 +105,7 @@ export const users = {
   }),
 
   update: z.object({
-    name: z.string().min(2).max(100).optional(),
+    name: z.string().min(2).max(100).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
     email: z.string().email('Invalid email').optional(),
     role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
     storageQuotaMB: z.number().min(0).optional(),
@@ -208,7 +210,7 @@ export const email = {
 
 export const profile = {
   update: z.object({
-    name: z.string().min(2).max(100).optional(),
+    name: z.string().min(2).max(100).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
     fullName: z.string().max(100).nullable().optional(),
     email: z.string().email('Invalid email').optional(),
     bio: z.string().max(500).nullable().optional(),

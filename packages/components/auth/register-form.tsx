@@ -44,6 +44,12 @@ export function RegisterForm() {
       return
     }
 
+    if (name.includes(' ')) {
+      setError('Username cannot contain spaces')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -119,6 +125,8 @@ export function RegisterForm() {
             className="h-11 bg-background/50 focus:bg-background transition-colors"
             autoComplete="name"
             autoFocus
+            pattern="\S+"
+            title="Username cannot contain spaces"
           />
         </div>
         <div className="space-y-2">
