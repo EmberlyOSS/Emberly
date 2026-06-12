@@ -3,6 +3,7 @@
 Emberly is an open source platform for modern file storage, sharing, and identity verification. Build your digital presence with powerful tools for teams and individuals.
 
 [![Build Checks](https://github.com/EmberlyOSS/Emberly/actions/workflows/build.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/build.yml) [![CodeQL Advanced](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/EmberlyOSS/Emberly?utm_source=oss&utm_medium=github&utm_campaign=EmberlyOSS%2FEmberly&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FEmberlyOSS%2FEmberly.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FEmberlyOSS%2FEmberly?ref=badge_shield)
 
 ## Features
 
@@ -175,6 +176,9 @@ Get help and connect with the community:
 ## License
 
 This project is licensed under the GNU Affero General Public License v3 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FEmberlyOSS%2FEmberly.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FEmberlyOSS%2FEmberly?ref=badge_large)
 
 ## Code of Conduct
 
