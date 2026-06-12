@@ -15,6 +15,7 @@
 import { getIntegrations } from '@/packages/lib/config'
 
 const VULTR_API_BASE = 'https://api.vultr.com/v2'
+const VULTR_API_BASE_URL = new URL(VULTR_API_BASE)
 
 function buildVultrApiUrl(path: string): string {
     if (!path.startsWith('/')) {
@@ -24,7 +25,26 @@ function buildVultrApiUrl(path: string): string {
         throw new Error(`Unsafe Vultr API path: "${path}"`)
     }
 
-    return new URL(path, VULTR_API_BASE).toString()
+    const url = new URL(path, VULTR_API_BASE_URL)
+
+    if (url.origin !== VULTR_API_BASE_URL.origin) {
+        throw new Error(`Unsafe Vultr API URL origin: "${url.origin}"`)
+    }
+
+    if (!url.pathname.startsWith('/v2/')) {
+        throw new Error(`Unsafe Vultr API URL path: "${url.pathname}"`)
+    }
+
+    const lowerPath = url.pathname.toLowerCase()
+    if (
+        lowerPath.includes('%2e') ||
+        lowerPath.includes('%2f') ||
+        lowerPath.includes('%5c')
+    ) {
+        throw new Error(`Unsafe encoded Vultr API path: "${url.pathname}"`)
+    }
+
+    return url.toString()
 }
 
 async function getApiKey(): Promise<string> {
