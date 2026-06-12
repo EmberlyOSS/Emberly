@@ -13,6 +13,52 @@ interface TestIntegrationBody {
   credentials: Record<string, string>
 }
 
+function isPrivateOrLocalHost(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+
+  if (host === 'localhost' || host === '::1' || host === '[::1]') return true
+  if (host.endsWith('.localhost') || host.endsWith('.local')) return true
+
+  // IPv4 checks
+  const ipv4Match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (ipv4Match) {
+    const octets = ipv4Match.slice(1).map((n) => Number(n))
+    if (octets.some((o) => Number.isNaN(o) || o < 0 || o > 255)) return true
+
+    const [a, b] = octets
+    if (a === 10) return true
+    if (a === 127) return true
+    if (a === 169 && b === 254) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+    if (a === 0) return true
+  }
+
+  // Common IPv6 local/private forms
+  const normalized = host.replace(/^\[|\]$/g, '')
+  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true // ULA
+  if (normalized.startsWith('fe80:')) return true // link-local
+
+  return false
+}
+
+function getSafeKenerOrigin(baseUrl?: string): string | null {
+  const candidate = (baseUrl && baseUrl.trim()) || 'https://emberlystat.us'
+
+  let parsed: URL
+  try {
+    parsed = new URL(candidate)
+  } catch {
+    return null
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+  if (parsed.username || parsed.password) return null
+  if (isPrivateOrLocalHost(parsed.hostname)) return null
+
+  return parsed.origin
+}
+
 interface TestResult {
   ok: boolean
   message: string
@@ -122,9 +168,13 @@ async function testGitHub(pat: string, org?: string): Promise<TestResult> {
 }
 
 async function testKener(apiKey: string, baseUrl?: string): Promise<TestResult> {
-  const url = (baseUrl || 'https://emberlystat.us').replace(/\/$/, '')
+  const origin = getSafeKenerOrigin(baseUrl)
+  if (!origin) {
+    return { ok: false, message: 'Invalid Kener base URL' }
+  }
+
   try {
-    const res = await fetch(`${url}/api/v4/monitors`, {
+    const res = await fetch(`${origin}/api/v4/monitors`, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
       signal: AbortSignal.timeout(8000),
     })
