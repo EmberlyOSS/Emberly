@@ -218,11 +218,19 @@ export async function listClusters(): Promise<VultrCluster[]> {
 
 /** List tiers available for a specific cluster. */
 export async function listClusterTiers(clusterId: number): Promise<VultrTier[]> {
-    if (!Number.isInteger(clusterId)) {
+    if (!Number.isFinite(clusterId) || !Number.isSafeInteger(clusterId)) {
         throw new Error(`Invalid clusterId: ${clusterId}`)
     }
 
-    const data = await vultrRequest<{ tiers: VultrTier[] }>('GET', `/object-storage/clusters/${clusterId}/tiers`)
+    const safeClusterId = Math.trunc(clusterId)
+    if (safeClusterId !== clusterId || safeClusterId < 0) {
+        throw new Error(`Invalid clusterId: ${clusterId}`)
+    }
+
+    const data = await vultrRequest<{ tiers: VultrTier[] }>(
+        'GET',
+        `/object-storage/clusters/${safeClusterId}/tiers`
+    )
     return data.tiers ?? []
 }
 
