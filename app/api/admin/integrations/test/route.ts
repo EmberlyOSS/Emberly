@@ -135,7 +135,20 @@ async function testDiscord(webhookUrl: string, botToken?: string, serverId?: str
   // Fall back to webhook validation
   if (webhookUrl) {
     try {
-      const res = await fetch(webhookUrl, { method: 'GET' })
+      let parsed: URL
+      try {
+        parsed = new URL(webhookUrl)
+      } catch {
+        return { ok: false, message: 'Invalid webhook URL format' }
+      }
+
+      const hostname = parsed.hostname.toLowerCase()
+      const isDiscordHost = hostname === 'discord.com' || hostname === 'discordapp.com'
+      if (parsed.protocol !== 'https:' || !isDiscordHost || isPrivateOrLocalHost(hostname)) {
+        return { ok: false, message: 'Webhook URL must be a valid Discord HTTPS URL' }
+      }
+
+      const res = await fetch(parsed.toString(), { method: 'GET' })
       if (res.status === 401) return { ok: false, message: 'Invalid webhook URL' }
       if (!res.ok) return { ok: false, message: `Discord webhook error (${res.status})` }
       return { ok: true, message: 'Discord webhook is valid' }
