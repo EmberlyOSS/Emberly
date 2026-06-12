@@ -12,7 +12,8 @@ import {
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
   try {
     const parsed = new URL(url)
-    if (!parsed.hostname.endsWith('github.com')) return null
+    const host = parsed.hostname.toLowerCase()
+    if (host !== 'github.com' && !host.endsWith('.github.com')) return null
     const parts = parsed.pathname.replace(/^\//, '').split('/')
     if (parts.length < 2) return null
     return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') }
