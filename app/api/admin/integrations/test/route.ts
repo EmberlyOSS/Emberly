@@ -148,7 +148,15 @@ async function testDiscord(webhookUrl: string, botToken?: string, serverId?: str
         return { ok: false, message: 'Webhook URL must be a valid Discord HTTPS URL' }
       }
 
-      const res = await fetch(parsed.toString(), { method: 'GET' })
+      const match = parsed.pathname.match(/^\/api\/webhooks\/(\d+)\/([A-Za-z0-9._-]+)$/)
+      if (!match) {
+        return { ok: false, message: 'Webhook URL must match Discord webhook format' }
+      }
+
+      const [, webhookId, webhookToken] = match
+      const safeWebhookUrl = `https://${hostname}/api/webhooks/${webhookId}/${webhookToken}`
+
+      const res = await fetch(safeWebhookUrl, { method: 'GET' })
       if (res.status === 401) return { ok: false, message: 'Invalid webhook URL' }
       if (!res.ok) return { ok: false, message: `Discord webhook error (${res.status})` }
       return { ok: true, message: 'Discord webhook is valid' }
