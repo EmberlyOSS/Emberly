@@ -154,7 +154,7 @@ async function testDiscord(webhookUrl: string, botToken?: string, serverId?: str
       }
 
       const [, webhookId, webhookToken] = match
-      const safeWebhookUrl = `https://${hostname}/api/webhooks/${webhookId}/${webhookToken}`
+      const safeWebhookUrl = `https://discord.com/api/webhooks/${encodeURIComponent(webhookId)}/${encodeURIComponent(webhookToken)}`
 
       const res = await fetch(safeWebhookUrl, { method: 'GET' })
       if (res.status === 401) return { ok: false, message: 'Invalid webhook URL' }
