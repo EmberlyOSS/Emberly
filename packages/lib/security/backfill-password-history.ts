@@ -130,7 +130,7 @@ export async function backfillUserPasswordHistory(userId: string): Promise<boole
 
     return true
   } catch (error) {
-    console.error(`Failed to backfill password history for user ${userId}:`, error)
+    console.error('Failed to backfill password history for user %s:', userId, error)
     throw error
   }
 }
