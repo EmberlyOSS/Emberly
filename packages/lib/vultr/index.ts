@@ -16,6 +16,17 @@ import { getIntegrations } from '@/packages/lib/config'
 
 const VULTR_API_BASE = 'https://api.vultr.com/v2'
 
+function buildVultrApiUrl(path: string): string {
+    if (!path.startsWith('/')) {
+        throw new Error(`Invalid Vultr API path: "${path}"`)
+    }
+    if (path.startsWith('//') || path.includes('..') || path.includes('://')) {
+        throw new Error(`Unsafe Vultr API path: "${path}"`)
+    }
+
+    return new URL(path, VULTR_API_BASE).toString()
+}
+
 async function getApiKey(): Promise<string> {
     const integrations = await getIntegrations()
     const key = integrations?.vultr?.apiKey || process.env.VULTR_API_KEY
@@ -28,7 +39,7 @@ async function vultrRequest<T>(
     path: string,
     body?: unknown,
 ): Promise<T> {
-    const response = await fetch(`${VULTR_API_BASE}${path}`, {
+    const response = await fetch(buildVultrApiUrl(path), {
         method,
         headers: {
             Authorization: `Bearer ${await getApiKey()}`,
@@ -187,6 +198,10 @@ export async function listClusters(): Promise<VultrCluster[]> {
 
 /** List tiers available for a specific cluster. */
 export async function listClusterTiers(clusterId: number): Promise<VultrTier[]> {
+    if (!Number.isInteger(clusterId)) {
+        throw new Error(`Invalid clusterId: ${clusterId}`)
+    }
+
     const data = await vultrRequest<{ tiers: VultrTier[] }>('GET', `/object-storage/clusters/${clusterId}/tiers`)
     return data.tiers ?? []
 }
