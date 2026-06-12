@@ -16,10 +16,10 @@
 import { mkdir, writeFile, copyFile, readFile, readdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { promisify } from 'util'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 const ROOT_DIR = process.cwd()
 const PUBLIC_DIR = join(ROOT_DIR, 'public')
@@ -440,10 +440,19 @@ async function createZip() {
   try {
     if (process.platform === 'win32') {
       // PowerShell Compress-Archive
-      await execAsync(`powershell -Command "Compress-Archive -Path '${OUTPUT_DIR}\\*' -DestinationPath '${OUTPUT_ZIP}' -Force"`)
+      await execFileAsync('powershell', [
+        '-NoProfile',
+        '-Command',
+        'Compress-Archive',
+        '-Path',
+        `${OUTPUT_DIR}\\*`,
+        '-DestinationPath',
+        OUTPUT_ZIP,
+        '-Force',
+      ])
     } else {
       // Unix zip
-      await execAsync(`cd "${OUTPUT_DIR}" && zip -r "${OUTPUT_ZIP}" .`)
+      await execFileAsync('zip', ['-r', OUTPUT_ZIP, '.'], { cwd: OUTPUT_DIR })
     }
     console.log(`✓ Created zip: ${OUTPUT_ZIP}`)
   } catch (error) {
