@@ -8,7 +8,9 @@ import { prisma } from '@/packages/lib/database/prisma'
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
   try {
     const parsed = new URL(url)
-    if (!parsed.hostname.endsWith('github.com')) return null
+    const hostname = parsed.hostname.toLowerCase().replace(/\.$/, '')
+    const allowedHosts = new Set(['github.com', 'www.github.com'])
+    if (!allowedHosts.has(hostname)) return null
     const parts = parsed.pathname.replace(/^\//, '').split('/')
     if (parts.length < 2) return null
     return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') }
