@@ -56,6 +56,9 @@ function getSafeKenerOrigin(baseUrl?: string): string | null {
   if (parsed.username || parsed.password) return null
   if (isPrivateOrLocalHost(parsed.hostname)) return null
 
+  const allowedOrigins = new Set(['https://emberlystat.us'])
+  if (!allowedOrigins.has(parsed.origin)) return null
+
   return parsed.origin
 }
 
@@ -144,11 +147,23 @@ async function testDiscord(webhookUrl: string, botToken?: string, serverId?: str
   return { ok: false, message: 'No credentials configured' }
 }
 
+function sanitizeGitHubOrg(org?: string): string | null {
+  if (!org) return null
+  const trimmed = org.trim()
+  // GitHub org/user name rules: alphanumeric or single hyphens, no leading/trailing hyphen, max 39 chars.
+  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(trimmed)) return null
+  return trimmed
+}
+
 async function testGitHub(pat: string, org?: string): Promise<TestResult> {
   if (!pat) return { ok: false, message: 'Personal access token is not configured' }
+  const safeOrg = sanitizeGitHubOrg(org)
+  if (org && !safeOrg) {
+    return { ok: false, message: 'Invalid GitHub organization name format' }
+  }
   try {
-    const endpoint = org
-      ? `https://api.github.com/orgs/${org}`
+    const endpoint = safeOrg
+      ? `https://api.github.com/orgs/${safeOrg}`
       : 'https://api.github.com/user'
     const res = await fetch(endpoint, {
       headers: {
@@ -158,10 +173,10 @@ async function testGitHub(pat: string, org?: string): Promise<TestResult> {
       },
     })
     if (res.status === 401) return { ok: false, message: 'Invalid personal access token' }
-    if (res.status === 404) return { ok: false, message: `Organization "${org}" not found` }
+    if (res.status === 404) return { ok: false, message: `Organization "${safeOrg ?? org}" not found` }
     if (!res.ok) return { ok: false, message: `GitHub API error (${res.status})` }
     const json = await res.json().catch(() => null)
-    return { ok: true, message: `Connected to GitHub${org ? ` — org: ${json?.name ?? org}` : ` — user: ${json?.login}`}` }
+    return { ok: true, message: `Connected to GitHub${safeOrg ? ` — org: ${json?.name ?? safeOrg}` : ` — user: ${json?.login}`}` }
   } catch (err) {
     return { ok: false, message: 'Failed to reach GitHub API', detail: String(err) }
   }
