@@ -44,7 +44,6 @@ export function createDeviceFingerprint(userAgent: string | null | undefined): s
         .replace(/mac os x [\d_]+/g, 'macos')
         .replace(/android [\d.]+/g, 'android')
         .replace(/iphone os [\d_]+/g, 'ios')
-        .replace(/linux/g, 'linux')
         // Extract browser
         .replace(/chrome\/[\d.]+/g, 'chrome')
         .replace(/firefox\/[\d.]+/g, 'firefox')
