@@ -56,6 +56,9 @@ function getSafeKenerOrigin(baseUrl?: string): string | null {
   if (parsed.username || parsed.password) return null
   if (isPrivateOrLocalHost(parsed.hostname)) return null
 
+  const allowedOrigins = new Set(['https://emberlystat.us'])
+  if (!allowedOrigins.has(parsed.origin)) return null
+
   return parsed.origin
 }
 
