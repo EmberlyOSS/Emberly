@@ -333,7 +333,6 @@ export default function AlphaMigrationPage() {
                     size="sm"
                     onClick={() => {
                       setStep('confirm')
-                      setCodeSent(false)
                       setVerificationCode('')
                     }}
                     disabled={isLoading}

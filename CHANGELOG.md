@@ -60,6 +60,12 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - **Empty filename slug fallback** — Filenames composed entirely of non-ASCII/symbol characters would reduce to an empty slug after sanitization, producing broken storage paths. A `nanoid(6)` fallback is now used when the slug is empty.
 - **`storageQuotaMB = 0` admin override ignored** — `if (!baseQuotaMB)` treated an explicit zero-quota override as "unset", falling through to plan-based quota. Changed to `== null` checks so `0` is honored as a deliberate override.
 - **Storage-bucket subscription precedence missing from Stripe re-check path** — After a successful Stripe sync, `getPlanLimits` returned the latest active subscription without first checking for a `storage-bucket-*` subscription. Users with both sub types active could receive non-unlimited limits for that request. The re-check now mirrors the original early-exit logic.
+- **`proxy.ts` — `BASE_URL`/`MAIN_HOST` recomputed per request** — `process.env.NEXT_PUBLIC_BASE_URL` was parsed with `new URL()` on every invocation. Both the base URL string and its hostname are now computed once at module load time.
+- **`proxy.ts` — Duplicate media-rewrite block eliminated** — Video/audio range-request detection logic appeared twice (before and after the auth checks). Unified into a single block that runs before `getToken()`, so media requests skip JWT verification entirely.
+- **`proxy.ts` — `VIDEO_EXTENSIONS` array → `Set`** — `VIDEO_EXTENSIONS.includes(ext)` was an O(n) linear scan on every file URL request. Converted to a module-level `Set` for O(1) lookup.
+- **`proxy.ts` — Trailing-slash strip regex replaced** — `pathname.replace(/\/$/, '')` replaced with `endsWith('/')`+`slice`, consistent with the ReDoS hardening applied elsewhere.
+- **`proxy.ts` — `getClientIP` double-read of `x-forwarded-for`** — The function read `x-forwarded-for` a second time at the fallback return if the header was already `null` at the top. Simplified to a single read with null-coalescing chain.
+- **`proxy.ts` — Noisy `console.log` removed from hot paths** — Debug logs for unverified-user blocks and password-breach redirects fired on every affected request, adding synchronous I/O overhead in the middleware layer.
 
 ## [2.4.5] - 2026-06-02
 
