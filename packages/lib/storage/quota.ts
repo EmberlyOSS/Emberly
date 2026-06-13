@@ -112,7 +112,23 @@ export async function getPlanLimits(userId: string): Promise<PlanLimits> {
           userId,
           userRecord.stripeCustomerId
         )
-        // Re-check after sync
+        // Re-check after sync — storage-bucket subs take precedence (unlimited)
+        const syncedBucketSub = await prisma.subscription.findFirst({
+          where: {
+            userId,
+            status: 'active',
+            product: { slug: { startsWith: 'storage-bucket' } },
+          },
+          select: { id: true },
+        })
+        if (syncedBucketSub) {
+          return {
+            storageQuotaGB: null,
+            uploadSizeCapMB: null,
+            customDomainsLimit: null,
+            planName: 'Storage Bucket (Unlimited)',
+          }
+        }
         const syncedSub = await prisma.subscription.findFirst({
           where: { userId, status: 'active' },
           include: { product: true },
@@ -252,7 +268,7 @@ export async function getEffectiveQuotaMB(
 
   // Priority: admin override > plan quota + perks > default quota
   let baseQuotaMB = user.storageQuotaMB
-  if (!baseQuotaMB) {
+  if (baseQuotaMB == null) {
     if (planLimits.storageQuotaGB === null) {
       // Unlimited plan — use a 100 TB sentinel so arithmetic still works
       baseQuotaMB = 100 * 1024 * 1024
@@ -260,7 +276,7 @@ export async function getEffectiveQuotaMB(
       baseQuotaMB = (planLimits.storageQuotaGB + perkStorageBonusGB) * 1024
     }
   }
-  if (!baseQuotaMB && defaultQuotaMB) {
+  if (baseQuotaMB == null && defaultQuotaMB != null) {
     baseQuotaMB = defaultQuotaMB
   }
 

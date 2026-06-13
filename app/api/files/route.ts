@@ -279,13 +279,22 @@ export async function POST(req: Request) {
         permalink: vtResult.permalink,
         userId: user.id,
       })
-      await Promise.allSettled([
+      const results = await Promise.allSettled([
         storageProvider!.deleteFile(filePath),
         prisma.file.update({
           where: { id: fileRecord.id },
           data: { visibility: 'PRIVATE', name: '[Quarantined]' },
         }),
       ])
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          logger.error(
+            `Quarantine step ${i === 0 ? 'storage delete' : 'db update'} failed`,
+            r.reason as Error,
+            { fileId: fileRecord.id }
+          )
+        }
+      })
     }).catch((err) => {
       logger.error('Background VirusTotal scan failed', err as Error, {
         fileId: fileRecord.id,

@@ -25,7 +25,7 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 ### Changed
 
 - **Status Page Integration Removed**
-  - Removed the Kener / Uptime Kuma dynamic status integration entirely. The polling logic, `/api/status` route, admin settings panel, and integration test handler have all been removed.
+  - Removed the Kener / Uptime Kuma dynamic status integration entirely. The polling logic, `/api/status` route (now returns 404), admin settings panel, and integration test handler have all been removed.
   - `StatusIndicator` in the site footer is now a lightweight static link to [emberlystat.us](https://emberlystat.us) — no external API calls, no runtime failures, no "Status unknown" states.
   - `KENER_API_KEY`, `KENER_BASE_URL`, `UPTIME_KUMA_BASE_URL`, and `UPTIME_KUMA_SLUG` environment variables are no longer used and can be removed.
 
@@ -53,6 +53,13 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - **ESLint — Empty interfaces in `react-jsx-compat.d.ts`** — Six `interface X extends Y {}` declarations with no added members replaced with `type X = Y` aliases, satisfying `@typescript-eslint/no-empty-object-type`.
 - **ESLint — Unused variables across multiple files** — Removed or prefixed unused imports and variables flagged by `@typescript-eslint/no-unused-vars`: `Copy` in `bucket/page.tsx`, `User` in `blog/page.tsx`, `Share2`/`User` in `blog/[slug]/page.tsx`, `Footer`/`getConfig`/`providedPassword` in `[filename]/page.tsx`, `toast` in `squads/client.tsx`, `codeSent` state in `alpha-migration/page.tsx`, and `userName` parameter in `dashboard/client.tsx`.
 - **ESLint — `let` → `const` in `theme-initializer.tsx`** — `cssVariables` was declared with `let` but never reassigned; declaration moved to the single assignment site as `const`.
+- **Integration test fetch timeouts** — `testStripe`, `testResend`, `testCloudflare`, `testDiscord` (bot + webhook), and `testGitHub` had no request timeout, allowing the admin integration-test endpoint to hang indefinitely if a provider didn't respond. All now use `AbortSignal.timeout(8000)`, consistent with the existing Vultr handler.
+- **Quarantine failure logging** — `Promise.allSettled` results in the VirusTotal quarantine path were silently discarded. Storage delete or DB update failures now log an error with the file ID so they can be investigated.
+- **Session cache `emailVerified` backfill** — Redis-cached sessions written before the `emailVerified: boolean` field was added would deserialize with `undefined`, breaking the upload auth contract. A coerce-on-read now sets `false` for any entry missing the field.
+- **Legacy `kener`/`uptimeKuma` config keys stripped from admin response** — The integration config schema uses `.passthrough()`, so old DB records containing stale Kener or Uptime Kuma keys would survive `deepMerge` and be returned to SUPERADMIN via `GET /api/settings`. `maskSecretsForAdmin` now explicitly deletes both keys before returning.
+- **Empty filename slug fallback** — Filenames composed entirely of non-ASCII/symbol characters would reduce to an empty slug after sanitization, producing broken storage paths. A `nanoid(6)` fallback is now used when the slug is empty.
+- **`storageQuotaMB = 0` admin override ignored** — `if (!baseQuotaMB)` treated an explicit zero-quota override as "unset", falling through to plan-based quota. Changed to `== null` checks so `0` is honored as a deliberate override.
+- **Storage-bucket subscription precedence missing from Stripe re-check path** — After a successful Stripe sync, `getPlanLimits` returned the latest active subscription without first checking for a `storage-bucket-*` subscription. Users with both sub types active could receive non-unlimited limits for that request. The re-check now mirrors the original early-exit logic.
 
 ## [2.4.5] - 2026-06-02
 

@@ -47,7 +47,7 @@ Emberly is an open source platform for modern file storage, sharing, and identit
 - Promo code management with configurable discounts
 - User management dashboard
 - Application review queue with multi stage triage
-- Service status monitoring via Kener integration
+- Service status page link ([emberlystat.us](https://emberlystat.us))
 - Analytics and usage reporting
 
 ## Quick Start
@@ -105,7 +105,6 @@ The application will be available at http://localhost:3000.
 **Infrastructure & Services**
 
 - [S3 compatible storage](https://aws.amazon.com/s3/) - File storage
-- [Kener](https://kener.ing/) - Status page monitoring
 - [Next.js Auth](https://next-auth.js.org/) - Authentication
 - [Sentry](https://sentry.io/) - Error tracking
 
@@ -176,7 +175,6 @@ Get help and connect with the community:
 
 This project is licensed under the GNU Affero General Public License v3 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
 
-
 ## Code of Conduct
 
 This project adheres to the Contributor Covenant Code of Conduct. By participating, you agree to uphold this code. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the full text.
@@ -184,7 +182,6 @@ This project adheres to the Contributor Covenant Code of Conduct. By participati
 ## Acknowledgments
 
 Thank you to all [contributors](https://github.com/EmberlyOSS/Emberly/graphs/contributors) who have helped make Emberly possible. We also appreciate the [open source projects and communities](https://github.com/EmberlyOSS/Emberly/network/dependencies) that make Emberly possible.
-
 
 <a href="https://github.com/EmberlyOSS/Emberly/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=EmberlyOSS/Emberly" alt="Contributors" />

@@ -5,10 +5,7 @@ import {
 } from '@/packages/types/dto/settings'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
-import {
-  requireAuth,
-  requireSuperAdmin,
-} from '@/packages/lib/auth/api-auth'
+import { requireAuth, requireSuperAdmin } from '@/packages/lib/auth/api-auth'
 import {
   EmberlyConfig,
   getConfig,
@@ -50,6 +47,9 @@ function maskSecretsForAdmin(config: EmberlyConfig): EmberlyConfig {
   if (i.github) {
     i.github.pat = ''
   }
+  // Remove any stale legacy integration keys that may still live in DB config
+  delete i.kener
+  delete i.uptimeKuma
   return c as EmberlyConfig
 }
 

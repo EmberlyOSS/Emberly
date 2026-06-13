@@ -60,6 +60,7 @@ async function testStripe(secretKey: string): Promise<TestResult> {
   try {
     const res = await fetch('https://api.stripe.com/v1/customers?limit=1', {
       headers: { Authorization: `Bearer ${secretKey}` },
+      signal: AbortSignal.timeout(8000),
     })
     if (res.status === 401)
       return {
@@ -84,6 +85,7 @@ async function testResend(apiKey: string): Promise<TestResult> {
   try {
     const res = await fetch('https://api.resend.com/domains', {
       headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
     })
     if (res.status === 401 || res.status === 403)
       return { ok: false, message: 'Invalid API key' }
@@ -125,6 +127,7 @@ async function testCloudflare(
         Authorization: `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
+      signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
     if (!res.ok || json?.success === false) {
@@ -168,6 +171,7 @@ async function testDiscord(
         `https://discord.com/api/v10/guilds/${safeServerId}`,
         {
           headers: { Authorization: `Bot ${botToken}` },
+          signal: AbortSignal.timeout(8000),
         }
       )
       if (res.status === 401) return { ok: false, message: 'Invalid bot token' }
@@ -226,7 +230,10 @@ async function testDiscord(
       const [, webhookId, webhookToken] = match
       const safeWebhookUrl = `https://discord.com/api/webhooks/${encodeURIComponent(webhookId)}/${encodeURIComponent(webhookToken)}`
 
-      const res = await fetch(safeWebhookUrl, { method: 'GET' })
+      const res = await fetch(safeWebhookUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(8000),
+      })
       if (res.status === 401)
         return { ok: false, message: 'Invalid webhook URL' }
       if (!res.ok)
@@ -270,6 +277,7 @@ async function testGitHub(pat: string, org?: string): Promise<TestResult> {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
+      signal: AbortSignal.timeout(8000),
     })
     if (res.status === 401)
       return { ok: false, message: 'Invalid personal access token' }
