@@ -5,8 +5,8 @@
  * This script should be run once to upgrade existing Emberly instances
  */
 
-const { PrismaClient } = require('@prisma/client')
-const { hash, compare } = require('bcryptjs')
+import { PrismaClient } from '@prisma/client'
+import { hash, compare } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 

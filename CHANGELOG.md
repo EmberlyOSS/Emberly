@@ -49,6 +49,10 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - **TypeScript — Logger argument types in `sync-buckets.ts`** — `BucketSyncStats` was passed directly as a `logger.info` context argument (expects `Record<string, unknown>`); fixed by spreading with `{ ...stats }`. Two `logger.warn` calls passed raw `Error` objects where a context object is expected; fixed by passing `{ error: String(err) }`.
 - **TypeScript — `PaginationData.pages` property in `user-list.tsx`** — Three references used `.pages` on the `PaginationData` type returned by `useUserManagement`, which defines the property as `pageCount`. Corrected to `.pageCount`.
 - **TypeScript — `emailVerified` type mismatch in `app/api/files/route.ts`** — Prisma returns `emailVerified: Date | null` but `AuthenticatedUser` expects `boolean`. The squad-owner user object is now spread with `emailVerified: ownerUser.emailVerified !== null` before assignment.
+- **ESLint — `require()` imports in migration scripts** — `scripts/migrate-config.js` and `scripts/hash-file-passwords.js` used CommonJS `require()`, which is forbidden by the project's ESLint config. Both converted to ESM (`import`) and renamed to `.mjs`.
+- **ESLint — Empty interfaces in `react-jsx-compat.d.ts`** — Six `interface X extends Y {}` declarations with no added members replaced with `type X = Y` aliases, satisfying `@typescript-eslint/no-empty-object-type`.
+- **ESLint — Unused variables across multiple files** — Removed or prefixed unused imports and variables flagged by `@typescript-eslint/no-unused-vars`: `Copy` in `bucket/page.tsx`, `User` in `blog/page.tsx`, `Share2`/`User` in `blog/[slug]/page.tsx`, `Footer`/`getConfig`/`providedPassword` in `[filename]/page.tsx`, `toast` in `squads/client.tsx`, `codeSent` state in `alpha-migration/page.tsx`, and `userName` parameter in `dashboard/client.tsx`.
+- **ESLint — `let` → `const` in `theme-initializer.tsx`** — `cssVariables` was declared with `let` but never reassigned; declaration moved to the single assignment site as `const`.
 
 ## [2.4.5] - 2026-06-02
 

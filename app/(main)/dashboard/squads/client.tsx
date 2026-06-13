@@ -37,7 +37,12 @@ type SquadIncomingInvite = {
     _count: { members: number }
     maxSize: number
   }
-  invitedBy: { id: string; name: string | null; image: string | null; urlId: string }
+  invitedBy: {
+    id: string
+    name: string | null
+    image: string | null
+    urlId: string
+  }
 }
 
 type Squad = {
@@ -63,26 +68,63 @@ const STATUS_COLORS: Record<string, string> = {
 
 // -- Glass card wrappers -----------------------------------------------------
 
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`glass-card transition-all duration-300 ${className}`}>{children}</div>
+function GlassCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`glass-card transition-all duration-300 ${className}`}>
+      {children}
+    </div>
+  )
 }
 
-function GlassCardHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>{children}</div>
+function GlassCardHeader({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>
+      {children}
+    </div>
+  )
 }
 
-function GlassCardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={`font-semibold leading-none tracking-tight text-lg ${className}`}>{children}</h3>
+function GlassCardTitle({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <h3
+      className={`font-semibold leading-none tracking-tight text-lg ${className}`}
+    >
+      {children}
+    </h3>
+  )
 }
 
-function GlassCardContent({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function GlassCardContent({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return <div className={`p-6 pt-0 ${className}`}>{children}</div>
 }
 
 // -- Incoming invites section -----------------------------------------------
 
 function IncomingInvites() {
-  const { toast } = useToast()
   const [invites, setInvites] = useState<SquadIncomingInvite[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -114,7 +156,9 @@ function IncomingInvites() {
             {invites.length}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">You&apos;ve been invited to join these squads</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          You&apos;ve been invited to join these squads
+        </p>
       </GlassCardHeader>
       <GlassCardContent className="space-y-3">
         {invites.map((inv) => (
@@ -174,7 +218,11 @@ function SquadsList() {
       const data = await res.json()
       setSquads(data.data?.squads ?? [])
     } catch {
-      toast({ title: 'Error', description: 'Failed to load squads', variant: 'destructive' })
+      toast({
+        title: 'Error',
+        description: 'Failed to load squads',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
@@ -195,7 +243,9 @@ function SquadsList() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error((err as { error?: string }).error || 'Failed to create squad')
+        throw new Error(
+          (err as { error?: string }).error || 'Failed to create squad'
+        )
       }
       toast({ title: 'Squad created' })
       setNewName('')
@@ -204,7 +254,8 @@ function SquadsList() {
     } catch (err) {
       toast({
         title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to create squad',
+        description:
+          err instanceof Error ? err.message : 'Failed to create squad',
         variant: 'destructive',
       })
     } finally {
@@ -226,7 +277,8 @@ function SquadsList() {
           <div
             className="absolute inset-0 opacity-30 pointer-events-none"
             style={{
-              backgroundImage: 'radial-gradient(circle, hsl(var(--primary) / 0.08) 1px, transparent 1px)',
+              backgroundImage:
+                'radial-gradient(circle, hsl(var(--primary) / 0.08) 1px, transparent 1px)',
               backgroundSize: '20px 20px',
             }}
           />
@@ -238,13 +290,17 @@ function SquadsList() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-semibold">Early Access</p>
-                  <Badge variant="outline" className="text-[10px] text-primary border-primary/30 bg-primary/10 h-5">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] text-primary border-primary/30 bg-primary/10 h-5"
+                  >
                     Nexium
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Organized hubs for your team&apos;s output — share uploads, domains, and resources with your squad.
-                  Available now for all users with public profiles.
+                  Organized hubs for your team&apos;s output — share uploads,
+                  domains, and resources with your squad. Available now for all
+                  users with public profiles.
                 </p>
               </div>
             </div>
@@ -256,7 +312,11 @@ function SquadsList() {
           <p className="text-sm text-muted-foreground">
             {squads.length} squad{squads.length !== 1 ? 's' : ''}
           </p>
-          <Button size="sm" variant="outline" onClick={() => setShowCreate(!showCreate)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowCreate(!showCreate)}
+          >
             <Plus className="h-3.5 w-3.5 mr-1.5" /> New Squad
           </Button>
         </div>
@@ -272,10 +332,18 @@ function SquadsList() {
                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                 className="h-8 text-sm"
               />
-              <Button size="sm" onClick={handleCreate} disabled={creating || !newName.trim()}>
+              <Button
+                size="sm"
+                onClick={handleCreate}
+                disabled={creating || !newName.trim()}
+              >
                 {creating ? 'Creating...' : 'Create'}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowCreate(false)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowCreate(false)}
+              >
                 Cancel
               </Button>
             </div>
@@ -284,7 +352,9 @@ function SquadsList() {
 
         {/* Squad list */}
         {loading ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading squads...</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            Loading squads...
+          </div>
         ) : squads.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/60 p-10 text-center space-y-3">
             <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -292,9 +362,14 @@ function SquadsList() {
             </div>
             <p className="text-sm font-medium">No squads yet</p>
             <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-              Create a squad to share uploads, domains, and resources with your team.
+              Create a squad to share uploads, domains, and resources with your
+              team.
             </p>
-            <Button size="sm" variant="outline" onClick={() => setShowCreate(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCreate(true)}
+            >
               <Plus className="h-3.5 w-3.5 mr-1.5" /> Create your first squad
             </Button>
           </div>
@@ -312,19 +387,25 @@ function SquadsList() {
                       {squad.name}
                     </p>
                     {squad.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">{squad.description}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {squad.description}
+                      </p>
                     )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className={`text-[10px] h-5 ${STATUS_COLORS[squad.status] ?? ''}`}>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] h-5 ${STATUS_COLORS[squad.status] ?? ''}`}
+                  >
                     {squad.status}
                   </Badge>
                   <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {squad._count.members} member{squad._count.members !== 1 ? 's' : ''}
+                    {squad._count.members} member
+                    {squad._count.members !== 1 ? 's' : ''}
                   </span>
                   {!squad.isPublic && (
                     <span className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -339,7 +420,10 @@ function SquadsList() {
                     { icon: Key, label: 'API Keys' },
                     { icon: Globe, label: 'Domains' },
                   ].map(({ icon: Icon, label }) => (
-                    <span key={label} className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <span
+                      key={label}
+                      className="text-[11px] text-muted-foreground flex items-center gap-1"
+                    >
                       <Icon className="h-3 w-3" /> {label}
                     </span>
                   ))}

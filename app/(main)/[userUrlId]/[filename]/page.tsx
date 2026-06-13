@@ -9,7 +9,6 @@ import { getServerSession } from 'next-auth'
 
 import { ProtectedFile } from '@/packages/components/file/protected-file'
 import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
-import { Footer } from '@/packages/components/layout/footer'
 import { Icons } from '@/packages/components/shared/icons'
 import {
   Avatar,
@@ -21,7 +20,6 @@ import { Card } from '@/packages/components/ui/card'
 import { Input } from '@/packages/components/ui/input'
 
 import { authOptions } from '@/packages/lib/auth'
-import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import {
   buildDirectMediaMetadata,
@@ -103,7 +101,6 @@ export async function generateMetadata({
   const urlPath = `/${userUrlId}/${filename}`
   const headersList = await headers()
   const session = await getServerSession(authOptions)
-  const providedPassword = (await searchParams).password as string | undefined
 
   // Find the file
   const file = await findFileByUrlPath(userUrlId, filename, {
@@ -167,7 +164,6 @@ export default async function FilePage({
   searchParams,
 }: FilePageProps) {
   const session = await getServerSession(authOptions)
-  const config = await getConfig()
   const { userUrlId, filename } = await params
   const urlPath = `/${userUrlId}/${filename}`
   const providedPassword = (await searchParams).password as string | undefined
