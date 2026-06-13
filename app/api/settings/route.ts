@@ -6,7 +6,6 @@ import {
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import {
-  requireAdmin,
   requireAuth,
   requireSuperAdmin,
 } from '@/packages/lib/auth/api-auth'
