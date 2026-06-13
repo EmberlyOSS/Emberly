@@ -48,6 +48,7 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 - **Sitemap** — Marked sitemap route as dynamic to prevent build-time errors when database is unavailable during static export.
 - **TypeScript — Logger argument types in `sync-buckets.ts`** — `BucketSyncStats` was passed directly as a `logger.info` context argument (expects `Record<string, unknown>`); fixed by spreading with `{ ...stats }`. Two `logger.warn` calls passed raw `Error` objects where a context object is expected; fixed by passing `{ error: String(err) }`.
 - **TypeScript — `PaginationData.pages` property in `user-list.tsx`** — Three references used `.pages` on the `PaginationData` type returned by `useUserManagement`, which defines the property as `pageCount`. Corrected to `.pageCount`.
+- **TypeScript — `emailVerified` type mismatch in `app/api/files/route.ts`** — Prisma returns `emailVerified: Date | null` but `AuthenticatedUser` expects `boolean`. The squad-owner user object is now spread with `emailVerified: ownerUser.emailVerified !== null` before assignment.
 
 ## [2.4.5] - 2026-06-02
 

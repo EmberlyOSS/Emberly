@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       })
       if (!ownerUser)
         return apiError('Squad owner not found', HTTP_STATUS.UNAUTHORIZED)
-      user = ownerUser
+      user = { ...ownerUser, emailVerified: ownerUser.emailVerified !== null }
       squadContext = squad
     } else {
       const auth = await requireAuth(req)
