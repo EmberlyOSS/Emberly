@@ -35,7 +35,7 @@ export const configSchema = z
                       return isNaN(val.getTime()) ? null : val.toISOString()
                     }
                     // Handle JSON-parsed objects with a valid date property
-                    if (typeof val === 'object' && val !== null) {
+                    if (Object(val) === val && typeof val === 'object') {
                       try {
                         const d = new Date(val)
                         return isNaN(d.getTime()) ? null : d.toISOString()
