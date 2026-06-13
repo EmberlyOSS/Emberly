@@ -101,6 +101,7 @@ export async function getUniqueFilename(
   while (s < e && urlSafeName[s] === '-') s++
   while (e > s && urlSafeName[e - 1] === '-') e--
   urlSafeName = urlSafeName.slice(s, e)
+  if (!urlSafeName) urlSafeName = nanoid(6)
 
   if (extension) {
     urlSafeName += '.' + extension.toLowerCase()

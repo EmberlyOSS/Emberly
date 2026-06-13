@@ -39,7 +39,12 @@ export const sessionCache = {
       const redis = await getRedisClient()
       const data = await redis.get(redisKeys.userSession(userId))
       if (!data) return null
-      return JSON.parse(data) as CachedUserSession
+      const parsed = JSON.parse(data) as CachedUserSession
+      // Coerce emailVerified for older cached entries that pre-date the boolean field
+      if (typeof parsed.emailVerified !== 'boolean') {
+        parsed.emailVerified = false
+      }
+      return parsed
     } catch (error) {
       logger.error('Failed to get cached user session', error as Error, {
         userId,
