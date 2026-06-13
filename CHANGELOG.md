@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.6] - 2026-06-13
+
+### Security
+
+- **ReDoS — Polynomial Regular Expression Hardening**
+  - Replaced all `/\/+$/` trailing-slash regex patterns applied to user-controlled values with linear while-loop equivalents, eliminating O(n²) backtracking risk (CodeQL `js/polynomial-redos`).
+  - Affected files: `packages/lib/utils/index.ts` (`urlForHost`), `packages/lib/files/upload-validation.ts` (domain cleaning), `packages/lib/files/filename.ts` (slug trimming), `app/api/files/route.ts` (URL construction).
+  - Replaced `/^-+|-+$/g` alternation pattern in filename slug generation with pointer-based leading/trailing trim.
+- **SSRF — Integration Test Endpoint Input Validation**
+  - Discord server ID (`serverId`) now validated against snowflake format (`/^\d{17,20}$/`) before being interpolated into the Discord API URL (CodeQL `js/request-forgery`).
+  - Cloudflare account ID (`accountId`) now validated against 32-character lowercase hex format before URL construction.
+  - Both integrations return a clear validation error message rather than making an outbound request with unsanitised input.
+- **Miscellaneous CodeQL Findings Resolved**
+  - Incomplete URL substring sanitisation (alerts 6, 7) — hardened URL host checks.
+  - Shell command built from environment values (alert 16) — environment input sanitised before shell interpolation.
+  - Use of externally-controlled format string (alert 15) — format string construction tightened.
+  - Additional SSRF alerts (10–13, 17–19) addressed across various API routes.
+
+### Changed
+
+- **Status Page Integration Removed**
+  - Removed the Kener / Uptime Kuma dynamic status integration entirely. The polling logic, `/api/status` route, admin settings panel, and integration test handler have all been removed.
+  - `StatusIndicator` in the site footer is now a lightweight static link to [emberlystat.us](https://emberlystat.us) — no external API calls, no runtime failures, no "Status unknown" states.
+  - `KENER_API_KEY`, `KENER_BASE_URL`, `UPTIME_KUMA_BASE_URL`, and `UPTIME_KUMA_SLUG` environment variables are no longer used and can be removed.
+
+### Added
+
+- **CodeQL Workflow** — Automated static analysis via GitHub Actions (`/.github/workflows/codeql.yml`) now runs on push and pull request for continuous security scanning.
+- **SECURITY.md** — Added security policy documenting responsible disclosure process and supported versions.
+- **License Scan** — Added license scan report and status badge to repository.
+
+### Performance
+
+- **VirusTotal scan moved off the critical path** — VT hash lookups previously blocked the upload response for 5-10s on non-media files. The scan now runs in the background after the file is stored and the response is returned. Files detected as malicious are automatically quarantined (removed from storage, marked private) and logged.
+- **Stripe subscription sync debounce survives hot-reloads** — The per-user 5-minute Stripe sync cache (`stripeSyncCache`) was stored as a module-level variable, causing it to reset on every Next.js hot-reload in development and trigger a live Stripe API call on every upload. Moved to `globalThis` so the TTL is respected across reloads.
+- **S3 provider singleton persisted across hot-reloads** — Storage provider was re-initialized on every request in development for the same reason. Also moved to `globalThis`, eliminating redundant initialization logs and the associated config DB read per request.
+- **File buffer, storage provider, and filename generation parallelized** — `arrayBuffer()`, `getStorageProvider()`, and `getUniqueFilename()` now run concurrently with `Promise.all` instead of sequentially, removing 1-2 unnecessary round-trips from the critical path.
+- **`bcrypt.hash` moved outside the DB transaction** — Password hashing was running inside `prisma.$transaction`, blocking the database connection during a CPU-intensive operation. The hash is now computed before the transaction opens.
+
+### Fixed
+
+- **Sitemap** — Marked sitemap route as dynamic to prevent build-time errors when database is unavailable during static export.
+
 ## [2.4.5] - 2026-06-02
 
 ### Added

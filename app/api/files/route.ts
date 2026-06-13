@@ -20,12 +20,15 @@ import {
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import {
-  getFileExpirationInfo,
+  getFileExpirationInfoBatch,
   scheduleFileExpiration,
 } from '@/packages/lib/events/handlers/file-expiry'
 import { getUniqueFilename } from '@/packages/lib/files/filename'
 import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
-import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
+import {
+  validateFileSecurityChecks,
+  scanWithVirusTotal,
+} from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
 import { getStorageProvider } from '@/packages/lib/storage'
@@ -36,6 +39,9 @@ const logger = loggers.files
 export async function POST(req: Request) {
   let filePath = ''
   let userId: string | undefined
+  let storageProvider:
+    | Awaited<ReturnType<typeof getStorageProvider>>
+    | undefined
 
   try {
     // ── Auth: try squad token/API key first, then fall back to user session ──
@@ -58,6 +64,7 @@ export async function POST(req: Request) {
           role: true,
           randomizeFileUrls: true,
           preferredUploadDomain: true,
+          emailVerified: true,
         },
       })
       if (!ownerUser)
@@ -114,12 +121,13 @@ export async function POST(req: Request) {
       return apiError(result.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
 
+    const fileSizeMB = bytesToMB(uploadedFile.size)
+
     // Check file size against plan upload cap and storage quota
     if (user.role !== 'ADMIN') {
       const { getPlanLimits, canUploadSize } =
         await import('@/packages/lib/storage/quota')
       const planLimits = await getPlanLimits(user.id)
-      const fileSizeMB = bytesToMB(uploadedFile.size)
 
       // Check plan upload size cap (null = unlimited for Ember/Enterprise)
       if (planLimits.uploadSizeCapMB !== null) {
@@ -158,29 +166,35 @@ export async function POST(req: Request) {
     }
 
     // Validate email verification and custom domain verification
+    // Pass preloaded user data to skip the redundant DB round-trip in validateEmailVerified
     const uploadValidation = await validateUploadRequest(
       user.id,
-      requestedDomain
+      requestedDomain,
+      { emailVerified: user.emailVerified, role: user.role }
     )
     if (!uploadValidation.valid) {
       return apiError(uploadValidation.error!, HTTP_STATUS.FORBIDDEN)
     }
 
-    const { urlSafeName, displayName } = await getUniqueFilename(
-      join('uploads', user.urlId),
-      uploadedFile.name,
-      user.randomizeFileUrls
-    )
+    // Buffer file + resolve provider and unique filename in parallel
+    const [buf, { urlSafeName, displayName }, storageProviderResolved] =
+      await Promise.all([
+        uploadedFile.arrayBuffer().then((ab) => Buffer.from(ab)),
+        getUniqueFilename(
+          join('uploads', user.urlId),
+          uploadedFile.name,
+          user.randomizeFileUrls
+        ),
+        getStorageProvider(),
+      ])
+    storageProvider = storageProviderResolved
 
     filePath = join('uploads', user.urlId, urlSafeName)
     const urlPath = `/${user.urlId}/${urlSafeName}`
 
-    const storageProvider = await getStorageProvider()
-    const bytes = await uploadedFile.arrayBuffer()
-
-    // Security check: validate file against zip bombs, malware, dangerous types, and VirusTotal
-    const securityCheck = await validateFileSecurityChecksWithVT(
-      Buffer.from(bytes),
+    // Fast local security checks only (extension, MIME, zip bomb) — no network calls
+    const securityCheck = validateFileSecurityChecks(
+      buf,
       uploadedFile.name,
       uploadedFile.type
     )
@@ -189,7 +203,6 @@ export async function POST(req: Request) {
         fileName: uploadedFile.name,
         mimeType: uploadedFile.type,
         error: securityCheck.error,
-        virusTotal: securityCheck.virusTotal,
         userId: user.id,
       })
       return apiError(
@@ -198,25 +211,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (securityCheck.virusTotal?.scanPerformed) {
-      logger.info('File scanned by VirusTotal', {
-        fileName: uploadedFile.name,
-        detected: securityCheck.virusTotal.detected,
-        detectionRatio: securityCheck.virusTotal.detectionRatio,
-        permalink: securityCheck.virusTotal.permalink,
-        userId: user.id,
-      })
-    }
-
-    if (securityCheck.warnings?.length) {
-      logger.info('File security warnings', {
-        fileName: uploadedFile.name,
-        warnings: securityCheck.warnings,
-        userId: user.id,
-      })
-    }
-
-    // carry through host headers as metadata so storage/proxy can use them
+    // Carry through host headers as metadata so storage/proxy can use them
     const meta: Record<string, string> = {}
     try {
       const reqHeaders = (req as any).headers as Headers | undefined
@@ -230,12 +225,10 @@ export async function POST(req: Request) {
       // ignore
     }
 
-    await storageProvider.uploadFile(
-      Buffer.from(bytes),
-      filePath,
-      uploadedFile.type,
-      meta
-    )
+    // Hash password before the transaction so bcrypt doesn't block DB time
+    const passwordHash = password ? await hash(password, 10) : null
+
+    await storageProvider.uploadFile(buf, filePath, uploadedFile.type, meta)
 
     const fileRecord = await prisma.$transaction(async (tx) => {
       const file = await tx.file.create({
@@ -243,10 +236,10 @@ export async function POST(req: Request) {
           name: displayName,
           urlPath,
           mimeType: uploadedFile.type,
-          size: bytesToMB(uploadedFile.size),
+          size: fileSizeMB,
           path: filePath,
           visibility: visibility,
-          password: password ? await hash(password, 10) : null,
+          password: passwordHash,
           userId: user.id,
           allowSuggestions,
         },
@@ -254,14 +247,14 @@ export async function POST(req: Request) {
 
       await tx.user.update({
         where: { id: user.id },
-        data: { storageUsed: { increment: bytesToMB(uploadedFile.size) } },
+        data: { storageUsed: { increment: fileSizeMB } },
       })
 
       // Track squad storage usage when uploaded via squad token/API key
       if (squadContext) {
         await tx.nexiumSquad.update({
           where: { id: squadContext.squadId },
-          data: { storageUsed: { increment: bytesToMB(uploadedFile.size) } },
+          data: { storageUsed: { increment: fileSizeMB } },
         })
       }
 
@@ -276,6 +269,28 @@ export async function POST(req: Request) {
         })
       })
     }
+
+    // VirusTotal scan runs in the background after the response is sent.
+    // On detection the file is deleted from storage and marked in the DB.
+    scanWithVirusTotal(buf, uploadedFile.type, async (vtResult) => {
+      logger.warn('VirusTotal detected malware — quarantining file', {
+        fileId: fileRecord.id,
+        detectionRatio: vtResult.detectionRatio,
+        permalink: vtResult.permalink,
+        userId: user.id,
+      })
+      await Promise.allSettled([
+        storageProvider!.deleteFile(filePath),
+        prisma.file.update({
+          where: { id: fileRecord.id },
+          data: { visibility: 'PRIVATE', name: '[Quarantined]' },
+        }),
+      ])
+    }).catch((err) => {
+      logger.error('Background VirusTotal scan failed', err as Error, {
+        fileId: fileRecord.id,
+      })
+    })
 
     if (expirationDate) {
       try {
@@ -300,12 +315,20 @@ export async function POST(req: Request) {
     const baseUrl =
       process.env.NODE_ENV === 'development'
         ? 'http://localhost:3000'
-        : process.env.NEXTAUTH_URL?.replace(/\/$/, '') || ''
-    const fullUrl = (
-      baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
-    ).replace(/\/+$/, '')
+        : (process.env.NEXTAUTH_URL?.endsWith('/')
+            ? process.env.NEXTAUTH_URL.slice(0, -1)
+            : process.env.NEXTAUTH_URL) || ''
+    const trimTrailingSlashes = (s: string) => {
+      let end = s.length
+      while (end > 0 && s[end - 1] === '/') end--
+      return end === s.length ? s : s.slice(0, end)
+    }
 
-    const sanitizeHost = (host: string) => urlForHost(host).replace(/\/+$/, '')
+    const fullUrl = trimTrailingSlashes(
+      baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
+    )
+
+    const sanitizeHost = (host: string) => trimTrailingSlashes(urlForHost(host))
     const preferredHost = user.preferredUploadDomain
       ? sanitizeHost(user.preferredUploadDomain)
       : null
@@ -378,9 +401,8 @@ export async function POST(req: Request) {
       userId,
     })
 
-    if (filePath) {
+    if (filePath && storageProvider) {
       try {
-        const storageProvider = await getStorageProvider()
         await storageProvider.deleteFile(filePath)
         logger.info('Cleaned up file after error', { filePath })
       } catch (unlinkError) {
@@ -485,12 +507,14 @@ export async function GET(request: Request) {
         }),
       ])
 
-      const filesList = await Promise.all(
-        files.map(async (file) => {
-          const expiresAt = await getFileExpirationInfo(file.id)
-          return { ...file, hasPassword: Boolean(file.password), expiresAt }
-        })
+      const expirationMap = await getFileExpirationInfoBatch(
+        files.map((f) => f.id)
       )
+      const filesList = files.map((file) => ({
+        ...file,
+        hasPassword: Boolean(file.password),
+        expiresAt: expirationMap.get(file.id) ?? null,
+      }))
 
       return paginatedResponse<FileMetadata[]>(
         filesList as (FileMetadata & { expiresAt: Date | null })[],
@@ -580,42 +604,41 @@ export async function GET(request: Request) {
         orderBy.uploadedAt = 'desc'
     }
 
-    const total = await prisma.file.count({ where })
-
-    const files = await prisma.file.findMany({
-      where,
-      orderBy,
-      take: limit,
-      skip: offset,
-      select: {
-        id: true,
-        name: true,
-        urlPath: true,
-        mimeType: true,
-        size: true,
-        uploadedAt: true,
-        visibility: true,
-        password: true,
-        views: true,
-        downloads: true,
-        user: {
-          select: {
-            urlId: true,
+    const [total, files] = await Promise.all([
+      prisma.file.count({ where }),
+      prisma.file.findMany({
+        where,
+        orderBy,
+        take: limit,
+        skip: offset,
+        select: {
+          id: true,
+          name: true,
+          urlPath: true,
+          mimeType: true,
+          size: true,
+          uploadedAt: true,
+          visibility: true,
+          password: true,
+          views: true,
+          downloads: true,
+          user: {
+            select: {
+              urlId: true,
+            },
           },
         },
-      },
-    })
+      }),
+    ])
 
-    const filesList = (await Promise.all(
-      files.map(async (file) => {
-        const expiresAt = await getFileExpirationInfo(file.id)
-        return {
-          ...file,
-          hasPassword: Boolean(file.password),
-          expiresAt,
-        }
-      })
-    )) as (FileMetadata & { expiresAt: Date | null })[]
+    const expirationMap = await getFileExpirationInfoBatch(
+      files.map((f) => f.id)
+    )
+    const filesList = files.map((file) => ({
+      ...file,
+      hasPassword: Boolean(file.password),
+      expiresAt: expirationMap.get(file.id) ?? null,
+    })) as (FileMetadata & { expiresAt: Date | null })[]
 
     const pagination = {
       total,

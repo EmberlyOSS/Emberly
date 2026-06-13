@@ -16,9 +16,6 @@ export function Footer() {
                 &copy; {new Date().getFullYear()} NodeByte LTD. All rights
                 reserved.
               </p>
-              <div className="hidden sm:block">
-                <StatusIndicator />
-              </div>
             </div>
 
             <div className="flex items-center gap-3">

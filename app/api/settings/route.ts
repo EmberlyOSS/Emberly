@@ -5,7 +5,11 @@ import {
 } from '@/packages/types/dto/settings'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
-import { requireAdmin, requireAuth, requireSuperAdmin } from '@/packages/lib/auth/api-auth'
+import {
+  requireAdmin,
+  requireAuth,
+  requireSuperAdmin,
+} from '@/packages/lib/auth/api-auth'
 import {
   EmberlyConfig,
   getConfig,
@@ -31,12 +35,22 @@ function maskSecretsForAdmin(config: EmberlyConfig): EmberlyConfig {
   }
   // Integrations
   const i = c.settings?.integrations ?? {}
-  if (i.stripe)     { i.stripe.secretKey = '';     i.stripe.webhookSecret = '' }
-  if (i.resend)     { i.resend.apiKey = '' }
-  if (i.cloudflare) { i.cloudflare.apiToken = '' }
-  if (i.discord)    { i.discord.botToken = '' }
-  if (i.github)     { i.github.pat = '' }
-  if (i.kener)      { i.kener.apiKey = '' }
+  if (i.stripe) {
+    i.stripe.secretKey = ''
+    i.stripe.webhookSecret = ''
+  }
+  if (i.resend) {
+    i.resend.apiKey = ''
+  }
+  if (i.cloudflare) {
+    i.cloudflare.apiToken = ''
+  }
+  if (i.discord) {
+    i.discord.botToken = ''
+  }
+  if (i.github) {
+    i.github.pat = ''
+  }
   return c as EmberlyConfig
 }
 
@@ -182,4 +196,3 @@ export async function POST(req: Request) {
     return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
   }
 }
-

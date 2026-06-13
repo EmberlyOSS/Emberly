@@ -5,7 +5,14 @@ import nodemailer from 'nodemailer'
 
 const logger = loggers.config
 
-type IntegrationKey = 'stripe' | 'resend' | 'cloudflare' | 'discord' | 'github' | 'kener' | 'smtp' | 'vultr'
+type IntegrationKey =
+  | 'stripe'
+  | 'resend'
+  | 'cloudflare'
+  | 'discord'
+  | 'github'
+  | 'smtp'
+  | 'vultr'
 
 interface TestIntegrationBody {
   integration: IntegrationKey
@@ -42,26 +49,6 @@ function isPrivateOrLocalHost(hostname: string): boolean {
   return false
 }
 
-function getSafeKenerOrigin(baseUrl?: string): string | null {
-  const candidate = (baseUrl && baseUrl.trim()) || 'https://emberlystat.us'
-
-  let parsed: URL
-  try {
-    parsed = new URL(candidate)
-  } catch {
-    return null
-  }
-
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
-  if (parsed.username || parsed.password) return null
-  if (isPrivateOrLocalHost(parsed.hostname)) return null
-
-  const allowedOrigins = new Set(['https://emberlystat.us'])
-  if (!allowedOrigins.has(parsed.origin)) return null
-
-  return parsed.origin
-}
-
 interface TestResult {
   ok: boolean
   message: string
@@ -74,11 +61,21 @@ async function testStripe(secretKey: string): Promise<TestResult> {
     const res = await fetch('https://api.stripe.com/v1/customers?limit=1', {
       headers: { Authorization: `Bearer ${secretKey}` },
     })
-    if (res.status === 401) return { ok: false, message: 'Invalid secret key', detail: 'Authentication failed' }
-    if (!res.ok) return { ok: false, message: `Stripe API error (${res.status})` }
+    if (res.status === 401)
+      return {
+        ok: false,
+        message: 'Invalid secret key',
+        detail: 'Authentication failed',
+      }
+    if (!res.ok)
+      return { ok: false, message: `Stripe API error (${res.status})` }
     return { ok: true, message: 'Connected to Stripe successfully' }
   } catch (err) {
-    return { ok: false, message: 'Failed to reach Stripe API', detail: String(err) }
+    return {
+      ok: false,
+      message: 'Failed to reach Stripe API',
+      detail: String(err),
+    }
   }
 }
 
@@ -88,47 +85,107 @@ async function testResend(apiKey: string): Promise<TestResult> {
     const res = await fetch('https://api.resend.com/domains', {
       headers: { Authorization: `Bearer ${apiKey}` },
     })
-    if (res.status === 401 || res.status === 403) return { ok: false, message: 'Invalid API key' }
-    if (!res.ok) return { ok: false, message: `Resend API error (${res.status})` }
+    if (res.status === 401 || res.status === 403)
+      return { ok: false, message: 'Invalid API key' }
+    if (!res.ok)
+      return { ok: false, message: `Resend API error (${res.status})` }
     return { ok: true, message: 'Connected to Resend successfully' }
   } catch (err) {
-    return { ok: false, message: 'Failed to reach Resend API', detail: String(err) }
+    return {
+      ok: false,
+      message: 'Failed to reach Resend API',
+      detail: String(err),
+    }
   }
 }
 
-async function testCloudflare(apiToken: string, accountId?: string): Promise<TestResult> {
+function sanitizeCloudflareAccountId(id?: string): string | null {
+  if (!id) return null
+  const trimmed = id.trim()
+  // Cloudflare account IDs are 32-char lowercase hex strings
+  if (!/^[0-9a-f]{32}$/.test(trimmed)) return null
+  return trimmed
+}
+
+async function testCloudflare(
+  apiToken: string,
+  accountId?: string
+): Promise<TestResult> {
   if (!apiToken) return { ok: false, message: 'API token is not configured' }
+  const safeAccountId = sanitizeCloudflareAccountId(accountId)
+  if (accountId && !safeAccountId) {
+    return { ok: false, message: 'Invalid Cloudflare account ID format' }
+  }
   try {
-    const url = accountId
-      ? `https://api.cloudflare.com/client/v4/accounts/${accountId}`
+    const url = safeAccountId
+      ? `https://api.cloudflare.com/client/v4/accounts/${safeAccountId}`
       : 'https://api.cloudflare.com/client/v4/user'
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
     })
     const json = await res.json().catch(() => null)
     if (!res.ok || json?.success === false) {
-      return { ok: false, message: 'Invalid Cloudflare API token', detail: json?.errors?.[0]?.message }
+      return {
+        ok: false,
+        message: 'Invalid Cloudflare API token',
+        detail: json?.errors?.[0]?.message,
+      }
     }
     return { ok: true, message: 'Connected to Cloudflare successfully' }
   } catch (err) {
-    return { ok: false, message: 'Failed to reach Cloudflare API', detail: String(err) }
+    return {
+      ok: false,
+      message: 'Failed to reach Cloudflare API',
+      detail: String(err),
+    }
   }
 }
 
-async function testDiscord(webhookUrl: string, botToken?: string, serverId?: string): Promise<TestResult> {
+function sanitizeDiscordServerId(id?: string): string | null {
+  if (!id) return null
+  const trimmed = id.trim()
+  // Discord snowflakes are 17–20 digit integers
+  if (!/^\d{17,20}$/.test(trimmed)) return null
+  return trimmed
+}
+
+async function testDiscord(
+  webhookUrl: string,
+  botToken?: string,
+  serverId?: string
+): Promise<TestResult> {
   // Try bot token first (more informative)
-  if (botToken && serverId) {
+  const safeServerId = sanitizeDiscordServerId(serverId)
+  if (botToken && serverId && !safeServerId) {
+    return { ok: false, message: 'Invalid Discord server ID format' }
+  }
+  if (botToken && safeServerId) {
     try {
-      const res = await fetch(`https://discord.com/api/v10/guilds/${serverId}`, {
-        headers: { Authorization: `Bot ${botToken}` },
-      })
+      const res = await fetch(
+        `https://discord.com/api/v10/guilds/${safeServerId}`,
+        {
+          headers: { Authorization: `Bot ${botToken}` },
+        }
+      )
       if (res.status === 401) return { ok: false, message: 'Invalid bot token' }
-      if (res.status === 404) return { ok: false, message: 'Server not found or bot not in server' }
-      if (!res.ok) return { ok: false, message: `Discord API error (${res.status})` }
+      if (res.status === 404)
+        return { ok: false, message: 'Server not found or bot not in server' }
+      if (!res.ok)
+        return { ok: false, message: `Discord API error (${res.status})` }
       const json = await res.json().catch(() => null)
-      return { ok: true, message: `Connected to Discord — server: ${json?.name ?? serverId}` }
+      return {
+        ok: true,
+        message: `Connected to Discord — server: ${json?.name ?? safeServerId}`,
+      }
     } catch (err) {
-      return { ok: false, message: 'Failed to reach Discord API', detail: String(err) }
+      return {
+        ok: false,
+        message: 'Failed to reach Discord API',
+        detail: String(err),
+      }
     }
   }
 
@@ -143,25 +200,44 @@ async function testDiscord(webhookUrl: string, botToken?: string, serverId?: str
       }
 
       const hostname = parsed.hostname.toLowerCase()
-      const isDiscordHost = hostname === 'discord.com' || hostname === 'discordapp.com'
-      if (parsed.protocol !== 'https:' || !isDiscordHost || isPrivateOrLocalHost(hostname)) {
-        return { ok: false, message: 'Webhook URL must be a valid Discord HTTPS URL' }
+      const isDiscordHost =
+        hostname === 'discord.com' || hostname === 'discordapp.com'
+      if (
+        parsed.protocol !== 'https:' ||
+        !isDiscordHost ||
+        isPrivateOrLocalHost(hostname)
+      ) {
+        return {
+          ok: false,
+          message: 'Webhook URL must be a valid Discord HTTPS URL',
+        }
       }
 
-      const match = parsed.pathname.match(/^\/api\/webhooks\/(\d+)\/([A-Za-z0-9._-]+)$/)
+      const match = parsed.pathname.match(
+        /^\/api\/webhooks\/(\d+)\/([A-Za-z0-9._-]+)$/
+      )
       if (!match) {
-        return { ok: false, message: 'Webhook URL must match Discord webhook format' }
+        return {
+          ok: false,
+          message: 'Webhook URL must match Discord webhook format',
+        }
       }
 
       const [, webhookId, webhookToken] = match
       const safeWebhookUrl = `https://discord.com/api/webhooks/${encodeURIComponent(webhookId)}/${encodeURIComponent(webhookToken)}`
 
       const res = await fetch(safeWebhookUrl, { method: 'GET' })
-      if (res.status === 401) return { ok: false, message: 'Invalid webhook URL' }
-      if (!res.ok) return { ok: false, message: `Discord webhook error (${res.status})` }
+      if (res.status === 401)
+        return { ok: false, message: 'Invalid webhook URL' }
+      if (!res.ok)
+        return { ok: false, message: `Discord webhook error (${res.status})` }
       return { ok: true, message: 'Discord webhook is valid' }
     } catch (err) {
-      return { ok: false, message: 'Failed to reach Discord webhook', detail: String(err) }
+      return {
+        ok: false,
+        message: 'Failed to reach Discord webhook',
+        detail: String(err),
+      }
     }
   }
 
@@ -172,12 +248,14 @@ function sanitizeGitHubOrg(org?: string): string | null {
   if (!org) return null
   const trimmed = org.trim()
   // GitHub org/user name rules: alphanumeric or single hyphens, no leading/trailing hyphen, max 39 chars.
-  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(trimmed)) return null
+  if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(trimmed))
+    return null
   return trimmed
 }
 
 async function testGitHub(pat: string, org?: string): Promise<TestResult> {
-  if (!pat) return { ok: false, message: 'Personal access token is not configured' }
+  if (!pat)
+    return { ok: false, message: 'Personal access token is not configured' }
   const safeOrg = sanitizeGitHubOrg(org)
   if (org && !safeOrg) {
     return { ok: false, message: 'Invalid GitHub organization name format' }
@@ -193,34 +271,26 @@ async function testGitHub(pat: string, org?: string): Promise<TestResult> {
         'X-GitHub-Api-Version': '2022-11-28',
       },
     })
-    if (res.status === 401) return { ok: false, message: 'Invalid personal access token' }
-    if (res.status === 404) return { ok: false, message: `Organization "${safeOrg ?? org}" not found` }
-    if (!res.ok) return { ok: false, message: `GitHub API error (${res.status})` }
+    if (res.status === 401)
+      return { ok: false, message: 'Invalid personal access token' }
+    if (res.status === 404)
+      return {
+        ok: false,
+        message: `Organization "${safeOrg ?? org}" not found`,
+      }
+    if (!res.ok)
+      return { ok: false, message: `GitHub API error (${res.status})` }
     const json = await res.json().catch(() => null)
-    return { ok: true, message: `Connected to GitHub${safeOrg ? ` — org: ${json?.name ?? safeOrg}` : ` — user: ${json?.login}`}` }
+    return {
+      ok: true,
+      message: `Connected to GitHub${safeOrg ? ` — org: ${json?.name ?? safeOrg}` : ` — user: ${json?.login}`}`,
+    }
   } catch (err) {
-    return { ok: false, message: 'Failed to reach GitHub API', detail: String(err) }
-  }
-}
-
-async function testKener(apiKey: string, baseUrl?: string): Promise<TestResult> {
-  const origin = getSafeKenerOrigin(baseUrl)
-  if (!origin) {
-    return { ok: false, message: 'Invalid Kener base URL' }
-  }
-
-  try {
-    const res = await fetch(`${origin}/api/v4/monitors`, {
-      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-      signal: AbortSignal.timeout(8000),
-    })
-    if (res.status === 401 || res.status === 403) return { ok: false, message: 'Invalid API key' }
-    if (!res.ok) return { ok: false, message: `Kener API error (${res.status})` }
-    const json = await res.json().catch(() => null)
-    const count = (json?.monitors as unknown[])?.length ?? 0
-    return { ok: true, message: `Connected to Kener — ${count} monitor${count !== 1 ? 's' : ''} found` }
-  } catch (err) {
-    return { ok: false, message: 'Failed to reach Kener instance', detail: String(err) }
+    return {
+      ok: false,
+      message: 'Failed to reach GitHub API',
+      detail: String(err),
+    }
   }
 }
 
@@ -231,17 +301,32 @@ async function testVultr(apiKey: string): Promise<TestResult> {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(8000),
     })
-    if (res.status === 401 || res.status === 403) return { ok: false, message: 'Invalid API key' }
-    if (!res.ok) return { ok: false, message: `Vultr API error (${res.status})` }
+    if (res.status === 401 || res.status === 403)
+      return { ok: false, message: 'Invalid API key' }
+    if (!res.ok)
+      return { ok: false, message: `Vultr API error (${res.status})` }
     const json = await res.json().catch(() => null)
     const email = json?.account?.email
-    return { ok: true, message: `Connected to Vultr${email ? ` — ${email}` : ''}` }
+    return {
+      ok: true,
+      message: `Connected to Vultr${email ? ` — ${email}` : ''}`,
+    }
   } catch (err) {
-    return { ok: false, message: 'Failed to reach Vultr API', detail: String(err) }
+    return {
+      ok: false,
+      message: 'Failed to reach Vultr API',
+      detail: String(err),
+    }
   }
 }
 
-async function testSmtp(host: string, port: number, secure: boolean, user: string, password: string): Promise<TestResult> {
+async function testSmtp(
+  host: string,
+  port: number,
+  secure: boolean,
+  user: string,
+  password: string
+): Promise<TestResult> {
   if (!host) return { ok: false, message: 'SMTP host is not configured' }
   try {
     const transport = nodemailer.createTransport({
@@ -256,7 +341,11 @@ async function testSmtp(host: string, port: number, secure: boolean, user: strin
     transport.close()
     return { ok: true, message: `Connected to SMTP server at ${host}:${port}` }
   } catch (err) {
-    return { ok: false, message: 'Failed to connect to SMTP server', detail: String(err) }
+    return {
+      ok: false,
+      message: 'Failed to connect to SMTP server',
+      detail: String(err),
+    }
   }
 }
 
@@ -278,16 +367,20 @@ export async function POST(req: Request) {
         result = await testResend(credentials.apiKey)
         break
       case 'cloudflare':
-        result = await testCloudflare(credentials.apiToken, credentials.accountId)
+        result = await testCloudflare(
+          credentials.apiToken,
+          credentials.accountId
+        )
         break
       case 'discord':
-        result = await testDiscord(credentials.webhookUrl, credentials.botToken, credentials.serverId)
+        result = await testDiscord(
+          credentials.webhookUrl,
+          credentials.botToken,
+          credentials.serverId
+        )
         break
       case 'github':
         result = await testGitHub(credentials.pat, credentials.org)
-        break
-      case 'kener':
-        result = await testKener(credentials.apiKey, credentials.baseUrl)
         break
       case 'smtp':
         result = await testSmtp(
@@ -295,7 +388,7 @@ export async function POST(req: Request) {
           Number(credentials.port) || 587,
           credentials.secure === 'true',
           credentials.user,
-          credentials.password,
+          credentials.password
         )
         break
       case 'vultr':
@@ -311,4 +404,3 @@ export async function POST(req: Request) {
     return apiError('Internal server error')
   }
 }
-
