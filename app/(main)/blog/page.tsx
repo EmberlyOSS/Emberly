@@ -1,7 +1,14 @@
 import Link from 'next/link'
 
 import { format, formatDistanceToNow } from 'date-fns'
-import { Calendar, User, ArrowRight, BookOpen, MessageCircle, ExternalLink, FileText } from 'lucide-react'
+import {
+  Calendar,
+  ArrowRight,
+  BookOpen,
+  MessageCircle,
+  ExternalLink,
+  FileText,
+} from 'lucide-react'
 
 import { listPosts } from '@/packages/lib/blog'
 import PageShell from '@/packages/components/layout/PageShell'
@@ -10,14 +17,19 @@ import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
   title: 'Blog',
-  description: 'News, tips and updates about Emberly and file sharing best practices.',
+  description:
+    'News, tips and updates about Emberly and file sharing best practices.',
 })
 
 export default async function BlogListPage() {
   const posts = await listPosts({ publishedOnly: true, limit: 20, offset: 0 })
 
   return (
-    <PageShell title="Emberly Blog" subtitle="News, tips and updates about Emberly and file sharing best practices." bodyVariant="plain">
+    <PageShell
+      title="Emberly Blog"
+      subtitle="News, tips and updates about Emberly and file sharing best practices."
+      bodyVariant="plain"
+    >
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main content - Blog posts */}
@@ -30,15 +42,20 @@ export default async function BlogListPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="font-medium">No posts yet</p>
-                    <p className="text-sm text-muted-foreground">Check back soon for updates!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Check back soon for updates!
+                    </p>
                   </div>
                 </div>
               </div>
             ) : (
               posts.map((p, index) => (
-                <Link key={p.id} href={`/blog/${p.slug}`} className="block group">
+                <Link
+                  key={p.id}
+                  href={`/blog/${p.slug}`}
+                  className="block group"
+                >
                   <article className="glass-subtle glass-hover overflow-hidden">
-
                     {/* Featured badge for first post */}
                     {index === 0 && (
                       <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
@@ -88,9 +105,15 @@ export default async function BlogListPage() {
                           {p.publishedAt && (
                             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
                               <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                              <span>{format(new Date(p.publishedAt), 'MMM d, yyyy')}</span>
+                              <span>
+                                {format(new Date(p.publishedAt), 'MMM d, yyyy')}
+                              </span>
                               <span className="text-muted-foreground/60 hidden sm:inline">
-                                ({formatDistanceToNow(new Date(p.publishedAt), { addSuffix: true })})
+                                (
+                                {formatDistanceToNow(new Date(p.publishedAt), {
+                                  addSuffix: true,
+                                })}
+                                )
                               </span>
                             </div>
                           )}
@@ -122,7 +145,9 @@ export default async function BlogListPage() {
                     <h3 className="font-semibold">About this blog</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Announcements, how-to guides, and updates from the Emberly team. Stay up to date with the latest features and best practices.
+                    Announcements, how-to guides, and updates from the Emberly
+                    team. Stay up to date with the latest features and best
+                    practices.
                   </p>
                 </div>
               </div>
@@ -130,7 +155,9 @@ export default async function BlogListPage() {
               {/* Quick Links card */}
               <div className="glass-subtle overflow-hidden">
                 <div className="p-5">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Quick Links</h4>
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+                    Quick Links
+                  </h4>
                   <ul className="space-y-3">
                     <li>
                       <Link
@@ -168,8 +195,12 @@ export default async function BlogListPage() {
               <div className="glass-subtle overflow-hidden">
                 <div className="p-5">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-primary">{posts.length}</div>
-                    <div className="text-sm text-muted-foreground mt-1">Published articles</div>
+                    <div className="text-3xl font-bold text-primary">
+                      {posts.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Published articles
+                    </div>
                   </div>
                 </div>
               </div>

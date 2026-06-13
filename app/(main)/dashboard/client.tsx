@@ -75,7 +75,7 @@ const quickActions = [
 ]
 
 export function DashboardIndex({
-  userName,
+  userName: _userName,
   fileCount,
   urlCount,
   storageUsed,

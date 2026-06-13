@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 import { format, formatDistanceToNow } from 'date-fns'
 import GithubSlugger from 'github-slugger'
-import { ArrowLeft, Calendar, User, Clock, Share2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock } from 'lucide-react'
 
 import BlogToc, { BlogHeading } from '@/packages/components/shared/BlogToc'
 import MarkdownRenderer from '@/packages/components/shared/MarkdownRenderer'
@@ -14,7 +14,11 @@ import { getPostBySlug } from '@/packages/lib/blog'
 
 type ParamsPromise = Promise<{ slug: string }>
 
-export async function generateMetadata({ params }: { params: ParamsPromise }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: ParamsPromise
+}): Promise<Metadata> {
   const resolved = await params
   const post = await getPostBySlug(resolved.slug, true)
 
@@ -73,12 +77,20 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
   const readTime = estimateReadTime(post.content || '')
 
   return (
-    <PageShell title={post.title} subtitle={post.excerpt ?? 'Blog post'} bodyVariant="plain">
+    <PageShell
+      title={post.title}
+      subtitle={post.excerpt ?? 'Blog post'}
+      bodyVariant="plain"
+    >
       <section className="mx-auto px-4 max-w-7xl">
         {/* Back button */}
         <div className="mb-6">
           <Link href="/blog">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
               <ArrowLeft className="h-4 w-4" />
               Back to blog
             </Button>
@@ -115,7 +127,9 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
                       <div className="font-medium">
                         {post.author?.name ?? 'Unknown author'}
                       </div>
-                      <div className="text-sm text-muted-foreground">Author</div>
+                      <div className="text-sm text-muted-foreground">
+                        Author
+                      </div>
                     </div>
                   </div>
 
@@ -127,9 +141,15 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
                     {post.publishedAt && (
                       <div className="flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
-                        <span>{format(new Date(post.publishedAt), 'MMMM d, yyyy')}</span>
+                        <span>
+                          {format(new Date(post.publishedAt), 'MMMM d, yyyy')}
+                        </span>
                         <span className="text-muted-foreground/60">
-                          ({formatDistanceToNow(new Date(post.publishedAt), { addSuffix: true })})
+                          (
+                          {formatDistanceToNow(new Date(post.publishedAt), {
+                            addSuffix: true,
+                          })}
+                          )
                         </span>
                       </div>
                     )}
@@ -157,13 +177,13 @@ export default async function PostPage({ params }: { params: ParamsPromise }) {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
                     <p className="font-medium">Enjoyed this article?</p>
-                    <p className="text-sm text-muted-foreground">Share it with others or check out more posts.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Share it with others or check out more posts.
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <Link href="/blog">
-                      <Button variant="outline">
-                        More posts
-                      </Button>
+                      <Button variant="outline">More posts</Button>
                     </Link>
                   </div>
                 </div>

@@ -4,12 +4,15 @@ declare global {
   namespace JSX {
     type Element = React.JSX.Element
     type ElementType = React.JSX.ElementType
-    interface ElementClass extends React.JSX.ElementClass {}
-    interface ElementAttributesProperty extends React.JSX.ElementAttributesProperty {}
-    interface ElementChildrenAttribute extends React.JSX.ElementChildrenAttribute {}
-    type LibraryManagedAttributes<C, P> = React.JSX.LibraryManagedAttributes<C, P>
-    interface IntrinsicAttributes extends React.JSX.IntrinsicAttributes {}
-    interface IntrinsicClassAttributes<T> extends React.JSX.IntrinsicClassAttributes<T> {}
-    interface IntrinsicElements extends React.JSX.IntrinsicElements {}
+    type ElementClass = React.JSX.ElementClass
+    type ElementAttributesProperty = React.JSX.ElementAttributesProperty
+    type ElementChildrenAttribute = React.JSX.ElementChildrenAttribute
+    type LibraryManagedAttributes<C, P> = React.JSX.LibraryManagedAttributes<
+      C,
+      P
+    >
+    type IntrinsicAttributes = React.JSX.IntrinsicAttributes
+    type IntrinsicClassAttributes<T> = React.JSX.IntrinsicClassAttributes<T>
+    type IntrinsicElements = React.JSX.IntrinsicElements
   }
 }

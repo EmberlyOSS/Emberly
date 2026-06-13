@@ -46,13 +46,12 @@ function generateHueColors(hue: number): Record<string, string> {
   return result
 }
 
-export async function ThemeInitializer({ 
-  userTheme, 
+export async function ThemeInitializer({
+  userTheme,
   userCustomColors,
   systemTheme,
-  systemColors 
+  systemColors,
 }: ThemeInitializerProps) {
-  let cssVariables: string
   let themeName: string
   let colorsToUse: Record<string, string> = {}
 
@@ -66,7 +65,10 @@ export async function ThemeInitializer({
     colorsToUse = systemColors || {}
 
     // If system theme is hue-based but no colors provided, generate them
-    if (systemTheme.startsWith('hue:') && Object.keys(colorsToUse).length === 0) {
+    if (
+      systemTheme.startsWith('hue:') &&
+      Object.keys(colorsToUse).length === 0
+    ) {
       const hueMatch = systemTheme.match(/hue:(\d+)/)
       if (hueMatch) {
         const hue = parseInt(hueMatch[1], 10)
@@ -89,7 +91,7 @@ export async function ThemeInitializer({
     }
   }
 
-  cssVariables = Object.entries(colorsToUse)
+  const cssVariables = Object.entries(colorsToUse)
     .map(([key, value]) => {
       const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
       return `--${cssKey}: ${value};`
