@@ -1,9 +1,9 @@
 /**
  * HaveIBeenPwned (HIBP) Password Breach Checker
- * 
+ *
  * Uses the k-anonymity API to check if a password has been compromised
  * Privacy-friendly: only sends first 5 characters of SHA-1 hash
- * 
+ *
  * Free API: https://haveibeenpwned.com/API/v3
  */
 
@@ -18,15 +18,19 @@ export interface PasswordBreachResult {
 /**
  * Check if a password has been compromised using HaveIBeenPwned API
  * Uses k-anonymity approach - only sends hash prefix to HIBP
- * 
+ *
  * @param password - The password to check
  * @returns Object with isCompromised flag and occurrence count
  */
-export async function checkPasswordBreach(password: string): Promise<PasswordBreachResult> {
+export async function checkPasswordBreach(
+  password: string
+): Promise<PasswordBreachResult> {
   try {
-    // Calculate SHA-1 hash of password
-    const hash = createHash('sha1').update(password).digest('hex').toUpperCase()
-    
+    // SHA-1 is mandated by the HaveIBeenPwned k-anonymity API protocol — it is NOT
+    // used to store the password. Only the first 5 hex characters of the hash are
+    // ever transmitted; the full hash and the plaintext are discarded immediately.
+    const hash = createHash('sha1').update(password).digest('hex').toUpperCase() // codeql[js/insufficient-password-hash]
+
     // Take first 5 characters of hash (k-anonymity approach)
     const hashPrefix = hash.substring(0, 5)
     const hashSuffix = hash.substring(5)
