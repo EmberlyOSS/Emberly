@@ -11,7 +11,11 @@ const logger = loggers.storage
 export type { StorageProvider, RangeOptions } from './types'
 export { LocalStorageProvider, S3StorageProvider }
 
-let storageProvider: StorageProvider | null = null
+// Stored on globalThis so the singleton survives Next.js hot-reloads in dev mode
+const _g = globalThis as typeof globalThis & {
+  __storageProvider?: StorageProvider
+}
+let storageProvider: StorageProvider | null = _g.__storageProvider ?? null
 
 /** Build a provider from a StorageBucket DB record (no caching — used for per-user routing). */
 function providerFromBucket(bucket: {
@@ -70,6 +74,7 @@ export async function getStorageProvider(): Promise<StorageProvider> {
     storageProvider = new LocalStorageProvider()
   }
 
+  _g.__storageProvider = storageProvider
   return storageProvider
 }
 
@@ -78,7 +83,9 @@ export async function getStorageProvider(): Promise<StorageProvider> {
  * If the user has an assigned `storageBucketId`, returns a provider for that bucket.
  * Otherwise falls back to the global default provider.
  */
-export async function getStorageProviderForUser(userId: string): Promise<StorageProvider> {
+export async function getStorageProviderForUser(
+  userId: string
+): Promise<StorageProvider> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { storageBucketId: true },
@@ -89,7 +96,11 @@ export async function getStorageProviderForUser(userId: string): Promise<Storage
       where: { id: user.storageBucketId },
     })
     if (bucket) {
-      logger.info('Using custom storage bucket for user', { userId, bucketId: bucket.id, bucketName: bucket.name })
+      logger.info('Using custom storage bucket for user', {
+        userId,
+        bucketId: bucket.id,
+        bucketName: bucket.name,
+      })
       return providerFromBucket(bucket)
     }
   }
@@ -102,7 +113,9 @@ export async function getStorageProviderForUser(userId: string): Promise<Storage
  * If the squad has an assigned `storageBucketId`, returns a provider for that bucket.
  * Otherwise falls back to the global default provider.
  */
-export async function getStorageProviderForSquad(squadId: string): Promise<StorageProvider> {
+export async function getStorageProviderForSquad(
+  squadId: string
+): Promise<StorageProvider> {
   const squad = await prisma.nexiumSquad.findUnique({
     where: { id: squadId },
     select: { storageBucketId: true },
@@ -113,7 +126,11 @@ export async function getStorageProviderForSquad(squadId: string): Promise<Stora
       where: { id: squad.storageBucketId },
     })
     if (bucket) {
-      logger.info('Using custom storage bucket for squad', { squadId, bucketId: bucket.id, bucketName: bucket.name })
+      logger.info('Using custom storage bucket for squad', {
+        squadId,
+        bucketId: bucket.id,
+        bucketName: bucket.name,
+      })
       return providerFromBucket(bucket)
     }
   }
@@ -123,6 +140,7 @@ export async function getStorageProviderForSquad(squadId: string): Promise<Stora
 
 export function invalidateStorageProvider(): void {
   storageProvider = null
+  _g.__storageProvider = undefined
 }
 
 // ---------------------------------------------------------------------------

@@ -27,7 +27,9 @@ export function getRelativeTime(date: Date): string {
 
 export function urlForHost(host: string): string {
   if (!host) return ''
-  const cleaned = host.replace(/\/+$/, '')
+  let end = host.length
+  while (end > 0 && host[end - 1] === '/') end--
+  const cleaned = end === host.length ? host : host.slice(0, end)
   if (cleaned.startsWith('http://') || cleaned.startsWith('https://'))
     return cleaned
 

@@ -154,3 +154,26 @@ export async function getFileExpirationInfo(
 
   return fileEvent?.scheduledAt || null
 }
+
+export async function getFileExpirationInfoBatch(
+  fileIds: string[]
+): Promise<Map<string, Date>> {
+  if (fileIds.length === 0) return new Map()
+
+  const idSet = new Set(fileIds)
+  const scheduledEvents = await events.getEvents({
+    type: 'file.schedule-expiration',
+    status: EventStatus.SCHEDULED,
+  })
+
+  const result = new Map<string, Date>()
+  for (const event of scheduledEvents) {
+    const fileId = (event.payload as Record<string, unknown>)?.fileId as
+      | string
+      | undefined
+    if (fileId && idSet.has(fileId) && event.scheduledAt) {
+      result.set(fileId, event.scheduledAt)
+    }
+  }
+  return result
+}

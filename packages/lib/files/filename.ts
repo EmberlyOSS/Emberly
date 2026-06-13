@@ -28,9 +28,6 @@ function validateAndNormalizePath(basePath: string, filename: string): string {
   }
 
   const fullPath = join(cleanBase, cleanFilename)
-  // On Windows `path.join` returns backslashes while `cleanBase` uses
-  // forward slashes. Normalize both sides to forward-slash form before
-  // comparing to avoid false positives for path traversal detection.
   const fullPathNormalized = fullPath.replace(/\\/g, '/').replace(/\/+/g, '/')
   const cleanBaseNormalized = cleanBase.replace(/\\/g, '/').replace(/\/+/g, '/')
 
@@ -98,10 +95,12 @@ export async function getUniqueFilename(
     ? originalName.slice(0, originalName.lastIndexOf('.'))
     : originalName
 
-  let urlSafeName = baseNameWithoutExt
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+  let urlSafeName = baseNameWithoutExt.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  let s = 0,
+    e = urlSafeName.length
+  while (s < e && urlSafeName[s] === '-') s++
+  while (e > s && urlSafeName[e - 1] === '-') e--
+  urlSafeName = urlSafeName.slice(s, e)
 
   if (extension) {
     urlSafeName += '.' + extension.toLowerCase()

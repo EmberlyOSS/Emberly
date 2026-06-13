@@ -17,29 +17,19 @@ export type AuthenticatedUser = {
   role: string
   randomizeFileUrls: boolean
   preferredUploadDomain: string | null
+  emailVerified: boolean
 }
 
-/** A squad authenticated via its upload token or a named API key */
 export type AuthenticatedSquad = {
   squadId: string
   slug: string
   ownerUserId: string
-  /** Storage used in bytes */
   storageUsed: number
   storageQuotaMB: number | null
-  /** How the request was authenticated */
   authMethod: 'upload_token' | 'api_key'
-  /** ID of the NexiumSquadApiKey record (null for upload token auth) */
   apiKeyId: string | null
 }
 
-/**
- * Try to authenticate the request as a Nexium squad via:
- *   1. Squad upload token  (Bearer <token>)
- *   2. Squad API key       (Bearer nsk_…)
- *
- * Returns null if the bearer token doesn't match any squad credential.
- */
 export async function getSquadFromBearerToken(
   req: Request
 ): Promise<AuthenticatedSquad | null> {
@@ -48,8 +38,6 @@ export async function getSquadFromBearerToken(
 
   const token = authHeader.substring(7)
 
-  // ── 1. Squad upload token ────────────────────────────────────────────────
-  // Upload tokens are cuid/uuid strings (no prefix), API keys start with nsk_
   if (!token.startsWith('nsk_')) {
     const squad = await prisma.nexiumSquad.findUnique({
       where: { uploadToken: token },
@@ -146,6 +134,7 @@ export async function getAuthenticatedUser(
         role: cached.role,
         randomizeFileUrls: cached.randomizeFileUrls,
         preferredUploadDomain: cached.preferredUploadDomain,
+        emailVerified: cached.emailVerified,
       }
     }
 
@@ -163,6 +152,7 @@ export async function getAuthenticatedUser(
         preferredUploadDomain: true,
         sessionVersion: true,
         image: true,
+        emailVerified: true,
       },
     })
 
@@ -180,10 +170,11 @@ export async function getAuthenticatedUser(
         storageQuotaMB: user.storageQuotaMB,
         randomizeFileUrls: user.randomizeFileUrls,
         preferredUploadDomain: user.preferredUploadDomain,
+        emailVerified: !!user.emailVerified,
       })
     }
 
-    return user
+    return user ? { ...user, emailVerified: !!user.emailVerified } : null
   }
 
   const authHeader = req.headers.get('authorization')
@@ -208,6 +199,7 @@ export async function getAuthenticatedUser(
               role: true,
               randomizeFileUrls: true,
               preferredUploadDomain: true,
+              emailVerified: true,
             },
           },
         },
@@ -218,7 +210,10 @@ export async function getAuthenticatedUser(
           where: { id: keyRecord.id },
           data: { lastUsedAt: new Date() },
         })
-        return keyRecord.user
+        return {
+          ...keyRecord.user,
+          emailVerified: !!keyRecord.user.emailVerified,
+        }
       }
       // ebk_ prefix but not found — don't fall through to uploadToken lookup
       return null
@@ -239,6 +234,7 @@ export async function getAuthenticatedUser(
           role: cached.role,
           randomizeFileUrls: cached.randomizeFileUrls,
           preferredUploadDomain: cached.preferredUploadDomain,
+          emailVerified: cached.emailVerified,
         }
       }
     }
@@ -257,6 +253,7 @@ export async function getAuthenticatedUser(
         preferredUploadDomain: true,
         sessionVersion: true,
         image: true,
+        emailVerified: true,
       },
     })
 
@@ -277,10 +274,11 @@ export async function getAuthenticatedUser(
         storageQuotaMB: user.storageQuotaMB,
         randomizeFileUrls: user.randomizeFileUrls,
         preferredUploadDomain: user.preferredUploadDomain,
+        emailVerified: !!user.emailVerified,
       })
     }
 
-    return user
+    return user ? { ...user, emailVerified: !!user.emailVerified } : null
   }
 
   return null
