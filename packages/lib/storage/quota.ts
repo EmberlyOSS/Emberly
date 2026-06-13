@@ -249,7 +249,6 @@ export async function getEffectiveQuotaMB(
 
   // Calculate perk bonuses
   const perkStorageBonusGB = calculateStorageBonusGB(user.perkRoles || [])
-  const perkStorageBonusMB = perkStorageBonusGB * 1024
 
   // Priority: admin override > plan quota + perks > default quota
   let baseQuotaMB = user.storageQuotaMB
