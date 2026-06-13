@@ -276,7 +276,7 @@ export async function getEffectiveQuotaMB(
       baseQuotaMB = (planLimits.storageQuotaGB + perkStorageBonusGB) * 1024
     }
   }
-  if (baseQuotaMB == null && defaultQuotaMB != null) {
+  if (defaultQuotaMB != null) {
     baseQuotaMB = defaultQuotaMB
   }
 
