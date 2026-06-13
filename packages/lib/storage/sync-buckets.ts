@@ -160,7 +160,7 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
 
     stats.duration = Date.now() - startTime
 
-    logger.info('[Sync] Bucket synchronization completed', stats)
+    logger.info('[Sync] Bucket synchronization completed', { ...stats })
     return stats
   } catch (err) {
     logger.error('[Sync] Bucket synchronization failed', err as Error)
@@ -226,7 +226,7 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
             } catch (err) {
               logger.warn(
                 `[Sync] Failed to delete Vultr bucket ${bucket.vultrBucketName}`,
-                err as Error
+                { error: String(err) }
               )
             }
           }
@@ -266,7 +266,7 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
             } catch (deleteErr) {
               logger.warn(
                 `[Sync] Failed to delete Vultr bucket ${bucket.vultrBucketName}`,
-                deleteErr as Error
+                { error: String(deleteErr) }
               )
             }
           }
