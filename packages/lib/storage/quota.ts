@@ -331,7 +331,7 @@ export function formatQuotaMessage(quota: QuotaInfo): string {
   const totalStr = formatMB(quota.quotaMB)
   const remainingStr = formatMB(quota.remainingMB)
 
-  let message = `You are using ${usedStr} of ${totalStr} (${quota.percentageUsed.toFixed(1)}%)`
+  let message = `You are using ${usedStr} of ${totalStr} (${quota.percentageUsed.toFixed(1)}%, ${remainingStr} remaining)`
 
   if (quota.percentageUsed > 90) {
     message += '. ⚠️ Storage is critically low!'
