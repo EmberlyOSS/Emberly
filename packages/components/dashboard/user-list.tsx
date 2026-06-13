@@ -2412,7 +2412,7 @@ export function UserList() {
         </DialogContent>
       </Dialog>
 
-      {pagination && pagination.pages > 1 && (
+      {pagination && pagination.pageCount > 1 && (
         <div className="flex justify-center">
           <Pagination>
             <PaginationContent>
@@ -2429,19 +2429,21 @@ export function UserList() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </PaginationItem>
-              {getPaginationRange(currentPage, pagination.pages).map((p) => (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                      e.preventDefault()
-                      fetchUsers(p)
-                    }}
-                    isActive={p === currentPage}
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+              {getPaginationRange(currentPage, pagination.pageCount).map(
+                (p) => (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                        e.preventDefault()
+                        fetchUsers(p)
+                      }}
+                      isActive={p === currentPage}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
               <PaginationItem>
                 <Button
                   variant="outline"
@@ -2450,7 +2452,7 @@ export function UserList() {
                     e.preventDefault()
                     fetchUsers(currentPage + 1)
                   }}
-                  disabled={currentPage === pagination.pages}
+                  disabled={currentPage === pagination.pageCount}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
