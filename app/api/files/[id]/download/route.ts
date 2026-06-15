@@ -5,7 +5,7 @@ import { compare } from 'bcryptjs'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
@@ -46,6 +46,7 @@ export async function GET(
         userId: true,
         visibility: true,
         password: true,
+        storageBucketId: true,
       },
     })
 
@@ -76,7 +77,7 @@ export async function GET(
       data: { downloads: { increment: 1 } },
     })
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
 
     const range = request.headers.get('range')
     const size = await storageProvider.getFileSize(file.path)
@@ -138,7 +139,7 @@ export async function POST(
     try {
       const body = await request.json()
       providedPassword = body.password || null
-    } catch { }
+    } catch {}
 
     const file = await prisma.file.findUnique({
       where: { id: fileId },
@@ -151,6 +152,7 @@ export async function POST(
         userId: true,
         visibility: true,
         password: true,
+        storageBucketId: true,
       },
     })
 
@@ -181,7 +183,7 @@ export async function POST(
       data: { downloads: { increment: 1 } },
     })
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
 
     const size = await storageProvider.getFileSize(file.path)
 

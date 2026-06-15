@@ -3,10 +3,13 @@ import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { existsSync } from 'fs'
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { join, posix } from 'path'
 
 import { requireAuth } from '@/packages/lib/auth/api-auth'
-import { uploadCache, type UploadMetadata } from '@/packages/lib/cache/upload-cache'
+import {
+  uploadCache,
+  type UploadMetadata,
+} from '@/packages/lib/cache/upload-cache'
 import { isRedisConnected } from '@/packages/lib/cache/redis'
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
@@ -15,7 +18,10 @@ import { validateUploadRequest } from '@/packages/lib/files/upload-validation'
 import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
-import { getStorageProvider } from '@/packages/lib/storage'
+import {
+  getStorageProvider,
+  getUploadBucketForUser,
+} from '@/packages/lib/storage'
 import { bytesToMB } from '@/packages/lib/utils'
 
 const logger = loggers.files
@@ -139,10 +145,11 @@ export async function POST(req: Request) {
 
     // Check file size against plan upload cap and storage quota
     if (user.role !== 'ADMIN') {
-      const { getPlanLimits, canUploadSize } = await import('@/packages/lib/storage/quota')
+      const { getPlanLimits, canUploadSize } =
+        await import('@/packages/lib/storage/quota')
       const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(size)
-      
+
       // Check plan upload size cap
       const uploadSizeCapMB = planLimits.uploadSizeCapMB ?? 0
       const maxUploadBytes = uploadSizeCapMB * 1024 * 1024
@@ -156,14 +163,16 @@ export async function POST(req: Request) {
           { status: 413 }
         )
       }
-      
+
       // Check storage quota
       const uploadCheck = await canUploadSize(user.id, fileSizeMB)
       if (!uploadCheck.allowed) {
         return NextResponse.json(
           {
             error: 'Storage quota exceeded',
-            message: uploadCheck.reason || 'You have reached your storage quota. Purchase additional storage to continue uploading.',
+            message:
+              uploadCheck.reason ||
+              'You have reached your storage quota. Purchase additional storage to continue uploading.',
             action: 'upgrade',
           },
           { status: 413 }
@@ -217,7 +226,7 @@ export async function POST(req: Request) {
     }
 
     const { urlSafeName, displayName } = await getUniqueFilename(
-      join('uploads', user.urlId),
+      posix.join('uploads', user.urlId),
       filename,
       user.randomizeFileUrls
     )
@@ -225,8 +234,8 @@ export async function POST(req: Request) {
     let filePath: string
     let urlPath: string
     try {
-      filePath = join('uploads', user.urlId, urlSafeName)
-      if (!filePath.startsWith(join('uploads', user.urlId))) {
+      filePath = posix.join('uploads', user.urlId, urlSafeName)
+      if (!filePath.startsWith(posix.join('uploads', user.urlId))) {
         throw new Error('Invalid file path: Path traversal detected')
       }
       urlPath = `/${user.urlId}/${urlSafeName}`
@@ -238,7 +247,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid file path' }, { status: 400 })
     }
 
-    const storageProvider = await getStorageProvider()
+    // Resolve upload destination: dedicated bucket → core bucket → global fallback
+    const uploadDest = await getUploadBucketForUser(user.id)
+    const storageProvider = uploadDest?.provider ?? (await getStorageProvider())
+    const storageBucketId = uploadDest?.bucket.id ?? null
+
     // capture host headers from the incoming request and attach as metadata
     const meta: Record<string, string> = {}
     try {
@@ -273,6 +286,7 @@ export async function POST(req: Request) {
       urlPath,
       s3UploadId,
       domain: typeof domain === 'string' && domain.length > 0 ? domain : null,
+      storageBucketId,
     }
 
     await saveUploadMetadata(localId, metadata)
@@ -316,7 +330,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const storageProvider = await getStorageProvider()
+    const { getProviderForStoredFile } = await import('@/packages/lib/storage')
+    const storageProvider = await getProviderForStoredFile(
+      metadata.storageBucketId
+    )
     const presignedUrl = await storageProvider.getPresignedPartUploadUrl(
       metadata.fileKey,
       metadata.s3UploadId,
@@ -362,13 +379,17 @@ export async function PUT(req: Request) {
     const body = await req.json()
     const { parts: uploadedParts } = body
 
-    const storageProvider = await getStorageProvider()
+    const { getProviderForStoredFile } = await import('@/packages/lib/storage')
+    const storageProvider = await getProviderForStoredFile(
+      metadata.storageBucketId
+    )
     await storageProvider.completeMultipartUpload(
       metadata.fileKey,
       metadata.s3UploadId,
       uploadedParts
     )
 
+    const storageBucketId = metadata.storageBucketId ?? null
     const fileRecord = await prisma.$transaction(async (tx) => {
       const file = await tx.file.create({
         data: {
@@ -381,11 +402,8 @@ export async function PUT(req: Request) {
           password: metadata.password
             ? await hash(metadata.password, 10)
             : null,
-          user: {
-            connect: {
-              id: metadata.userId,
-            },
-          },
+          storageBucketId,
+          userId: metadata.userId,
         },
       })
 
@@ -397,6 +415,13 @@ export async function PUT(req: Request) {
           },
         },
       })
+
+      if (storageBucketId) {
+        await tx.storageBucket.update({
+          where: { id: storageBucketId },
+          data: { fileCount: { increment: 1 } },
+        })
+      }
 
       return file
     })
@@ -426,4 +451,3 @@ export async function PUT(req: Request) {
     )
   }
 }
-

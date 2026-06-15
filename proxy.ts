@@ -133,9 +133,6 @@ export async function proxy(request: NextRequest) {
   const isNextAuthRoute = pathname.startsWith('/api/auth/')
   const isApiRoute = pathname.startsWith('/api/')
 
-  // ── File URL handling — single unified check before auth ──────────────────
-  // Covers both trailing-slash and non-trailing-slash variants via normalizedPathname.
-  // Must run before getToken() so media range requests skip JWT verification entirely.
   const isFileUrl =
     FILE_URL_PATTERN.test(normalizedPathname) &&
     !normalizedPathname.endsWith('/raw') &&
@@ -149,18 +146,12 @@ export async function proxy(request: NextRequest) {
       rangeHeader != null ||
       (acceptHeader !== '' && !acceptHeader.includes('text/html'))
 
-    // Video/audio range or non-HTML requests → raw bytes.
-    // Must run before the bot handler: Discord's media proxy UA contains "discord"
-    // and would otherwise be caught by handleBotRequest.
     if (fileExt && VIDEO_EXTENSIONS_SET.has(fileExt) && isMediaRequest) {
       const url = new URL(request.url)
       url.pathname = `${normalizedPathname}/raw`
       return NextResponse.rewrite(url)
     }
 
-    // Non-trailing-slash, non-bot requests → rewrite to trailing slash so the
-    // file page renders correctly. Bots fall through so handleBotRequest can
-    // respect the uploader's rich-embed setting.
     if (pathname === normalizedPathname) {
       const userAgent = request.headers.get('user-agent') || ''
       if (!isBotRequest(userAgent)) {

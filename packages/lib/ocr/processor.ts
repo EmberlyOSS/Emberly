@@ -2,7 +2,7 @@ import { createWorker } from 'tesseract.js'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 
 import type { OCRTask } from './queue'
 
@@ -10,11 +10,20 @@ const logger = loggers.ocr
 
 export async function processImageOCRTask({ filePath, fileId }: OCRTask) {
   try {
-    const storageProvider = await getStorageProvider()
+    const fileRecord = await prisma.file.findUnique({
+      where: { id: fileId },
+      select: { storageBucketId: true },
+    })
+    const storageProvider = await getProviderForStoredFile(
+      fileRecord?.storageBucketId
+    )
     const stream = await storageProvider.getFileStream(filePath)
 
     // Stream file into memory but enforce a hard size cap to avoid OOM
-    const MAX_OCR_FILE_SIZE = parseInt(process.env.MAX_OCR_FILE_SIZE || String(20 * 1024 * 1024), 10) // 20MB default
+    const MAX_OCR_FILE_SIZE = parseInt(
+      process.env.MAX_OCR_FILE_SIZE || String(20 * 1024 * 1024),
+      10
+    ) // 20MB default
 
     const chunks: Buffer[] = []
     let totalLength = 0
@@ -22,7 +31,11 @@ export async function processImageOCRTask({ filePath, fileId }: OCRTask) {
       const buf = Buffer.from(chunk)
       totalLength += buf.length
       if (totalLength > MAX_OCR_FILE_SIZE) {
-        logger.warn('OCR file too large, skipping OCR', { filePath, fileId, size: totalLength })
+        logger.warn('OCR file too large, skipping OCR', {
+          filePath,
+          fileId,
+          size: totalLength,
+        })
         // Mark as processed without OCR to avoid requeueing
         await prisma.file.update({
           where: { id: fileId },

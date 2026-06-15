@@ -167,6 +167,9 @@ model File {
   // Squad association — null for personal files
   squadId          String?
   squad            NexiumSquad?         @relation(fields: [squadId], references: [id], onDelete: SetNull)
+  // Which storage bucket this file lives in. Null = global config provider (legacy / fallback).
+  storageBucketId  String?
+  storageBucket    StorageBucket?       @relation("FileBucket", fields: [storageBucketId], references: [id], onDelete: SetNull)
   editSuggestions  FileEditSuggestion[]
   collaborators    FileCollaborator[]
   contentReports   ContentReport[]
@@ -175,6 +178,7 @@ model File {
   @@index([isOcrProcessed]) // Worker queue filtering
   @@index([flagged])
   @@index([squadId])
+  @@index([storageBucketId])
 }
 
 // Collaborators who can edit a file
@@ -961,6 +965,14 @@ model StorageBucket {
   s3SecretKey          String   @default("")
   s3Endpoint           String?
   s3ForcePathStyle     Boolean  @default(false)
+  // Internal shared pool buckets (isCore = true) vs user-dedicated buckets (isCore = false).
+  // Core buckets are selected by least-filled load balancing for users without a dedicated bucket.
+  isCore               Boolean  @default(false)
+  // Running count of files stored in this bucket — used for core bucket load balancing.
+  fileCount            Int      @default(0)
+  // Higher priority core buckets are preferred when file counts are equal.
+  // Useful for routing uploads to higher-performance or lower-latency buckets.
+  priority             Int      @default(0)
   // Vultr-backed buckets: tracks which pooled instance this bucket lives in
   // and the Stripe subscription that triggered provisioning.
   vultrObjectStorageId String?
@@ -973,8 +985,10 @@ model StorageBucket {
   vultrObjectStorage VultrObjectStorage? @relation(fields: [vultrObjectStorageId], references: [id], onDelete: SetNull)
   assignedUsers      User[]              @relation("UserStorageBucket")
   assignedSquads     NexiumSquad[]       @relation("SquadStorageBucket")
+  files              File[]              @relation("FileBucket")
 
   @@index([provider])
+  @@index([isCore])
   @@index([vultrObjectStorageId])
   @@unique([vultrBucketName])
   @@unique([stripeSubscriptionId])

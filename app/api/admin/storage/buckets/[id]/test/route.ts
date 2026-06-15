@@ -18,15 +18,40 @@ export async function POST(req: Request, { params }: Params) {
 
     const { id } = await params
 
-    const bucket = await prisma.storageBucket.findUnique({ where: { id } })
+    logger.debug('Testing bucket connection', { bucketId: id })
+    const bucket = await prisma.storageBucket.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        provider: true,
+        s3Bucket: true,
+        s3Region: true,
+        s3AccessKeyId: true,
+        s3SecretKey: true,
+        s3Endpoint: true,
+        s3ForcePathStyle: true,
+      },
+    })
+    logger.debug('Bucket lookup result', { bucketId: id, found: !!bucket })
     if (!bucket) return apiError('Bucket not found', HTTP_STATUS.NOT_FOUND)
 
     if (bucket.provider !== 's3') {
-      return apiResponse({ ok: true, message: 'Local storage — no remote connection to test' })
+      return apiResponse({
+        ok: true,
+        message: 'Local storage — no remote connection to test',
+      })
     }
 
-    if (!bucket.s3Bucket || !bucket.s3Region || !bucket.s3AccessKeyId || !bucket.s3SecretKey) {
-      return apiResponse({ ok: false, message: 'Missing S3 credentials — fill in all required fields first' })
+    if (
+      !bucket.s3Bucket ||
+      !bucket.s3Region ||
+      !bucket.s3AccessKeyId ||
+      !bucket.s3SecretKey
+    ) {
+      return apiResponse({
+        ok: false,
+        message: 'Missing S3 credentials — fill in all required fields first',
+      })
     }
 
     const client = new S3Client({
@@ -45,15 +70,28 @@ export async function POST(req: Request, { params }: Params) {
 
     try {
       await client.send(new HeadBucketCommand({ Bucket: bucket.s3Bucket }))
-      return apiResponse({ ok: true, message: `Connected — bucket "${bucket.s3Bucket}" is accessible` })
+      return apiResponse({
+        ok: true,
+        message: `Connected — bucket "${bucket.s3Bucket}" is accessible`,
+      })
     } catch (err: any) {
       if (err?.$metadata?.httpStatusCode === 404) {
-        return apiResponse({ ok: false, message: `Bucket "${bucket.s3Bucket}" not found` })
+        return apiResponse({
+          ok: false,
+          message: `Bucket "${bucket.s3Bucket}" not found`,
+        })
       }
       if (err?.$metadata?.httpStatusCode === 403) {
-        return apiResponse({ ok: false, message: 'Access denied — check credentials and bucket policy' })
+        return apiResponse({
+          ok: false,
+          message: 'Access denied — check credentials and bucket policy',
+        })
       }
-      return apiResponse({ ok: false, message: 'S3 connection failed', detail: err?.message ?? String(err) })
+      return apiResponse({
+        ok: false,
+        message: 'S3 connection failed',
+        detail: err?.message ?? String(err),
+      })
     } finally {
       client.destroy()
     }

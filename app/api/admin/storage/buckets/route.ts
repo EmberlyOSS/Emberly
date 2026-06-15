@@ -16,6 +16,10 @@ export async function GET(req: Request) {
         id: true,
         name: true,
         provider: true,
+        isCore: true,
+        priority: true,
+        fileCount: true,
+        provisionStatus: true,
         s3Bucket: true,
         s3Region: true,
         s3Endpoint: true,
@@ -27,7 +31,7 @@ export async function GET(req: Request) {
         // Return masked versions of secrets — never expose raw keys
         s3AccessKeyId: true,
         _count: {
-          select: { assignedUsers: true, assignedSquads: true },
+          select: { assignedUsers: true, assignedSquads: true, files: true },
         },
       },
     })
@@ -36,7 +40,9 @@ export async function GET(req: Request) {
     return apiResponse(
       buckets.map((b) => ({
         ...b,
-        s3AccessKeyId: b.s3AccessKeyId ? `${b.s3AccessKeyId.slice(0, 4)}••••` : '',
+        s3AccessKeyId: b.s3AccessKeyId
+          ? `${b.s3AccessKeyId.slice(0, 4)}••••`
+          : '',
         s3SecretKey: '',
       }))
     )
@@ -52,22 +58,49 @@ export async function POST(req: Request) {
     if (response) return response
 
     const body = await req.json()
-    const { name, provider = 's3', s3Bucket, s3Region, s3AccessKeyId, s3SecretKey, s3Endpoint, s3ForcePathStyle, vultrObjectStorageId, vultrBucketName } = body
+    const {
+      name,
+      provider = 's3',
+      isCore = false,
+      priority = 0,
+      s3Bucket,
+      s3Region,
+      s3AccessKeyId,
+      s3SecretKey,
+      s3Endpoint,
+      s3ForcePathStyle,
+      vultrObjectStorageId,
+      vultrBucketName,
+    } = body
 
-    if (!name?.trim()) return apiError('Bucket name is required', HTTP_STATUS.BAD_REQUEST)
+    if (!name?.trim())
+      return apiError('Bucket name is required', HTTP_STATUS.BAD_REQUEST)
 
     // For Vultr-backed buckets, populate S3 credentials from the existing VultrObjectStorage record
     if (provider === 'vultr') {
-      if (!vultrObjectStorageId) return apiError('Vultr instance is required', HTTP_STATUS.BAD_REQUEST)
-      if (!vultrBucketName?.trim()) return apiError('Bucket name within the Vultr instance is required', HTTP_STATUS.BAD_REQUEST)
+      if (!vultrObjectStorageId)
+        return apiError('Vultr instance is required', HTTP_STATUS.BAD_REQUEST)
+      if (!vultrBucketName?.trim())
+        return apiError(
+          'Bucket name within the Vultr instance is required',
+          HTTP_STATUS.BAD_REQUEST
+        )
 
-      const vultr = await prisma.vultrObjectStorage.findUnique({ where: { id: vultrObjectStorageId } })
-      if (!vultr) return apiError('Vultr Object Storage instance not found', HTTP_STATUS.NOT_FOUND)
+      const vultr = await prisma.vultrObjectStorage.findUnique({
+        where: { id: vultrObjectStorageId },
+      })
+      if (!vultr)
+        return apiError(
+          'Vultr Object Storage instance not found',
+          HTTP_STATUS.NOT_FOUND
+        )
 
       const bucket = await prisma.storageBucket.create({
         data: {
           name: name.trim(),
           provider: 's3',
+          isCore: Boolean(isCore),
+          priority: Number(priority) || 0,
           s3Bucket: vultrBucketName.trim(),
           s3Region: vultr.region,
           s3AccessKeyId: vultr.s3AccessKey,
@@ -79,15 +112,21 @@ export async function POST(req: Request) {
         },
       })
 
-      return apiResponse(
-        { ...bucket, s3AccessKeyId: bucket.s3AccessKeyId ? `${bucket.s3AccessKeyId.slice(0, 4)}••••` : '', s3SecretKey: '' }
-      )
+      return apiResponse({
+        ...bucket,
+        s3AccessKeyId: bucket.s3AccessKeyId
+          ? `${bucket.s3AccessKeyId.slice(0, 4)}••••`
+          : '',
+        s3SecretKey: '',
+      })
     }
 
     const bucket = await prisma.storageBucket.create({
       data: {
         name: name.trim(),
         provider,
+        isCore: Boolean(isCore),
+        priority: Number(priority) || 0,
         s3Bucket: s3Bucket ?? '',
         s3Region: s3Region ?? '',
         s3AccessKeyId: s3AccessKeyId ?? '',
@@ -97,12 +136,15 @@ export async function POST(req: Request) {
       },
     })
 
-    return apiResponse(
-      { ...bucket, s3AccessKeyId: bucket.s3AccessKeyId ? `${bucket.s3AccessKeyId.slice(0, 4)}••••` : '', s3SecretKey: '' }
-    )
+    return apiResponse({
+      ...bucket,
+      s3AccessKeyId: bucket.s3AccessKeyId
+        ? `${bucket.s3AccessKeyId.slice(0, 4)}••••`
+        : '',
+      s3SecretKey: '',
+    })
   } catch (error) {
     logger.error('Failed to create storage bucket', error as Error)
     return apiError('Internal server error')
   }
 }
-

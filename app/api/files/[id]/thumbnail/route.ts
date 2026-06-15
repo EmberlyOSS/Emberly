@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 
-
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
@@ -35,6 +34,7 @@ export async function GET(
         visibility: true,
         userId: true,
         password: true,
+        storageBucketId: true,
       },
     })
 
@@ -71,7 +71,7 @@ export async function GET(
     }
 
     // Skip password check for thumbnails (thumbnails should be accessible if file is accessible)
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     const fileStream = await storageProvider.getFileStream(file.path)
 
     // Just serve the original image - let the browser/CSS handle sizing

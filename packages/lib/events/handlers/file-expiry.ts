@@ -3,7 +3,7 @@ import { EventStatus, ExpiryAction } from '@/packages/types/events'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 
 import { events } from '../index'
 
@@ -59,7 +59,9 @@ export function registerFileExpiryHandlers() {
         }
 
         if (payload.action === ExpiryAction.DELETE) {
-          const storageProvider = await getStorageProvider()
+          const storageProvider = await getProviderForStoredFile(
+            file.storageBucketId
+          )
           await storageProvider.deleteFile(file.path)
           logger.info('Deleted file from storage', { path: file.path })
 

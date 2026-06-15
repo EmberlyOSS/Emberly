@@ -231,17 +231,26 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
             }
           }
 
-          // Mark as deprovisioned
-          await prisma.storageBucket.update({
-            where: { id: bucket.id },
-            data: { provisionStatus: 'deprovisioning' },
-          })
-
-          // Unassign from users
-          await prisma.user.updateMany({
-            where: { storageBucketId: bucket.id },
-            data: { storageBucketId: null },
-          })
+          // Mark as deprovisioned and update the Subscription record so
+          // getPlanLimits stops granting unlimited access. This is the recovery
+          // path for cases where the webhook failed to fire or was not processed.
+          await prisma.$transaction([
+            prisma.storageBucket.update({
+              where: { id: bucket.id },
+              data: { provisionStatus: 'deprovisioning' },
+            }),
+            prisma.subscription.updateMany({
+              where: {
+                stripeSubscriptionId: bucket.stripeSubscriptionId,
+                status: 'active',
+              },
+              data: { status: 'canceled', cancelAtPeriodEnd: false },
+            }),
+            prisma.user.updateMany({
+              where: { storageBucketId: bucket.id },
+              data: { storageBucketId: null },
+            }),
+          ])
         }
       } catch (err: any) {
         // 404 means subscription doesn't exist
@@ -271,15 +280,23 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
             }
           }
 
-          await prisma.storageBucket.update({
-            where: { id: bucket.id },
-            data: { provisionStatus: 'deprovisioning' },
-          })
-
-          await prisma.user.updateMany({
-            where: { storageBucketId: bucket.id },
-            data: { storageBucketId: null },
-          })
+          await prisma.$transaction([
+            prisma.storageBucket.update({
+              where: { id: bucket.id },
+              data: { provisionStatus: 'deprovisioning' },
+            }),
+            prisma.subscription.updateMany({
+              where: {
+                stripeSubscriptionId: bucket.stripeSubscriptionId,
+                status: 'active',
+              },
+              data: { status: 'canceled', cancelAtPeriodEnd: false },
+            }),
+            prisma.user.updateMany({
+              where: { storageBucketId: bucket.id },
+              data: { storageBucketId: null },
+            }),
+          ])
         } else {
           logger.error(
             `[Sync] Error checking subscription ${bucket.stripeSubscriptionId}`,

@@ -5,7 +5,7 @@ import {
 } from '@/packages/types/dto/file'
 import { Prisma } from '@/prisma/generated/prisma/client'
 import { hash } from 'bcryptjs'
-import { join } from 'path'
+import { posix } from 'path'
 
 import {
   HTTP_STATUS,
@@ -31,7 +31,11 @@ import {
 } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
-import { getStorageProvider } from '@/packages/lib/storage'
+import {
+  getStorageProvider,
+  getUploadBucketForUser,
+  getUploadBucketForSquad,
+} from '@/packages/lib/storage'
 import { bytesToMB, urlForHost } from '@/packages/lib/utils'
 
 const logger = loggers.files
@@ -176,20 +180,24 @@ export async function POST(req: Request) {
       return apiError(uploadValidation.error!, HTTP_STATUS.FORBIDDEN)
     }
 
-    // Buffer file + resolve provider and unique filename in parallel
-    const [buf, { urlSafeName, displayName }, storageProviderResolved] =
-      await Promise.all([
-        uploadedFile.arrayBuffer().then((ab) => Buffer.from(ab)),
-        getUniqueFilename(
-          join('uploads', user.urlId),
-          uploadedFile.name,
-          user.randomizeFileUrls
-        ),
-        getStorageProvider(),
-      ])
-    storageProvider = storageProviderResolved
+    // Resolve upload destination: dedicated bucket → core bucket → global fallback
+    const uploadDest = squadContext
+      ? await getUploadBucketForSquad(squadContext.squadId)
+      : await getUploadBucketForUser(user.id)
+    const storageBucketId = uploadDest?.bucket.id ?? null
 
-    filePath = join('uploads', user.urlId, urlSafeName)
+    // Buffer file + resolve unique filename in parallel (provider already resolved above)
+    const [buf, { urlSafeName, displayName }] = await Promise.all([
+      uploadedFile.arrayBuffer().then((ab) => Buffer.from(ab)),
+      getUniqueFilename(
+        posix.join('uploads', user.urlId),
+        uploadedFile.name,
+        user.randomizeFileUrls
+      ),
+    ])
+    storageProvider = uploadDest?.provider ?? (await getStorageProvider())
+
+    filePath = posix.join('uploads', user.urlId, urlSafeName)
     const urlPath = `/${user.urlId}/${urlSafeName}`
 
     // Fast local security checks only (extension, MIME, zip bomb) — no network calls
@@ -242,6 +250,7 @@ export async function POST(req: Request) {
           password: passwordHash,
           userId: user.id,
           allowSuggestions,
+          storageBucketId,
         },
       })
 
@@ -255,6 +264,14 @@ export async function POST(req: Request) {
         await tx.nexiumSquad.update({
           where: { id: squadContext.squadId },
           data: { storageUsed: { increment: fileSizeMB } },
+        })
+      }
+
+      // Keep the bucket's file counter in sync for load-balancing accuracy
+      if (storageBucketId) {
+        await tx.storageBucket.update({
+          where: { id: storageBucketId },
+          data: { fileCount: { increment: 1 } },
         })
       }
 

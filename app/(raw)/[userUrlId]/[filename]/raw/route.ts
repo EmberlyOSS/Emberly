@@ -4,12 +4,11 @@ import { getServerSession } from 'next-auth'
 import { Readable } from 'stream'
 
 import { authOptions } from '@/packages/lib/auth'
-import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { checkFileAccess } from '@/packages/lib/files/access'
 import { findFileByUrlPath } from '@/packages/lib/files/lookup'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 
 const logger = loggers.files.getChildLogger('raw')
 
@@ -18,7 +17,8 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
   'Access-Control-Allow-Headers': 'Range, Content-Type',
-  'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+  'Access-Control-Expose-Headers':
+    'Content-Length, Content-Range, Accept-Ranges',
 }
 
 function encodeFilename(filename: string): string {
@@ -136,10 +136,14 @@ export async function HEAD(
       return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
 
-    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
-    if (deny) return new Response(null, { status: deny.status, headers: CORS_HEADERS })
+    const deny = await checkFileAccess(file, {
+      userId: session?.user?.id,
+      providedPassword,
+    })
+    if (deny)
+      return new Response(null, { status: deny.status, headers: CORS_HEADERS })
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     const size = await storageProvider.getFileSize(file.path)
 
     return new NextResponse(null, {
@@ -176,17 +180,17 @@ export async function GET(
       return new Response(null, { status: 404, headers: CORS_HEADERS })
     }
 
-    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
-    if (deny) return new Response(null, { status: deny.status, headers: CORS_HEADERS })
+    const deny = await checkFileAccess(file, {
+      userId: session?.user?.id,
+      providedPassword,
+    })
+    if (deny)
+      return new Response(null, { status: deny.status, headers: CORS_HEADERS })
 
-    const config = await getConfig()
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     logger.info('raw route storage debug', {
       filePath: file.path,
-      provider: config.settings.general.storage.provider,
-      bucket: config.settings.general.storage.s3.bucket,
-      endpoint: config.settings.general.storage.s3.endpoint,
-      forcePathStyle: config.settings.general.storage.s3.forcePathStyle,
+      storageBucketId: file.storageBucketId ?? 'global',
     })
     const range = req.headers.get('range')
 

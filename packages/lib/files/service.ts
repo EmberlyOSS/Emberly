@@ -14,7 +14,7 @@
  */
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 import { File, Prisma, User } from '@/prisma/generated/prisma/client'
 import { compare, hash } from 'bcryptjs'
 
@@ -167,7 +167,7 @@ export async function deleteFileWithCleanup(
 
   try {
     // Delete from storage provider
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     await storageProvider.deleteFile(file.path)
 
     // Delete from database
@@ -215,30 +215,11 @@ export async function deleteFilesWithCleanup(
     where: { id: { in: fileIds }, userId },
   })
 
-  let storageProvider: Awaited<ReturnType<typeof getStorageProvider>>
-  try {
-    storageProvider = await getStorageProvider()
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Failed to initialize storage provider'
-    logger.error(
-      'Failed to initialize storage provider for bulk delete',
-      error as Error,
-      { userId }
-    )
-    return {
-      success: false,
-      deletedCount: 0,
-      failedCount: files.length,
-      totalStorageBytes: 0,
-      error: message,
-    }
-  }
-
   for (const file of files) {
     try {
+      const storageProvider = await getProviderForStoredFile(
+        file.storageBucketId
+      )
       await storageProvider.deleteFile(file.path)
       await prisma.file.delete({ where: { id: file.id } })
       deletedCount++

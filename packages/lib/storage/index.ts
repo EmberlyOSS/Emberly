@@ -1,6 +1,7 @@
 import { loggers } from '@/packages/lib/logger'
 
 import { prisma } from '@/packages/lib/database/prisma'
+import type { StorageBucket } from '@/prisma/generated/prisma/client'
 import { getConfig } from '../config/index'
 import { LocalStorageProvider } from './providers/local'
 import { S3StorageProvider } from './providers/s3'
@@ -11,13 +12,19 @@ const logger = loggers.storage
 export type { StorageProvider, RangeOptions } from './types'
 export { LocalStorageProvider, S3StorageProvider }
 
+/** { bucket record, ready-to-use provider } returned by upload-destination helpers. */
+export type UploadDestination = {
+  bucket: StorageBucket
+  provider: StorageProvider
+}
+
 // Stored on globalThis so the singleton survives Next.js hot-reloads in dev mode
 const _g = globalThis as typeof globalThis & {
   __storageProvider?: StorageProvider
 }
 let storageProvider: StorageProvider | null = _g.__storageProvider ?? null
 
-/** Build a provider from a StorageBucket DB record (no caching — used for per-user routing). */
+/** Build a provider from a StorageBucket DB record (no caching — used for per-bucket routing). */
 function providerFromBucket(bucket: {
   provider: string
   s3Bucket: string
@@ -40,6 +47,7 @@ function providerFromBucket(bucket: {
   return new LocalStorageProvider()
 }
 
+/** The global config-driven provider (singleton). Used as the fallback for legacy files (storageBucketId = null). */
 export async function getStorageProvider(): Promise<StorageProvider> {
   if (storageProvider) return storageProvider
 
@@ -78,14 +86,46 @@ export async function getStorageProvider(): Promise<StorageProvider> {
   return storageProvider
 }
 
+export function invalidateStorageProvider(): void {
+  storageProvider = null
+  _g.__storageProvider = undefined
+}
+
+// ---------------------------------------------------------------------------
+// Core bucket selection — least-filled load balancing across internal buckets
+// ---------------------------------------------------------------------------
+
 /**
- * Get a storage provider scoped to a specific user.
- * If the user has an assigned `storageBucketId`, returns a provider for that bucket.
- * Otherwise falls back to the global default provider.
+ * Pick the active core bucket with the lowest fileCount.
+ * Returns null when no active core buckets are configured; callers fall back
+ * to the global config provider in that case.
  */
-export async function getStorageProviderForUser(
+async function selectCoreBucket(): Promise<UploadDestination | null> {
+  const bucket = await prisma.storageBucket.findFirst({
+    where: { isCore: true, provisionStatus: 'active' },
+    orderBy: [{ fileCount: 'asc' }, { priority: 'desc' }],
+  })
+
+  if (!bucket) return null
+
+  return { bucket, provider: providerFromBucket(bucket) }
+}
+
+// ---------------------------------------------------------------------------
+// Upload-destination helpers — call these from upload routes
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve where a new file for this user should be stored.
+ *
+ * Priority:
+ *   1. User's dedicated bucket (storageBucketId on the User record)
+ *   2. Least-filled active core bucket
+ *   3. null → caller falls back to getStorageProvider()
+ */
+export async function getUploadBucketForUser(
   userId: string
-): Promise<StorageProvider> {
+): Promise<UploadDestination | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { storageBucketId: true },
@@ -93,29 +133,32 @@ export async function getStorageProviderForUser(
 
   if (user?.storageBucketId) {
     const bucket = await prisma.storageBucket.findUnique({
-      where: { id: user.storageBucketId },
+      where: { id: user.storageBucketId, provisionStatus: 'active' },
     })
     if (bucket) {
-      logger.info('Using custom storage bucket for user', {
+      logger.info('Routing upload to user dedicated bucket', {
         userId,
         bucketId: bucket.id,
         bucketName: bucket.name,
       })
-      return providerFromBucket(bucket)
+      return { bucket, provider: providerFromBucket(bucket) }
     }
   }
 
-  return getStorageProvider()
+  return selectCoreBucket()
 }
 
 /**
- * Get a storage provider scoped to a specific squad.
- * If the squad has an assigned `storageBucketId`, returns a provider for that bucket.
- * Otherwise falls back to the global default provider.
+ * Resolve where a new file for this squad should be stored.
+ *
+ * Priority:
+ *   1. Squad's dedicated bucket
+ *   2. Least-filled active core bucket
+ *   3. null → caller falls back to getStorageProvider()
  */
-export async function getStorageProviderForSquad(
+export async function getUploadBucketForSquad(
   squadId: string
-): Promise<StorageProvider> {
+): Promise<UploadDestination | null> {
   const squad = await prisma.nexiumSquad.findUnique({
     where: { id: squadId },
     select: { storageBucketId: true },
@@ -123,34 +166,91 @@ export async function getStorageProviderForSquad(
 
   if (squad?.storageBucketId) {
     const bucket = await prisma.storageBucket.findUnique({
-      where: { id: squad.storageBucketId },
+      where: { id: squad.storageBucketId, provisionStatus: 'active' },
     })
     if (bucket) {
-      logger.info('Using custom storage bucket for squad', {
+      logger.info('Routing upload to squad dedicated bucket', {
         squadId,
         bucketId: bucket.id,
         bucketName: bucket.name,
       })
-      return providerFromBucket(bucket)
+      return { bucket, provider: providerFromBucket(bucket) }
     }
   }
 
-  return getStorageProvider()
-}
-
-export function invalidateStorageProvider(): void {
-  storageProvider = null
-  _g.__storageProvider = undefined
+  return selectCoreBucket()
 }
 
 // ---------------------------------------------------------------------------
-// Convenience URL helpers — avoids repeating getStorageProvider() + getFileUrl()
-// in every route that only needs a URL.
+// Serve-time helper — call this when reading/streaming a stored file
 // ---------------------------------------------------------------------------
 
 /**
- * Build a public (or presigned) URL for a stored file.
- * Delegates to the active provider's `getFileUrl` implementation.
+ * Return the storage provider for an already-stored file.
+ *
+ * Pass `file.storageBucketId` from the DB record. A null value means the file
+ * was stored before bucket routing was introduced and lives in the global
+ * config bucket — getStorageProvider() is used as the fallback.
+ */
+export async function getProviderForStoredFile(
+  storageBucketId: string | null | undefined
+): Promise<StorageProvider> {
+  if (!storageBucketId) return getStorageProvider()
+
+  const bucket = await prisma.storageBucket.findUnique({
+    where: { id: storageBucketId },
+  })
+
+  if (!bucket) {
+    logger.warn(
+      'storageBucketId on file does not match any bucket record — falling back to global provider',
+      {
+        storageBucketId,
+      }
+    )
+    return getStorageProvider()
+  }
+
+  return providerFromBucket(bucket)
+}
+
+// ---------------------------------------------------------------------------
+// Convenience URL helpers — bucket-aware
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a public (or presigned) URL for a stored file using its bucket.
+ * Pass `storageBucketId` from the File record so the correct provider is used.
+ */
+export async function getFileUrlForFile(
+  storageBucketId: string | null | undefined,
+  path: string,
+  expiresIn?: number,
+  hostOverride?: string
+): Promise<string> {
+  const provider = await getProviderForStoredFile(storageBucketId)
+  return provider.getFileUrl(path, expiresIn, hostOverride)
+}
+
+/**
+ * Build a download URL for a stored file using its bucket.
+ */
+export async function getDownloadUrlForFile(
+  storageBucketId: string | null | undefined,
+  path: string,
+  filename?: string,
+  hostOverride?: string
+): Promise<string> {
+  const provider = await getProviderForStoredFile(storageBucketId)
+  if (provider.getDownloadUrl) {
+    return provider.getDownloadUrl(path, filename, hostOverride)
+  }
+  return provider.getFileUrl(path, undefined, hostOverride)
+}
+
+/**
+ * @deprecated Use getFileUrlForFile() so the correct bucket provider is used.
+ * Kept for call sites that only deal with the global config bucket.
  */
 export async function getFileUrl(
   path: string,
@@ -162,8 +262,8 @@ export async function getFileUrl(
 }
 
 /**
- * Build a download URL (with `Content-Disposition: attachment`) for a stored file.
- * Falls back to `getFileUrl` when the provider doesn't implement `getDownloadUrl`.
+ * @deprecated Use getDownloadUrlForFile() so the correct bucket provider is used.
+ * Kept for call sites that only deal with the global config bucket.
  */
 export async function getDownloadUrl(
   path: string,
@@ -175,4 +275,32 @@ export async function getDownloadUrl(
     return provider.getDownloadUrl(path, filename, hostOverride)
   }
   return provider.getFileUrl(path, undefined, hostOverride)
+}
+
+// ---------------------------------------------------------------------------
+// Legacy per-entity helpers (kept for any future direct use)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get a storage provider scoped to a specific user's dedicated bucket.
+ * Falls back to the global default provider if no dedicated bucket is assigned.
+ * Prefer getUploadBucketForUser() for upload routing (includes core bucket selection).
+ */
+export async function getStorageProviderForUser(
+  userId: string
+): Promise<StorageProvider> {
+  const dest = await getUploadBucketForUser(userId)
+  return dest?.provider ?? getStorageProvider()
+}
+
+/**
+ * Get a storage provider scoped to a specific squad's dedicated bucket.
+ * Falls back to the global default provider if no dedicated bucket is assigned.
+ * Prefer getUploadBucketForSquad() for upload routing (includes core bucket selection).
+ */
+export async function getStorageProviderForSquad(
+  squadId: string
+): Promise<StorageProvider> {
+  const dest = await getUploadBucketForSquad(squadId)
+  return dest?.provider ?? getStorageProvider()
 }
