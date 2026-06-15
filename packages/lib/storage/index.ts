@@ -199,6 +199,16 @@ export async function getProviderForStoredFile(
 
   const bucket = await prisma.storageBucket.findUnique({
     where: { id: storageBucketId },
+    select: {
+      id: true,
+      provider: true,
+      s3Bucket: true,
+      s3Region: true,
+      s3AccessKeyId: true,
+      s3SecretKey: true,
+      s3Endpoint: true,
+      s3ForcePathStyle: true,
+    },
   })
 
   if (!bucket) {

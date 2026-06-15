@@ -66,6 +66,7 @@ next-env.d.ts
 .cursor/
 *.swp
 *.swo
+emberly.site.conf
 
 # Database
 prisma/*.db
