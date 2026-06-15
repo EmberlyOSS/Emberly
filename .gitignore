@@ -64,8 +64,6 @@ next-env.d.ts
 .idea/
 .vscode/
 .cursor/
-CLAUDE.md
-AGENTS.md
 *.swp
 *.swo
 

@@ -5,7 +5,7 @@ import { join } from 'path'
 
 import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 
 const logger = loggers.files
 
@@ -51,7 +51,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(
+      metadata.storageBucketId
+    )
     const url = await storageProvider.getPresignedPartUploadUrl(
       metadata.fileKey,
       metadata.s3UploadId,
@@ -98,7 +100,9 @@ export async function PUT(
 
     const chunk = await req.arrayBuffer()
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(
+      metadata.storageBucketId
+    )
     const response = await storageProvider.uploadPart(
       metadata.fileKey,
       metadata.s3UploadId,

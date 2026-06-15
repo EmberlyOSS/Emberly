@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { prisma } from '@/packages/lib/database/prisma'
 import { emitAuditEvent } from '@/packages/lib/events/audit-helper'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 
 const logger = loggers.files
 
@@ -103,7 +103,9 @@ export async function DELETE(
     }
 
     try {
-      const storageProvider = await getStorageProvider()
+      const storageProvider = await getProviderForStoredFile(
+        file.storageBucketId
+      )
       await storageProvider.deleteFile(file.path)
     } catch (error) {
       logger.error('Error deleting file from storage', error as Error, {
@@ -125,6 +127,13 @@ export async function DELETE(
           },
         },
       })
+
+      if (file.storageBucketId) {
+        await tx.storageBucket.update({
+          where: { id: file.storageBucketId },
+          data: { fileCount: { decrement: 1 } },
+        })
+      }
     })
 
     void emitAuditEvent('file.deleted', {

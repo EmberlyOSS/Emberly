@@ -1,42 +1,18 @@
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { AlertTriangle, Key, Server } from 'lucide-react'
+import { AlertTriangle, Clock, Key, Server } from 'lucide-react'
 
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { provisionBucketForUserSubscription } from '@/packages/lib/storage/bucket-provisioning'
 import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
+import { BucketSecretReveal } from '@/packages/components/dashboard/bucket-secret-reveal'
 
 export const metadata = buildPageMetadata({
   title: 'Storage Bucket',
   description: 'View your dedicated S3 storage bucket credentials and status.',
 })
-
-function CredentialRow({
-  label,
-  value,
-  mono = true,
-}: {
-  label: string
-  value: string
-  mono?: boolean
-}) {
-  return (
-    <div className="flex flex-col gap-1 py-3 border-b border-border/40 last:border-0">
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      <div className="flex items-center gap-2">
-        <span
-          className={`text-sm text-foreground break-all ${mono ? 'font-mono' : ''}`}
-        >
-          {value}
-        </span>
-      </div>
-    </div>
-  )
-}
 
 export default async function BucketPage() {
   const session = await getServerSession(authOptions)
@@ -56,6 +32,7 @@ export default async function BucketPage() {
           s3Bucket: true,
           s3Region: true,
           s3AccessKeyId: true,
+          s3SecretKey: true,
           s3Endpoint: true,
           s3ForcePathStyle: true,
         },
@@ -122,6 +99,7 @@ export default async function BucketPage() {
               s3Bucket: true,
               s3Region: true,
               s3AccessKeyId: true,
+              s3SecretKey: true,
               s3Endpoint: true,
               s3ForcePathStyle: true,
             },
@@ -192,12 +170,6 @@ export default async function BucketPage() {
     )
   }
 
-  // Mask access key ID (show only first 4 + last 4 chars)
-  const maskedKeyId =
-    bucket.s3AccessKeyId.length > 8
-      ? `${bucket.s3AccessKeyId.slice(0, 4)}••••••••${bucket.s3AccessKeyId.slice(-4)}`
-      : `${bucket.s3AccessKeyId.slice(0, 4)}••••`
-
   return (
     <DashboardShell
       header={
@@ -222,59 +194,49 @@ export default async function BucketPage() {
         </div>
       }
     >
-      {/* Security notice */}
-      <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-sm text-amber-700 dark:text-amber-400">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+      {/* Coming soon notice */}
+      <div className="flex items-start gap-3 rounded-lg border border-blue-500/40 bg-blue-500/10 px-5 py-4 text-sm text-blue-700 dark:text-blue-400">
+        <Clock className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          Keep your credentials safe. Never expose your Secret Key publicly. If
-          you believe your credentials have been compromised, contact{' '}
+          Direct S3 credential access is coming soon. In the meantime, your
+          connection credentials were delivered by email when your bucket was
+          assigned. Contact{' '}
           <a
             href="mailto:support@embrly.ca"
             className="underline underline-offset-2"
           >
             support@embrly.ca
           </a>{' '}
-          immediately.
+          if you need them resent.
         </span>
       </div>
 
-      {/* Credentials */}
-      <div className="glass-card">
-        <div className="p-6 border-b border-border/40 flex items-center gap-3">
-          <Key className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Connection Credentials</h2>
+      {/* Secret key reveal */}
+      {bucket.s3SecretKey && (
+        <div className="glass-card">
+          <div className="p-6 border-b border-border/40 flex items-center gap-3">
+            <Key className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Secret Access Key</h2>
+          </div>
+          <div className="p-6">
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-400 mb-4">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Never share your secret key. If you believe it has been
+                compromised, contact support immediately.
+              </span>
+            </div>
+            <BucketSecretReveal secret={bucket.s3SecretKey} />
+          </div>
         </div>
-        <div className="p-6">
-          <CredentialRow label="Bucket Name" value={bucket.s3Bucket} />
-          <CredentialRow label="Region" value={bucket.s3Region} />
-          <CredentialRow label="Access Key ID" value={maskedKeyId} />
-          <CredentialRow
-            label="Secret Access Key"
-            value="Delivered by email on assignment — contact support if needed"
-            mono={false}
-          />
-          {bucket.s3ForcePathStyle !== undefined && (
-            <CredentialRow
-              label="Path-style URLs"
-              value={bucket.s3ForcePathStyle ? 'Enabled' : 'Disabled'}
-              mono={false}
-            />
-          )}
-          <CredentialRow
-            label="Provider"
-            value="Emberly Object Storage"
-            mono={false}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Help */}
       <div className="glass-card">
         <div className="p-6">
           <h2 className="text-lg font-semibold mb-3">Need help?</h2>
           <p className="text-sm text-muted-foreground">
-            Check your email for the full credentials sent when your bucket was
-            assigned. For troubleshooting or to rotate your access key, contact{' '}
+            For troubleshooting or to rotate your access key, contact{' '}
             <a
               href="mailto:support@embrly.ca"
               className="text-primary underline underline-offset-2"

@@ -26,7 +26,7 @@ interface ErrorLogContext {
 // Guard access to Node globals so this module can load in Edge runtime.
 const runtimeProcess =
   typeof globalThis !== 'undefined' &&
-    typeof (globalThis as { process?: NodeJS.Process }).process !== 'undefined'
+  typeof (globalThis as { process?: NodeJS.Process }).process !== 'undefined'
     ? (globalThis as { process?: NodeJS.Process }).process
     : undefined
 
@@ -59,38 +59,45 @@ const formatters = {
 // Fallback to console transport due to worker thread issues
 const transport = isDevelopment
   ? {
-    write: (msg: string) => {
-      try {
-        const obj = JSON.parse(msg)
-        const timestamp = new Date(obj.time)
-          .toISOString()
-          .replace('T', ' ')
-          .slice(0, -5)
-        // Handle both numeric levels (pino default) and string levels (from formatter)
-        const rawLevel = obj.level
-        const level = (
-          rawLevel === 30 || rawLevel === 'INFO'
-            ? 'INFO'
-            : rawLevel === 40 || rawLevel === 'WARN'
-              ? 'WARN'
-              : rawLevel === 50 || rawLevel === 'ERROR'
-                ? 'ERROR'
-                : rawLevel === 60 || rawLevel === 'FATAL'
-                  ? 'FATAL'
-                  : rawLevel === 20 || rawLevel === 'DEBUG'
-                    ? 'DEBUG'
-                    : rawLevel === 10 || rawLevel === 'TRACE'
-                      ? 'TRACE'
-                      : String(rawLevel).toUpperCase()
-        ).padEnd(5)
-        const name = obj.name ? `[${obj.name}]`.padEnd(12) : ''
-        const message = obj.msg || ''
-        console.log(`${timestamp} ${level} ${name} ${message}`)
-      } catch {
-        console.log(msg)
-      }
-    },
-  }
+      write: (msg: string) => {
+        try {
+          const obj = JSON.parse(msg)
+          const timestamp = new Date(obj.time)
+            .toISOString()
+            .replace('T', ' ')
+            .slice(0, -5)
+          // Handle both numeric levels (pino default) and string levels (from formatter)
+          const rawLevel = obj.level
+          const level = (
+            rawLevel === 30 || rawLevel === 'INFO'
+              ? 'INFO'
+              : rawLevel === 40 || rawLevel === 'WARN'
+                ? 'WARN'
+                : rawLevel === 50 || rawLevel === 'ERROR'
+                  ? 'ERROR'
+                  : rawLevel === 60 || rawLevel === 'FATAL'
+                    ? 'FATAL'
+                    : rawLevel === 20 || rawLevel === 'DEBUG'
+                      ? 'DEBUG'
+                      : rawLevel === 10 || rawLevel === 'TRACE'
+                        ? 'TRACE'
+                        : String(rawLevel).toUpperCase()
+          ).padEnd(5)
+          const name = obj.name ? `[${obj.name}]`.padEnd(12) : ''
+          const message = obj.msg || ''
+          const err = obj.error
+          const errDetail = err
+            ? ` — ${err.message || JSON.stringify(err)}`
+            : ''
+          console.log(`${timestamp} ${level} ${name} ${message}${errDetail}`)
+          if (err?.stack) {
+            console.log(err.stack)
+          }
+        } catch {
+          console.log(msg)
+        }
+      },
+    }
   : undefined
 
 const baseLogger = pino(
@@ -140,7 +147,7 @@ const baseLogger = pino(
     },
     ...(isProduction && {
       browser: {
-        write: () => { },
+        write: () => {},
       },
     }),
   },

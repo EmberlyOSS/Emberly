@@ -6,7 +6,7 @@ import { authOptions } from '@/packages/lib/auth'
 import { checkFileAccess } from '@/packages/lib/files/access'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/packages/lib/api/cors'
 
 const logger = loggers.files
@@ -40,13 +40,19 @@ export async function GET(
     // urlPath here is already assembled from the path segments
     let file = await prisma.file.findUnique({
       where: { urlPath },
-      include: { user: { select: { enableRichEmbeds: true } } },
+      include: {
+        user: { select: { enableRichEmbeds: true } },
+        storageBucket: { select: { id: true } },
+      },
     })
 
     if (!file && urlPath.includes(' ')) {
       file = await prisma.file.findUnique({
         where: { urlPath: urlPath.replace(/ /g, '-') },
-        include: { user: { select: { enableRichEmbeds: true } } },
+        include: {
+          user: { select: { enableRichEmbeds: true } },
+          storageBucket: { select: { id: true } },
+        },
       })
     }
 
@@ -71,7 +77,9 @@ export async function GET(
     const enableRichEmbeds = file.user?.enableRichEmbeds ?? true
     const shouldForceDownload = isDownloadRequest || !enableRichEmbeds
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(
+      file.storageBucket?.id
+    )
     const isVideo = file.mimeType.startsWith('video/')
     const range = request.headers.get('range')
     const size = await storageProvider.getFileSize(file.path)

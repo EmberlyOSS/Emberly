@@ -13,7 +13,7 @@ import { scheduleFileExpiration } from '@/packages/lib/events/handlers/file-expi
 import { validateFileSecurityChecksWithVT } from '@/packages/lib/files/security-validation'
 import { loggers } from '@/packages/lib/logger'
 import { processImageOCR } from '@/packages/lib/ocr'
-import { getStorageProvider } from '@/packages/lib/storage'
+import { getProviderForStoredFile } from '@/packages/lib/storage'
 import { bytesToMB } from '@/packages/lib/utils'
 import { getConfig } from '@/packages/lib/config'
 
@@ -114,7 +114,9 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid parts data' }, { status: 400 })
     }
 
-    const storageProvider = await getStorageProvider()
+    const storageProvider = await getProviderForStoredFile(
+      metadata.storageBucketId
+    )
     await storageProvider.completeMultipartUpload(
       metadata.fileKey,
       metadata.s3UploadId,
@@ -200,6 +202,7 @@ export async function POST(
       }
     }
 
+    const storageBucketId = metadata.storageBucketId ?? null
     const fileRecord = await prisma.$transaction(async (tx) => {
       const file = await tx.file.create({
         data: {
@@ -212,6 +215,7 @@ export async function POST(
           password: metadata.password
             ? await hash(metadata.password, 10)
             : null,
+          storageBucketId,
           user: {
             connect: {
               id: metadata.userId,
@@ -228,6 +232,13 @@ export async function POST(
           },
         },
       })
+
+      if (storageBucketId) {
+        await tx.storageBucket.update({
+          where: { id: storageBucketId },
+          data: { fileCount: { increment: 1 } },
+        })
+      }
 
       return file
     })

@@ -6,13 +6,13 @@ Thanks for helping keep Emberly and its users safe.
 
 We provide security fixes for:
 
-| Version | Supported |
-| --------- | ------- |
-| `main` branch    | Yes |
-| `develop` branch | Yes |
-| 2.4.x     | Yes     |
-| 2.3.x     | Yes     |
-| < 2.2.x   | No      |
+| Version          | Supported |
+| ---------------- | --------- |
+| `main` branch    | Yes       |
+| `develop` branch | Yes       |
+| 2.4.x            | Yes       |
+| 2.3.x            | Yes       |
+| < 2.2.x          | No        |
 
 ## Reporting a Vulnerability
 

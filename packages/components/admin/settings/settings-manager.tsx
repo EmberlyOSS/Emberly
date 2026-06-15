@@ -79,6 +79,7 @@ import type { EmberlyConfig } from '@/lib/config'
 import type { BackgroundEffect, AnimationSpeed } from '@/lib/theme/theme-types'
 
 import { StorageBucketManager } from '@/packages/components/admin/settings/storage-bucket-manager'
+import { UserBucketAssignment } from '@/packages/components/admin/settings/user-bucket-assignment'
 import { VultrInstanceManager } from '@/packages/components/admin/settings/vultr-instance-manager'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
@@ -1762,9 +1763,18 @@ export function SettingsManager() {
           <SettingsSection
             icon={Database}
             title="Additional Storage Buckets"
-            description="Create named S3 buckets that can be assigned to specific users or squads, overriding the default storage."
+            description="Create named S3 buckets that can be assigned to specific users or squads, overriding the default storage. Mark a bucket as Core Pool to include it in the shared upload rotation."
           >
             <StorageBucketManager />
+          </SettingsSection>
+
+          {/* User Bucket Assignment */}
+          <SettingsSection
+            icon={Users}
+            title="User Bucket Assignment"
+            description="Manually assign a dedicated storage bucket to a specific user, overriding the default core pool routing."
+          >
+            <UserBucketAssignment />
           </SettingsSection>
         </TabsContent>
 

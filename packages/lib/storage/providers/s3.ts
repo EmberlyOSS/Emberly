@@ -20,6 +20,13 @@ import type { RangeOptions, S3Config, StorageProvider } from '../types'
 
 const logger = loggers.storage.getChildLogger('s3')
 
+function toS3Key(path: string): string {
+  return path
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/^uploads\//, '')
+}
+
 export class S3StorageProvider implements StorageProvider {
   private client: S3Client
   private bucket: string
@@ -59,7 +66,7 @@ export class S3StorageProvider implements StorageProvider {
     path: string,
     mimeType: string
   ): Promise<void> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     await this.client.send(
       new PutObjectCommand({
@@ -73,7 +80,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async deleteFile(path: string): Promise<void> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     await this.client.send(
       new DeleteObjectCommand({
@@ -84,7 +91,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getFile(path: string): Promise<Buffer> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const response = await this.client.send(
       new GetObjectCommand({
@@ -106,7 +113,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getFileStream(path: string, range?: RangeOptions): Promise<Readable> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const options: { Range?: string } = {}
     if (range) {
@@ -160,7 +167,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getFileUrl(path: string, expiresIn: number = 3600): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     if (key.startsWith('avatars/')) {
       if (this.endpoint) {
@@ -182,7 +189,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getDownloadUrl(path: string, filename?: string): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const command = new GetObjectCommand({
       Bucket: this.bucket,
@@ -196,7 +203,7 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getFileSize(path: string): Promise<number> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const command = new HeadObjectCommand({
       Bucket: this.bucket,
@@ -288,7 +295,7 @@ export class S3StorageProvider implements StorageProvider {
     path: string,
     mimeType: string
   ): Promise<NodeWritable> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
     const { PassThrough } = await import('stream')
     const passThrough = new PassThrough()
 
@@ -539,7 +546,7 @@ export class S3StorageProvider implements StorageProvider {
     path: string,
     mimeType: string
   ): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const response = await this.client.send(
       new CreateMultipartUploadCommand({
@@ -561,7 +568,7 @@ export class S3StorageProvider implements StorageProvider {
     uploadId: string,
     partNumber: number
   ): Promise<string> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const command = new UploadPartCommand({
       Bucket: this.bucket,
@@ -578,7 +585,7 @@ export class S3StorageProvider implements StorageProvider {
     uploadId: string,
     parts: { ETag: string; PartNumber: number }[]
   ): Promise<void> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     await this.client.send(
       new CompleteMultipartUploadCommand({
@@ -598,7 +605,7 @@ export class S3StorageProvider implements StorageProvider {
     partNumber: number,
     data: Buffer
   ): Promise<{ ETag: string }> {
-    const key = path.replace(/^\/+/, '').replace(/^uploads\//, '')
+    const key = toS3Key(path)
 
     const response = await this.client.send(
       new UploadPartCommand({

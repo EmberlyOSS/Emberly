@@ -51,6 +51,10 @@ export const USER_ADMIN_SELECT = {
       },
     },
   },
+  storageBucketId: true,
+  storageBucket: {
+    select: { id: true, name: true, isCore: true, provisionStatus: true },
+  },
   _count: {
     select: {
       files: true,
