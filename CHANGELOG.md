@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.7] - 2026-06-15
+
+### Added
+
+- **Core Pool Storage Buckets** — `StorageBucket` now supports `isCore` (boolean) and `priority` (integer) fields. Core buckets are shared across all users via least-filled load balancing (`fileCount ASC, priority DESC`). Dedicated buckets are assigned per-user or per-squad. Priority breaks ties when two core buckets have equal file counts — higher number wins. Default is `0` (no preference).
+- **`File → StorageBucket` relation** — Files now track which bucket they were stored in via `storageBucketId`. This is used at serve time to route reads, streams, deletes, OCR, and thumbnail generation to the correct bucket rather than the global default.
+- **User bucket assignment UI** — New `UserBucketAssignment` component in the admin settings Storage tab. Paginated user list with per-user bucket dropdown and save button. Clears assignment (falls back to core pool) or assigns a dedicated bucket; triggers credentials email on assignment.
+- **Admin storage bucket manager — `isCore` / `priority` UI** — Edit dialog now includes a Core Pool Bucket toggle and a Priority number input (visible when `isCore` is on). List rows show Core Pool badge (violet), Dedicated badge, file count, and priority for core buckets.
+- **Bucket connection test — per-bucket provider** — `POST /api/admin/storage/buckets/[id]/test` now uses an explicit `select` in `findUnique` (fixes a `@prisma/adapter-pg` driver adapter issue that caused `findUnique` without a select to return `null` for existing records). Test error detail is now surfaced inline in the UI alongside the status message.
+- **`PUT /api/admin/storage/buckets` — `priority` on create** — Create route now reads and persists `priority` from the request body. Previously new buckets always defaulted to `0` regardless of the value submitted.
+- **User bucket page — secret key reveal** — The `/dashboard/bucket` page now shows the actual secret access key with a show/hide toggle (`BucketSecretReveal` client component). All other credentials are hidden behind a "coming soon" notice while direct S3 credential access is being developed.
+- **`reconcileDeprovisionedBuckets` — atomic `Subscription.status` update** — Both cancellation paths (cancelled subscription, subscription not found in Stripe) now use `prisma.$transaction` to atomically update the bucket (`provisionStatus → deprovisioning`), subscription (`status → canceled`), and clear user assignments in a single operation.
+
+### Fixed
+
+- **File serving — wrong storage provider for bucket-routed files** — All file read/stream/delete paths used `getStorageProvider()` (global config bucket singleton) even when the file was stored in a core or dedicated bucket. Affected routes: `GET /api/files/[...path]`, `GET /api/files/[id]/thumbnail`, suggestion approval in `PUT /api/files/[id]/suggestions`, OCR processing, file expiry handler, and single/bulk delete in the file service. All now use `getProviderForStoredFile(file.storageBucketId)`, which routes to the correct bucket and falls back to global for legacy files.
+- **S3 key normalization — Windows backslash paths** — `path.join()` produces backslash-separated paths on Windows (e.g. `uploads\userUrlId\filename.png`). The S3 provider's key derivation regex `/^uploads\//` never matched these, leaving the full backslash path as the S3 key and causing `NoSuchKey` on every read. Added `toS3Key()` helper that normalizes backslashes to forward slashes before stripping the `uploads/` prefix; applied to all five S3 provider methods (`uploadFile`, `getFile`, `getFileStream`, `deleteFile`, `getFileUrl`, `getFileSize`).
+- **Upload path generation — forward slashes enforced** — `app/api/files/route.ts` and `app/api/files/chunks/route.ts` used `path.join()` to build `filePath`, producing backslash paths on Windows that were stored in the database and used as S3 keys. Both now use `path.posix.join()` so paths are always forward-slash regardless of platform.
+- **OCR — wrong bucket** — `processImageOCRTask` called `getStorageProvider()` unconditionally. It now looks up `file.storageBucketId` and routes to `getProviderForStoredFile` so OCR reads from the same bucket the file was uploaded to.
+- **Bucket list — `priority` missing from select** — `GET /api/admin/storage/buckets` did not include `priority` in its field select. The edit dialog received `priority: undefined`, causing the priority input to be uncontrolled (React warning) and saving to silently leave the existing value unchanged.
+- **Edit dialog — uncontrolled `priority` input** — `openEdit` now uses `bucket.priority ?? 0` when populating the form, preventing the React "uncontrolled → controlled" warning when `priority` was absent from the list response.
+- **Dev logger — error detail suppressed** — The development pino transport only printed `obj.msg`, silently dropping `obj.error`. Error message and stack trace are now appended to the console output.
+- **Chunks route — Prisma XOR type error** — `tx.file.create` mixed `storageBucketId` (unchecked input) with `user: { connect: { id } }` (checked input), which Prisma's XOR type rejects. Replaced with `userId` scalar field.
+
+### Changed
+
+- **`getStorageProvider()` scope clarified** — The global singleton is now the fallback only for legacy files (`storageBucketId = null`). All new file operations route through `getProviderForStoredFile` or `getUploadBucketForUser`/`getUploadBucketForSquad`.
+- **`selectCoreBucket` ordering** — Core bucket selection now orders by `fileCount ASC, priority DESC` so higher-priority buckets win when file counts are equal.
+
 ## [2.4.6] - 2026-06-13
 
 ### Security
