@@ -10,9 +10,9 @@ We provide security fixes for:
 | ---------------- | --------- |
 | `main` branch    | Yes       |
 | `develop` branch | Yes       |
+| 2.5.x            | Yes       |
 | 2.4.x            | Yes       |
-| 2.3.x            | Yes       |
-| < 2.2.x          | No        |
+| < 2.3.x          | No        |
 
 ## Reporting a Vulnerability
 
