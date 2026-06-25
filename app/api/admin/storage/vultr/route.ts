@@ -14,7 +14,7 @@ import {
   listClusters,
   listObjectStorages,
   listTiers,
-} from '@/packages/lib/vultr'
+} from '@/packages/lib/storage/providers/vultr'
 
 const logger = loggers.storage
 
@@ -45,9 +45,10 @@ export async function GET(req: Request) {
       return apiResponse(tiers)
     }
 
-    // Default: list all provisioned VultrObjectStorage records with live enrichment
+    // Default: list all Vultr-provider pools with live enrichment
     const [dbInstances, vultrInstances] = await Promise.allSettled([
-      prisma.vultrObjectStorage.findMany({
+      prisma.objectStoragePool.findMany({
+        where: { provider: 'vultr' },
         orderBy: { createdAt: 'asc' },
         include: { _count: { select: { storageBuckets: true } } },
       }),
@@ -59,11 +60,10 @@ export async function GET(req: Request) {
       vultrInstances.status === 'fulfilled' ? vultrInstances.value : []
     const liveMap = new Map(live.map((v) => [v.id, v]))
 
-    // Sync status + credentials back to DB for any instances that have drifted
-    // (e.g. pending → active, or keys that were blank at creation time).
+    // Sync status + credentials back to DB for any pools that have drifted.
     // Fire-and-forget so it doesn't slow down the response.
     const staleInstances = db.filter((instance) => {
-      const liveData = liveMap.get(instance.vultrId)
+      const liveData = liveMap.get(instance.externalId)
       if (!liveData) return false
       return (
         liveData.status !== instance.status ||
@@ -74,8 +74,8 @@ export async function GET(req: Request) {
     if (staleInstances.length > 0) {
       Promise.all(
         staleInstances.map((instance) => {
-          const liveData = liveMap.get(instance.vultrId)!
-          return prisma.vultrObjectStorage.update({
+          const liveData = liveMap.get(instance.externalId)!
+          return prisma.objectStoragePool.update({
             where: { id: instance.id },
             data: {
               status: liveData.status,
@@ -91,25 +91,25 @@ export async function GET(req: Request) {
       )
         .then(() => {
           logger.info(
-            `[Admin] Synced ${staleInstances.length} Vultr instance(s) from live Vultr data`
+            `[Admin] Synced ${staleInstances.length} Vultr pool(s) from live Vultr data`
           )
         })
         .catch((err) => {
-          logger.warn(
-            '[Admin] Failed to sync Vultr instance status/credentials',
-            { error: err }
-          )
+          logger.warn('[Admin] Failed to sync Vultr pool status/credentials', {
+            error: err,
+          })
         })
     }
 
     const result = db.map((instance) => {
-      const liveData = liveMap.get(instance.vultrId)
+      const liveData = liveMap.get(instance.externalId)
+      const meta = instance.metadata as { clusterId?: number } | null
       return {
         id: instance.id,
-        vultrId: instance.vultrId,
+        externalId: instance.externalId,
         label: instance.label,
         region: instance.region,
-        clusterId: instance.clusterId,
+        clusterId: meta?.clusterId ?? null,
         tier: instance.tier,
         status: liveData?.status ?? instance.status,
         s3Hostname: instance.s3Hostname,
@@ -197,18 +197,19 @@ export async function POST(req: Request) {
       `[Admin] Provisioned Vultr Object Storage: ${vultrInstance.id} in region ${vultrInstance.region}`
     )
 
-    // Persist in DB
-    const dbInstance = await prisma.vultrObjectStorage.create({
+    // Persist in DB as a unified ObjectStoragePool
+    const dbInstance = await prisma.objectStoragePool.create({
       data: {
-        vultrId: vultrInstance.id,
+        provider: 'vultr',
+        externalId: vultrInstance.id,
         label: label.trim(),
         region: vultrInstance.region,
-        clusterId,
         s3Hostname: vultrInstance.s3_hostname,
         s3AccessKey: vultrInstance.s3_access_key ?? '',
         s3SecretKey: vultrInstance.s3_secret_key ?? '',
         tier: selectedTier.sales_name,
         status: vultrInstance.status,
+        metadata: { clusterId },
       },
     })
 
@@ -265,7 +266,7 @@ export async function POST(req: Request) {
         )
       }
 
-      await prisma.vultrObjectStorage.update({
+      await prisma.objectStoragePool.update({
         where: { id: dbInstance.id },
         data: { cfHostname, cfDnsRecordId: record.id },
       })
@@ -281,10 +282,10 @@ export async function POST(req: Request) {
 
     return apiResponse({
       id: dbInstance.id,
-      vultrId: dbInstance.vultrId,
+      externalId: dbInstance.externalId,
       label: dbInstance.label,
       region: dbInstance.region,
-      clusterId: dbInstance.clusterId,
+      clusterId,
       tier: dbInstance.tier,
       status: dbInstance.status,
       s3Hostname: dbInstance.s3Hostname,

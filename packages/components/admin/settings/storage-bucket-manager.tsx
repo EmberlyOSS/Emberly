@@ -55,8 +55,8 @@ interface StorageBucket {
   s3AccessKeyId: string
   s3Endpoint: string | null
   s3ForcePathStyle: boolean
-  vultrObjectStorageId: string | null
-  vultrBucketName: string | null
+  objectStoragePoolId: string | null
+  poolBucketName: string | null
   createdAt: string
   updatedAt: string
   _count: { assignedUsers: number; assignedSquads: number; files: number }
@@ -83,13 +83,13 @@ interface BucketForm {
   s3SecretKey: string
   s3Endpoint: string
   s3ForcePathStyle: boolean
-  vultrObjectStorageId: string
-  vultrBucketName: string
+  objectStoragePoolId: string
+  poolBucketName: string
 }
 
 const EMPTY_FORM: BucketForm = {
   name: '',
-  provider: 'vultr',
+  provider: 'pool',
   isCore: false,
   priority: 0,
   s3Bucket: '',
@@ -98,8 +98,8 @@ const EMPTY_FORM: BucketForm = {
   s3SecretKey: '',
   s3Endpoint: '',
   s3ForcePathStyle: false,
-  vultrObjectStorageId: '',
-  vultrBucketName: '',
+  objectStoragePoolId: '',
+  poolBucketName: '',
 }
 
 interface TestState {
@@ -179,7 +179,7 @@ export function StorageBucketManager() {
     setEditingId(bucket.id)
     setForm({
       name: bucket.name,
-      provider: bucket.vultrObjectStorageId ? 'vultr' : bucket.provider,
+      provider: bucket.objectStoragePoolId ? 'pool' : bucket.provider,
       isCore: bucket.isCore,
       priority: bucket.priority ?? 0,
       s3Bucket: bucket.s3Bucket,
@@ -188,8 +188,8 @@ export function StorageBucketManager() {
       s3SecretKey: '',
       s3Endpoint: bucket.s3Endpoint ?? '',
       s3ForcePathStyle: bucket.s3ForcePathStyle,
-      vultrObjectStorageId: bucket.vultrObjectStorageId ?? '',
-      vultrBucketName: bucket.vultrBucketName ?? '',
+      objectStoragePoolId: bucket.objectStoragePoolId ?? '',
+      poolBucketName: bucket.poolBucketName ?? '',
     })
     setDialogOpen(true)
     if (vultrInstances.length === 0) fetchVultrInstances()
@@ -341,8 +341,8 @@ export function StorageBucketManager() {
                       variant="secondary"
                       className="text-[10px] py-0 shrink-0"
                     >
-                      {bucket.vultrObjectStorageId
-                        ? 'Vultr'
+                      {bucket.objectStoragePoolId
+                        ? 'Pool'
                         : bucket.provider === 's3'
                           ? 'S3'
                           : 'Local'}
@@ -546,9 +546,9 @@ export function StorageBucketManager() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Object Storage Instance</Label>
                   <Select
-                    value={form.vultrObjectStorageId}
+                    value={form.objectStoragePoolId}
                     onValueChange={(v) =>
-                      setForm((f) => ({ ...f, vultrObjectStorageId: v }))
+                      setForm((f) => ({ ...f, objectStoragePoolId: v }))
                     }
                     disabled={!!editingId || vultrLoading}
                   >
@@ -593,11 +593,11 @@ export function StorageBucketManager() {
                   <Input
                     placeholder="e.g. user-uploads"
                     className="h-8 text-sm font-mono"
-                    value={form.vultrBucketName}
+                    value={form.poolBucketName}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        vultrBucketName: e.target.value,
+                        poolBucketName: e.target.value,
                       }))
                     }
                     disabled={!!editingId}

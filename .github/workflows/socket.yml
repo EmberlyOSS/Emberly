@@ -1,0 +1,33 @@
+name: Socket Security
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+jobs:
+  socket-scan:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to post PR comments and check run results
+      pull-requests: write
+      checks: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Socket Security Scan
+        uses: SocketDev/socket-action@v1
+        with:
+          api_key: ${{ secrets.SOCKET_SECURITY_API_KEY }}
+          # Fail the workflow if any issue reaches the "error" action level in socket.yml
+          # (malware, install scripts, obfuscated files, typosquatting, new authors, env exfil)
+          fail_on_error: true

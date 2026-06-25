@@ -207,6 +207,23 @@ export const configSchema = z
               .passthrough()
               .optional()
               .default({}),
+            linode: z
+              .object({
+                apiKey: z.string().optional().default(''),
+              })
+              .passthrough()
+              .optional()
+              .default({}),
+            ovhcloud: z
+              .object({
+                appKey: z.string().optional().default(''),
+                appSecret: z.string().optional().default(''),
+                consumerKey: z.string().optional().default(''),
+                endpoint: z.string().optional().default('ovh-eu'),
+              })
+              .passthrough()
+              .optional()
+              .default({}),
             resend: z
               .object({
                 apiKey: z.string().optional().default(''),
@@ -342,6 +359,15 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
       },
       vultr: {
         apiKey: '',
+      },
+      linode: {
+        apiKey: '',
+      },
+      ovhcloud: {
+        appKey: '',
+        appSecret: '',
+        consumerKey: '',
+        endpoint: 'ovh-eu',
       },
       resend: {
         apiKey: '',

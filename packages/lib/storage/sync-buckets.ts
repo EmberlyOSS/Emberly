@@ -1,9 +1,9 @@
 /**
  * Bucket Synchronization Worker
  *
- * This module handles periodic reconciliation between Stripe subscriptions
- * and provisioned storage buckets. It ensures users with active storage-bucket
- * subscriptions have corresponding database records and properly assigned buckets.
+ * Handles periodic reconciliation between Stripe subscriptions and provisioned
+ * storage buckets. Ensures users with active storage-bucket subscriptions have
+ * corresponding database records and properly assigned buckets.
  */
 
 import {
@@ -12,7 +12,9 @@ import {
 } from '@/packages/lib/stripe/client'
 import { prisma } from '@/packages/lib/database/prisma'
 import { provisionBucketForUserSubscription } from './bucket-provisioning'
-import { deleteObjectStorageBucket } from '@/packages/lib/vultr'
+import { deleteObjectStorageBucket } from '@/packages/lib/storage/providers/vultr'
+import { deleteLinodeBucket } from '@/packages/lib/storage/providers/linode'
+import { deleteOVHStorageContainer } from '@/packages/lib/storage/providers/ovhcloud'
 import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.storage.getChildLogger('sync-buckets')
@@ -24,6 +26,50 @@ export interface BucketSyncStats {
   failed: number
   deprovisioned: number
   duration: number
+}
+
+/**
+ * Delete a bucket from its provider using the pool's metadata.
+ * Errors are non-fatal — the caller handles them.
+ */
+async function deprovisionBucketOnProvider(
+  pool: {
+    provider: string
+    externalId: string
+    metadata: unknown
+  },
+  bucketName: string
+): Promise<void> {
+  switch (pool.provider) {
+    case 'vultr':
+      await deleteObjectStorageBucket(pool.externalId, bucketName)
+      break
+    case 'linode': {
+      const meta = pool.metadata as { linodeClusterId?: string } | null
+      if (!meta?.linodeClusterId)
+        throw new Error('Linode pool missing metadata.linodeClusterId')
+      await deleteLinodeBucket(meta.linodeClusterId, bucketName)
+      break
+    }
+    case 'ovhcloud': {
+      const meta = pool.metadata as {
+        projectId?: string
+        regionName?: string
+      } | null
+      if (!meta?.projectId || !meta?.regionName)
+        throw new Error(
+          'OVHcloud pool missing metadata.projectId or metadata.regionName'
+        )
+      await deleteOVHStorageContainer(
+        meta.projectId,
+        meta.regionName,
+        bucketName
+      )
+      break
+    }
+    default:
+      throw new Error(`Unknown pool provider: "${pool.provider}"`)
+  }
 }
 
 /**
@@ -49,7 +95,6 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
   try {
     const stripe = await getStripeClient()
 
-    // Fetch all active storage-bucket subscriptions from Stripe
     logger.info('[Sync] Starting bucket synchronization')
 
     let hasMore = true
@@ -69,16 +114,12 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
         stats.totalSubscriptions++
 
         try {
-          // Check if this is a storage-bucket subscription
           const metadata = sub.metadata || {}
-          const isStorageBucket = metadata.type === 'storage-bucket'
-
-          if (!isStorageBucket) {
+          if (metadata.type !== 'storage-bucket') {
             stats.skipped++
             continue
           }
 
-          // Find the user
           const user = await prisma.user.findFirst({
             where: { stripeCustomerId: sub.customer as string },
           })
@@ -91,13 +132,11 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
             continue
           }
 
-          // Check if bucket already provisioned
           const existing = await prisma.storageBucket.findUnique({
             where: { stripeSubscriptionId: sub.id },
           })
 
           if (existing) {
-            // Ensure user has this bucket assigned
             if (user.storageBucketId !== existing.id) {
               await prisma.user.update({
                 where: { id: user.id },
@@ -111,7 +150,6 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
             continue
           }
 
-          // Provision the bucket
           logger.info(`[Sync] Provisioning bucket for user ${user.id}`, {
             subscriptionId: sub.id,
             location: metadata.location,
@@ -126,7 +164,6 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
               region: (metadata.location as string) || undefined,
               tierSlug: (metadata.tier as string) || undefined,
             })
-
             stats.provisioned++
             logger.info(
               `[Sync] Successfully provisioned bucket for user ${user.id}`
@@ -135,7 +172,9 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
             logger.error(
               `[Sync] Failed to provision bucket for user ${user.id}`,
               err as Error,
-              { subscriptionId: sub.id }
+              {
+                subscriptionId: sub.id,
+              }
             )
             stats.failed++
           }
@@ -148,18 +187,15 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
         }
       }
 
-      // Check for pagination
       hasMore = subscriptions.has_more
       if (hasMore && subscriptions.data.length > 0) {
         startingAfter = subscriptions.data[subscriptions.data.length - 1].id
       }
     }
 
-    // Optional: deprovision buckets for subscriptions that no longer exist
     await reconcileDeprovisionedBuckets()
 
     stats.duration = Date.now() - startTime
-
     logger.info('[Sync] Bucket synchronization completed', { ...stats })
     return stats
   } catch (err) {
@@ -170,14 +206,13 @@ export async function syncStorageBucketSubscriptions(): Promise<BucketSyncStats>
 }
 
 /**
- * Check for storage buckets whose Stripe subscriptions no longer exist.
- * These should be deprovisioned or marked as inactive.
+ * Check for storage buckets whose Stripe subscriptions no longer exist or are
+ * cancelled, and deprovision them on the provider + mark them inactive.
  */
 async function reconcileDeprovisionedBuckets(): Promise<void> {
   try {
     const stripe = await getStripeClient()
 
-    // Find all buckets with Stripe subscription IDs
     const bucketsWithSubs = await prisma.storageBucket.findMany({
       where: {
         stripeSubscriptionId: { not: null },
@@ -186,8 +221,8 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
       select: {
         id: true,
         stripeSubscriptionId: true,
-        vultrObjectStorageId: true,
-        vultrBucketName: true,
+        objectStoragePoolId: true,
+        poolBucketName: true,
       },
     })
 
@@ -195,108 +230,25 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
       if (!bucket.stripeSubscriptionId) continue
 
       try {
-        // Check if subscription still exists in Stripe
         const sub = await stripe.subscriptions.retrieve(
           bucket.stripeSubscriptionId,
-          { maxNetworkRetries: 1 }
+          {
+            maxNetworkRetries: 1,
+          }
         )
 
-        // If subscription is cancelled or incomplete, mark bucket for deprovisioning
         if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
           logger.info(`[Sync] Marking bucket ${bucket.id} for deprovisioning`, {
             subscriptionStatus: sub.status,
           })
-
-          // Attempt to delete from Vultr if applicable
-          if (bucket.vultrObjectStorageId && bucket.vultrBucketName) {
-            try {
-              const vultrInstance = await prisma.vultrObjectStorage.findUnique({
-                where: { id: bucket.vultrObjectStorageId },
-              })
-
-              if (vultrInstance) {
-                await deleteObjectStorageBucket(
-                  vultrInstance.vultrId,
-                  bucket.vultrBucketName
-                )
-                logger.info(
-                  `[Sync] Deleted Vultr bucket ${bucket.vultrBucketName}`
-                )
-              }
-            } catch (err) {
-              logger.warn(
-                `[Sync] Failed to delete Vultr bucket ${bucket.vultrBucketName}`,
-                { error: String(err) }
-              )
-            }
-          }
-
-          // Mark as deprovisioned and update the Subscription record so
-          // getPlanLimits stops granting unlimited access. This is the recovery
-          // path for cases where the webhook failed to fire or was not processed.
-          await prisma.$transaction([
-            prisma.storageBucket.update({
-              where: { id: bucket.id },
-              data: { provisionStatus: 'deprovisioning' },
-            }),
-            prisma.subscription.updateMany({
-              where: {
-                stripeSubscriptionId: bucket.stripeSubscriptionId,
-                status: 'active',
-              },
-              data: { status: 'canceled', cancelAtPeriodEnd: false },
-            }),
-            prisma.user.updateMany({
-              where: { storageBucketId: bucket.id },
-              data: { storageBucketId: null },
-            }),
-          ])
+          await deprovisionBucket(bucket)
         }
       } catch (err: any) {
-        // 404 means subscription doesn't exist
         if (err?.statusCode === 404) {
           logger.info(
             `[Sync] Subscription ${bucket.stripeSubscriptionId} no longer exists`
           )
-
-          // Deprovision this bucket
-          if (bucket.vultrObjectStorageId && bucket.vultrBucketName) {
-            try {
-              const vultrInstance = await prisma.vultrObjectStorage.findUnique({
-                where: { id: bucket.vultrObjectStorageId },
-              })
-
-              if (vultrInstance) {
-                await deleteObjectStorageBucket(
-                  vultrInstance.vultrId,
-                  bucket.vultrBucketName
-                )
-              }
-            } catch (deleteErr) {
-              logger.warn(
-                `[Sync] Failed to delete Vultr bucket ${bucket.vultrBucketName}`,
-                { error: String(deleteErr) }
-              )
-            }
-          }
-
-          await prisma.$transaction([
-            prisma.storageBucket.update({
-              where: { id: bucket.id },
-              data: { provisionStatus: 'deprovisioning' },
-            }),
-            prisma.subscription.updateMany({
-              where: {
-                stripeSubscriptionId: bucket.stripeSubscriptionId,
-                status: 'active',
-              },
-              data: { status: 'canceled', cancelAtPeriodEnd: false },
-            }),
-            prisma.user.updateMany({
-              where: { storageBucketId: bucket.id },
-              data: { storageBucketId: null },
-            }),
-          ])
+          await deprovisionBucket(bucket)
         } else {
           logger.error(
             `[Sync] Error checking subscription ${bucket.stripeSubscriptionId}`,
@@ -310,6 +262,56 @@ async function reconcileDeprovisionedBuckets(): Promise<void> {
       '[Sync] Reconciliation of deprovisioned buckets failed',
       err as Error
     )
-    // Don't throw - this is a non-critical operation
+    // Non-critical — don't rethrow
   }
+}
+
+async function deprovisionBucket(bucket: {
+  id: string
+  stripeSubscriptionId: string | null
+  objectStoragePoolId: string | null
+  poolBucketName: string | null
+}): Promise<void> {
+  if (bucket.objectStoragePoolId && bucket.poolBucketName) {
+    try {
+      const pool = await prisma.objectStoragePool.findUnique({
+        where: { id: bucket.objectStoragePoolId },
+      })
+      if (pool) {
+        await deprovisionBucketOnProvider(pool, bucket.poolBucketName)
+        logger.info(
+          `[Sync] Deleted bucket ${bucket.poolBucketName} from ${pool.provider} pool ${pool.id}`
+        )
+      }
+    } catch (err) {
+      logger.warn(
+        `[Sync] Failed to delete bucket ${bucket.poolBucketName} from provider`,
+        {
+          error: String(err),
+        }
+      )
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.storageBucket.update({
+      where: { id: bucket.id },
+      data: { provisionStatus: 'deprovisioning' },
+    }),
+    ...(bucket.stripeSubscriptionId
+      ? [
+          prisma.subscription.updateMany({
+            where: {
+              stripeSubscriptionId: bucket.stripeSubscriptionId,
+              status: 'active',
+            },
+            data: { status: 'canceled', cancelAtPeriodEnd: false },
+          }),
+        ]
+      : []),
+    prisma.user.updateMany({
+      where: { storageBucketId: bucket.id },
+      data: { storageBucketId: null },
+    }),
+  ])
 }
