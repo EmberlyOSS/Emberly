@@ -15,7 +15,7 @@
  * API reference: https://api.eu.ovhcloud.com/console/?section=%2FpublicCloud&branch=v2
  */
 
-import { createHash } from 'crypto'
+import { createHmac } from 'crypto'
 import { getIntegrations } from '@/packages/lib/config'
 
 // OVH endpoint base URLs keyed by endpoint name
@@ -71,14 +71,13 @@ function signOVHRequest(
   timestamp: number
 ): string {
   const toSign = [
-    appSecret,
     consumerKey,
     method.toUpperCase(),
     url,
     body,
     String(timestamp),
   ].join('+')
-  return '$1$' + createHash('sha1').update(toSign).digest('hex')
+  return '$1$' + createHmac('sha1', appSecret).update(toSign).digest('hex')
 }
 
 async function ovhRequest<T>(
