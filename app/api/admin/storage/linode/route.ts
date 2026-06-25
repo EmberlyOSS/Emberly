@@ -106,17 +106,15 @@ export async function POST(req: Request) {
       )
     }
 
-    // Create an unrestricted access key for this cluster
+    // Create an unrestricted access key scoped to this cluster's region
     const keyLabel = `emberly-${clusterId}-${Date.now()}`
-    const linodeKey = await createLinodeKeys(keyLabel, undefined, [
-      { id: cluster.region },
-    ])
+    const linodeKey = await createLinodeKeys(keyLabel, undefined, [clusterId])
     logger.info(
       `[Admin] Created Linode access key ${linodeKey.id} for cluster ${clusterId}`
     )
 
     // Determine the S3 endpoint from the key's region list
-    const regionEntry = linodeKey.regions?.find((r) => r.id === cluster.region)
+    const regionEntry = linodeKey.regions?.find((r) => r.id === clusterId)
     const s3Hostname =
       regionEntry?.s3_endpoint ?? `${clusterId}.linodeobjects.com`
 

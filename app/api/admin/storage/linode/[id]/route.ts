@@ -173,7 +173,7 @@ export async function POST(req: Request, { params }: Params) {
     const newKey = await createLinodeKeys(
       newKeyLabel,
       undefined,
-      meta?.linodeClusterId ? [{ id: meta.linodeClusterId }] : undefined
+      meta?.linodeClusterId ? [meta.linodeClusterId] : undefined
     )
     logger.info(
       `[Admin] Created new Linode key ${newKey.id} for pool ${pool.id}`

@@ -78,6 +78,8 @@ import { cn } from '@/lib/utils'
 import type { EmberlyConfig } from '@/lib/config'
 import type { BackgroundEffect, AnimationSpeed } from '@/lib/theme/theme-types'
 
+import { LinodePoolManager } from '@/packages/components/admin/settings/linode-pool-manager'
+import { OVHCloudPoolManager } from '@/packages/components/admin/settings/ovhcloud-pool-manager'
 import { StorageBucketManager } from '@/packages/components/admin/settings/storage-bucket-manager'
 import { UserBucketAssignment } from '@/packages/components/admin/settings/user-bucket-assignment'
 import { VultrInstanceManager } from '@/packages/components/admin/settings/vultr-instance-manager'
@@ -1759,6 +1761,24 @@ export function SettingsManager() {
             <VultrInstanceManager />
           </SettingsSection>
 
+          {/* Linode Object Storage Pools */}
+          <SettingsSection
+            icon={Cloud}
+            title="Linode Object Storage"
+            description="Linode cluster-backed storage pools. Each pool creates an access key for a cluster region available on the pricing page."
+          >
+            <LinodePoolManager />
+          </SettingsSection>
+
+          {/* OVHcloud Object Storage Pools */}
+          <SettingsSection
+            icon={Cloud}
+            title="OVHcloud Object Storage"
+            description="OVHcloud Public Cloud storage pools. Each pool generates S3-compatible credentials for a project and region."
+          >
+            <OVHCloudPoolManager />
+          </SettingsSection>
+
           {/* Additional Storage Buckets */}
           <SettingsSection
             icon={Database}
@@ -2903,6 +2923,236 @@ export function SettingsManager() {
                 }
               >
                 {intTestStates['vultr']?.loading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Test Connection
+              </Button>
+            </div>
+          </SettingsSection>
+
+          {/* Linode */}
+          <SettingsSection
+            icon={Server}
+            title="Linode"
+            description="Linode Object Storage API for automated pool provisioning. Overrides the LINODE_API_KEY env var."
+            badge={
+              isFieldChanged('integrations', ['linode']) && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                  Modified
+                </span>
+              )
+            }
+          >
+            <SettingRow
+              label="API Key"
+              description="Linode personal access token with Object Storage read/write scope"
+            >
+              <Input
+                type="password"
+                placeholder="API key"
+                className="w-80 font-mono text-sm"
+                value={
+                  (workingConfig?.settings.integrations as any)?.linode
+                    ?.apiKey ?? ''
+                }
+                onChange={(e) =>
+                  handleSettingChange('integrations', {
+                    linode: {
+                      ...(workingConfig?.settings.integrations as any)?.linode,
+                      apiKey: e.target.value,
+                    },
+                  } as any)
+                }
+              />
+            </SettingRow>
+            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+              <div>
+                {intTestStates['linode'] &&
+                  !intTestStates['linode'].loading && (
+                    <span
+                      className={`text-xs flex items-center gap-1.5 ${intTestStates['linode'].ok ? 'text-green-500' : 'text-destructive'}`}
+                    >
+                      {intTestStates['linode'].ok ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <AlertCircle className="h-3.5 w-3.5" />
+                      )}
+                      {intTestStates['linode'].message}
+                    </span>
+                  )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 shrink-0"
+                disabled={intTestStates['linode']?.loading}
+                onClick={() =>
+                  handleIntegrationTest('linode', {
+                    apiKey:
+                      (workingConfig?.settings.integrations as any)?.linode
+                        ?.apiKey ?? '',
+                  })
+                }
+              >
+                {intTestStates['linode']?.loading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Test Connection
+              </Button>
+            </div>
+          </SettingsSection>
+
+          {/* OVHcloud */}
+          <SettingsSection
+            icon={Server}
+            title="OVHcloud"
+            description="OVHcloud Public Cloud API for automated S3 credential provisioning. Overrides OVH_APP_KEY, OVH_APP_SECRET, OVH_CONSUMER_KEY, and OVH_ENDPOINT env vars."
+            badge={
+              isFieldChanged('integrations', ['ovhcloud']) && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                  Modified
+                </span>
+              )
+            }
+          >
+            <SettingRow
+              label="Application Key"
+              description="OVH application key (appKey)"
+            >
+              <Input
+                type="password"
+                placeholder="Application key"
+                className="w-80 font-mono text-sm"
+                value={
+                  (workingConfig?.settings.integrations as any)?.ovhcloud
+                    ?.appKey ?? ''
+                }
+                onChange={(e) =>
+                  handleSettingChange('integrations', {
+                    ovhcloud: {
+                      ...(workingConfig?.settings.integrations as any)
+                        ?.ovhcloud,
+                      appKey: e.target.value,
+                    },
+                  } as any)
+                }
+              />
+            </SettingRow>
+            <SettingRow
+              label="Application Secret"
+              description="OVH application secret (appSecret)"
+            >
+              <Input
+                type="password"
+                placeholder="Application secret"
+                className="w-80 font-mono text-sm"
+                value={
+                  (workingConfig?.settings.integrations as any)?.ovhcloud
+                    ?.appSecret ?? ''
+                }
+                onChange={(e) =>
+                  handleSettingChange('integrations', {
+                    ovhcloud: {
+                      ...(workingConfig?.settings.integrations as any)
+                        ?.ovhcloud,
+                      appSecret: e.target.value,
+                    },
+                  } as any)
+                }
+              />
+            </SettingRow>
+            <SettingRow
+              label="Consumer Key"
+              description="OVH consumer key (consumerKey) — obtained via /auth/credential"
+            >
+              <Input
+                type="password"
+                placeholder="Consumer key"
+                className="w-80 font-mono text-sm"
+                value={
+                  (workingConfig?.settings.integrations as any)?.ovhcloud
+                    ?.consumerKey ?? ''
+                }
+                onChange={(e) =>
+                  handleSettingChange('integrations', {
+                    ovhcloud: {
+                      ...(workingConfig?.settings.integrations as any)
+                        ?.ovhcloud,
+                      consumerKey: e.target.value,
+                    },
+                  } as any)
+                }
+              />
+            </SettingRow>
+            <SettingRow label="Endpoint" description="OVH API endpoint region">
+              <Select
+                value={
+                  (workingConfig?.settings.integrations as any)?.ovhcloud
+                    ?.endpoint ?? 'ovh-eu'
+                }
+                onValueChange={(v) =>
+                  handleSettingChange('integrations', {
+                    ovhcloud: {
+                      ...(workingConfig?.settings.integrations as any)
+                        ?.ovhcloud,
+                      endpoint: v,
+                    },
+                  } as any)
+                }
+              >
+                <SelectTrigger className="w-48 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ovh-eu">Europe (ovh-eu)</SelectItem>
+                  <SelectItem value="ovh-ca">Canada (ovh-ca)</SelectItem>
+                  <SelectItem value="ovh-us">US (ovh-us)</SelectItem>
+                </SelectContent>
+              </Select>
+            </SettingRow>
+            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+              <div>
+                {intTestStates['ovhcloud'] &&
+                  !intTestStates['ovhcloud'].loading && (
+                    <span
+                      className={`text-xs flex items-center gap-1.5 ${intTestStates['ovhcloud'].ok ? 'text-green-500' : 'text-destructive'}`}
+                    >
+                      {intTestStates['ovhcloud'].ok ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <AlertCircle className="h-3.5 w-3.5" />
+                      )}
+                      {intTestStates['ovhcloud'].message}
+                    </span>
+                  )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 shrink-0"
+                disabled={intTestStates['ovhcloud']?.loading}
+                onClick={() =>
+                  handleIntegrationTest('ovhcloud', {
+                    appKey:
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.appKey ?? '',
+                    appSecret:
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.appSecret ?? '',
+                    consumerKey:
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.consumerKey ?? '',
+                    endpoint:
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.endpoint ?? 'ovh-eu',
+                  })
+                }
+              >
+                {intTestStates['ovhcloud']?.loading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <RefreshCw className="h-3.5 w-3.5" />
