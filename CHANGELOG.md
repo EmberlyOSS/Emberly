@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-06-25
+
+### Added
+
+- **BullMQ event worker** — replaced the custom Postgres+Redis polling event system with [BullMQ](https://docs.bullmq.io/). All event handlers are now static `HandlerMap` objects dispatched by a BullMQ worker. In development the worker runs in-process automatically; in production it runs as a separate process via `bun run worker`. Controlled by the `EMBERLY_RUN_EVENT_WORKER` environment variable (`true` / `false` / unset).
+- **Bull Board queue monitor** — admin queue dashboard available at `/api/admin/queues`. Requires an active admin session. Built with a custom Next.js App Router adapter for `@bull-board/api` — no custom server or external process needed. Displays live job counts, retry/promote/clean controls, job payloads, logs, and metrics for the `emberly-events` queue.
+- **Standalone worker entry point** — `scripts/worker.ts` can be run as a dedicated process (`bun run worker`) for production deployments that want a separate worker process, Docker sidecar, or systemd service.
+- **Deterministic file-expiry job IDs** — file expiration jobs use the stable ID `file-expiry-<fileId>` so they can be cancelled or inspected directly via BullMQ's job store. `cancelFileExpiration` and `getFileExpirationInfo` use these IDs instead of querying a Postgres `EventHandler` table.
+- **Periodic storage sync via BullMQ** — `storage.sync-buckets` is now a recurring BullMQ job (`repeat: { pattern: '0 * * * *' }`) scheduled at startup rather than through the old event system.
+- **Linode Object Storage provider** — new `LinodeStorageProvider` in `packages/lib/storage/providers/linode.ts` implements the Linode Object Storage management API (cluster listing, bucket creation/deletion, key management). Fully integrated with the `ObjectStoragePool` model and admin provisioning flow.
+- **OVHcloud Object Storage provider** — new `OVHcloudStorageProvider` in `packages/lib/storage/providers/ovhcloud.ts` implements the OVHcloud Public Cloud Object Storage API (project listing, region listing, S3 credential management). Integrated with `ObjectStoragePool` and admin provisioning flow.
+- **Admin pool manager UI — Linode** — `packages/components/admin/settings/linode-pool-manager.tsx` provides a full CRUD interface for Linode Object Storage pools: list clusters, create/delete pools, view credentials.
+- **Admin pool manager UI — OVHcloud** — `packages/components/admin/settings/ovhcloud-pool-manager.tsx` provides a full CRUD interface for OVHcloud Object Storage pools.
+- **Linode admin API routes** — `POST /api/admin/storage/linode` (create pool) and `DELETE /api/admin/storage/linode/[id]` (delete pool).
+- **OVHcloud admin API routes** — `POST /api/admin/storage/ovhcloud` (create pool) and `DELETE /api/admin/storage/ovhcloud/[id]` (delete pool).
+- **`ObjectStoragePool` Prisma migration** — unified storage pool model supporting `vultr`, `linode`, and `ovhcloud` providers. Replaces `VultrObjectStorage` as the single table for all provisioned storage pools. Provider-specific metadata stored as `Json` (`clusterId` for Vultr, `keyId + linodeClusterId` for Linode, `projectId + regionName + credentialAccess` for OVHcloud).
+
+### Fixed
+
+- **Bucket provisioning** — corrected key mapping and credential lookup issues that caused provisioning to fail for newly created pools.
+- **Storage key issues** — fixed S3 key derivation errors that caused reads and deletes to target the wrong object on certain pool configurations.
+
+### Changed
+
+- **Event handler pattern** — all handler files now export a `HandlerMap` static object instead of calling `events.on()` at registration time. The `events.emit()` call signature is unchanged across all 31+ call sites — the compat shim in `events/index.ts` maintains backward compatibility.
+- **`EventHandler` model removed** — the `EventHandler` Prisma model (used by the old polling worker) has been dropped. Apply with `bun run db:migrate`.
+- **Redis is now required** — previously optional for some configurations; BullMQ and rate limiting both require a live Redis connection. See [README Event Worker](README.md#event-worker) for setup.
+- **Vultr instance manager** — updated to work with the unified `ObjectStoragePool` model.
+- **Settings manager** — admin settings panel updated to include Linode and OVHcloud pool manager tabs.
+
 ## [2.4.7] - 2026-06-15
 
 ### Added
