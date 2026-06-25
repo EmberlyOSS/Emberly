@@ -1,3 +1,5 @@
+import { createHash } from 'crypto'
+
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { loggers } from '@/packages/lib/logger'
@@ -13,6 +15,8 @@ type IntegrationKey =
   | 'github'
   | 'smtp'
   | 'vultr'
+  | 'linode'
+  | 'ovhcloud'
 
 interface TestIntegrationBody {
   integration: IntegrationKey
@@ -328,6 +332,90 @@ async function testVultr(apiKey: string): Promise<TestResult> {
   }
 }
 
+async function testLinode(apiKey: string): Promise<TestResult> {
+  if (!apiKey) return { ok: false, message: 'API key is not configured' }
+  try {
+    const res = await fetch(
+      'https://api.linode.com/v4/object-storage/clusters',
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(8000),
+      }
+    )
+    if (res.status === 401 || res.status === 400)
+      return { ok: false, message: 'Invalid API key' }
+    if (!res.ok)
+      return { ok: false, message: `Linode API error (${res.status})` }
+    const json = await res.json().catch(() => null)
+    const count = json?.data?.length ?? 0
+    return {
+      ok: true,
+      message: `Connected to Linode — ${count} cluster${count !== 1 ? 's' : ''} available`,
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      message: 'Failed to reach Linode API',
+      detail: String(err),
+    }
+  }
+}
+
+const OVH_ENDPOINTS: Record<string, string> = {
+  'ovh-eu': 'https://eu.api.ovh.com/v2',
+  'ovh-us': 'https://api.us.ovhcloud.com/v2',
+  'ovh-ca': 'https://ca.api.ovh.com/v2',
+}
+
+async function testOVHCloud(
+  appKey: string,
+  appSecret: string,
+  consumerKey: string,
+  endpoint: string
+): Promise<TestResult> {
+  if (!appKey || !appSecret || !consumerKey)
+    return { ok: false, message: 'All four OVH credentials are required' }
+  const baseUrl = OVH_ENDPOINTS[endpoint] ?? OVH_ENDPOINTS['ovh-eu']
+  try {
+    const url = `${baseUrl}/cloud/project`
+    const timestamp = Math.round(Date.now() / 1000)
+    const toSign = [
+      appSecret,
+      consumerKey,
+      'GET',
+      url,
+      '',
+      String(timestamp),
+    ].join('+')
+    const signature = '$1$' + createHash('sha1').update(toSign).digest('hex')
+    const res = await fetch(url, {
+      headers: {
+        'X-Ovh-Application': appKey,
+        'X-Ovh-Consumer': consumerKey,
+        'X-Ovh-Timestamp': String(timestamp),
+        'X-Ovh-Signature': signature,
+      },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.status === 401 || res.status === 403)
+      return { ok: false, message: 'Invalid OVHcloud credentials' }
+    if (!res.ok)
+      return { ok: false, message: `OVHcloud API error (${res.status})` }
+    const json = await res.json().catch(() => null)
+    const count = Array.isArray(json) ? json.length : 0
+    return {
+      ok: true,
+      message: `Connected to OVHcloud — ${count} project${count !== 1 ? 's' : ''} accessible`,
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      message: 'Failed to reach OVHcloud API',
+      detail: String(err),
+    }
+  }
+}
+
 async function testSmtp(
   host: string,
   port: number,
@@ -401,6 +489,17 @@ export async function POST(req: Request) {
         break
       case 'vultr':
         result = await testVultr(credentials.apiKey)
+        break
+      case 'linode':
+        result = await testLinode(credentials.apiKey)
+        break
+      case 'ovhcloud':
+        result = await testOVHCloud(
+          credentials.appKey,
+          credentials.appSecret,
+          credentials.consumerKey,
+          credentials.endpoint ?? 'ovh-eu'
+        )
         break
       default:
         return apiError('Unknown integration', HTTP_STATUS.BAD_REQUEST)

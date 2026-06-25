@@ -208,7 +208,7 @@ export async function createLinodeKeys(
     bucket_name: string
     permissions: 'read_only' | 'read_write'
   }>,
-  regions?: Array<{ id: string }>
+  regions?: string[]
 ): Promise<LinodeObjectStorageKey> {
   const body: Record<string, unknown> = { label }
   if (bucketAccess?.length) body.bucket_access = bucketAccess

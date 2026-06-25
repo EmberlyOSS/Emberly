@@ -140,14 +140,16 @@ export default async function PricingPage() {
 
   // Only expose regions where an admin has provisioned an active storage pool.
   // This prevents selling a bucket in a region we can't actually deliver.
-  const activeVultrInstances = await prisma.objectStoragePool.findMany({
+  // Covers all providers: Vultr, Linode, OVHcloud.
+  const activeStoragePools = await prisma.objectStoragePool.findMany({
     where: { status: 'active' },
     select: { region: true, s3Hostname: true, tier: true },
     orderBy: { region: 'asc' },
   })
 
-  // Build per-tier region availability. `tier` stores the provider's sales name
-  // (e.g. "Standard", "Archival"). Match case-insensitively against our slug keywords.
+  // Build per-tier region availability. `tier` stores the normalised slug set
+  // at provision time (e.g. "standard", "premium", "high_performance").
+  // Tier keyword matching is substring-based so "high_performance" → "performance".
   const tierKeywords = [
     'archival',
     'standard',
@@ -156,19 +158,19 @@ export default async function PricingPage() {
     'accelerated',
   ] as const
   const tierRegions: Record<string, string[]> = {}
-  const hasTierInfo = activeVultrInstances.some(
+  const hasTierInfo = activeStoragePools.some(
     (v) => v.tier && v.tier !== 'standard'
   )
 
   for (const kw of tierKeywords) {
     const slug = `storage-bucket-${kw}`
     if (hasTierInfo) {
-      tierRegions[slug] = activeVultrInstances
+      tierRegions[slug] = activeStoragePools
         .filter((v) => v.tier?.toLowerCase().includes(kw))
         .map((v) => v.region)
     } else {
-      // Legacy: all instances provisioned before tier tracking — offer all regions for all tiers
-      tierRegions[slug] = activeVultrInstances.map((v) => v.region)
+      // Legacy: all pools provisioned before tier tracking — offer all regions for all tiers
+      tierRegions[slug] = activeStoragePools.map((v) => v.region)
     }
   }
 
