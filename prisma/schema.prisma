@@ -930,24 +930,40 @@ model ApplicationReply {
 // Admins provision one per region via Admin → Storage → Vultr.
 // Each paying user gets their own bucket created inside the appropriate instance.
 // This amortises the fixed Vultr instance cost across all users in that region.
-model VultrObjectStorage {
+// Unified provisioned Object Storage pool — one record per admin-configured
+// regional pool regardless of provider (Vultr, Linode, OVHcloud, …).
+// Each paying user gets a bucket provisioned inside the pool that best matches
+// their region/tier preference.
+model ObjectStoragePool {
   id          String   @id @default(cuid())
-  vultrId     String   @unique // Vultr resource UUID
+  // 'vultr' | 'linode' | 'ovhcloud'
+  provider    String
+  // Provider-assigned resource identifier:
+  //   Vultr   → Object Storage instance UUID
+  //   Linode  → Access key label (unique per account)
+  //   OVHcloud → "<projectId>/<regionName>"
+  externalId  String
   label       String
-  region      String   // Vultr region code, e.g. 'ewr', 'ams'
-  clusterId   Int
-  s3Hostname  String   // e.g. 'ewr1.vultrobjects.com'
+  region      String
+  s3Hostname  String
   s3AccessKey String
   s3SecretKey String
-  tier          String   @default("standard")
-  status        String   @default("active") // 'pending' | 'active'
-  cfHostname    String?  // e.g. 'storage-ewr.embrly.ca' (DNS-only CNAME via Cloudflare)
-  cfDnsRecordId String?  // Cloudflare DNS record ID, used for cleanup on deletion
+  tier        String   @default("standard")
+  status      String   @default("active") // 'pending' | 'active'
+  // Provider-specific extra data:
+  //   Vultr   → { clusterId: number }
+  //   Linode  → { keyId: number, linodeClusterId: string }
+  //   OVHcloud → { projectId: string, regionName: string, credentialAccess: string }
+  metadata    Json?
+  cfHostname    String?
+  cfDnsRecordId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   storageBuckets StorageBucket[]
 
+  @@unique([provider, externalId])
+  @@index([provider])
   @@index([region])
   @@index([status])
 }
@@ -973,24 +989,24 @@ model StorageBucket {
   // Higher priority core buckets are preferred when file counts are equal.
   // Useful for routing uploads to higher-performance or lower-latency buckets.
   priority             Int      @default(0)
-  // Vultr-backed buckets: tracks which pooled instance this bucket lives in
-  // and the Stripe subscription that triggered provisioning.
-  vultrObjectStorageId String?
-  vultrBucketName      String?  // The actual bucket name within the Vultr instance
-  stripeSubscriptionId String?  // Subscription that provisioned this bucket
+  // Provider-backed buckets: links to the ObjectStoragePool this bucket lives in
+  // and the actual bucket name within that pool.
+  objectStoragePoolId  String?
+  poolBucketName       String?  // The actual bucket/container name within the pool
+  stripeSubscriptionId String?  // Subscription that triggered provisioning
   provisionStatus      String   @default("active") // 'provisioning' | 'active' | 'deprovisioning'
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  vultrObjectStorage VultrObjectStorage? @relation(fields: [vultrObjectStorageId], references: [id], onDelete: SetNull)
-  assignedUsers      User[]              @relation("UserStorageBucket")
-  assignedSquads     NexiumSquad[]       @relation("SquadStorageBucket")
-  files              File[]              @relation("FileBucket")
+  objectStoragePool ObjectStoragePool? @relation(fields: [objectStoragePoolId], references: [id], onDelete: SetNull)
+  assignedUsers     User[]             @relation("UserStorageBucket")
+  assignedSquads    NexiumSquad[]      @relation("SquadStorageBucket")
+  files             File[]             @relation("FileBucket")
 
   @@index([provider])
   @@index([isCore])
-  @@index([vultrObjectStorageId])
-  @@unique([vultrBucketName])
+  @@index([objectStoragePoolId])
+  @@unique([poolBucketName])
   @@unique([stripeSubscriptionId])
 }
 

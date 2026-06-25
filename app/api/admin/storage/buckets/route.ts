@@ -24,8 +24,8 @@ export async function GET(req: Request) {
         s3Region: true,
         s3Endpoint: true,
         s3ForcePathStyle: true,
-        vultrObjectStorageId: true,
-        vultrBucketName: true,
+        objectStoragePoolId: true,
+        poolBucketName: true,
         createdAt: true,
         updatedAt: true,
         // Return masked versions of secrets — never expose raw keys
@@ -69,31 +69,31 @@ export async function POST(req: Request) {
       s3SecretKey,
       s3Endpoint,
       s3ForcePathStyle,
-      vultrObjectStorageId,
-      vultrBucketName,
+      objectStoragePoolId,
+      poolBucketName,
     } = body
 
     if (!name?.trim())
       return apiError('Bucket name is required', HTTP_STATUS.BAD_REQUEST)
 
-    // For Vultr-backed buckets, populate S3 credentials from the existing VultrObjectStorage record
-    if (provider === 'vultr') {
-      if (!vultrObjectStorageId)
-        return apiError('Vultr instance is required', HTTP_STATUS.BAD_REQUEST)
-      if (!vultrBucketName?.trim())
+    // For pool-backed buckets, populate S3 credentials from the ObjectStoragePool record
+    if (provider === 'pool') {
+      if (!objectStoragePoolId)
         return apiError(
-          'Bucket name within the Vultr instance is required',
+          'Object Storage Pool is required',
+          HTTP_STATUS.BAD_REQUEST
+        )
+      if (!poolBucketName?.trim())
+        return apiError(
+          'Bucket name within the pool is required',
           HTTP_STATUS.BAD_REQUEST
         )
 
-      const vultr = await prisma.vultrObjectStorage.findUnique({
-        where: { id: vultrObjectStorageId },
+      const pool = await prisma.objectStoragePool.findUnique({
+        where: { id: objectStoragePoolId },
       })
-      if (!vultr)
-        return apiError(
-          'Vultr Object Storage instance not found',
-          HTTP_STATUS.NOT_FOUND
-        )
+      if (!pool)
+        return apiError('Object Storage Pool not found', HTTP_STATUS.NOT_FOUND)
 
       const bucket = await prisma.storageBucket.create({
         data: {
@@ -101,14 +101,14 @@ export async function POST(req: Request) {
           provider: 's3',
           isCore: Boolean(isCore),
           priority: Number(priority) || 0,
-          s3Bucket: vultrBucketName.trim(),
-          s3Region: vultr.region,
-          s3AccessKeyId: vultr.s3AccessKey,
-          s3SecretKey: vultr.s3SecretKey,
-          s3Endpoint: `https://${vultr.s3Hostname}`,
+          s3Bucket: poolBucketName.trim(),
+          s3Region: pool.region,
+          s3AccessKeyId: pool.s3AccessKey,
+          s3SecretKey: pool.s3SecretKey,
+          s3Endpoint: `https://${pool.s3Hostname}`,
           s3ForcePathStyle: false,
-          vultrObjectStorageId: vultr.id,
-          vultrBucketName: vultrBucketName.trim(),
+          objectStoragePoolId: pool.id,
+          poolBucketName: poolBucketName.trim(),
         },
       })
 

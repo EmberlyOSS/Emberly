@@ -145,7 +145,7 @@ export async function listObjectStorages(): Promise<
  * Provision a new Object Storage instance.
  * @param clusterId - ID from listClusters()
  * @param label     - Human-readable name (e.g. "emberly-ewr-pool")
- * @param tier      - e.g. "standard" | "premium" | "archival" (default: "standard")
+ * @param tierId    - Tier ID from listClusterTiers()
  */
 export async function createObjectStorage(
   clusterId: number,

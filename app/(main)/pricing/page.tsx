@@ -7,18 +7,24 @@ import CustomPricingCTA from '@/packages/components/pricing/CustomPricingCTA'
 import PricingHero from '@/packages/components/pricing/PricingHero'
 import HomeShell from '@/packages/components/layout/home-shell'
 import PricingTabs from '@/packages/components/pricing/PricingTabs'
-import { getAddOnPricing, getPlanPricing } from '@/packages/lib/products/pricing'
+import {
+  getAddOnPricing,
+  getPlanPricing,
+} from '@/packages/lib/products/pricing'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
   title: 'Pricing',
-  description: 'Flexible plans for individuals, teams, and self-hosted deployments. Start free or scale up with advanced features.',
+  description:
+    'Flexible plans for individuals, teams, and self-hosted deployments. Start free or scale up with advanced features.',
 })
 
 export default async function PricingPage() {
   const session = await getServerSession(authOptions)
 
-  const activeProducts = await prisma.product.findMany({ where: { active: true } })
+  const activeProducts = await prisma.product.findMany({
+    where: { active: true },
+  })
 
   let user: any = null
   if (session?.user?.id) {
@@ -26,7 +32,11 @@ export default async function PricingPage() {
       where: { id: session.user.id },
       select: {
         id: true,
-        subscriptions: { select: { id: true, productId: true, status: true }, take: 1, orderBy: { createdAt: 'desc' } },
+        subscriptions: {
+          select: { id: true, productId: true, status: true },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
       },
     })
   }
@@ -35,7 +45,9 @@ export default async function PricingPage() {
 
   // interactive add-on controls handled in client component `AddOnCheckout`
 
-  const planProducts = activeProducts.filter((p) => p.type === 'plan' || !p.type)
+  const planProducts = activeProducts.filter(
+    (p) => p.type === 'plan' || !p.type
+  )
 
   const sortedPlanProducts = [...planProducts].sort((a, b) => {
     const priceA = a.defaultPriceCents ?? Number.MAX_SAFE_INTEGER
@@ -56,7 +68,10 @@ export default async function PricingPage() {
       description: product.description || 'Flexible plan for your team.',
       price: pricing.monthlyDisplay,
       priceYearly: pricing.yearlyDisplay,
-      features: product.features && product.features.length ? product.features : ['Everything you need to get started.'],
+      features:
+        product.features && product.features.length
+          ? product.features
+          : ['Everything you need to get started.'],
       priceIdMonthly: pricing.priceIdMonthly,
       priceIdYearly: pricing.priceIdYearly,
       popular: Boolean(product.popular),
@@ -65,11 +80,15 @@ export default async function PricingPage() {
 
   const sparkSlug = planProducts.find((p) => p.slug === 'spark')?.slug
   const activePlanKey = activeSubscription
-    ? (planProducts.find((p) => p.id === activeSubscription.productId)?.slug || planProducts.find((p) => p.id === activeSubscription.productId)?.id || sparkSlug || 'free')
-    : (sparkSlug || 'free')
+    ? planProducts.find((p) => p.id === activeSubscription.productId)?.slug ||
+      planProducts.find((p) => p.id === activeSubscription.productId)?.id ||
+      sparkSlug ||
+      'free'
+    : sparkSlug || 'free'
 
   const currentPlanName = activeSubscription
-    ? planProducts.find((p) => p.id === activeSubscription.productId)?.name || 'Current plan'
+    ? planProducts.find((p) => p.id === activeSubscription.productId)?.name ||
+      'Current plan'
     : planProducts.find((p) => p.slug === 'spark')?.name || 'Current plan'
 
   const addOnProducts = activeProducts.filter((p) => p.type === 'addon')
@@ -87,7 +106,9 @@ export default async function PricingPage() {
     }
   })
 
-  const discoveryPlanProducts = activeProducts.filter((p) => p.type === 'nexium-plan')
+  const discoveryPlanProducts = activeProducts.filter(
+    (p) => p.type === 'nexium-plan'
+  )
 
   const discoveryPlans = discoveryPlanProducts.map((product) => {
     const pricing = getPlanPricing(product)
@@ -95,10 +116,14 @@ export default async function PricingPage() {
       id: product.id,
       key: product.slug || product.id,
       name: product.name,
-      description: product.description || 'Flexible Discovery plan for your squad.',
+      description:
+        product.description || 'Flexible Discovery plan for your squad.',
       price: pricing.monthlyDisplay,
       priceYearly: pricing.yearlyDisplay,
-      features: product.features && product.features.length ? product.features : ['Everything your squad needs.'],
+      features:
+        product.features && product.features.length
+          ? product.features
+          : ['Everything your squad needs.'],
       priceIdMonthly: pricing.priceIdMonthly,
       priceIdYearly: pricing.priceIdYearly,
       popular: Boolean(product.popular),
@@ -106,24 +131,34 @@ export default async function PricingPage() {
   })
 
   const discoveryActivePlanKey = activeSubscription
-    ? (discoveryPlanProducts.find((p) => p.id === activeSubscription.productId)?.slug
-      || discoveryPlanProducts.find((p) => p.id === activeSubscription.productId)?.id
-      || 'nexium-free')
+    ? discoveryPlanProducts.find((p) => p.id === activeSubscription.productId)
+        ?.slug ||
+      discoveryPlanProducts.find((p) => p.id === activeSubscription.productId)
+        ?.id ||
+      'nexium-free'
     : 'nexium-free'
 
-  // Only expose regions where an admin has provisioned an active Vultr pool.
+  // Only expose regions where an admin has provisioned an active storage pool.
   // This prevents selling a bucket in a region we can't actually deliver.
-  const activeVultrInstances = await prisma.vultrObjectStorage.findMany({
+  const activeVultrInstances = await prisma.objectStoragePool.findMany({
     where: { status: 'active' },
     select: { region: true, s3Hostname: true, tier: true },
     orderBy: { region: 'asc' },
   })
 
-  // Build per-tier region availability. Vultr's `tier` field stores the sales_name
+  // Build per-tier region availability. `tier` stores the provider's sales name
   // (e.g. "Standard", "Archival"). Match case-insensitively against our slug keywords.
-  const tierKeywords = ['archival', 'standard', 'premium', 'performance', 'accelerated'] as const
+  const tierKeywords = [
+    'archival',
+    'standard',
+    'premium',
+    'performance',
+    'accelerated',
+  ] as const
   const tierRegions: Record<string, string[]> = {}
-  const hasTierInfo = activeVultrInstances.some((v) => v.tier && v.tier !== 'standard')
+  const hasTierInfo = activeVultrInstances.some(
+    (v) => v.tier && v.tier !== 'standard'
+  )
 
   for (const kw of tierKeywords) {
     const slug = `storage-bucket-${kw}`
@@ -139,7 +174,9 @@ export default async function PricingPage() {
 
   // Build storageTiers array from the 5 tier addon products
   const storageTierSlugs = tierKeywords.map((kw) => `storage-bucket-${kw}`)
-  const storageTierProducts = activeProducts.filter((p) => storageTierSlugs.includes(p.slug ?? ''))
+  const storageTierProducts = activeProducts.filter((p) =>
+    storageTierSlugs.includes(p.slug ?? '')
+  )
 
   const storageTiers = storageTierSlugs
     .map((slug) => {
@@ -154,7 +191,9 @@ export default async function PricingPage() {
         availableRegions: tierRegions[slug] ?? [],
       }
     })
-    .filter(Boolean) as import('@/packages/components/pricing/S3Section').StorageTier[]
+    .filter(
+      Boolean
+    ) as import('@/packages/components/pricing/S3Section').StorageTier[]
 
   return (
     <HomeShell>

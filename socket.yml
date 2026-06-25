@@ -1,0 +1,89 @@
+version: 2
+
+# socket.dev supply-chain security configuration
+# Docs: https://docs.socket.dev/docs/socket-yml
+
+projectIgnorePaths:
+  # Generated code — not hand-authored, don't scan for issues
+  - prisma/generated/**
+  - .next/**
+  - node_modules/**
+  # Scripts are trusted internal tooling
+  - scripts/**
+
+issueRules:
+  # === High severity — block PRs ===
+
+  # Packages that execute code at install time are a supply-chain risk
+  installScripts:
+    action: error
+
+  # Obfuscated source is a strong indicator of malware
+  obfuscatedFiles:
+    action: error
+
+  # Known malware — always block
+  malware:
+    action: error
+
+  # Packages that were recently published for the first time (≤7 days)
+  # carry elevated risk; block until they age
+  newAuthor:
+    action: error
+
+  # Packages that exfiltrate environment variables or source code
+  envVars:
+    action: error
+
+  # Typosquatting (package name similar to a popular package)
+  typosquatSquatting:
+    action: error
+
+  # Packages that have been deprecated / unmaintained for a long time
+  deprecated:
+    action: warn
+
+  # === Medium severity — warn but allow ===
+
+  # Direct network access from a package (expected for HTTP clients,
+  # flag unexpected network callers)
+  networkAccess:
+    action: warn
+
+  # Packages that read from the filesystem outside their own directory
+  filesystemAccess:
+    action: warn
+
+  # Packages that spawn child processes
+  shellAccess:
+    action: warn
+
+  # Packages whose maintainers have changed recently
+  changedAuthor:
+    action: warn
+
+  # Packages with no declared license (may have legal implications)
+  noLicense:
+    action: warn
+
+  # Packages that declare an unusually broad set of Node.js capabilities
+  ambiguousClassifier:
+    action: warn
+
+  # === Low severity — monitor only ===
+
+  # Packages that use dynamic requires (harder to statically analyse)
+  dynamicRequire:
+    action: monitor
+
+  # Packages that eval() code (may be intentional for template engines etc.)
+  evalUsage:
+    action: monitor
+
+  # Packages sourced directly from git (instead of the npm registry)
+  gitDependency:
+    action: monitor
+
+  # Packages that have been unpublished and re-published
+  unpublished:
+    action: monitor
