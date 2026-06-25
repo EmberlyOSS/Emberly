@@ -3,10 +3,8 @@ import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import {
-  createLinodeBucket,
   createLinodeKeys,
   listLinodeClusters,
-  listLinodeKeys,
   listLinodeStorageTypes,
 } from '@/packages/lib/storage/providers/linode'
 
