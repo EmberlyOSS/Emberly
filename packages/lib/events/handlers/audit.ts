@@ -1,23 +1,13 @@
-import type {
-  BaseEvent,
-  EventType,
-  RequestContext,
-} from '@/packages/types/events'
-import { Prisma } from '@/prisma/generated/prisma/client'
+import type { EventType, RequestContext } from '@/packages/types/events'
+import type { Prisma } from '@/prisma/generated/prisma/client'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-
-import { events } from '../index'
+import type { HandlerFn, HandlerMap } from '../bullmq/types'
 
 const logger = loggers.events.getChildLogger('audit')
 
-/**
- * Events that should be marked as auditable and retained permanently.
- * These events will NOT be cleaned up by the worker's cleanup process.
- */
 export const AUDITABLE_EVENTS: EventType[] = [
-  // Auth events
   'auth.login',
   'auth.logout',
   'auth.password-changed',
@@ -28,7 +18,6 @@ export const AUDITABLE_EVENTS: EventType[] = [
   'auth.2fa-backup-codes-generated',
   'auth.2fa-backup-code-used',
   'auth.session-revoked',
-  // Account events
   'account.created',
   'account.email-changed',
   'account.email-verified',
@@ -38,24 +27,20 @@ export const AUDITABLE_EVENTS: EventType[] = [
   'account.deletion-requested',
   'account.deletion-cancelled',
   'account.deleted',
-  // Security events
   'security.suspicious-activity',
   'security.rate-limit-exceeded',
   'security.api-key-created',
   'security.api-key-revoked',
-  // Admin events
   'admin.user-role-changed',
   'admin.user-suspended',
   'admin.user-unsuspended',
   'admin.content-removed',
-  // Billing events (high-value)
   'billing.subscription-created',
   'billing.subscription-updated',
   'billing.subscription-cancelled',
   'billing.payment-succeeded',
   'billing.payment-failed',
   'billing.refund-issued',
-  // Nexium events
   'nexium.profile-created',
   'nexium.profile-updated',
   'nexium.profile-deleted',
@@ -66,9 +51,10 @@ export const AUDITABLE_EVENTS: EventType[] = [
   'nexium.squad-created',
 ]
 
-/**
- * Extracts common audit fields from event payload
- */
+export function isAuditableEvent(eventType: EventType): boolean {
+  return AUDITABLE_EVENTS.includes(eventType)
+}
+
 function extractAuditFields(
   eventType: EventType,
   payload: Record<string, unknown>
@@ -87,20 +73,17 @@ function extractAuditFields(
   const context = payload.context as RequestContext | undefined
   const [resource, action] = eventType.split('.')
 
-  // Determine actor and target based on event type
   let actorId = payload.userId as string | undefined
   const actorEmail = payload.email as string | undefined
   let targetId: string | undefined
   let targetEmail: string | undefined
 
-  // Admin actions have a different actor
   if (eventType.startsWith('admin.')) {
     actorId = payload.adminUserId as string | undefined
     targetId = payload.targetUserId as string | undefined
     targetEmail = payload.targetEmail as string | undefined
   }
 
-  // Determine success (default true unless explicitly failed)
   let success = true
   if ('success' in payload) {
     success = payload.success as boolean
@@ -120,10 +103,6 @@ function extractAuditFields(
   }
 }
 
-/**
- * Redacts sensitive fields from payload before storing for audit.
- * The redacted payload replaces the original in the Event record.
- */
 function redactSensitiveData(
   payload: Record<string, unknown>
 ): Record<string, unknown> {
@@ -138,13 +117,11 @@ function redactSensitiveData(
   const redacted = { ...payload }
 
   for (const key of Object.keys(redacted)) {
-    const lowerKey = key.toLowerCase()
-    if (sensitiveFields.some((f) => lowerKey.includes(f))) {
+    if (sensitiveFields.some((f) => key.toLowerCase().includes(f))) {
       redacted[key] = '[REDACTED]'
     }
   }
 
-  // Truncate large fields
   for (const key of Object.keys(redacted)) {
     const value = redacted[key]
     if (typeof value === 'string' && value.length > 500) {
@@ -155,19 +132,21 @@ function redactSensitiveData(
   return redacted
 }
 
-/**
- * Marks an event as auditable by updating it with audit metadata.
- * Auditable events are excluded from cleanup and retained permanently.
- */
-async function markEventAsAuditable(event: BaseEvent): Promise<void> {
-  const payload = event.payload as Record<string, unknown>
-  const auditFields = extractAuditFields(event.type as EventType, payload)
+async function writeAuditRecord(
+  type: EventType,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const auditFields = extractAuditFields(type, payload)
   const redactedPayload = redactSensitiveData(payload)
 
   try {
-    await prisma.event.update({
-      where: { id: event.id },
+    await prisma.event.create({
       data: {
+        type,
+        payload: redactedPayload as Prisma.InputJsonValue,
+        status: 'COMPLETED',
+        priority: 0,
+        maxRetries: 0,
         isAuditable: true,
         actorId: auditFields.actorId,
         actorEmail: auditFields.actorEmail,
@@ -179,51 +158,28 @@ async function markEventAsAuditable(event: BaseEvent): Promise<void> {
         ip: auditFields.ip,
         userAgent: auditFields.userAgent,
         geo: auditFields.geo,
-        // Replace payload with redacted version for long-term storage
-        payload: redactedPayload as Prisma.InputJsonValue,
       },
     })
-
-    logger.debug('Event marked as auditable', {
-      eventId: event.id,
-      eventType: event.type,
-      actorId: auditFields.actorId,
-    })
+    logger.debug('Audit record written', { type })
   } catch (error) {
-    logger.error('Failed to mark event as auditable', error as Error, {
-      eventId: event.id,
-      eventType: event.type,
-    })
+    logger.error('Failed to write audit record', error as Error, { type })
     throw error
   }
 }
 
-/**
- * Register audit logging handlers for all auditable events.
- * These handlers mark events as auditable so they're retained permanently.
- */
-export function registerAuditHandlers(): void {
-  for (const eventType of AUDITABLE_EVENTS) {
-    events.on(
-      eventType,
-      'audit-logger',
-      async (_payload, event) => {
-        await markEventAsAuditable(event)
-      },
-      {
-        enabled: true,
-        maxConcurrency: 10,
-        timeout: 10000,
-      }
-    )
-  }
-
-  logger.debug('Audit handlers registered', { count: AUDITABLE_EVENTS.length })
+const auditHandler: HandlerFn = async (payload, job) => {
+  await writeAuditRecord(
+    job.name as EventType,
+    payload as Record<string, unknown>
+  )
 }
 
-/**
- * Query audit events for a user (as actor or target)
- */
+export const auditHandlerMap: HandlerMap = Object.fromEntries(
+  AUDITABLE_EVENTS.map((type) => [type, [auditHandler]])
+) as HandlerMap
+
+export { auditHandler }
+
 export async function getAuditEventsForUser(
   userId: string,
   options: {
@@ -275,9 +231,6 @@ export async function getAuditEventsForUser(
   })
 }
 
-/**
- * Get recent security events for user's profile/security page
- */
 export async function getRecentSecurityEvents(
   userId: string,
   limit = 10
@@ -311,11 +264,4 @@ export async function getRecentSecurityEvents(
       createdAt: true,
     },
   })
-}
-
-/**
- * Check if an event type is auditable
- */
-export function isAuditableEvent(eventType: EventType): boolean {
-  return AUDITABLE_EVENTS.includes(eventType)
 }

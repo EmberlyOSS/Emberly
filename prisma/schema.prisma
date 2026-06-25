@@ -294,19 +294,6 @@ model Event {
   @@index([status, priority, scheduledAt]) // Optimized valid job queue polling
 }
 
-model EventHandler {
-  id        String   @id @default(cuid())
-  eventType String
-  handler   String
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([eventType, handler])
-  @@index([eventType])
-  @@index([enabled])
-}
-
 model BlogPost {
   id          String     @id @default(cuid())
   slug        String     @unique

@@ -61,7 +61,7 @@ For contribution guidelines and detailed documentation see [CONTRIBUTING.md](CON
 - Node.js 18+
 - [Bun](https://bun.sh/) (recommended package manager)
 - PostgreSQL 14+
-- Redis 6+ (optional for caching and rate limiting)
+- Redis 6+ (required — used for caching, rate limiting, and the job queue)
 
 ### Development Setup
 
@@ -90,6 +90,8 @@ bun dev
 
 The application will be available at `http://localhost:3000`.
 
+In development, the event worker runs in-process automatically — no extra steps needed. See [Event Worker](#event-worker) for production deployment.
+
 ## Tech Stack
 
 **Frontend & Framework**
@@ -104,7 +106,7 @@ The application will be available at `http://localhost:3000`.
 
 - [PostgreSQL](https://www.postgresql.org/) — relational database
 - [Prisma ORM](https://www.prisma.io/) — database toolkit and migrations
-- [Redis](https://redis.io/) — caching and rate limiting
+- [Redis](https://redis.io/) + [BullMQ](https://docs.bullmq.io/) — caching, rate limiting, and background job queue
 - [Stripe](https://stripe.com/) — payment processing
 - [Resend](https://resend.com/) — transactional email delivery
 
@@ -146,7 +148,7 @@ packages/
   lib/                      Business logic and integrations
     api/                    API handler wrapper (auth, logging, errors)
     auth/                   NextAuth config and helpers
-    events/                 Event system (emitter, consumer, worker, handlers)
+    events/                 BullMQ job queue — emit helpers and per-event handlers
     cache/                  Redis helpers
     storage/                S3 / Vultr integration
     emails/                 Email templates (Resend)
@@ -162,8 +164,135 @@ prisma/
   migrations/               Migration history
 
 public/                     Static assets
-scripts/                    Utility scripts (seed, media-kit)
+scripts/                    Utility scripts (seed, media-kit, worker)
 ```
+
+## Event Worker
+
+Emberly uses [BullMQ](https://docs.bullmq.io/) (backed by Redis) to process background jobs: emails, audit logs, Discord notifications, file expiry, storage sync, and more.
+
+### How it works
+
+All API routes call `events.emit('some.event', payload)`, which pushes a job onto the `emberly:events` BullMQ queue. A worker process dequeues jobs and dispatches them to the registered handlers.
+
+### Development
+
+In development the worker runs **in-process** alongside the Next.js dev server — no extra setup needed beyond `REDIS_URL` in your `.env`.
+
+You can also run it as a dedicated process:
+
+```bash
+bun run worker
+```
+
+The in-process worker is controlled by `EMBERLY_RUN_EVENT_WORKER`:
+
+| Value   | Behaviour                                             |
+| ------- | ----------------------------------------------------- |
+| unset   | Auto-starts in development, **skipped in production** |
+| `true`  | Always starts (useful for single-container deploys)   |
+| `false` | Never starts (use standalone worker instead)          |
+
+### Production
+
+In production, run the worker as a **separate process** alongside the web server:
+
+```bash
+# web server
+bun run start
+
+# event worker (separate terminal / container)
+bun run worker
+```
+
+#### Docker / container deployments
+
+Use the same image with a different start command:
+
+```dockerfile
+# web container
+CMD ["bun", "run", "start"]
+
+# worker container
+CMD ["bun", "run", "worker"]
+```
+
+Both need the same `REDIS_URL` and `DATABASE_URL`. The worker serves no HTTP traffic and does not need `PORT` or `NEXTAUTH_URL`.
+
+#### Environment variables
+
+| Variable             | Required | Description                                   |
+| -------------------- | -------- | --------------------------------------------- |
+| `REDIS_URL`          | Yes      | Redis connection string (`redis://host:6379`) |
+| `DATABASE_URL`       | Yes      | PostgreSQL connection string                  |
+| `WORKER_CONCURRENCY` | No       | Jobs processed in parallel (default: `10`)    |
+
+Provider credentials (SMTP, Discord webhook, etc.) are stored in the database via **Admin → Integrations**, not in env.
+
+#### systemd (bare-metal / VPS deployments)
+
+Create a unit file at `/etc/systemd/system/emberly-worker.service`:
+
+```ini
+[Unit]
+Description=Emberly Event Worker
+After=network.target redis.service postgresql.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=emberly
+WorkingDirectory=/opt/emberly
+EnvironmentFile=/opt/emberly/.env
+ExecStart=/usr/local/bin/bun run worker
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=emberly-worker
+
+# Prevent the worker from using excessive resources
+MemoryMax=512M
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable and start it:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable emberly-worker
+sudo systemctl start emberly-worker
+
+# Check status and live logs
+sudo systemctl status emberly-worker
+sudo journalctl -u emberly-worker -f
+```
+
+The `EnvironmentFile` path should point to the same `.env` used by your web server. Make sure it contains at minimum `REDIS_URL` and `DATABASE_URL`.
+
+To deploy a new version:
+
+```bash
+# Pull changes, then restart the worker
+sudo systemctl restart emberly-worker
+```
+
+#### Scaling
+
+Multiple worker instances can run simultaneously — BullMQ uses Redis atomic operations so each job is processed exactly once. Add more worker containers or systemd units to increase throughput.
+
+### Monitoring
+
+BullMQ exposes queue and job state via Redis. Any BullMQ-compatible dashboard (e.g. [Bull Board](https://github.com/felixmosh/bull-board)) can connect using:
+
+- **Queue name:** `emberly-events`
+- Completed jobs are retained for **24 hours**
+- Failed jobs are retained for **7 days** and retried up to **3 times** with exponential backoff
+
+---
 
 ## Contributing
 
