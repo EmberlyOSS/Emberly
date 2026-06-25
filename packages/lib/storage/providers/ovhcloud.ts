@@ -15,7 +15,7 @@
  * API reference: https://api.eu.ovhcloud.com/console/?section=%2FpublicCloud&branch=v2
  */
 
-import { createHash } from 'crypto'
+import { createHmac } from 'crypto'
 import { getIntegrations } from '@/packages/lib/config'
 
 // OVH endpoint base URLs keyed by endpoint name
@@ -71,14 +71,13 @@ function signOVHRequest(
   timestamp: number
 ): string {
   const toSign = [
-    appSecret,
     consumerKey,
     method.toUpperCase(),
     url,
     body,
     String(timestamp),
   ].join('+')
-  return '$1$' + createHash('sha1').update(toSign).digest('hex')
+  return '$1$' + createHmac('sha1', appSecret).update(toSign).digest('hex')
 }
 
 async function ovhRequest<T>(
@@ -246,6 +245,26 @@ export async function listOVHStorageContainers(
   )
 }
 
+function normalizeAndValidateContainerName(name: string): string {
+  const normalized = name.trim().toLowerCase()
+
+  // Conservative S3/OVH-compatible bucket/container constraints.
+  // Keep strict to avoid passing attacker-shaped input into signed payloads.
+  if (normalized.length < 3 || normalized.length > 63) {
+    throw new Error(
+      `Invalid OVH container name length (${normalized.length}). Expected 3-63 characters.`
+    )
+  }
+
+  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(normalized)) {
+    throw new Error(
+      'Invalid OVH container name format. Use lowercase letters, numbers, and hyphens; must start/end with alphanumeric.'
+    )
+  }
+
+  return normalized
+}
+
 /**
  * Create an Object Storage container (bucket) in a project+region.
  *
@@ -260,10 +279,11 @@ export async function createOVHStorageContainer(
   name: string,
   storagePolicyClass: OVHStoragePolicyClass = 'standard'
 ): Promise<OVHStorageContainer> {
+  const safeName = normalizeAndValidateContainerName(name)
   return ovhRequest<OVHStorageContainer>(
     'POST',
     `/cloud/project/${encodeURIComponent(projectId)}/region/${encodeURIComponent(regionName)}/storage`,
-    { name, storagePolicyClass }
+    { name: safeName, storagePolicyClass }
   )
 }
 
