@@ -1,6 +1,6 @@
 {
   "name": "@emberly/website",
-  "version": "2.4.7",
+  "version": "2.5.0",
   "license": "AGPL-3.0-only",
   "author": "CodeMeAPixel",
   "homepage": "https://github.com/EmberlyOSS/Emberly",
@@ -34,6 +34,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",
     "@aws-sdk/s3-request-presigner": "^3.940.0",
+    "@bull-board/api": "^8.0.1",
+    "@bull-board/ui": "^8.0.1",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-go": "^6.0.1",

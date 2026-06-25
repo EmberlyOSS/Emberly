@@ -173,7 +173,7 @@ Emberly uses [BullMQ](https://docs.bullmq.io/) (backed by Redis) to process back
 
 ### How it works
 
-All API routes call `events.emit('some.event', payload)`, which pushes a job onto the `emberly:events` BullMQ queue. A worker process dequeues jobs and dispatches them to the registered handlers.
+All API routes call `events.emit('some.event', payload)`, which pushes a job onto the `emberly-events` BullMQ queue. A worker process dequeues jobs and dispatches them to the registered handlers.
 
 ### Development
 
