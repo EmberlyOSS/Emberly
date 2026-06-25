@@ -1,18 +1,16 @@
 import type { EventPayload } from '@/packages/types/events'
-import { EventStatus, ExpiryAction } from '@/packages/types/events'
+import { ExpiryAction } from '@/packages/types/events'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getProviderForStoredFile } from '@/packages/lib/storage'
-
-import { events } from '../index'
+import { eventQueue, emit } from '../bullmq/queue'
+import type { HandlerMap } from '../bullmq/types'
 
 const logger = loggers.events.getChildLogger('file-expiry')
 
-export function registerFileExpiryHandlers() {
-  events.on(
-    'file.schedule-expiration',
-    'queue-deletion',
+export const fileExpiryHandlers: HandlerMap = {
+  'file.schedule-expiration': [
     async (payload: EventPayload<'file.schedule-expiration'>) => {
       logger.info('Scheduling file expiration', {
         fileId: payload.fileId,
@@ -21,7 +19,20 @@ export function registerFileExpiryHandlers() {
         expiresAt: payload.expiresAt,
       })
 
-      await events.schedule(
+      const delay = payload.expiresAt.getTime() - Date.now()
+      if (delay <= 0) {
+        await emit('file.expired', {
+          fileId: payload.fileId,
+          userId: payload.userId,
+          fileName: payload.fileName,
+          filePath: '',
+          size: 0,
+          action: payload.action,
+        })
+        return
+      }
+
+      await eventQueue.add(
         'file.expired',
         {
           fileId: payload.fileId,
@@ -31,14 +42,15 @@ export function registerFileExpiryHandlers() {
           size: 0,
           action: payload.action,
         },
-        payload.expiresAt
+        {
+          jobId: `file-expiry-${payload.fileId}`,
+          delay,
+        }
       )
-    }
-  )
+    },
+  ],
 
-  events.on(
-    'file.expired',
-    'process-expired-file',
+  'file.expired': [
     async (payload: EventPayload<'file.expired'>) => {
       try {
         logger.info('Processing file expiration', {
@@ -67,40 +79,30 @@ export function registerFileExpiryHandlers() {
 
           await prisma.user.update({
             where: { id: file.userId },
-            data: {
-              storageUsed: {
-                decrement: file.size,
-              },
-            },
+            data: { storageUsed: { decrement: file.size } },
           })
           logger.info('Updated storage quota for user', {
             userId: file.userId,
             sizeFreed: file.size,
           })
 
-          await prisma.file.delete({
-            where: { id: payload.fileId },
-          })
+          await prisma.file.delete({ where: { id: payload.fileId } })
           logger.info('Deleted file from database', { fileId: payload.fileId })
         } else if (payload.action === ExpiryAction.SET_PRIVATE) {
           await prisma.file.update({
             where: { id: payload.fileId },
-            data: {
-              visibility: 'PRIVATE',
-            },
+            data: { visibility: 'PRIVATE' },
           })
           logger.info('Set file to private', { fileId: payload.fileId })
         }
       } catch (error) {
-        logger.error(`Failed to process expired file`, error as Error, {
+        logger.error('Failed to process expired file', error as Error, {
           fileId: payload.fileId,
         })
         throw error
       }
-    }
-  )
-
-  logger.debug('File expiry event handlers registered')
+    },
+  ],
 }
 
 export async function scheduleFileExpiration(
@@ -110,51 +112,54 @@ export async function scheduleFileExpiration(
   expiresAt: Date,
   action: ExpiryAction = ExpiryAction.DELETE
 ): Promise<void> {
-  await events.schedule(
-    'file.schedule-expiration',
+  const delay = expiresAt.getTime() - Date.now()
+  if (delay <= 0) {
+    await emit('file.expired', {
+      fileId,
+      userId,
+      fileName,
+      filePath: '',
+      size: 0,
+      action,
+    })
+    return
+  }
+
+  await eventQueue.add(
+    'file.expired',
     {
       fileId,
       userId,
       fileName,
-      expiresAt,
+      filePath: '',
+      size: 0,
       action,
     },
-    expiresAt
+    {
+      jobId: `file-expiry-${fileId}`,
+      delay,
+    }
   )
 }
 
 export async function cancelFileExpiration(fileId: string): Promise<boolean> {
-  const scheduledEvents = await events.getEvents({
-    type: 'file.schedule-expiration',
-    status: EventStatus.SCHEDULED,
-  })
+  const job = await eventQueue.getJob(`file-expiry-${fileId}`)
+  if (!job) return false
 
-  const fileEvents = scheduledEvents.filter(
-    (event) => (event.payload as Record<string, unknown>)?.fileId === fileId
-  )
-
-  let cancelled = false
-  for (const event of fileEvents) {
-    await events.deleteEvent(event.id)
-    cancelled = true
-  }
-
-  return cancelled
+  await job.remove()
+  return true
 }
 
 export async function getFileExpirationInfo(
   fileId: string
 ): Promise<Date | null> {
-  const scheduledEvents = await events.getEvents({
-    type: 'file.schedule-expiration',
-    status: EventStatus.SCHEDULED,
-  })
+  const job = await eventQueue.getJob(`file-expiry-${fileId}`)
+  if (!job || !job.opts.delay) return null
 
-  const fileEvent = scheduledEvents.find(
-    (event) => (event.payload as Record<string, unknown>)?.fileId === fileId
+  const scheduledAt = new Date(
+    (job.timestamp ?? Date.now()) + (job.opts.delay ?? 0)
   )
-
-  return fileEvent?.scheduledAt || null
+  return scheduledAt
 }
 
 export async function getFileExpirationInfoBatch(
@@ -162,20 +167,17 @@ export async function getFileExpirationInfoBatch(
 ): Promise<Map<string, Date>> {
   if (fileIds.length === 0) return new Map()
 
-  const idSet = new Set(fileIds)
-  const scheduledEvents = await events.getEvents({
-    type: 'file.schedule-expiration',
-    status: EventStatus.SCHEDULED,
-  })
-
   const result = new Map<string, Date>()
-  for (const event of scheduledEvents) {
-    const fileId = (event.payload as Record<string, unknown>)?.fileId as
-      | string
-      | undefined
-    if (fileId && idSet.has(fileId) && event.scheduledAt) {
-      result.set(fileId, event.scheduledAt)
-    }
-  }
+  await Promise.all(
+    fileIds.map(async (fileId) => {
+      const job = await eventQueue.getJob(`file-expiry-${fileId}`)
+      if (job && job.opts.delay) {
+        const scheduledAt = new Date(
+          (job.timestamp ?? Date.now()) + (job.opts.delay ?? 0)
+        )
+        result.set(fileId, scheduledAt)
+      }
+    })
+  )
   return result
 }

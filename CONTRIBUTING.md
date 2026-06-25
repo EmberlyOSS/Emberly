@@ -25,7 +25,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 - [Node.js](https://nodejs.org/) 18.x or later
 - [Bun](https://bun.sh/) (recommended) or npm/yarn
 - [PostgreSQL](https://www.postgresql.org/) 14.x or later
-- [Redis](https://redis.io/) 6.x or later (optional, for caching)
+- [Redis](https://redis.io/) 6.x or later (required — caching, rate limiting, and job queue)
 - [Git](https://git-scm.com/)
 
 ### Development Setup
@@ -75,6 +75,15 @@ This project and everyone participating in it is governed by our [Code of Conduc
    ```
 
    The app will be available at `http://localhost:3000`.
+
+   The event worker (emails, audit logs, Discord notifications, etc.) starts automatically in development. If you want to run it as a separate process instead:
+
+   ```bash
+   # In a second terminal
+   bun run worker
+   ```
+
+   Set `EMBERLY_RUN_EVENT_WORKER=false` in `.env` if you always want the standalone worker and never the in-process one. See the [Event Worker](README.md#event-worker) section in the README for full details.
 
 ## How to Contribute
 

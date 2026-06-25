@@ -1,13 +1,16 @@
+import { Worker } from 'bullmq'
 import { loggers } from '@/packages/lib/logger'
-
-import { registerAllHandlers } from './handlers'
-import { events } from './index'
+import { bullmqConnection } from './bullmq/connection'
+import { eventQueue } from './bullmq/queue'
+import { createProcessor } from './bullmq/processor'
+import { allHandlers } from './handlers'
 
 const logger = loggers.events
 
+let worker: Worker | null = null
 let initialized = false
 
-export async function initializeEventSystem() {
+export async function initializeEventSystem(): Promise<void> {
   if (initialized) {
     logger.debug('Event system already initialized')
     return
@@ -18,53 +21,74 @@ export async function initializeEventSystem() {
   try {
     logger.debug('Initializing event system...')
 
-    // Register all event handlers (auth, account, email, audit, file, billing, security, admin)
-    await registerAllHandlers()
-
-    // Decide whether to start the in-process event worker.
-    // Controlled by `EMBERLY_RUN_EVENT_WORKER` environment variable:
-    // - 'true'  => always start
-    // - 'false' => never start
-    // - unset   => start by default in non-production, skip in production
     const env = process.env.EMBERLY_RUN_EVENT_WORKER
     const shouldStartWorker =
       env === 'true' ||
       (env !== 'false' && process.env.NODE_ENV !== 'production')
 
     if (shouldStartWorker) {
-      // Start worker asynchronously (fire-and-forget) so initialization
-      // doesn't block server startup. Log any start errors.
-      events
-        .startWorker({
-          batchSize: 3,
-          pollInterval: 5000,
-          maxConcurrency: 1,
-          enableScheduledEvents: true,
+      const processor = createProcessor(allHandlers)
+      worker = new Worker('emberly-events', processor, {
+        connection: bullmqConnection,
+        concurrency: 5,
+      })
+
+      worker.on('completed', (job) => {
+        logger.debug('Job completed', { type: job.name, jobId: job.id })
+      })
+
+      worker.on('failed', (job, err) => {
+        logger.error('Job failed', err, {
+          type: job?.name,
+          jobId: job?.id,
+          attempt: job?.attemptsMade,
         })
-        .then(() => logger.debug('Event worker started'))
-        .catch((err) =>
-          logger.error('Failed to start event worker', err as Error)
-        )
+      })
+
+      logger.info('BullMQ worker started')
     } else {
       logger.debug('Event worker start skipped (env control)')
     }
 
+    if (process.env.NODE_ENV !== 'test') {
+      await schedulePeriodicJobs()
+    }
+
     initialized = true
     const duration = Date.now() - startTime
-    logger.info('Event system initialized', { duration })
-
-    // Fetch stats but don't let failures block initialization
-    // Initial fetch might timeout during heavy startup, which is fine
-    setTimeout(() => {
-      events
-        .getStats()
-        .then((stats) => logger.debug('Event queue stats', { stats }))
-        .catch(() => { /* silent fail on startup */ })
-    }, 5000)
+    logger.info('Event system initialized', {
+      duration,
+      handlerTypes: allHandlers.size,
+    })
   } catch (error) {
     logger.error('Failed to initialize event system', error as Error)
     throw error
   }
+}
+
+async function schedulePeriodicJobs(): Promise<void> {
+  try {
+    await eventQueue.add(
+      'storage.sync-buckets',
+      { _trigger: 'periodic' },
+      {
+        repeat: { pattern: '0 * * * *' },
+        jobId: 'storage-sync-periodic',
+      }
+    )
+    logger.info('Periodic storage sync job scheduled (hourly)')
+  } catch (error) {
+    logger.error('Failed to schedule periodic jobs', error as Error)
+  }
+}
+
+export async function shutdownEventSystem(): Promise<void> {
+  if (worker) {
+    await worker.close()
+    worker = null
+    logger.info('BullMQ worker stopped')
+  }
+  initialized = false
 }
 
 export function isEventSystemInitialized(): boolean {

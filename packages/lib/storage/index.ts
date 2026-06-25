@@ -286,31 +286,3 @@ export async function getDownloadUrl(
   }
   return provider.getFileUrl(path, undefined, hostOverride)
 }
-
-// ---------------------------------------------------------------------------
-// Legacy per-entity helpers (kept for any future direct use)
-// ---------------------------------------------------------------------------
-
-/**
- * Get a storage provider scoped to a specific user's dedicated bucket.
- * Falls back to the global default provider if no dedicated bucket is assigned.
- * Prefer getUploadBucketForUser() for upload routing (includes core bucket selection).
- */
-export async function getStorageProviderForUser(
-  userId: string
-): Promise<StorageProvider> {
-  const dest = await getUploadBucketForUser(userId)
-  return dest?.provider ?? getStorageProvider()
-}
-
-/**
- * Get a storage provider scoped to a specific squad's dedicated bucket.
- * Falls back to the global default provider if no dedicated bucket is assigned.
- * Prefer getUploadBucketForSquad() for upload routing (includes core bucket selection).
- */
-export async function getStorageProviderForSquad(
-  squadId: string
-): Promise<StorageProvider> {
-  const dest = await getUploadBucketForSquad(squadId)
-  return dest?.provider ?? getStorageProvider()
-}

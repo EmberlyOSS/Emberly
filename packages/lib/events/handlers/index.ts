@@ -1,108 +1,54 @@
-/**
- * Central handler registration
- *
- * This file exports all handler registration functions and provides
- * a single entry point to register all handlers at once.
- */
-
+import { mergeHandlerMaps } from '../bullmq/types'
 import { loggers } from '@/packages/lib/logger'
 
-import { eventConsumer } from '../consumer'
-import { registerAccountHandlers } from './account'
-import { registerAdminDiscordHandlers } from './admin-discord'
-import { registerAdminHandlers } from './admin'
-import { registerAuditHandlers } from './audit'
-import { registerAuthHandlers } from './auth'
-import { registerBillingHandlers } from './billing'
-import { registerDiscordHandlers } from './discord'
-import { registerEmailHandlers } from './email'
-import { registerFileHandlers } from './file'
-import { registerApplicationHandlers } from './applications'
-import { registerNexiumHandlers } from './nexium'
-import { registerFileExpiryHandlers } from './file-expiry'
-import { registerSecurityHandlers } from './security'
-import { registerUserHandlers } from './user'
-import { registerStorageHandlers } from './storage'
+import { auditHandlerMap } from './audit'
+import { emailHandlers } from './email'
+import { authHandlers } from './auth'
+import { accountHandlers } from './account'
+import { fileHandlers } from './file'
+import { fileExpiryHandlers } from './file-expiry'
+import { billingHandlers } from './billing'
+import { securityHandlers } from './security'
+import { discordHandlers } from './discord'
+import { adminDiscordHandlers } from './admin-discord'
+import { adminHandlers } from './admin'
+import { userHandlers } from './user'
+import { nexiumHandlers } from './nexium'
+import { applicationHandlers } from './applications'
+import { storageHandlers } from './storage'
 
 const logger = loggers.events.getChildLogger('handlers')
 
-/**
- * Register all event handlers
- *
- * Handler registration is now synchronous (in-memory only) for fast startup.
- * After all handlers are registered, we sync to Redis cache and DB in a single batch.
- */
-export async function registerAllHandlers(): Promise<void> {
-  const startTime = Date.now()
-  logger.debug('Registering all event handlers...')
+export const allHandlers = mergeHandlerMaps([
+  auditHandlerMap,
+  emailHandlers,
+  authHandlers,
+  accountHandlers,
+  fileHandlers,
+  fileExpiryHandlers,
+  billingHandlers,
+  securityHandlers,
+  discordHandlers,
+  adminDiscordHandlers,
+  adminHandlers,
+  userHandlers,
+  nexiumHandlers,
+  applicationHandlers,
+  storageHandlers,
+])
 
-  // All these registration functions are now synchronous (in-memory only)
-  registerAuditHandlers()
-  registerEmailHandlers()
-  registerAuthHandlers()
-  registerAccountHandlers()
-  registerFileHandlers()
-  registerFileExpiryHandlers()
-  registerBillingHandlers()
-  registerSecurityHandlers()
-  registerDiscordHandlers()
-  registerAdminDiscordHandlers()
-  registerAdminHandlers()
-  registerUserHandlers()
-  registerNexiumHandlers()
-  registerApplicationHandlers()
-  registerStorageHandlers()
+logger.debug('All event handler maps merged', { eventTypes: allHandlers.size })
 
-  const handlerCount = eventConsumer.getHandlerCount()
-  const memoryDuration = Date.now() - startTime
-  logger.debug(`${handlerCount} handlers registered in memory`, {
-    duration: memoryDuration,
-  })
-
-  // Sync to Redis and DB in background (non-blocking for faster startup)
-  // We use fire-and-forget so startup doesn't wait for DB
-  eventConsumer
-    .syncHandlersToStorage()
-    .then(() => {
-      const totalDuration = Date.now() - startTime
-      logger.info(`Event handlers synced to storage`, {
-        handlerCount,
-        totalDuration,
-      })
-    })
-    .catch((err) => {
-      logger.warn(
-        'Failed to sync handlers to storage (handlers still work in-memory)',
-        { error: err }
-      )
-    })
-
-  logger.info(`All ${handlerCount} event handlers registered`, {
-    duration: memoryDuration,
-    handlerCount,
-  })
-}
-
-// Re-export individual registration functions
-export { registerAccountHandlers } from './account'
-export { registerAdminDiscordHandlers } from './admin-discord'
-export { registerAdminHandlers } from './admin'
 export {
-  registerAuditHandlers,
   getAuditEventsForUser,
   getRecentSecurityEvents,
+  isAuditableEvent,
+  AUDITABLE_EVENTS,
 } from './audit'
-export { registerBillingHandlers } from './billing'
-export { registerDiscordHandlers } from './discord'
-export { registerEmailHandlers, EMAIL_TEMPLATES } from './email'
-export { registerFileHandlers } from './file'
 export {
-  registerFileExpiryHandlers,
   scheduleFileExpiration,
   cancelFileExpiration,
   getFileExpirationInfo,
+  getFileExpirationInfoBatch,
 } from './file-expiry'
-export { registerSecurityHandlers } from './security'
-export { registerUserHandlers } from './user'
-export { registerNexiumHandlers } from './nexium'
-export { registerStorageHandlers } from './storage'
+export { EMAIL_TEMPLATES } from './email'

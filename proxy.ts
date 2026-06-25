@@ -72,7 +72,8 @@ export async function proxy(request: NextRequest) {
   ) {
     if (pathname === '/') {
       try {
-        const lookupUrl = new URL('/api/internal/domain-lookup', request.url)
+        const internalBase = `http://localhost:${process.env.PORT || 3000}`
+        const lookupUrl = new URL('/api/internal/domain-lookup', internalBase)
         lookupUrl.searchParams.set('hostname', incomingHost)
 
         const res = await fetch(lookupUrl.toString())

@@ -1,9 +1,9 @@
 /**
  * Centralized Validation Schemas
- * 
+ *
  * All Zod schemas used across routes consolidated in one place
  * Organized by domain for easy maintenance
- * 
+ *
  * Import pattern:
  * import { auth, files, users, domains } from '@/packages/lib/validation'
  */
@@ -31,12 +31,6 @@ export const auth = {
   login: z.object({
     email: z.string().email('Invalid email'),
     password: z.string().min(1, 'Password required'),
-    twoFactorCode: z.string().optional(),
-  }),
-
-  desktopAuth: z.object({
-    emailOrUsername: z.string().min(1, 'Email or username is required'),
-    password: z.string().min(1, 'Password is required'),
     twoFactorCode: z.string().optional(),
   }),
 
@@ -95,7 +89,12 @@ export const auth = {
 
 export const users = {
   create: z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces'),
+    name: z
+      .string()
+      .min(2, 'Name must be at least 2 characters')
+      .max(100)
+      .trim()
+      .refine((name) => !name.includes(' '), 'Name cannot contain spaces'),
     email: z.string().email('Invalid email'),
     password: z.string().min(8).optional(),
     role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']),
@@ -105,14 +104,16 @@ export const users = {
   }),
 
   update: z.object({
-    name: z.string().min(2).max(100).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
+    name: z
+      .string()
+      .min(2)
+      .max(100)
+      .trim()
+      .refine((name) => !name.includes(' '), 'Name cannot contain spaces')
+      .optional(),
     email: z.string().email('Invalid email').optional(),
     role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
     storageQuotaMB: z.number().min(0).optional(),
-  }),
-
-  impersonate: z.object({
-    userId: z.string().min(1, 'User ID required'),
   }),
 }
 
@@ -139,15 +140,6 @@ export const files = {
 
   setExpiry: z.object({
     expiresAt: z.string().datetime().nullable(),
-  }),
-
-  collaboratorAdd: z.object({
-    email: z.string().email('Invalid email'),
-    permission: z.enum(['view', 'suggest', 'edit']),
-  }),
-
-  collaboratorUpdate: z.object({
-    permission: z.enum(['view', 'suggest', 'edit']),
   }),
 
   uploadChunk: z.object({
@@ -192,7 +184,9 @@ export const email = {
     priority: z.enum(['low', 'normal', 'high']).default('normal'),
     ctaLabel: z.string().optional(),
     ctaHref: z.string().url().optional(),
-    recipientFilter: z.enum(['all', 'verified', 'unverified', 'admin']).default('all'),
+    recipientFilter: z
+      .enum(['all', 'verified', 'unverified', 'admin'])
+      .default('all'),
     dryRun: z.boolean().default(false),
   }),
 
@@ -210,7 +204,13 @@ export const email = {
 
 export const profile = {
   update: z.object({
-    name: z.string().min(2).max(100).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
+    name: z
+      .string()
+      .min(2)
+      .max(100)
+      .trim()
+      .refine((name) => !name.includes(' '), 'Name cannot contain spaces')
+      .optional(),
     fullName: z.string().max(100).nullable().optional(),
     email: z.string().email('Invalid email').optional(),
     bio: z.string().max(500).nullable().optional(),
@@ -271,10 +271,7 @@ export const setup = z.object({
       .trim()
       .refine((name) => !name.includes('@'), 'Username cannot contain @ symbol')
       .refine((name) => !name.includes(' '), 'Username cannot contain spaces')
-      .refine(
-        (name) => name.length >= 2,
-        'Username cannot be only whitespace'
-      ),
+      .refine((name) => name.length >= 2, 'Username cannot be only whitespace'),
     email: z.string().email('Invalid email'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
   }),
@@ -325,7 +322,9 @@ export const nexium = {
 
   skillAdd: z.object({
     name: z.string().min(1, 'Skill name required').max(100),
-    level: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT']).optional(),
+    level: z
+      .enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'])
+      .optional(),
     yearsOfExperience: z.number().min(0).optional(),
   }),
 

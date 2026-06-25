@@ -28,6 +28,7 @@
     "format:check": "npx prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "postinstall": "prisma generate",
     "media-kit": "npx tsx scripts/generate-media-kit.ts",
+    "worker": "npx tsx scripts/worker.ts",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -78,6 +79,7 @@
     "@uiw/react-codemirror": "^4.24.1",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
+    "bullmq": "^5.79.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "country-flag-icons": "^1.6.16",
@@ -126,6 +128,7 @@
     "@react-email/tailwind": "^2.0.2",
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^25.2.2",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^18.3.7",
     "@types/uuid": "^10.0.0",
