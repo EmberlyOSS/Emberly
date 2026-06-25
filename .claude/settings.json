@@ -1,9 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(yarn:*)",
-      "Bash(npx prisma:*)",
-      "Bash(npx tsx:*)",
+      "Bash(bun:*)",
+      "Bash(bunx:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git status:*)",

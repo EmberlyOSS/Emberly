@@ -3,13 +3,13 @@
 Run ESLint across the project and auto-fix what can be fixed.
 
 ```bash
-yarn lint:fix
+bun run lint:fix
 ```
 
 Then verify no remaining errors:
 
 ```bash
-yarn lint
+bun run lint
 ```
 
 Key rules to be aware of:

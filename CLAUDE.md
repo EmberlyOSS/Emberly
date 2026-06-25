@@ -17,7 +17,7 @@ Emberly is an open-source, self-hosted file sharing and user identity platform b
 | Payments        | Stripe                                            |
 | Email           | Resend or SMTP                                    |
 | Styling         | Tailwind CSS 3 + shadcn/ui (Radix UI)             |
-| Package manager | Yarn 1                                            |
+| Package manager | Bun                                               |
 | License         | AGPL-3.0-only                                     |
 
 ---
@@ -26,29 +26,33 @@ Emberly is an open-source, self-hosted file sharing and user identity platform b
 
 ```bash
 # Development
-yarn dev           # Next.js dev server with Turbopack
+bun dev            # Next.js dev server with Turbopack
 
 # Build
-yarn build         # Production build
-yarn typecheck     # tsc --noEmit (no build, just types)
-yarn lint          # ESLint
-yarn lint:fix      # ESLint with auto-fix
-yarn format        # Prettier write
-yarn format:check  # Prettier check (used in CI)
+bun run build      # Production build
+bun run typecheck  # tsc --noEmit (no build, just types)
+bun run lint       # ESLint
+bun run lint:fix   # ESLint with auto-fix
+bun run format     # Prettier write
+bun run format:check  # Prettier check (used in CI)
 
 # Database
-yarn db:generate   # prisma generate (regenerate client after schema changes)
-yarn db:migrate    # prisma migrate dev (create + apply migration in dev)
-yarn db:deploy     # prisma migrate deploy (apply existing migrations in prod)
-yarn db:push       # prisma db push (schema sync without migrations — dev only)
-yarn db:studio     # Open Prisma Studio
-yarn db:seed       # Seed subscription plans
+bun run db:generate   # prisma generate (regenerate client after schema changes)
+bun run db:migrate    # prisma migrate dev (create + apply migration in dev)
+bun run db:deploy     # prisma migrate deploy (apply existing migrations in prod)
+bun run db:push       # prisma db push (schema sync without migrations — dev only)
+bun run db:studio     # Open Prisma Studio
+bun run db:seed       # Seed subscription plans
+
+# Packages
+bun add <pkg>      # Add a dependency
+bun remove <pkg>   # Remove a dependency
 
 # Security
-npx socket@latest check  # Run socket.dev supply chain check locally
+bunx socket@latest check  # Run socket.dev supply chain check locally
 ```
 
-**Always run `yarn db:generate` after editing `prisma/schema.prisma`.**
+**Always run `bun run db:generate` after editing `prisma/schema.prisma`.**
 
 ---
 
