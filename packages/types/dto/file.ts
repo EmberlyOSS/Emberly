@@ -15,7 +15,7 @@ export type FileUploadRequest = z.infer<typeof FileUploadSchema>
 const FileLikeSchema = (() => {
   const globalFile =
     typeof globalThis !== 'undefined' &&
-      typeof (globalThis as { File?: typeof File }).File !== 'undefined'
+    typeof (globalThis as { File?: typeof File }).File !== 'undefined'
       ? (globalThis as { File: typeof File }).File
       : null
 
@@ -55,6 +55,7 @@ export interface FileMetadata {
 }
 
 export interface FileUploadResponse {
+  id: string
   url: string
   name: string
   size: number

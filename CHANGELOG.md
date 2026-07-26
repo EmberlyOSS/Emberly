@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.5.1] - 2026-07-26
+
+### Fixed
+
+- **System/admin API keys rejected on protected routes** — `requireAdmin()`, `requireSuperAdmin()`, `requireRole()`, and `requirePermission()` (`packages/lib/auth/api-auth.ts`) take an optional `req` parameter used to check the `esk_…` system key via the Bearer token, but the overwhelming majority of call sites (54 for `requireAdmin()` alone, all 8 for `requireSuperAdmin()`) never passed it — so the system-key check silently never ran on those routes and a valid system key got "Unauthorized". Fixed by falling back to Next.js's request-scoped `headers()` when `req` is omitted, so the check now runs regardless of call site.
+- **Admin API keys had no effect on admin-gated routes** — the same four helpers only ever checked the browser session or the system key, never a personal `ebk_…` API key belonging to an actual admin/superadmin user. Added a `resolveActingUser()` layer that checks session → personal API key/upload token → system key, in that order, so an admin's own key now works on admin routes, not just the system key.
+- **SUPERADMIN excluded from two admin routes** — `app/api/analytics/top-users/route.ts` and `app/api/files/[id]/thumbnail/route.ts` both gated access with a strict `role === 'ADMIN'` check, so a SUPERADMIN got 403/404 where an ADMIN would succeed. Both now accept either role.
+
+### Added
+
+- `FileUploadResponse` (`packages/types/dto/file.ts`) now includes the file's database `id`, returned from both `POST /api/files` and the chunked-upload completion endpoint. Previously an API client had no way to reference a file it had just uploaded for a later update/delete call.
+
 ## [2.5.0] - 2026-06-25
 
 ### Added
