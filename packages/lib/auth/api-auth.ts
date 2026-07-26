@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 
 import { authOptions } from '@/packages/lib/auth'
 import { sessionCache } from '@/packages/lib/cache/session-cache'
@@ -117,7 +118,7 @@ export async function requireSquadAuth(req: Request) {
 }
 
 export async function getAuthenticatedUser(
-  req: Request
+  req?: Request
 ): Promise<AuthenticatedUser | null> {
   const session = await getServerSession(authOptions)
   if (session?.user) {
@@ -177,7 +178,7 @@ export async function getAuthenticatedUser(
     return user ? { ...user, emailVerified: !!user.emailVerified } : null
   }
 
-  const authHeader = req.headers.get('authorization')
+  const authHeader = await resolveAuthHeader(req)
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
 
@@ -284,7 +285,7 @@ export async function getAuthenticatedUser(
   return null
 }
 
-export async function requireAuth(req: Request) {
+export async function requireAuth(req?: Request) {
   const user = await getAuthenticatedUser(req)
   if (!user) {
     return {
@@ -307,22 +308,34 @@ const SYSTEM_KEY_USER = {
  * Returns a synthetic SUPERADMIN user object on success, null otherwise.
  */
 async function getSystemKeyUser(req?: Request) {
-  if (!req) return null
   const valid = await isSystemKeyAuth(req)
   return valid ? SYSTEM_KEY_USER : null
 }
 
-export async function requireAdmin(req?: Request) {
+/**
+ * Resolve the "acting user" for a permission check across all three
+ * supported auth methods: browser session, personal/squad Bearer token
+ * (upload token or `ebk_…` API key), or the `esk_…` system key. The system
+ * key always satisfies any permission check (it's a SUPERADMIN identity);
+ * the other two are checked by the caller against the actual permission.
+ */
+async function resolveActingUser(req?: Request) {
   const session = await getServerSession(authOptions)
+  if (session?.user) return session.user
 
-  if (
-    session?.user &&
-    hasPermission(session.user.role as any, Permission.ACCESS_ADMIN_PANEL)
-  ) {
-    return { user: session.user, response: null }
+  const apiUser = await getAuthenticatedUser(req)
+  if (apiUser) return apiUser
+
+  return null
+}
+
+export async function requireAdmin(req?: Request) {
+  const user = await resolveActingUser(req)
+  if (user && hasPermission(user.role as any, Permission.ACCESS_ADMIN_PANEL)) {
+    return { user, response: null }
   }
 
-  // Fall back to system API key
+  // Fall back to system API key (always satisfies any permission)
   const systemUser = await getSystemKeyUser(req)
   if (systemUser) return { user: systemUser, response: null }
 
@@ -333,16 +346,12 @@ export async function requireAdmin(req?: Request) {
 }
 
 export async function requireSuperAdmin(req?: Request) {
-  const session = await getServerSession(authOptions)
-
+  const user = await resolveActingUser(req)
   if (
-    session?.user &&
-    hasPermission(
-      session.user.role as any,
-      Permission.PERFORM_SUPERADMIN_ACTIONS
-    )
+    user &&
+    hasPermission(user.role as any, Permission.PERFORM_SUPERADMIN_ACTIONS)
   ) {
-    return { user: session.user, response: null }
+    return { user, response: null }
   }
 
   // Fall back to system API key
@@ -367,14 +376,14 @@ export async function requireRole(
   minRole: 'USER' | 'ADMIN' | 'SUPERADMIN',
   req?: Request
 ) {
-  const session = await getServerSession(authOptions)
+  const user = await resolveActingUser(req)
 
-  if (session?.user) {
-    const userRole = session.user.role as 'USER' | 'ADMIN' | 'SUPERADMIN'
+  if (user) {
+    const userRole = user.role as 'USER' | 'ADMIN' | 'SUPERADMIN'
     const roleHierarchy = { USER: 0, ADMIN: 10, SUPERADMIN: 100 }
 
     if (roleHierarchy[userRole] >= roleHierarchy[minRole]) {
-      return { user: session.user, response: null }
+      return { user, response: null }
     }
 
     return {
@@ -402,10 +411,10 @@ export async function requireRole(
  *   if (response) return response
  */
 export async function requirePermission(permission: Permission, req?: Request) {
-  const session = await getServerSession(authOptions)
+  const user = await resolveActingUser(req)
 
-  if (session?.user && hasPermission(session.user.role as any, permission)) {
-    return { user: session.user, response: null }
+  if (user && hasPermission(user.role as any, permission)) {
+    return { user, response: null }
   }
 
   // System API key has all permissions
@@ -606,12 +615,27 @@ export async function requireSquadPermission(
 // ── System API key authentication ──────────────────────────────────────────
 
 /**
+ * Resolve the Authorization header either from an explicitly passed `Request`
+ * (e.g. in tests, or handlers with a non-standard signature) or, when omitted,
+ * from Next.js's request-scoped `headers()` — which works in any Route
+ * Handler regardless of whether the caller threaded `req` through. Most
+ * `requireAdmin()`/`requireSuperAdmin()` call sites in this codebase call
+ * these with no arguments, so this fallback is what makes system API keys
+ * actually work on those routes.
+ */
+async function resolveAuthHeader(req?: Request): Promise<string | null> {
+  if (req) return req.headers.get('authorization')
+  const headerList = await headers()
+  return headerList.get('authorization')
+}
+
+/**
  * Verify a system API key from a Bearer token (esk_…).
  * The key hash is stored in the Config table under key 'system_api_key'.
  * Returns true if the token matches, false otherwise.
  */
-export async function isSystemKeyAuth(req: Request): Promise<boolean> {
-  const authHeader = req.headers.get('authorization')
+export async function isSystemKeyAuth(req?: Request): Promise<boolean> {
+  const authHeader = await resolveAuthHeader(req)
   if (!authHeader?.startsWith('Bearer esk_')) return false
 
   const token = authHeader.substring(7)
@@ -629,7 +653,7 @@ export async function isSystemKeyAuth(req: Request): Promise<boolean> {
 /**
  * Require a valid system API key. Returns a 401 response if invalid.
  */
-export async function requireSystemKey(req: Request) {
+export async function requireSystemKey(req?: Request) {
   const valid = await isSystemKeyAuth(req)
   if (!valid) {
     return {

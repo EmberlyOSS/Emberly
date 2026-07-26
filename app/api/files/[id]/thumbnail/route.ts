@@ -55,7 +55,7 @@ export async function GET(
 
     // Check access permissions (similar to main file endpoint)
     const isOwner = user?.id === file.userId
-    const isAdmin = user?.role === 'ADMIN'
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN'
     const isPrivate = file.visibility === 'PRIVATE' && !isOwner && !isAdmin
 
     if (isPrivate) {
