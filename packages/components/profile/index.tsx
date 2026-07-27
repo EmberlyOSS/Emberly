@@ -4,6 +4,7 @@ import { useCallback, useMemo, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import { ProfileClientProps } from '@/packages/types/components/profile'
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 
 import { Button } from '@/packages/components/ui/button'
 import { format } from 'date-fns'
@@ -48,34 +49,69 @@ import { ProfilePerks } from './perks'
 import { ApplicationsDashboard } from './applications-dashboard'
 
 const profileSections = [
-  { group: 'Account', items: [
-    { value: 'profile', label: 'Profile', icon: UserIcon },
-    { value: 'settings', label: 'Settings', icon: Settings },
-    { value: 'connections', label: 'Connections', icon: LinkIcon },
-    { value: 'security', label: 'Security', icon: Shield }
-  ]},
-  { group: 'Content', items: [
-    { value: 'api', label: 'API', icon: KeyRound },
-    { value: 'uploads', label: 'Uploads', icon: Upload },
-    { value: 'applications', label: 'Applications', icon: ClipboardList },
-    { value: 'appearance', label: 'Appearance', icon: Palette },
-  ]},
-  { group: 'Engagement', items: [
-    { value: 'notifications', label: 'Notifications', icon: Bell },
-    { value: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-    { value: 'referrals', label: 'Referrals', icon: Users },
-    { value: 'perks', label: 'Perks', icon: Gift },
-  ]},
-  { group: 'Billing & Data', items: [
-    { value: 'billing', label: 'Billing', icon: CreditCard },
-    { value: 'data', label: 'Data', icon: Database },
-  ]},
+  {
+    group: 'Account',
+    items: [
+      { value: 'profile', label: 'Profile', icon: UserIcon },
+      { value: 'settings', label: 'Settings', icon: Settings },
+      { value: 'connections', label: 'Connections', icon: LinkIcon },
+      { value: 'security', label: 'Security', icon: Shield },
+    ],
+  },
+  {
+    group: 'Content',
+    items: [
+      { value: 'api', label: 'API', icon: KeyRound },
+      { value: 'uploads', label: 'Uploads', icon: Upload },
+      {
+        value: 'applications',
+        label: 'Applications',
+        icon: ClipboardList,
+        cloudOnly: true,
+      },
+      { value: 'appearance', label: 'Appearance', icon: Palette },
+    ],
+  },
+  {
+    group: 'Engagement',
+    items: [
+      { value: 'notifications', label: 'Notifications', icon: Bell },
+      {
+        value: 'testimonials',
+        label: 'Testimonials',
+        icon: MessageSquare,
+        cloudOnly: true,
+      },
+      { value: 'referrals', label: 'Referrals', icon: Users, cloudOnly: true },
+      { value: 'perks', label: 'Perks', icon: Gift, cloudOnly: true },
+    ],
+  },
+  {
+    group: 'Billing & Data',
+    items: [
+      { value: 'billing', label: 'Billing', icon: CreditCard, cloudOnly: true },
+      { value: 'data', label: 'Data', icon: Database },
+    ],
+  },
 ]
 
-const allTabs = profileSections.flatMap(s => s.items)
+function visibleProfileSections(cloudEnabled: boolean) {
+  return profileSections
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((i) => !i.cloudOnly || cloudEnabled),
+    }))
+    .filter((s) => s.items.length > 0)
+}
 
 // Glass card wrapper component for consistent styling
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function GlassCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
     <div className={`glass-card transition-all duration-300 ${className}`}>
       {children}
@@ -83,15 +119,43 @@ function GlassCard({ children, className = '' }: { children: React.ReactNode; cl
   )
 }
 
-function GlassCardHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>{children}</div>
+function GlassCardHeader({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>
+      {children}
+    </div>
+  )
 }
 
-function GlassCardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={`font-semibold leading-none tracking-tight text-lg ${className}`}>{children}</h3>
+function GlassCardTitle({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <h3
+      className={`font-semibold leading-none tracking-tight text-lg ${className}`}
+    >
+      {children}
+    </h3>
+  )
 }
 
-function GlassCardContent({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function GlassCardContent({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return <div className={`p-6 pt-0 ${className}`}>{children}</div>
 }
 
@@ -105,6 +169,15 @@ export function ProfileClient({
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const [selectedTab, setSelectedTab] = useState<string>('')
+  const cloudEnabled = isCloudEnabledClient()
+  const sections = useMemo(
+    () => visibleProfileSections(cloudEnabled),
+    [cloudEnabled]
+  )
+  const visibleTabs = useMemo(
+    () => sections.flatMap((s) => s.items),
+    [sections]
+  )
 
   // Handle OAuth success/error messages
   useEffect(() => {
@@ -143,12 +216,12 @@ export function ProfileClient({
   // Set initial tab from URL query param or default
   useEffect(() => {
     const tabParam = searchParams.get('tab')
-    if (tabParam && allTabs.some(t => t.value === tabParam)) {
+    if (tabParam && visibleTabs.some((t) => t.value === tabParam)) {
       setSelectedTab(tabParam)
     } else if (!selectedTab) {
       setSelectedTab(defaultTab)
     }
-  }, [defaultTab, selectedTab, searchParams])
+  }, [defaultTab, selectedTab, searchParams, visibleTabs])
 
   // Update URL when tab changes
   const handleTabChange = useCallback((value: string) => {
@@ -168,7 +241,7 @@ export function ProfileClient({
     productUpdates: true,
   }
 
-  const activeSection = allTabs.find(t => t.value === selectedTab)
+  const activeSection = visibleTabs.find((t) => t.value === selectedTab)
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 overflow-hidden lg:items-start">
@@ -177,7 +250,7 @@ export function ProfileClient({
         {/* Mobile: horizontal scrollable strip */}
         <ScrollIndicator className="lg:hidden glass-subtle rounded-xl p-1.5">
           <div className="flex gap-1 w-max">
-            {allTabs.map((item) => {
+            {visibleTabs.map((item) => {
               const Icon = item.icon
               const isActive = selectedTab === item.value
               return (
@@ -200,7 +273,7 @@ export function ProfileClient({
 
         {/* Desktop: full grouped sidebar */}
         <div className="hidden lg:block glass-subtle rounded-xl p-2 lg:sticky lg:top-24 space-y-3">
-          {profileSections.map((section) => (
+          {sections.map((section) => (
             <div key={section.group}>
               <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                 {section.group}
@@ -232,262 +305,286 @@ export function ProfileClient({
 
       {/* Content Area */}
       <div className="flex-1 min-w-0 space-y-6">
-      {selectedTab === 'profile' && (
-        <>
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Profile Information</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Your identity, bio, and social links</p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileAccount user={user} onUpdate={handleRefresh} />
-          </GlassCardContent>
-        </GlassCard>
-      </>
-      )}
+        {selectedTab === 'profile' && (
+          <>
+            <GlassCard>
+              <GlassCardHeader>
+                <GlassCardTitle>Profile Information</GlassCardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your identity, bio, and social links
+                </p>
+              </GlassCardHeader>
+              <GlassCardContent>
+                <ProfileAccount user={user} onUpdate={handleRefresh} />
+              </GlassCardContent>
+            </GlassCard>
+          </>
+        )}
 
-      {selectedTab === 'settings' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Settings</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Control visibility, expiry defaults, and file URL options</p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileSettings user={user} onUpdate={handleRefresh} />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'settings' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Settings</GlassCardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Control visibility, expiry defaults, and file URL options
+              </p>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <ProfileSettings user={user} onUpdate={handleRefresh} />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'connections' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Connections</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Connect your social accounts to unlock perks and use their avatars
-            </p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <LinkedAccounts />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'connections' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Connections</GlassCardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Connect your social accounts to unlock perks and use their
+                avatars
+              </p>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <LinkedAccounts />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'billing' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Billing</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <div className="space-y-4">
-              {user.subscription ? (
-                <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Current plan</div>
-                      <div className="text-sm text-muted-foreground">
-                        {user.subscription.productName ?? user.subscription.productId}
+        {selectedTab === 'billing' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Billing</GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <div className="space-y-4">
+                {user.subscription ? (
+                  <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Current plan</div>
+                        <div className="text-sm text-muted-foreground">
+                          {user.subscription.productName ??
+                            user.subscription.productId}
+                        </div>
                       </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                        {user.subscription.status}
+                      </span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      {user.subscription.status}
-                    </span>
+
+                    {user.subscription.currentPeriodEnd && (
+                      <div className="mt-3 pt-3 border-t border-border/50 dark:border-border/20 text-sm text-muted-foreground">
+                        Renews:{' '}
+                        {format(
+                          new Date(user.subscription.currentPeriodEnd),
+                          'PPP'
+                        )}
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 text-sm text-muted-foreground">
+                    No active subscription — if you recently subscribed,{' '}
+                    <button
+                      className="text-primary underline underline-offset-2 hover:no-underline"
+                      onClick={async () => {
+                        await fetch('/api/payments/sync-subscription', {
+                          method: 'POST',
+                        })
+                        window.location.reload()
+                      }}
+                    >
+                      click here to sync
+                    </button>
+                  </div>
+                )}
 
-                  {user.subscription.currentPeriodEnd && (
-                    <div className="mt-3 pt-3 border-t border-border/50 dark:border-border/20 text-sm text-muted-foreground">
-                      Renews:{' '}
-                      {format(new Date(user.subscription.currentPeriodEnd), 'PPP')}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 text-sm text-muted-foreground">
-                  No active subscription — if you recently subscribed,{' '}
-                  <button
-                    className="text-primary underline underline-offset-2 hover:no-underline"
-                    onClick={async () => {
-                      await fetch('/api/payments/sync-subscription', { method: 'POST' })
-                      window.location.reload()
-                    }}
+                <div className="flex gap-3">
+                  <Button
+                    asChild
+                    className="flex-1 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all"
                   >
-                    click here to sync
-                  </button>
+                    <a href="/api/payments/portal">Manage billing</a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => (window.location.href = '/pricing')}
+                    className="border-border/50 hover:bg-muted/30 transition-colors"
+                  >
+                    View plans
+                  </Button>
                 </div>
-              )}
 
-              <div className="flex gap-3">
-                <Button asChild className="flex-1 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 transition-all">
-                  <a href="/api/payments/portal">
-                    Manage billing
-                  </a>
-                </Button>
-                <Button variant="outline" onClick={() => window.location.href = '/pricing'} className="border-border/50 hover:bg-muted/30 transition-colors">
-                  View plans
-                </Button>
+                {/* Billing Credits Section */}
+                <BillingCreditsSection />
               </div>
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-              {/* Billing Credits Section */}
-              <BillingCreditsSection />
-            </div>
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'uploads' && (
+          <>
+            <GlassCard>
+              <GlassCardHeader>
+                <GlassCardTitle>Storage Usage</GlassCardTitle>
+              </GlassCardHeader>
+              <GlassCardContent>
+                <ProfileStorage
+                  quotasEnabled={quotasEnabled}
+                  formattedQuota={formattedQuota}
+                  formattedUsed={formattedUsed}
+                  usagePercentage={usagePercentage}
+                  fileCount={user.fileCount}
+                  shortUrlCount={user.shortUrlCount}
+                />
+              </GlassCardContent>
+            </GlassCard>
 
-      {selectedTab === 'uploads' && (
-        <>
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Storage Usage</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileStorage
-              quotasEnabled={quotasEnabled}
-              formattedQuota={formattedQuota}
-              formattedUsed={formattedUsed}
-              usagePercentage={usagePercentage}
-              fileCount={user.fileCount}
-              shortUrlCount={user.shortUrlCount}
+            <GlassCard>
+              <GlassCardHeader>
+                <GlassCardTitle>Upload Tools</GlassCardTitle>
+              </GlassCardHeader>
+              <GlassCardContent>
+                <ProfileTools />
+              </GlassCardContent>
+            </GlassCard>
+          </>
+        )}
+
+        {selectedTab === 'api' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>API Keys</GlassCardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage your API keys and upload token for external integrations
+              </p>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <ApiKeysPanel />
+            </GlassCardContent>
+          </GlassCard>
+        )}
+
+        {selectedTab === 'security' && (
+          <>
+            <PasswordBreachAlert
+              passwordBreachDetectedAt={user.passwordBreachDetectedAt}
             />
-          </GlassCardContent>
-        </GlassCard>
+            <GlassCard>
+              <GlassCardHeader>
+                <GlassCardTitle>Security Settings</GlassCardTitle>
+              </GlassCardHeader>
+              <GlassCardContent>
+                <ProfileSecurity onUpdate={handleRefresh} />
+              </GlassCardContent>
+            </GlassCard>
+          </>
+        )}
 
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Upload Tools</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileTools />
-          </GlassCardContent>
-        </GlassCard>
-        </>
-      )}
+        {selectedTab === 'perks' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Your Perks</GlassCardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                View your active perks and discover new ones to unlock
+              </p>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <ProfilePerks />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'api' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>API Keys</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your API keys and upload token for external integrations
-            </p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ApiKeysPanel />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'referrals' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Referral Program</GlassCardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Earn $10 billing credits for each friend who signs up using your
+                referral link. They also get $10 credit!
+              </p>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <ProfileReferrals />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'security' && (
-        <>
-        <PasswordBreachAlert passwordBreachDetectedAt={user.passwordBreachDetectedAt} />
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Security Settings</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileSecurity onUpdate={handleRefresh} />
-          </GlassCardContent>
-        </GlassCard>
-        </>
-      )}
+        {selectedTab === 'notifications' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Email Notifications</GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <EmailPreferences
+                userId={user.id}
+                emailNotificationsEnabled={
+                  user.emailNotificationsEnabled ?? true
+                }
+                emailPreferences={
+                  user.emailPreferences ?? defaultEmailPreferences
+                }
+                discordWebhookUrl={user.discordWebhookUrl ?? null}
+                discordNotificationsEnabled={
+                  user.discordNotificationsEnabled ?? false
+                }
+                discordPreferences={
+                  user.discordPreferences ?? {
+                    security: true,
+                    account: false,
+                    billing: true,
+                    marketing: false,
+                    productUpdates: false,
+                  }
+                }
+                onUpdate={handleRefresh}
+              />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'perks' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Your Perks</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              View your active perks and discover new ones to unlock
-            </p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfilePerks />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'appearance' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Appearance</GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <ProfileAppearance />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'referrals' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Referral Program</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Earn $10 billing credits for each friend who signs up using your referral link. They also get $10 credit!
-            </p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileReferrals />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'testimonials' && <ProfileTestimonials />}
 
-      {selectedTab === 'notifications' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Email Notifications</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <EmailPreferences
-              userId={user.id}
-              emailNotificationsEnabled={user.emailNotificationsEnabled ?? true}
-              emailPreferences={user.emailPreferences ?? defaultEmailPreferences}
-              discordWebhookUrl={user.discordWebhookUrl ?? null}
-              discordNotificationsEnabled={user.discordNotificationsEnabled ?? false}
-              discordPreferences={user.discordPreferences ?? {
-                security: true,
-                account: false,
-                billing: true,
-                marketing: false,
-                productUpdates: false,
-              }}
-              onUpdate={handleRefresh}
-            />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'applications' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Your Applications</GlassCardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                View and manage your applications for staff, partnerships,
+                verification, and ban appeals
+              </p>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <ApplicationsDashboard />
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
-      {selectedTab === 'appearance' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Appearance</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ProfileAppearance />
-          </GlassCardContent>
-        </GlassCard>
-      )}
+        {selectedTab === 'data' && (
+          <GlassCard>
+            <GlassCardHeader>
+              <GlassCardTitle>Data</GlassCardTitle>
+            </GlassCardHeader>
+            <GlassCardContent className="space-y-6">
+              <ProfileExport />
 
-      {selectedTab === 'testimonials' && (
-        <ProfileTestimonials />
-      )}
+              <Separator className="my-6 bg-muted/50" />
 
-      {selectedTab === 'applications' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Your Applications</GlassCardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              View and manage your applications for staff, partnerships, verification, and ban appeals
-            </p>
-          </GlassCardHeader>
-          <GlassCardContent>
-            <ApplicationsDashboard />
-          </GlassCardContent>
-        </GlassCard>
-      )}
-
-      {selectedTab === 'data' && (
-        <GlassCard>
-          <GlassCardHeader>
-            <GlassCardTitle>Data</GlassCardTitle>
-          </GlassCardHeader>
-          <GlassCardContent className="space-y-6">
-            <ProfileExport />
-
-            <Separator className="my-6 bg-muted/50" />
-
-            <ProfileDataExplorer />
-          </GlassCardContent>
-        </GlassCard>
-      )}
-
-
+              <ProfileDataExplorer />
+            </GlassCardContent>
+          </GlassCard>
+        )}
       </div>
     </div>
   )

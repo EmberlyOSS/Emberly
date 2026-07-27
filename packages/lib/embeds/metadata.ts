@@ -330,9 +330,12 @@ export async function buildSiteMetadata(overrides?: {
   const config = await getConfig()
   const baseUrl = await getBaseUrl()
 
-  const siteName = 'Emberly'
+  const siteName = config.settings.general.siteName || 'Emberly'
   const title = overrides?.title || siteName
-  const description = overrides?.description || SITE_DESCRIPTION
+  const description =
+    overrides?.description ||
+    config.settings.general.metaDescription ||
+    SITE_DESCRIPTION
 
   const themeColor = config.settings.appearance.customColors?.primary
     ? `hsl(${config.settings.appearance.customColors.primary})`
@@ -346,9 +349,9 @@ export async function buildSiteMetadata(overrides?: {
     },
     description,
     keywords: SITE_KEYWORDS,
-    authors: [{ name: 'Emberly', url: baseUrl }],
-    creator: 'Emberly',
-    publisher: 'Emberly',
+    authors: [{ name: siteName, url: baseUrl }],
+    creator: siteName,
+    publisher: siteName,
     category: 'technology',
     classification: 'Software / Developer Tools',
     referrer: 'origin-when-cross-origin',

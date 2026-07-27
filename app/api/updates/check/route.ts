@@ -25,7 +25,7 @@ export async function GET() {
     if (response) return response
 
     const currentVersion = pkg.version
-    const releases = await getRepoReleases('EmberlyOSS', 'Website', 30)
+    const releases = await getRepoReleases('EmberlyOSS', 'Emberly', 30)
 
     const stableReleases = releases
       .filter((release) => !release.prerelease && !release.draft)
@@ -61,4 +61,3 @@ export async function GET() {
     )
   }
 }
-

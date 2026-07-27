@@ -19,30 +19,70 @@ import {
   Users,
 } from 'lucide-react'
 
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 
 const adminRoutes = [
   { href: '/admin', label: 'Overview', icon: Shield },
-  { href: '/admin/blog', label: 'Blogs', icon: BookOpen },
-  { href: '/admin/legal', label: 'Legal', icon: Gavel },
+  { href: '/admin/blog', label: 'Blogs', icon: BookOpen, cloudOnly: true },
+  { href: '/admin/legal', label: 'Legal', icon: Gavel, cloudOnly: true },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: ShieldAlert },
-  { href: '/admin/applications', label: 'Applications', icon: ClipboardList },
-  { href: '/admin/products', label: 'Products', icon: CreditCard },
-  { href: '/admin/email', label: 'Email', icon: Mail, superAdminOnly: true },
-  { href: '/admin/partners', label: 'Partners', icon: Handshake },
-  { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
-  { href: '/admin/logs', label: 'Audit Logs', icon: ChartBar, superAdminOnly: true },
-  { href: '/admin/settings', label: 'Settings', icon: Settings, superAdminOnly: true },
+  {
+    href: '/admin/applications',
+    label: 'Applications',
+    icon: ClipboardList,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/products',
+    label: 'Products',
+    icon: CreditCard,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/email',
+    label: 'Email',
+    icon: Mail,
+    superAdminOnly: true,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/partners',
+    label: 'Partners',
+    icon: Handshake,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/testimonials',
+    label: 'Testimonials',
+    icon: MessageSquare,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/logs',
+    label: 'Audit Logs',
+    icon: ChartBar,
+    superAdminOnly: true,
+  },
+  {
+    href: '/admin/settings',
+    label: 'Settings',
+    icon: Settings,
+    superAdminOnly: true,
+  },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === 'SUPERADMIN'
+  const cloudEnabled = isCloudEnabledClient()
 
   const visibleRoutes = adminRoutes.filter(
-    (r) => !('superAdminOnly' in r && r.superAdminOnly) || isSuperAdmin
+    (r) =>
+      (!('superAdminOnly' in r && r.superAdminOnly) || isSuperAdmin) &&
+      (!('cloudOnly' in r && r.cloudOnly) || cloudEnabled)
   )
 
   function isActive(href: string) {

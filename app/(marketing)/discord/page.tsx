@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
 import HomeShell from '@/packages/components/layout/home-shell'
+import { DISCORD_INVITE_URL } from '@/packages/lib/constants/site'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
@@ -129,7 +130,7 @@ export default function DiscordPage() {
                 <div className="flex flex-wrap items-center gap-4 pt-2">
                   <Button size="lg" asChild className="group">
                     <a
-                      href="https://discord.gg/36spBmzZVB"
+                      href={DISCORD_INVITE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -363,7 +364,7 @@ export default function DiscordPage() {
             <div className="mt-6">
               <Button size="lg" asChild className="group">
                 <a
-                  href="https://discord.gg/36spBmzZVB"
+                  href={DISCORD_INVITE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

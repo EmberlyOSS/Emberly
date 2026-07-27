@@ -38,18 +38,31 @@ const inter = localFont({
   variable: '--font-inter',
 })
 
-export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
-  ),
-  title: null,
-  description: null,
-  icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    shortcut: '/icon.svg',
-  },
-  manifest: '/manifest.webmanifest',
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getConfig()
+  const siteName = config.settings.general.siteName || 'Emberly'
+  const description = config.settings.general.metaDescription || undefined
+
+  return {
+    metadataBase: new URL(
+      process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
+    ),
+    title: { default: siteName, template: `%s | ${siteName}` },
+    description,
+    icons: config.settings.appearance.favicon
+      ? {
+          icon: [
+            { url: '/api/favicon', type: 'image/png', sizes: '32x32' },
+            { url: '/icon.svg', type: 'image/svg+xml' },
+          ],
+        }
+      : {
+          icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+          apple: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+          shortcut: '/icon.svg',
+        },
+    manifest: '/manifest.webmanifest',
+  }
 }
 
 export const dynamic = 'force-dynamic'
@@ -63,15 +76,6 @@ export default async function RootLayout({
   const customCSS = config.settings.advanced?.customCSS || ''
   const hasCustomFont =
     typeof customCSS === 'string' ? customCSS.includes('font-family') : false
-
-  if (config.settings.appearance.favicon) {
-    metadata.icons = {
-      icon: [
-        { url: '/api/favicon', type: 'image/png', sizes: '32x32' },
-        { url: '/icon.svg', type: 'image/svg+xml' },
-      ],
-    }
-  }
 
   // If user is authenticated, fetch their theme so we can server-render it
   const session = await getServerSession(authOptions)

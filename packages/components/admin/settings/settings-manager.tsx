@@ -72,6 +72,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
@@ -83,6 +84,7 @@ import { OVHCloudPoolManager } from '@/packages/components/admin/settings/ovhclo
 import { StorageBucketManager } from '@/packages/components/admin/settings/storage-bucket-manager'
 import { UserBucketAssignment } from '@/packages/components/admin/settings/user-bucket-assignment'
 import { VultrInstanceManager } from '@/packages/components/admin/settings/vultr-instance-manager'
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 
@@ -507,6 +509,7 @@ export function SettingsManager() {
   const { toast } = useToast()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === 'SUPERADMIN'
+  const cloudEnabled = isCloudEnabledClient()
 
   const [savedConfig, setSavedConfig] = useState<EmberlyConfig | null>(null)
   const [workingConfig, setWorkingConfig] = useState<EmberlyConfig | null>(null)
@@ -1183,7 +1186,7 @@ export function SettingsManager() {
               </Button>
               <Button variant="outline" size="sm" asChild className="h-9">
                 <a
-                  href="https://ko-fi.com/codemeapixel"
+                  href="https://github.com/sponsors/EmberlyOSS"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -1191,6 +1194,59 @@ export function SettingsManager() {
                   Sponsor
                 </a>
               </Button>
+            </div>
+          </SettingsSection>
+
+          {/* Branding */}
+          <SettingsSection
+            icon={InfoIcon}
+            title="Branding"
+            description="Customize the name and meta description shown for your instance"
+          >
+            <div className="space-y-2 pl-0.5">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Site Name</Label>
+                {isFieldChanged('general', ['siteName']) && <ChangeIndicator />}
+              </div>
+              <Input
+                value={workingConfig.settings.general.siteName}
+                onChange={(e) =>
+                  handleSettingChange('general', {
+                    siteName: e.target.value,
+                  })
+                }
+                placeholder="Emberly"
+                className={cn(
+                  'max-w-sm',
+                  getFieldClasses('general', ['siteName'])
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown in the browser tab, page titles, and social share cards
+              </p>
+            </div>
+
+            <div className="space-y-2 pl-0.5">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Meta Description</Label>
+                {isFieldChanged('general', ['metaDescription']) && (
+                  <ChangeIndicator />
+                )}
+              </div>
+              <Textarea
+                value={workingConfig.settings.general.metaDescription}
+                onChange={(e) =>
+                  handleSettingChange('general', {
+                    metaDescription: e.target.value,
+                  })
+                }
+                placeholder="A short description of your instance for search engines and social previews"
+                className={cn(
+                  'max-w-lg',
+                  getFieldClasses('general', ['metaDescription'])
+                )}
+                rows={3}
+              />
             </div>
           </SettingsSection>
 
@@ -1285,7 +1341,7 @@ export function SettingsManager() {
                 <AlertDescription>
                   If you disable credits, please consider{' '}
                   <a
-                    href="https://ko-fi.com/codemeapixel"
+                    href="https://github.com/sponsors/EmberlyOSS"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline font-medium hover:no-underline"
@@ -1752,50 +1808,54 @@ export function SettingsManager() {
             </div>
           </SettingsSection>
 
-          {/* Vultr Object Storage Pools */}
-          <SettingsSection
-            icon={Cloud}
-            title="Vultr Object Storage"
-            description="Regional pooled instances. Active instances enable that region on the pricing page so users can purchase storage."
-          >
-            <VultrInstanceManager />
-          </SettingsSection>
+          {cloudEnabled && (
+            <>
+              {/* Vultr Object Storage Pools */}
+              <SettingsSection
+                icon={Cloud}
+                title="Vultr Object Storage"
+                description="Regional pooled instances. Active instances enable that region on the pricing page so users can purchase storage."
+              >
+                <VultrInstanceManager />
+              </SettingsSection>
 
-          {/* Linode Object Storage Pools */}
-          <SettingsSection
-            icon={Cloud}
-            title="Linode Object Storage"
-            description="Linode cluster-backed storage pools. Each pool creates an access key for a cluster region available on the pricing page."
-          >
-            <LinodePoolManager />
-          </SettingsSection>
+              {/* Linode Object Storage Pools */}
+              <SettingsSection
+                icon={Cloud}
+                title="Linode Object Storage"
+                description="Linode cluster-backed storage pools. Each pool creates an access key for a cluster region available on the pricing page."
+              >
+                <LinodePoolManager />
+              </SettingsSection>
 
-          {/* OVHcloud Object Storage Pools */}
-          <SettingsSection
-            icon={Cloud}
-            title="OVHcloud Object Storage"
-            description="OVHcloud Public Cloud storage pools. Each pool generates S3-compatible credentials for a project and region."
-          >
-            <OVHCloudPoolManager />
-          </SettingsSection>
+              {/* OVHcloud Object Storage Pools */}
+              <SettingsSection
+                icon={Cloud}
+                title="OVHcloud Object Storage"
+                description="OVHcloud Public Cloud storage pools. Each pool generates S3-compatible credentials for a project and region."
+              >
+                <OVHCloudPoolManager />
+              </SettingsSection>
 
-          {/* Additional Storage Buckets */}
-          <SettingsSection
-            icon={Database}
-            title="Additional Storage Buckets"
-            description="Create named S3 buckets that can be assigned to specific users or squads, overriding the default storage. Mark a bucket as Core Pool to include it in the shared upload rotation."
-          >
-            <StorageBucketManager />
-          </SettingsSection>
+              {/* Additional Storage Buckets */}
+              <SettingsSection
+                icon={Database}
+                title="Additional Storage Buckets"
+                description="Create named S3 buckets that can be assigned to specific users or squads, overriding the default storage. Mark a bucket as Core Pool to include it in the shared upload rotation."
+              >
+                <StorageBucketManager />
+              </SettingsSection>
 
-          {/* User Bucket Assignment */}
-          <SettingsSection
-            icon={Users}
-            title="User Bucket Assignment"
-            description="Manually assign a dedicated storage bucket to a specific user, overriding the default core pool routing."
-          >
-            <UserBucketAssignment />
-          </SettingsSection>
+              {/* User Bucket Assignment */}
+              <SettingsSection
+                icon={Users}
+                title="User Bucket Assignment"
+                description="Manually assign a dedicated storage bucket to a specific user, overriding the default core pool routing."
+              >
+                <UserBucketAssignment />
+              </SettingsSection>
+            </>
+          )}
         </TabsContent>
 
         {/* Appearance Tab */}
@@ -2021,99 +2081,102 @@ export function SettingsManager() {
           <SystemApiKeySection />
 
           {/* Stripe */}
-          <SettingsSection
-            icon={CreditCard}
-            title="Stripe"
-            description="Payment processing. Overrides STRIPE_SECRET and STRIPE_WEBHOOK env vars."
-            badge={
-              isFieldChanged('integrations', ['stripe']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="Secret Key"
-              description="Stripe secret key (sk_live_... or sk_test_...)"
+          {cloudEnabled && (
+            <SettingsSection
+              icon={CreditCard}
+              title="Stripe"
+              description="Payment processing. Overrides STRIPE_SECRET and STRIPE_WEBHOOK env vars."
+              badge={
+                isFieldChanged('integrations', ['stripe']) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                    Modified
+                  </span>
+                )
+              }
             >
-              <Input
-                type="password"
-                placeholder="sk_live_..."
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.stripe?.secretKey ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    stripe: {
-                      ...workingConfig?.settings.integrations?.stripe,
-                      secretKey: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Webhook Secret"
-              description="Signing secret for Stripe webhook events"
-            >
-              <Input
-                type="password"
-                placeholder="whsec_..."
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.stripe?.webhookSecret ??
-                  ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    stripe: {
-                      ...workingConfig?.settings.integrations?.stripe,
-                      webhookSecret: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['stripe'] &&
-                  !intTestStates['stripe'].loading && (
-                    <span
-                      className={`text-xs flex items-center gap-1.5 ${intTestStates['stripe'].ok ? 'text-green-500' : 'text-destructive'}`}
-                    >
-                      {intTestStates['stripe'].ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      )}
-                      {intTestStates['stripe'].message}
-                    </span>
-                  )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['stripe']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('stripe', {
-                    secretKey:
-                      workingConfig?.settings.integrations?.stripe?.secretKey ??
-                      '',
-                  })
-                }
+              <SettingRow
+                label="Secret Key"
+                description="Stripe secret key (sk_live_... or sk_test_...)"
               >
-                {intTestStates['stripe']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
+                <Input
+                  type="password"
+                  placeholder="sk_live_..."
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.stripe?.secretKey ??
+                    ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      stripe: {
+                        ...workingConfig?.settings.integrations?.stripe,
+                        secretKey: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <SettingRow
+                label="Webhook Secret"
+                description="Signing secret for Stripe webhook events"
+              >
+                <Input
+                  type="password"
+                  placeholder="whsec_..."
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.stripe
+                      ?.webhookSecret ?? ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      stripe: {
+                        ...workingConfig?.settings.integrations?.stripe,
+                        webhookSecret: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                <div>
+                  {intTestStates['stripe'] &&
+                    !intTestStates['stripe'].loading && (
+                      <span
+                        className={`text-xs flex items-center gap-1.5 ${intTestStates['stripe'].ok ? 'text-green-500' : 'text-destructive'}`}
+                      >
+                        {intTestStates['stripe'].ok ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5" />
+                        )}
+                        {intTestStates['stripe'].message}
+                      </span>
+                    )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 shrink-0"
+                  disabled={intTestStates['stripe']?.loading}
+                  onClick={() =>
+                    handleIntegrationTest('stripe', {
+                      secretKey:
+                        workingConfig?.settings.integrations?.stripe
+                          ?.secretKey ?? '',
+                    })
+                  }
+                >
+                  {intTestStates['stripe']?.loading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Test Connection
+                </Button>
+              </div>
+            </SettingsSection>
+          )}
 
           {/* Resend / SMTP */}
           {(() => {
@@ -2510,128 +2573,135 @@ export function SettingsManager() {
           })()}
 
           {/* Cloudflare */}
-          <SettingsSection
-            icon={Cloud}
-            title="Cloudflare"
-            description="CDN, DNS, and storage. Overrides CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_ZONE_ID env vars."
-            badge={
-              isFieldChanged('integrations', ['cloudflare']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="API Token"
-              description="Cloudflare API token with required permissions"
+          {cloudEnabled && (
+            <SettingsSection
+              icon={Cloud}
+              title="Cloudflare"
+              description="CDN, DNS, and storage. Overrides CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_ZONE_ID env vars."
+              badge={
+                isFieldChanged('integrations', ['cloudflare']) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                    Modified
+                  </span>
+                )
+              }
             >
-              <Input
-                type="password"
-                placeholder="API token"
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.cloudflare?.apiToken ??
-                  ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    cloudflare: {
-                      ...workingConfig?.settings.integrations?.cloudflare,
-                      apiToken: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Account ID"
-              description="Your Cloudflare account ID"
-            >
-              <Input
-                placeholder="Account ID"
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.cloudflare?.accountId ??
-                  ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    cloudflare: {
-                      ...workingConfig?.settings.integrations?.cloudflare,
-                      accountId: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Zone ID"
-              description="Cloudflare zone ID for your domain"
-            >
-              <Input
-                placeholder="Zone ID"
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.cloudflare?.zoneId ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    cloudflare: {
-                      ...workingConfig?.settings.integrations?.cloudflare,
-                      zoneId: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['cloudflare'] &&
-                  !intTestStates['cloudflare'].loading && (
-                    <span
-                      className={`text-xs flex items-center gap-1.5 ${intTestStates['cloudflare'].ok ? 'text-green-500' : 'text-destructive'}`}
-                    >
-                      {intTestStates['cloudflare'].ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      )}
-                      {intTestStates['cloudflare'].message}
-                    </span>
-                  )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['cloudflare']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('cloudflare', {
-                    apiToken:
-                      workingConfig?.settings.integrations?.cloudflare
-                        ?.apiToken ?? '',
-                    accountId:
-                      workingConfig?.settings.integrations?.cloudflare
-                        ?.accountId ?? '',
-                  })
-                }
+              <SettingRow
+                label="API Token"
+                description="Cloudflare API token with required permissions"
               >
-                {intTestStates['cloudflare']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
+                <Input
+                  type="password"
+                  placeholder="API token"
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.cloudflare
+                      ?.apiToken ?? ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      cloudflare: {
+                        ...workingConfig?.settings.integrations?.cloudflare,
+                        apiToken: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <SettingRow
+                label="Account ID"
+                description="Your Cloudflare account ID"
+              >
+                <Input
+                  placeholder="Account ID"
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.cloudflare
+                      ?.accountId ?? ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      cloudflare: {
+                        ...workingConfig?.settings.integrations?.cloudflare,
+                        accountId: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <SettingRow
+                label="Zone ID"
+                description="Cloudflare zone ID for your domain"
+              >
+                <Input
+                  placeholder="Zone ID"
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.cloudflare?.zoneId ??
+                    ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      cloudflare: {
+                        ...workingConfig?.settings.integrations?.cloudflare,
+                        zoneId: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                <div>
+                  {intTestStates['cloudflare'] &&
+                    !intTestStates['cloudflare'].loading && (
+                      <span
+                        className={`text-xs flex items-center gap-1.5 ${intTestStates['cloudflare'].ok ? 'text-green-500' : 'text-destructive'}`}
+                      >
+                        {intTestStates['cloudflare'].ok ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5" />
+                        )}
+                        {intTestStates['cloudflare'].message}
+                      </span>
+                    )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 shrink-0"
+                  disabled={intTestStates['cloudflare']?.loading}
+                  onClick={() =>
+                    handleIntegrationTest('cloudflare', {
+                      apiToken:
+                        workingConfig?.settings.integrations?.cloudflare
+                          ?.apiToken ?? '',
+                      accountId:
+                        workingConfig?.settings.integrations?.cloudflare
+                          ?.accountId ?? '',
+                    })
+                  }
+                >
+                  {intTestStates['cloudflare']?.loading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Test Connection
+                </Button>
+              </div>
+            </SettingsSection>
+          )}
 
           {/* Discord */}
           <SettingsSection
             icon={Shield}
             title="Discord"
-            description="Alerts, webhooks, and supporter perks. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID, and DISCORD_SUPPORTER_ROLE env vars."
+            description={
+              cloudEnabled
+                ? 'Alerts, webhooks, and supporter perks. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID, and DISCORD_SUPPORTER_ROLE env vars.'
+                : 'Alerts and webhooks for admin notifications. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, and DISCORD_SERVER_ID env vars.'
+            }
             badge={
               isFieldChanged('integrations', ['discord']) && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -2703,27 +2773,29 @@ export function SettingsManager() {
                 }
               />
             </SettingRow>
-            <SettingRow
-              label="Supporter Role ID"
-              description="Role ID granted to active supporters"
-            >
-              <Input
-                placeholder="Role ID"
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.discord
-                    ?.supporterRole ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    discord: {
-                      ...workingConfig?.settings.integrations?.discord,
-                      supporterRole: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
+            {cloudEnabled && (
+              <SettingRow
+                label="Supporter Role ID"
+                description="Role ID granted to active supporters"
+              >
+                <Input
+                  placeholder="Role ID"
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.discord
+                      ?.supporterRole ?? ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      discord: {
+                        ...workingConfig?.settings.integrations?.discord,
+                        supporterRole: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+            )}
             <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
               <div>
                 {intTestStates['discord'] &&
@@ -2770,397 +2842,413 @@ export function SettingsManager() {
           </SettingsSection>
 
           {/* GitHub */}
-          <SettingsSection
-            icon={Github}
-            title="GitHub"
-            description="Organization data for contributors and changelogs. Overrides GITHUB_ORG and GITHUB_PAT env vars."
-            badge={
-              isFieldChanged('integrations', ['github']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="Organization"
-              description="GitHub organization name"
+          {cloudEnabled && (
+            <SettingsSection
+              icon={Github}
+              title="GitHub"
+              description="Organization data for contributors and changelogs. Overrides GITHUB_ORG and GITHUB_PAT env vars."
+              badge={
+                isFieldChanged('integrations', ['github']) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                    Modified
+                  </span>
+                )
+              }
             >
-              <Input
-                placeholder="EmberlyOSS"
-                className="w-80 font-mono text-sm"
-                value={workingConfig?.settings.integrations?.github?.org ?? ''}
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    github: {
-                      ...workingConfig?.settings.integrations?.github,
-                      org: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Personal Access Token"
-              description="PAT for authenticated API requests"
-            >
-              <Input
-                type="password"
-                placeholder="ghp_..."
-                className="w-80 font-mono text-sm"
-                value={workingConfig?.settings.integrations?.github?.pat ?? ''}
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    github: {
-                      ...workingConfig?.settings.integrations?.github,
-                      pat: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['github'] &&
-                  !intTestStates['github'].loading && (
-                    <span
-                      className={`text-xs flex items-center gap-1.5 ${intTestStates['github'].ok ? 'text-green-500' : 'text-destructive'}`}
-                    >
-                      {intTestStates['github'].ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      )}
-                      {intTestStates['github'].message}
-                    </span>
-                  )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['github']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('github', {
-                    pat:
-                      workingConfig?.settings.integrations?.github?.pat ?? '',
-                    org:
-                      workingConfig?.settings.integrations?.github?.org ?? '',
-                  })
-                }
+              <SettingRow
+                label="Organization"
+                description="GitHub organization name"
               >
-                {intTestStates['github']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
+                <Input
+                  placeholder="EmberlyOSS"
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.github?.org ?? ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      github: {
+                        ...workingConfig?.settings.integrations?.github,
+                        org: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <SettingRow
+                label="Personal Access Token"
+                description="PAT for authenticated API requests"
+              >
+                <Input
+                  type="password"
+                  placeholder="ghp_..."
+                  className="w-80 font-mono text-sm"
+                  value={
+                    workingConfig?.settings.integrations?.github?.pat ?? ''
+                  }
+                  onChange={(e) =>
+                    handleSettingChange('integrations', {
+                      github: {
+                        ...workingConfig?.settings.integrations?.github,
+                        pat: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </SettingRow>
+              <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                <div>
+                  {intTestStates['github'] &&
+                    !intTestStates['github'].loading && (
+                      <span
+                        className={`text-xs flex items-center gap-1.5 ${intTestStates['github'].ok ? 'text-green-500' : 'text-destructive'}`}
+                      >
+                        {intTestStates['github'].ok ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5" />
+                        )}
+                        {intTestStates['github'].message}
+                      </span>
+                    )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 shrink-0"
+                  disabled={intTestStates['github']?.loading}
+                  onClick={() =>
+                    handleIntegrationTest('github', {
+                      pat:
+                        workingConfig?.settings.integrations?.github?.pat ?? '',
+                      org:
+                        workingConfig?.settings.integrations?.github?.org ?? '',
+                    })
+                  }
+                >
+                  {intTestStates['github']?.loading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Test Connection
+                </Button>
+              </div>
+            </SettingsSection>
+          )}
 
           {/* Vultr */}
-          <SettingsSection
-            icon={Server}
-            title="Vultr"
-            description="Object Storage API for automated bucket provisioning. Overrides the VULTR_API_KEY env var."
-            badge={
-              isFieldChanged('integrations', ['vultr']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="API Key"
-              description="Vultr API key from the Vultr customer portal"
-            >
-              <Input
-                type="password"
-                placeholder="API key"
-                className="w-80 font-mono text-sm"
-                value={
-                  (workingConfig?.settings.integrations as any)?.vultr
-                    ?.apiKey ?? ''
+          {cloudEnabled && (
+            <>
+              <SettingsSection
+                icon={Server}
+                title="Vultr"
+                description="Object Storage API for automated bucket provisioning. Overrides the VULTR_API_KEY env var."
+                badge={
+                  isFieldChanged('integrations', ['vultr']) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      Modified
+                    </span>
+                  )
                 }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    vultr: {
-                      ...(workingConfig?.settings.integrations as any)?.vultr,
-                      apiKey: e.target.value,
-                    },
-                  } as any)
-                }
-              />
-            </SettingRow>
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['vultr'] && !intTestStates['vultr'].loading && (
-                  <span
-                    className={`text-xs flex items-center gap-1.5 ${intTestStates['vultr'].ok ? 'text-green-500' : 'text-destructive'}`}
-                  >
-                    {intTestStates['vultr'].ok ? (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    ) : (
-                      <AlertCircle className="h-3.5 w-3.5" />
-                    )}
-                    {intTestStates['vultr'].message}
-                  </span>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['vultr']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('vultr', {
-                    apiKey:
+              >
+                <SettingRow
+                  label="API Key"
+                  description="Vultr API key from the Vultr customer portal"
+                >
+                  <Input
+                    type="password"
+                    placeholder="API key"
+                    className="w-80 font-mono text-sm"
+                    value={
                       (workingConfig?.settings.integrations as any)?.vultr
-                        ?.apiKey ?? '',
-                  })
+                        ?.apiKey ?? ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        vultr: {
+                          ...(workingConfig?.settings.integrations as any)
+                            ?.vultr,
+                          apiKey: e.target.value,
+                        },
+                      } as any)
+                    }
+                  />
+                </SettingRow>
+                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                  <div>
+                    {intTestStates['vultr'] &&
+                      !intTestStates['vultr'].loading && (
+                        <span
+                          className={`text-xs flex items-center gap-1.5 ${intTestStates['vultr'].ok ? 'text-green-500' : 'text-destructive'}`}
+                        >
+                          {intTestStates['vultr'].ok ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          )}
+                          {intTestStates['vultr'].message}
+                        </span>
+                      )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 shrink-0"
+                    disabled={intTestStates['vultr']?.loading}
+                    onClick={() =>
+                      handleIntegrationTest('vultr', {
+                        apiKey:
+                          (workingConfig?.settings.integrations as any)?.vultr
+                            ?.apiKey ?? '',
+                      })
+                    }
+                  >
+                    {intTestStates['vultr']?.loading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Test Connection
+                  </Button>
+                </div>
+              </SettingsSection>
+
+              {/* Linode */}
+              <SettingsSection
+                icon={Server}
+                title="Linode"
+                description="Linode Object Storage API for automated pool provisioning. Overrides the LINODE_API_KEY env var."
+                badge={
+                  isFieldChanged('integrations', ['linode']) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      Modified
+                    </span>
+                  )
                 }
               >
-                {intTestStates['vultr']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
-
-          {/* Linode */}
-          <SettingsSection
-            icon={Server}
-            title="Linode"
-            description="Linode Object Storage API for automated pool provisioning. Overrides the LINODE_API_KEY env var."
-            badge={
-              isFieldChanged('integrations', ['linode']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="API Key"
-              description="Linode personal access token with Object Storage read/write scope"
-            >
-              <Input
-                type="password"
-                placeholder="API key"
-                className="w-80 font-mono text-sm"
-                value={
-                  (workingConfig?.settings.integrations as any)?.linode
-                    ?.apiKey ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    linode: {
-                      ...(workingConfig?.settings.integrations as any)?.linode,
-                      apiKey: e.target.value,
-                    },
-                  } as any)
-                }
-              />
-            </SettingRow>
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['linode'] &&
-                  !intTestStates['linode'].loading && (
-                    <span
-                      className={`text-xs flex items-center gap-1.5 ${intTestStates['linode'].ok ? 'text-green-500' : 'text-destructive'}`}
-                    >
-                      {intTestStates['linode'].ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      )}
-                      {intTestStates['linode'].message}
-                    </span>
-                  )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['linode']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('linode', {
-                    apiKey:
+                <SettingRow
+                  label="API Key"
+                  description="Linode personal access token with Object Storage read/write scope"
+                >
+                  <Input
+                    type="password"
+                    placeholder="API key"
+                    className="w-80 font-mono text-sm"
+                    value={
                       (workingConfig?.settings.integrations as any)?.linode
-                        ?.apiKey ?? '',
-                  })
-                }
-              >
-                {intTestStates['linode']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
-
-          {/* OVHcloud */}
-          <SettingsSection
-            icon={Server}
-            title="OVHcloud"
-            description="OVHcloud Public Cloud API for automated S3 credential provisioning. Overrides OVH_APP_KEY, OVH_APP_SECRET, OVH_CONSUMER_KEY, and OVH_ENDPOINT env vars."
-            badge={
-              isFieldChanged('integrations', ['ovhcloud']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="Application Key"
-              description="OVH application key (appKey)"
-            >
-              <Input
-                type="password"
-                placeholder="Application key"
-                className="w-80 font-mono text-sm"
-                value={
-                  (workingConfig?.settings.integrations as any)?.ovhcloud
-                    ?.appKey ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    ovhcloud: {
-                      ...(workingConfig?.settings.integrations as any)
-                        ?.ovhcloud,
-                      appKey: e.target.value,
-                    },
-                  } as any)
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Application Secret"
-              description="OVH application secret (appSecret)"
-            >
-              <Input
-                type="password"
-                placeholder="Application secret"
-                className="w-80 font-mono text-sm"
-                value={
-                  (workingConfig?.settings.integrations as any)?.ovhcloud
-                    ?.appSecret ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    ovhcloud: {
-                      ...(workingConfig?.settings.integrations as any)
-                        ?.ovhcloud,
-                      appSecret: e.target.value,
-                    },
-                  } as any)
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Consumer Key"
-              description="OVH consumer key (consumerKey) — obtained via /auth/credential"
-            >
-              <Input
-                type="password"
-                placeholder="Consumer key"
-                className="w-80 font-mono text-sm"
-                value={
-                  (workingConfig?.settings.integrations as any)?.ovhcloud
-                    ?.consumerKey ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    ovhcloud: {
-                      ...(workingConfig?.settings.integrations as any)
-                        ?.ovhcloud,
-                      consumerKey: e.target.value,
-                    },
-                  } as any)
-                }
-              />
-            </SettingRow>
-            <SettingRow label="Endpoint" description="OVH API endpoint region">
-              <Select
-                value={
-                  (workingConfig?.settings.integrations as any)?.ovhcloud
-                    ?.endpoint ?? 'ovh-eu'
-                }
-                onValueChange={(v) =>
-                  handleSettingChange('integrations', {
-                    ovhcloud: {
-                      ...(workingConfig?.settings.integrations as any)
-                        ?.ovhcloud,
-                      endpoint: v,
-                    },
-                  } as any)
-                }
-              >
-                <SelectTrigger className="w-48 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ovh-eu">Europe (ovh-eu)</SelectItem>
-                  <SelectItem value="ovh-ca">Canada (ovh-ca)</SelectItem>
-                  <SelectItem value="ovh-us">US (ovh-us)</SelectItem>
-                </SelectContent>
-              </Select>
-            </SettingRow>
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['ovhcloud'] &&
-                  !intTestStates['ovhcloud'].loading && (
-                    <span
-                      className={`text-xs flex items-center gap-1.5 ${intTestStates['ovhcloud'].ok ? 'text-green-500' : 'text-destructive'}`}
-                    >
-                      {intTestStates['ovhcloud'].ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5" />
+                        ?.apiKey ?? ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        linode: {
+                          ...(workingConfig?.settings.integrations as any)
+                            ?.linode,
+                          apiKey: e.target.value,
+                        },
+                      } as any)
+                    }
+                  />
+                </SettingRow>
+                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                  <div>
+                    {intTestStates['linode'] &&
+                      !intTestStates['linode'].loading && (
+                        <span
+                          className={`text-xs flex items-center gap-1.5 ${intTestStates['linode'].ok ? 'text-green-500' : 'text-destructive'}`}
+                        >
+                          {intTestStates['linode'].ok ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          )}
+                          {intTestStates['linode'].message}
+                        </span>
                       )}
-                      {intTestStates['ovhcloud'].message}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 shrink-0"
+                    disabled={intTestStates['linode']?.loading}
+                    onClick={() =>
+                      handleIntegrationTest('linode', {
+                        apiKey:
+                          (workingConfig?.settings.integrations as any)?.linode
+                            ?.apiKey ?? '',
+                      })
+                    }
+                  >
+                    {intTestStates['linode']?.loading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Test Connection
+                  </Button>
+                </div>
+              </SettingsSection>
+
+              {/* OVHcloud */}
+              <SettingsSection
+                icon={Server}
+                title="OVHcloud"
+                description="OVHcloud Public Cloud API for automated S3 credential provisioning. Overrides OVH_APP_KEY, OVH_APP_SECRET, OVH_CONSUMER_KEY, and OVH_ENDPOINT env vars."
+                badge={
+                  isFieldChanged('integrations', ['ovhcloud']) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      Modified
                     </span>
-                  )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['ovhcloud']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('ovhcloud', {
-                    appKey:
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.appKey ?? '',
-                    appSecret:
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.appSecret ?? '',
-                    consumerKey:
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.consumerKey ?? '',
-                    endpoint:
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.endpoint ?? 'ovh-eu',
-                  })
+                  )
                 }
               >
-                {intTestStates['ovhcloud']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
+                <SettingRow
+                  label="Application Key"
+                  description="OVH application key (appKey)"
+                >
+                  <Input
+                    type="password"
+                    placeholder="Application key"
+                    className="w-80 font-mono text-sm"
+                    value={
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.appKey ?? ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        ovhcloud: {
+                          ...(workingConfig?.settings.integrations as any)
+                            ?.ovhcloud,
+                          appKey: e.target.value,
+                        },
+                      } as any)
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Application Secret"
+                  description="OVH application secret (appSecret)"
+                >
+                  <Input
+                    type="password"
+                    placeholder="Application secret"
+                    className="w-80 font-mono text-sm"
+                    value={
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.appSecret ?? ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        ovhcloud: {
+                          ...(workingConfig?.settings.integrations as any)
+                            ?.ovhcloud,
+                          appSecret: e.target.value,
+                        },
+                      } as any)
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Consumer Key"
+                  description="OVH consumer key (consumerKey) — obtained via /auth/credential"
+                >
+                  <Input
+                    type="password"
+                    placeholder="Consumer key"
+                    className="w-80 font-mono text-sm"
+                    value={
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.consumerKey ?? ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        ovhcloud: {
+                          ...(workingConfig?.settings.integrations as any)
+                            ?.ovhcloud,
+                          consumerKey: e.target.value,
+                        },
+                      } as any)
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Endpoint"
+                  description="OVH API endpoint region"
+                >
+                  <Select
+                    value={
+                      (workingConfig?.settings.integrations as any)?.ovhcloud
+                        ?.endpoint ?? 'ovh-eu'
+                    }
+                    onValueChange={(v) =>
+                      handleSettingChange('integrations', {
+                        ovhcloud: {
+                          ...(workingConfig?.settings.integrations as any)
+                            ?.ovhcloud,
+                          endpoint: v,
+                        },
+                      } as any)
+                    }
+                  >
+                    <SelectTrigger className="w-48 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ovh-eu">Europe (ovh-eu)</SelectItem>
+                      <SelectItem value="ovh-ca">Canada (ovh-ca)</SelectItem>
+                      <SelectItem value="ovh-us">US (ovh-us)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </SettingRow>
+                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                  <div>
+                    {intTestStates['ovhcloud'] &&
+                      !intTestStates['ovhcloud'].loading && (
+                        <span
+                          className={`text-xs flex items-center gap-1.5 ${intTestStates['ovhcloud'].ok ? 'text-green-500' : 'text-destructive'}`}
+                        >
+                          {intTestStates['ovhcloud'].ok ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          )}
+                          {intTestStates['ovhcloud'].message}
+                        </span>
+                      )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 shrink-0"
+                    disabled={intTestStates['ovhcloud']?.loading}
+                    onClick={() =>
+                      handleIntegrationTest('ovhcloud', {
+                        appKey:
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.appKey ?? '',
+                        appSecret:
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.appSecret ?? '',
+                        consumerKey:
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.consumerKey ?? '',
+                        endpoint:
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.endpoint ?? 'ovh-eu',
+                      })
+                    }
+                  >
+                    {intTestStates['ovhcloud']?.loading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Test Connection
+                  </Button>
+                </div>
+              </SettingsSection>
+            </>
+          )}
         </TabsContent>
       </Tabs>
 

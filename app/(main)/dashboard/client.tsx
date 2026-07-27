@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import {
   FolderOpen,
   Upload,
@@ -53,6 +54,7 @@ const quickActions = [
     label: 'Domains',
     description: 'Connect your own domains to Emberly',
     icon: Globe,
+    cloudOnly: true,
   },
   {
     href: '/dashboard/analytics',
@@ -65,12 +67,14 @@ const quickActions = [
     label: 'Discovery',
     description: 'Manage your Nexium talent profile',
     icon: Sparkles,
+    cloudOnly: true,
   },
   {
     href: '/dashboard/bucket',
     label: 'Buckets',
     description: 'Access your S3-compatible storage',
     icon: Database,
+    cloudOnly: true,
   },
 ]
 
@@ -80,6 +84,11 @@ export function DashboardIndex({
   urlCount,
   storageUsed,
 }: DashboardIndexProps) {
+  const cloudEnabled = isCloudEnabledClient()
+  const visibleActions = quickActions.filter(
+    (a) => !a.cloudOnly || cloudEnabled
+  )
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -117,7 +126,7 @@ export function DashboardIndex({
       <div>
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
+          {visibleActions.map((action) => (
             <Link
               key={action.href}
               href={action.href}

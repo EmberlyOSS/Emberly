@@ -3,11 +3,15 @@ import type { NextRequest } from 'next/server'
 
 import { getToken } from 'next-auth/jwt'
 
+import { apiError, HTTP_STATUS } from './packages/lib/api/response'
+import { isCloudEnabled } from './packages/lib/config/env'
 import {
   handleBotRequest,
   isBotRequest,
 } from './packages/lib/middleware/bot-handler'
 import {
+  CLOUD_ONLY_API_PATHS,
+  CLOUD_ONLY_PAGE_PATHS,
   FILE_URL_PATTERN,
   PROTECTED_PAGE_PATHS,
   SUPERADMIN_PATHS,
@@ -127,6 +131,49 @@ export async function proxy(request: NextRequest) {
       >>
     }
     return tokenPromise
+  }
+
+  if (!isCloudEnabled()) {
+    const isMainHost =
+      !incomingHost ||
+      incomingHost === MAIN_HOST ||
+      incomingHost === 'localhost'
+
+    if (isMainHost && normalizedPathname === '/') {
+      try {
+        const internalBase = `http://localhost:${process.env.PORT || 3000}`
+        const res = await fetch(new URL('/api/setup/check', internalBase))
+        if (res.ok) {
+          const data = await res.json()
+          if (!data.completed) {
+            return NextResponse.redirect(new URL('/setup', BASE_URL))
+          }
+        }
+      } catch (e) {
+        console.error('[Proxy] Setup check failed:', e)
+      }
+
+      const token = await getAuthToken()
+      return NextResponse.redirect(
+        new URL(token ? '/dashboard' : '/auth/login', BASE_URL)
+      )
+    }
+
+    if (CLOUD_ONLY_API_PATHS.some((p) => pathname.startsWith(p))) {
+      return apiError('Not found', HTTP_STATUS.NOT_FOUND)
+    }
+
+    if (
+      CLOUD_ONLY_PAGE_PATHS.some(
+        (p) =>
+          normalizedPathname === p || normalizedPathname.startsWith(`${p}/`)
+      )
+    ) {
+      const token = await getAuthToken()
+      return NextResponse.redirect(
+        new URL(token ? '/dashboard' : '/auth/login', BASE_URL)
+      )
+    }
   }
 
   const isAlphaMigrationPage = pathname === '/auth/alpha-migration'

@@ -7,11 +7,29 @@ import { allHandlers } from './handlers'
 
 const logger = loggers.events
 
-let worker: Worker | null = null
-let initialized = false
+const _g = globalThis as typeof globalThis & {
+  __eventWorker?: Worker | null
+  __eventSystemInitialized?: boolean
+}
+
+function getWorker(): Worker | null {
+  return _g.__eventWorker ?? null
+}
+
+function setWorker(w: Worker | null): void {
+  _g.__eventWorker = w
+}
+
+function getInitialized(): boolean {
+  return _g.__eventSystemInitialized ?? false
+}
+
+function setInitialized(value: boolean): void {
+  _g.__eventSystemInitialized = value
+}
 
 export async function initializeEventSystem(): Promise<void> {
-  if (initialized) {
+  if (getInitialized()) {
     logger.debug('Event system already initialized')
     return
   }
@@ -28,7 +46,7 @@ export async function initializeEventSystem(): Promise<void> {
 
     if (shouldStartWorker) {
       const processor = createProcessor(allHandlers)
-      worker = new Worker('emberly-events', processor, {
+      const worker = new Worker('emberly-events', processor, {
         connection: bullmqConnection,
         concurrency: 5,
       })
@@ -45,6 +63,7 @@ export async function initializeEventSystem(): Promise<void> {
         })
       })
 
+      setWorker(worker)
       logger.info('BullMQ worker started')
     } else {
       logger.debug('Event worker start skipped (env control)')
@@ -54,7 +73,7 @@ export async function initializeEventSystem(): Promise<void> {
       await schedulePeriodicJobs()
     }
 
-    initialized = true
+    setInitialized(true)
     const duration = Date.now() - startTime
     logger.info('Event system initialized', {
       duration,
@@ -83,14 +102,19 @@ async function schedulePeriodicJobs(): Promise<void> {
 }
 
 export async function shutdownEventSystem(): Promise<void> {
+  const worker = getWorker()
   if (worker) {
     await worker.close()
-    worker = null
+    setWorker(null)
     logger.info('BullMQ worker stopped')
   }
-  initialized = false
+  setInitialized(false)
 }
 
 export function isEventSystemInitialized(): boolean {
-  return initialized
+  return getInitialized()
+}
+
+export function isWorkerRunning(): boolean {
+  return getWorker() !== null
 }

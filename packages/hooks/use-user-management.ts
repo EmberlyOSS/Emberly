@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react'
-
 import { useRouter } from 'next/navigation'
-
 import { useToast } from './use-toast'
 
 export interface User {
@@ -119,7 +117,6 @@ export function useUserManagement(options: UseUserManagementOptions = {}) {
         const responseData = await response.json()
         const newUser = responseData.data
 
-        // Refetch the first page to maintain consistency
         await fetchUsers(1)
 
         if (options.onUserCreated) {
@@ -152,7 +149,6 @@ export function useUserManagement(options: UseUserManagementOptions = {}) {
     async (userId: string, formData: UserFormData) => {
       try {
         setIsLoading(true)
-        // Strip empty password string so the API schema's min(8) is not triggered
         const payload: Record<string, unknown> = { ...formData, id: userId }
         if (!payload.password) delete payload.password
         const response = await fetch('/api/users', {

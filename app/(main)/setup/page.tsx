@@ -54,14 +54,21 @@ const defaultSetupData: SetupData = {
   admin: { name: '', email: '', password: '' },
   storage: {
     provider: 'local',
-    s3: { bucket: '', region: '', accessKeyId: '', secretAccessKey: '', endpoint: '', forcePathStyle: false },
+    s3: {
+      bucket: '',
+      region: '',
+      accessKeyId: '',
+      secretAccessKey: '',
+      endpoint: '',
+      forcePathStyle: false,
+    },
   },
   registrations: { enabled: true, disabledMessage: '' },
 }
 
 const STEPS = [
   { id: 1, label: 'Admin Account', icon: User },
-  { id: 2, label: 'Storage',       icon: HardDrive },
+  { id: 2, label: 'Storage', icon: HardDrive },
   { id: 3, label: 'Registrations', icon: Users },
 ]
 
@@ -75,13 +82,25 @@ function StepIndicator({ current }: { current: number }) {
         return (
           <div key={s.id} className="flex items-center flex-1 last:flex-none">
             <div className="flex flex-col items-center gap-1.5">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all ${done ? 'border-primary bg-primary text-primary-foreground' : active ? 'border-primary bg-primary/15 text-primary' : 'border-border/50 bg-muted/30 text-muted-foreground'}`}>
-                {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all ${done ? 'border-primary bg-primary text-primary-foreground' : active ? 'border-primary bg-primary/15 text-primary' : 'border-border/50 bg-muted/30 text-muted-foreground'}`}
+              >
+                {done ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Icon className="h-4 w-4" />
+                )}
               </div>
-              <span className={`text-[11px] font-medium whitespace-nowrap ${active ? 'text-primary' : 'text-muted-foreground'}`}>{s.label}</span>
+              <span
+                className={`text-[11px] font-medium whitespace-nowrap ${active ? 'text-primary' : 'text-muted-foreground'}`}
+              >
+                {s.label}
+              </span>
             </div>
             {idx < STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${current > s.id ? 'bg-primary/50' : 'bg-border/40'}`} />
+              <div
+                className={`flex-1 h-px mx-2 mb-5 transition-colors ${current > s.id ? 'bg-primary/50' : 'bg-border/40'}`}
+              />
             )}
           </div>
         )
@@ -90,7 +109,17 @@ function StepIndicator({ current }: { current: number }) {
   )
 }
 
-function FieldRow({ icon: Icon, label, hint, children }: { icon: React.ElementType; label: string; hint?: string; children: React.ReactNode }) {
+function FieldRow({
+  icon: Icon,
+  label,
+  hint,
+  children,
+}: {
+  icon: React.ElementType
+  label: string
+  hint?: string
+  children: React.ReactNode
+}) {
   return (
     <div className="space-y-1.5">
       <Label className="flex items-center gap-1.5 text-sm font-medium">
@@ -133,15 +162,21 @@ export default function SetupPage() {
   const setStorage = (patch: Partial<SetupData['storage']>) =>
     setData((d) => ({ ...d, storage: { ...d.storage, ...patch } }))
   const setS3 = (patch: Partial<SetupData['storage']['s3']>) =>
-    setData((d) => ({ ...d, storage: { ...d.storage, s3: { ...d.storage.s3, ...patch } } }))
+    setData((d) => ({
+      ...d,
+      storage: { ...d.storage, s3: { ...d.storage.s3, ...patch } },
+    }))
   const setReg = (patch: Partial<SetupData['registrations']>) =>
     setData((d) => ({ ...d, registrations: { ...d.registrations, ...patch } }))
 
-  const step1Valid = !!data.admin.name && !!data.admin.email && !!data.admin.password
+  const step1Valid =
+    !!data.admin.name && !!data.admin.email && !!data.admin.password
   const step2Valid =
     data.storage.provider === 'local' ||
-    (!!data.storage.s3.bucket && !!data.storage.s3.region &&
-      !!data.storage.s3.accessKeyId && !!data.storage.s3.secretAccessKey)
+    (!!data.storage.s3.bucket &&
+      !!data.storage.s3.region &&
+      !!data.storage.s3.accessKeyId &&
+      !!data.storage.s3.secretAccessKey)
 
   const handleSubmit = async () => {
     try {
@@ -161,12 +196,16 @@ export default function SetupPage() {
         redirect: false,
       })
       if (result?.error) throw new Error('Failed to sign in after setup')
-      toast({ title: 'Setup complete', description: 'Your Emberly instance is ready.' })
+      toast({
+        title: 'Setup complete',
+        description: 'Your Emberly instance is ready.',
+      })
       router.push('/dashboard')
     } catch (error) {
       toast({
         title: 'Setup failed',
-        description: error instanceof Error ? error.message : 'Please try again',
+        description:
+          error instanceof Error ? error.message : 'Please try again',
         variant: 'destructive',
       })
     } finally {
@@ -175,22 +214,27 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <main className="relative min-h-[calc(100vh-57px)] overflow-hidden">
       <DynamicBackground />
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center py-16 px-4">
+      <div className="relative z-10 flex min-h-[calc(100vh-57px)] flex-col items-center justify-center py-16 px-4">
         <div className="w-full max-w-[480px] space-y-6">
-
           {/* Logo + title */}
           <div className="flex flex-col items-center gap-3 mb-2">
             <div className="glass-card">
               <div className="flex items-center gap-3 px-6 py-3.5">
                 <Icons.logo className="h-7 w-7 text-primary" />
-                <span className="emberly-text text-xl text-primary">Emberly</span>
+                <span className="emberly-text text-xl text-primary">
+                  Emberly
+                </span>
               </div>
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold tracking-tight">Initial Setup</h1>
-              <p className="text-sm text-muted-foreground mt-1">Configure your Emberly instance</p>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Initial Setup
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure your Emberly instance
+              </p>
             </div>
           </div>
 
@@ -207,7 +251,9 @@ export default function SetupPage() {
                       <div className="p-2 rounded-lg bg-primary/15">
                         <Shield className="h-4 w-4 text-primary" />
                       </div>
-                      <h2 className="font-semibold">Create your admin account</h2>
+                      <h2 className="font-semibold">
+                        Create your admin account
+                      </h2>
                     </div>
                     <p className="text-sm text-muted-foreground pl-[2.75rem]">
                       This will be the superadmin for your instance.
@@ -260,7 +306,9 @@ export default function SetupPage() {
                   <FieldRow icon={Server} label="Storage provider">
                     <Select
                       value={data.storage.provider}
-                      onValueChange={(v: 'local' | 's3') => setStorage({ provider: v })}
+                      onValueChange={(v: 'local' | 's3') =>
+                        setStorage({ provider: v })
+                      }
                     >
                       <SelectTrigger className="h-10 bg-background/50">
                         <SelectValue />
@@ -273,13 +321,15 @@ export default function SetupPage() {
                   </FieldRow>
                   {data.storage.provider === 'local' && (
                     <InfoBanner>
-                      Files will be stored on the local filesystem. Ensure you have enough disk space and regular backups.
+                      Files will be stored on the local filesystem. Ensure you
+                      have enough disk space and regular backups.
                     </InfoBanner>
                   )}
                   {data.storage.provider === 's3' && (
                     <>
                       <InfoBanner>
-                        Files will be stored in an S3-compatible service — AWS S3, MinIO, DigitalOcean Spaces, etc.
+                        Files will be stored in an S3-compatible service — AWS
+                        S3, MinIO, DigitalOcean Spaces, etc.
                       </InfoBanner>
                       <div className="grid grid-cols-2 gap-3">
                         <FieldRow icon={Database} label="Bucket name">
@@ -304,7 +354,9 @@ export default function SetupPage() {
                           type="password"
                           placeholder="AKIA…"
                           value={data.storage.s3.accessKeyId}
-                          onChange={(e) => setS3({ accessKeyId: e.target.value })}
+                          onChange={(e) =>
+                            setS3({ accessKeyId: e.target.value })
+                          }
                           className="h-10 bg-background/50"
                         />
                       </FieldRow>
@@ -313,11 +365,17 @@ export default function SetupPage() {
                           type="password"
                           placeholder="Secret key"
                           value={data.storage.s3.secretAccessKey}
-                          onChange={(e) => setS3({ secretAccessKey: e.target.value })}
+                          onChange={(e) =>
+                            setS3({ secretAccessKey: e.target.value })
+                          }
                           className="h-10 bg-background/50"
                         />
                       </FieldRow>
-                      <FieldRow icon={Server} label="Custom endpoint" hint="Leave blank for AWS S3">
+                      <FieldRow
+                        icon={Server}
+                        label="Custom endpoint"
+                        hint="Leave blank for AWS S3"
+                      >
                         <Input
                           placeholder="https://s3.example.com"
                           value={data.storage.s3.endpoint}
@@ -341,11 +399,13 @@ export default function SetupPage() {
                       <h2 className="font-semibold">User registrations</h2>
                     </div>
                     <p className="text-sm text-muted-foreground pl-[2.75rem]">
-                      Control who can sign up. You can change this anytime in Settings.
+                      Control who can sign up. You can change this anytime in
+                      Settings.
                     </p>
                   </div>
                   <InfoBanner>
-                    More registration options are available in admin settings after setup.
+                    More registration options are available in admin settings
+                    after setup.
                   </InfoBanner>
                   <FieldRow icon={Users} label="Allow new registrations">
                     <Select
@@ -356,21 +416,32 @@ export default function SetupPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="true">Enabled — anyone can register</SelectItem>
-                        <SelectItem value="false">Disabled — invite only</SelectItem>
+                        <SelectItem value="true">
+                          Enabled — anyone can register
+                        </SelectItem>
+                        <SelectItem value="false">
+                          Disabled — invite only
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </FieldRow>
                   {!data.registrations.enabled && (
                     <>
                       <WarnBanner>
-                        Registrations are disabled. New users won't be able to sign up until you re-enable this.
+                        Registrations are disabled. New users won't be able to
+                        sign up until you re-enable this.
                       </WarnBanner>
-                      <FieldRow icon={Settings2} label="Disabled message" hint="Shown on the login page">
+                      <FieldRow
+                        icon={Settings2}
+                        label="Disabled message"
+                        hint="Shown on the login page"
+                      >
                         <Input
                           placeholder="Registrations are currently closed."
                           value={data.registrations.disabledMessage}
-                          onChange={(e) => setReg({ disabledMessage: e.target.value })}
+                          onChange={(e) =>
+                            setReg({ disabledMessage: e.target.value })
+                          }
                           className="h-10 bg-background/50"
                         />
                       </FieldRow>
@@ -382,7 +453,11 @@ export default function SetupPage() {
               {/* Navigation */}
               <div className="flex gap-2 mt-8 pt-6 border-t border-border/50">
                 {step > 1 && (
-                  <Button variant="outline" onClick={() => setStep(step - 1)} className="h-10">
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(step - 1)}
+                    className="h-10"
+                  >
                     Back
                   </Button>
                 )}
@@ -396,7 +471,11 @@ export default function SetupPage() {
                   </Button>
                 )}
                 {step === 3 && (
-                  <Button className="flex-1 h-10" onClick={handleSubmit} disabled={isLoading}>
+                  <Button
+                    className="flex-1 h-10"
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -425,6 +504,6 @@ export default function SetupPage() {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

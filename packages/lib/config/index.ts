@@ -14,6 +14,8 @@ export const configSchema = z
       .object({
         general: z
           .object({
+            siteName: z.string().optional().default('Emberly'),
+            metaDescription: z.string().optional().default(''),
             setup: z
               .object({
                 completed: z.boolean().optional().default(false),
@@ -265,6 +267,8 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
   version: '1.0.0',
   settings: {
     general: {
+      siteName: 'Emberly',
+      metaDescription: '',
       setup: {
         completed: false,
         completedAt: null,
