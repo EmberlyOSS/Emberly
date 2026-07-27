@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { apiError, HTTP_STATUS } from '@/packages/lib/api/response'
+import { isCloudEnabled } from '@/packages/lib/config/env'
 import { prisma } from '@/packages/lib/database/prisma'
 import {
   getCommitDetail,
@@ -11,6 +13,10 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!isCloudEnabled()) {
+    return apiError('Not found', HTTP_STATUS.NOT_FOUND)
+  }
+
   try {
     const { id } = await params
 

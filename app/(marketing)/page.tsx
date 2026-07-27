@@ -46,7 +46,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Reusable GlassCard component
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function GlassCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
     <div className={`glass-card glass-hover overflow-hidden ${className}`}>
       {children}
@@ -65,42 +71,48 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Secure by Design',
-    description: 'End-to-end encryption, optional password protection, and configurable file expirations.',
+    description:
+      'End-to-end encryption, optional password protection, and configurable file expirations.',
     color: 'text-chart-1',
     bg: 'bg-chart-1/10',
   },
   {
     icon: Zap,
     title: 'Lightning Fast',
-    description: 'CDN-backed delivery with chunked uploads for large files and instant short URLs.',
+    description:
+      'CDN-backed delivery with chunked uploads for large files and instant short URLs.',
     color: 'text-primary',
     bg: 'bg-primary/10',
   },
   {
     icon: Sparkles,
     title: 'Rich Embeds',
-    description: 'Beautiful previews on Discord, Twitter, Slack, and more with customizable metadata.',
+    description:
+      'Beautiful previews on Discord, Twitter, Slack, and more with customizable metadata.',
     color: 'text-chart-3',
     bg: 'bg-chart-3/10',
   },
   {
     icon: Globe,
     title: 'Custom Domains',
-    description: 'Bring your own domain to serve files under your brand with full SSL support.',
+    description:
+      'Bring your own domain to serve files under your brand with full SSL support.',
     color: 'text-chart-4',
     bg: 'bg-chart-4/10',
   },
   {
     icon: Code2,
     title: 'Developer Friendly',
-    description: 'Simple REST API, ShareX/Flameshot support, and webhook integrations.',
+    description:
+      'Simple REST API, ShareX/Flameshot support, and webhook integrations.',
     color: 'text-chart-5',
     bg: 'bg-chart-5/10',
   },
   {
     icon: Users,
     title: 'Team Ready',
-    description: 'Collaborate with teammates, manage permissions, and track usage analytics.',
+    description:
+      'Collaborate with teammates, manage permissions, and track usage analytics.',
     color: 'text-chart-2',
     bg: 'bg-chart-2/10',
   },
@@ -111,46 +123,55 @@ const HOW_IT_WORKS = [
     step: '01',
     icon: Upload,
     title: 'Upload',
-    description: 'Drag & drop files or use our API. Supports files up to your configured limit.',
+    description:
+      'Drag & drop files or use our API. Supports files up to your configured limit.',
   },
   {
     step: '02',
     icon: Share2,
     title: 'Share',
-    description: 'Get a short link instantly. Set expiration, password, or visibility.',
+    description:
+      'Get a short link instantly. Set expiration, password, or visibility.',
   },
   {
     step: '03',
     icon: Rocket,
     title: 'Done',
-    description: 'Your file is live. Track views, manage access, and export anytime.',
+    description:
+      'Your file is live. Track views, manage access, and export anytime.',
   },
 ]
 
 const FAQ_ITEMS = [
   {
     question: 'How do I upload files?',
-    answer: 'Create an account, then drag & drop files into the dashboard or use our API with tools like ShareX.',
+    answer:
+      'Create an account, then drag & drop files into the dashboard or use our API with tools like ShareX.',
   },
   {
     question: 'Are my files private?',
-    answer: 'Files are private by default. You control visibility, expiration, and password protection.',
+    answer:
+      'Files are private by default. You control visibility, expiration, and password protection.',
   },
   {
     question: 'Can I use a custom domain?',
-    answer: 'Yes! Point your DNS to Emberly and add the domain in settings to serve files under your brand.',
+    answer:
+      'Yes! Point your DNS to Emberly and add the domain in settings to serve files under your brand.',
   },
   {
     question: 'What file sizes are supported?',
-    answer: 'Spark (free) supports up to 500 MB per file. Paid plans increase this up to unlimited on Ember and Enterprise tiers.',
+    answer:
+      'Spark (free) supports up to 500 MB per file. Paid plans increase this up to unlimited on Ember and Enterprise tiers.',
   },
   {
     question: 'Is there an API?',
-    answer: 'Yes, we have a full REST API with documentation. Perfect for automation and integrations.',
+    answer:
+      'Yes, we have a full REST API with documentation. Perfect for automation and integrations.',
   },
   {
     question: 'Can I self-host Emberly?',
-    answer: 'Absolutely! Emberly is open source. Check our GitHub for deployment guides.',
+    answer:
+      'Absolutely! Emberly is open source. Check our GitHub for deployment guides.',
   },
 ]
 
@@ -175,7 +196,10 @@ export default async function HomePage() {
     include: { user: { select: { id: true, name: true, urlId: true } } },
   })
 
-  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://embrly.ca'
+  const BASE_URL =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    'https://embrly.ca'
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -185,7 +209,8 @@ export default async function HomePage() {
         '@id': `${BASE_URL}/#website`,
         url: BASE_URL,
         name: 'Emberly',
-        description: 'Open-source file sharing, URL shortening, and talent discovery platform.',
+        description:
+          'Open-source file sharing, URL shortening, and talent discovery platform.',
         potentialAction: {
           '@type': 'SearchAction',
           target: {
@@ -205,9 +230,7 @@ export default async function HomePage() {
           '@type': 'ImageObject',
           url: `${BASE_URL}/icon.svg`,
         },
-        sameAs: [
-          'https://github.com/EmberlyOSS/Emberly',
-        ],
+        sameAs: ['https://github.com/EmberlyOSS/Emberly'],
         contactPoint: {
           '@type': 'ContactPoint',
           url: `${BASE_URL}/contact`,
@@ -260,14 +283,13 @@ export default async function HomePage() {
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
                 Share Files.
-                <span className="block text-gradient">
-                  Build Together.
-                </span>
+                <span className="block text-gradient">Build Together.</span>
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-                The open-source platform for secure file sharing and team collaboration.
-                Upload, manage, and share content with custom domains, rich embeds, and built-in talent discovery.
+                The open-source platform for secure file sharing and team
+                collaboration. Upload, manage, and share content with custom
+                domains, rich embeds, and built-in talent discovery.
               </p>
 
               {/* CTA Buttons */}
@@ -287,7 +309,12 @@ export default async function HomePage() {
                     </Link>
                   </Button>
                 )}
-                <Button size="lg" variant="outline" asChild className="bg-background/50">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  asChild
+                  className="bg-background/50"
+                >
                   <Link href="/about">
                     Learn More
                     <ExternalLink className="ml-2 h-4 w-4" />
@@ -331,7 +358,9 @@ export default async function HomePage() {
                     {/* URL Bar */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/80 border border-border/30">
                       <Lock className="h-4 w-4 text-chart-4" />
-                      <span className="text-sm font-mono flex-1">emberly.site/abc123</span>
+                      <span className="text-sm font-mono flex-1">
+                        emberly.site/abc123
+                      </span>
                       <Button variant="ghost" size="icon" className="h-6 w-6">
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -343,22 +372,35 @@ export default async function HomePage() {
                         <FileUp className="h-8 w-8 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">project-assets.zip</p>
-                        <p className="text-sm text-muted-foreground">2.4 MB • Uploaded just now</p>
+                        <p className="font-medium truncate">
+                          project-assets.zip
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          2.4 MB • Uploaded just now
+                        </p>
                       </div>
                     </div>
 
                     {/* Status */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary" className="bg-chart-4/10 text-chart-4 border-chart-4/20">
+                      <Badge
+                        variant="secondary"
+                        className="bg-chart-4/10 text-chart-4 border-chart-4/20"
+                      >
                         <Check className="h-3 w-3 mr-1" />
                         Uploaded
                       </Badge>
-                      <Badge variant="secondary" className="bg-chart-1/10 text-chart-1 border-chart-1/20">
+                      <Badge
+                        variant="secondary"
+                        className="bg-chart-1/10 text-chart-1 border-chart-1/20"
+                      >
                         <Timer className="h-3 w-3 mr-1" />
                         Expires in 7 days
                       </Badge>
-                      <Badge variant="secondary" className="bg-chart-3/10 text-chart-3 border-chart-3/20">
+                      <Badge
+                        variant="secondary"
+                        className="bg-chart-3/10 text-chart-3 border-chart-3/20"
+                      >
                         <Lock className="h-3 w-3 mr-1" />
                         Password Protected
                       </Badge>
@@ -370,7 +412,11 @@ export default async function HomePage() {
                         <Download className="h-4 w-4 mr-2" />
                         Download
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1 bg-background/50">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 bg-background/50"
+                      >
                         <Link2 className="h-4 w-4 mr-2" />
                         Copy Link
                       </Button>
@@ -392,19 +438,27 @@ export default async function HomePage() {
               Built for teams and builders
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to share, collaborate, and grow secure file hosting,
-              custom domains, URL shortening, rich embeds, and team collaboration tools.
+              Everything you need to share, collaborate, and grow secure file
+              hosting, custom domains, URL shortening, rich embeds, and team
+              collaboration tools.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((feature) => (
-              <GlassCard key={feature.title} className="group hover:border-primary/30 transition-colors">
+              <GlassCard
+                key={feature.title}
+                className="group hover:border-primary/30 transition-colors"
+              >
                 <div className="p-6">
-                  <div className={`inline-flex p-3 rounded-xl ${feature.bg} group-hover:scale-110 transition-transform`}>
+                  <div
+                    className={`inline-flex p-3 rounded-xl ${feature.bg} group-hover:scale-110 transition-transform`}
+                  >
                     <feature.icon className={`h-6 w-6 ${feature.color}`} />
                   </div>
-                  <h3 className="mt-4 font-semibold text-lg">{feature.title}</h3>
+                  <h3 className="mt-4 font-semibold text-lg">
+                    {feature.title}
+                  </h3>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                     {feature.description}
                   </p>
@@ -432,7 +486,10 @@ export default async function HomePage() {
             <div className="p-6 md:p-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
                 {HOW_IT_WORKS.map((item, index) => (
-                  <div key={item.step} className="group relative flex md:flex-col items-start md:items-center gap-4 md:gap-0 p-4 md:px-6 md:py-2">
+                  <div
+                    key={item.step}
+                    className="group relative flex md:flex-col items-start md:items-center gap-4 md:gap-0 p-4 md:px-6 md:py-2"
+                  >
                     {/* Connector line (between steps) */}
                     {index < HOW_IT_WORKS.length - 1 && (
                       <>
@@ -453,7 +510,9 @@ export default async function HomePage() {
 
                     {/* Content */}
                     <div className="md:text-center md:mt-4">
-                      <span className="text-xs font-bold text-primary">{item.step}</span>
+                      <span className="text-xs font-bold text-primary">
+                        {item.step}
+                      </span>
                       <h3 className="font-semibold text-lg">{item.title}</h3>
                       <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                         {item.description}
@@ -520,8 +579,9 @@ export default async function HomePage() {
                 Ready to get started?
               </h2>
               <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-                Join developers and teams who use Emberly for secure file sharing,
-                collaboration, and talent discovery. Free to start, no credit card required.
+                Join developers and teams who use Emberly for secure file
+                sharing, collaboration, and talent discovery. Free to start, no
+                credit card required.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 {session ? (
@@ -539,10 +599,13 @@ export default async function HomePage() {
                     </Link>
                   </Button>
                 )}
-                <Button size="lg" variant="outline" className="bg-background/50" asChild>
-                  <Link href="/about">
-                    Learn More
-                  </Link>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-background/50"
+                  asChild
+                >
+                  <Link href="/about">Learn More</Link>
                 </Button>
               </div>
             </div>

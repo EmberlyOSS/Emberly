@@ -1,56 +1,42 @@
 # Emberly
 
-Emberly is an open-source platform for modern file storage, sharing, discovery, and identity verification. Build your digital presence with powerful tools for teams and individuals.
+Emberly is an open-source, self-hostable platform for modern file storage, sharing, and URL shortening. Run it yourself for a fast, private, self-contained instance, or point it at the hosted Emberly cloud for team collaboration, custom domains, and billing on top of the same codebase.
 
 [![Build Checks](https://github.com/EmberlyOSS/Emberly/actions/workflows/build.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/build.yml) [![CodeQL Advanced](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/EmberlyOSS/Emberly?utm_source=oss&utm_medium=github&utm_campaign=EmberlyOSS%2FEmberly&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews) [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FEmberlyOSS%2FEmberly.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2FEmberlyOSS%2FEmberly?ref=badge_shield&issueType=security)
 
 ## Features
 
+Self-hosted instances get the full core platform below. The sections marked **Cloud** are specific to the hosted Emberly service and aren't part of a self-hosted deployment.
+
 **File Storage & Sharing**
 
-- S3-compatible object storage with configurable upload limits
+- S3-compatible or local object storage with configurable upload limits
 - Secure file sharing with customizable access controls
 - File organization, tagging, and search
 - OCR-powered text extraction from uploaded images and documents
 - URL shortening with redirect tracking
-- Bandwidth-efficient delivery through global infrastructure
-
-**Domain & Branding**
-
-- Custom domain support with annual registration
-- Personal or team branded file-sharing pages
-- Domain SSL certificate management
-- DNS configuration assistance
-
-**Identity & Verification**
-
-- User verification badges with multiple tier options
-- Verification queue with application review system
-- Badge display on public profiles
-- Organization verification for teams
-
-**Team & Collaboration**
-
-- Squad-based team subscriptions with seat-based pricing
-- Granular permission management (roles: `SUPPORT`, `DEVELOPER`, `MODERATOR`, `DESIGNER`, `STAFF`)
-- Team member invitations and management
-- Shared storage pools with usage tracking
-
-**Applications & Trust**
-
-- Staff application system for organizational partnerships
-- Partner program enrollment
-- Verification badge applications
-- Ban appeal process with review workflow
-- Email notifications for all application updates
+- Code snippet pastes with syntax highlighting
 
 **Administrative Tools**
 
-- Promo code management with configurable discounts
-- User management dashboard
-- Application review queue with multi-stage triage
+- User management dashboard with role-based permissions
+- Content/user report review queue
+- Configurable storage provider, upload limits, and registration controls
+- Audit logs and system health monitoring
+- Custom branding (site name, meta description, favicon, theme)
+
+**Cloud — Team & Collaboration**
+
+- Squad-based team workspaces with seat-based pricing
+- Granular permission management (roles: `SUPPORT`, `DEVELOPER`, `MODERATOR`, `DESIGNER`, `STAFF`)
+- Talent discovery profiles and opportunity boards (Nexium)
+
+**Cloud — Domains & Billing**
+
+- Custom domain support with annual registration
+- Stripe-backed subscriptions, promo codes, and storage add-ons
+- Verification badges, staff/partner applications, and ban-appeal workflows
 - Service status page ([emberlystat.us](https://emberlystat.us))
-- Analytics and usage reporting
 
 ## Quick Start
 
@@ -81,14 +67,16 @@ cp .env.template .env
 bun run db:generate
 bun run db:migrate
 
-# (Optional) Seed subscription plans
+# (Optional, cloud only) Seed subscription plans
 bun run db:seed
 
 # Start development server
 bun dev
 ```
 
-The application will be available at `http://localhost:3000`.
+The application will be available at `http://localhost:3000`. The first time you visit it, you'll be walked through a setup wizard to create the initial admin account and configure storage.
+
+This gives you a fully self-hosted instance out of the box — uploads, pastes, short URLs, and admin tools all work with no extra configuration. The cloud-only features listed above (team workspaces, custom domains, billing) are specific to the hosted Emberly service and aren't part of a standard self-hosted deployment.
 
 In development, the event worker runs in-process automatically — no extra steps needed. See [Event Worker](#event-worker) for production deployment.
 
@@ -107,15 +95,15 @@ In development, the event worker runs in-process automatically — no extra step
 - [PostgreSQL](https://www.postgresql.org/) — relational database
 - [Prisma ORM](https://www.prisma.io/) — database toolkit and migrations
 - [Redis](https://redis.io/) + [BullMQ](https://docs.bullmq.io/) — caching, rate limiting, and background job queue
-- [Stripe](https://stripe.com/) — payment processing
-- [Resend](https://resend.com/) — transactional email delivery
+- [Stripe](https://stripe.com/) — payment processing (cloud only, not required to self-host)
+- [Resend](https://resend.com/) or SMTP — transactional email delivery
 
 **Infrastructure & Services**
 
-- S3-compatible object storage (AWS S3 / Vultr) — file storage
+- Local disk or S3-compatible object storage (AWS S3 / Vultr / Linode / OVHcloud) — file storage
 - [NextAuth](https://next-auth.js.org/) — authentication (Discord OAuth, GitHub OAuth, credentials)
-- [Sentry](https://sentry.io/) — error tracking and monitoring
-- [VirusTotal](https://www.virustotal.com/) — file scanning on upload
+- [Sentry](https://sentry.io/) — error tracking and monitoring (optional)
+- [VirusTotal](https://www.virustotal.com/) — file scanning on upload (optional)
 
 **Development Tools**
 
@@ -127,7 +115,8 @@ In development, the event worker runs in-process automatically — no extra step
 
 ```
 app/                        Next.js App Router pages and routes
-  (main)/                   Public user pages (auth, admin, user profiles)
+  (main)/                   Core app pages (auth, dashboard, admin, user profiles)
+  (marketing)/              Marketing/company pages (cloud only — hidden when self-hosted)
   (raw)/                    Raw file serving
   (shorturl)/               Short URL redirects
   api/                      ~180 REST API endpoints

@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { isCloudEnabled } from '@/packages/lib/config/env'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { prisma } from '@/packages/lib/database/prisma'
 
@@ -25,24 +26,27 @@ export default async function AdminPage() {
     ])
 
   return (
-    <AdminShell header={
-      <div className="glass-card overflow-hidden gradient-border-animated">
-        <div className="p-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Admin <span className="text-gradient">Overview</span>
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Platform administration and management.
-          </p>
+    <AdminShell
+      header={
+        <div className="glass-card overflow-hidden gradient-border-animated">
+          <div className="p-8">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Admin <span className="text-gradient">Overview</span>
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Platform administration and management.
+            </p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <AdminOverviewContent
         userCount={userCount}
         fileCount={fileCount}
         pendingReports={reportCount}
         pendingApplications={applicationCount}
         isSuperAdmin={isSuperAdmin}
+        cloudEnabled={isCloudEnabled()}
       />
     </AdminShell>
   )

@@ -16,17 +16,22 @@ import {
   RefreshCcw,
 } from 'lucide-react'
 
+import { DISCORD_INVITE_URL } from '@/packages/lib/constants/site'
 import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
 import { DashboardNav } from '@/packages/components/dashboard/nav'
 import { Button } from '@/packages/components/ui/button'
 import { Badge } from '@/packages/components/ui/badge'
 
 // Reusable GlassCard component
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function GlassCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <div className={`glass-card overflow-hidden ${className}`}>
-      {children}
-    </div>
+    <div className={`glass-card overflow-hidden ${className}`}>{children}</div>
   )
 }
 
@@ -54,7 +59,7 @@ export default function Error({
       await navigator.clipboard.writeText(errorInfo)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch { }
+    } catch {}
   }
 
   return (
@@ -92,7 +97,10 @@ export default function Error({
                       Error
                     </Badge>
                     {error?.digest && (
-                      <Badge variant="secondary" className="bg-background/50 font-mono text-xs">
+                      <Badge
+                        variant="secondary"
+                        className="bg-background/50 font-mono text-xs"
+                      >
                         Code: {error.digest}
                       </Badge>
                     )}
@@ -117,7 +125,12 @@ export default function Error({
                       <RefreshCcw className="h-4 w-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
                       Try Again
                     </Button>
-                    <Button variant="outline" size="lg" asChild className="bg-background/50">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      asChild
+                      className="bg-background/50"
+                    >
                       <Link href="/dashboard">
                         <LayoutDashboard className="h-4 w-4 mr-2" />
                         Go to Dashboard
@@ -201,14 +214,31 @@ export default function Error({
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild className="bg-background/50">
-                  <Link href="/discord">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="bg-background/50"
+                >
+                  <Link
+                    href={DISCORD_INVITE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Report on Discord
                   </Link>
                 </Button>
-                <Button variant="outline" size="sm" asChild className="bg-background/50">
-                  <Link href="https://github.com/EmberlyOSS/Emberly/issues" target="_blank">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="bg-background/50"
+                >
+                  <Link
+                    href="https://github.com/EmberlyOSS/Emberly/issues"
+                    target="_blank"
+                  >
                     <Bug className="h-4 w-4 mr-2" />
                     GitHub Issue
                   </Link>

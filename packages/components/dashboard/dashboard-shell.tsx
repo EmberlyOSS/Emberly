@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react'
 
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 
 const navItems = [
@@ -24,11 +25,26 @@ const navItems = [
   { href: '/dashboard/upload', label: 'Upload', icon: Upload },
   { href: '/dashboard/paste', label: 'Paste', icon: Clipboard },
   { href: '/dashboard/urls', label: 'Links', icon: LinkIcon },
-  { href: '/dashboard/domains', label: 'Domains', icon: Globe },
+  {
+    href: '/dashboard/domains',
+    label: 'Domains',
+    icon: Globe,
+    cloudOnly: true,
+  },
   { href: '/dashboard/analytics', label: 'Analytics', icon: ChartBar },
-  { href: '/dashboard/bucket', label: 'Buckets', icon: Database },
-  { href: '/dashboard/discovery', label: 'Discovery', icon: Sparkles },
-  { href: '/dashboard/squads', label: 'Squads', icon: Users },
+  {
+    href: '/dashboard/bucket',
+    label: 'Buckets',
+    icon: Database,
+    cloudOnly: true,
+  },
+  {
+    href: '/dashboard/discovery',
+    label: 'Discovery',
+    icon: Sparkles,
+    cloudOnly: true,
+  },
+  { href: '/dashboard/squads', label: 'Squads', icon: Users, cloudOnly: true },
 ]
 
 interface DashboardShellProps {
@@ -38,6 +54,10 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, header }: DashboardShellProps) {
   const pathname = usePathname()
+  const cloudEnabled = isCloudEnabledClient()
+  const visibleItems = navItems.filter(
+    (item) => !item.cloudOnly || cloudEnabled
+  )
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -49,7 +69,7 @@ export function DashboardShell({ children, header }: DashboardShellProps) {
       {header}
       <ScrollIndicator className="glass-subtle rounded-xl p-1.5">
         <div className="flex gap-1 w-max">
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const active = isActive(item.href)
             return (
               <Link

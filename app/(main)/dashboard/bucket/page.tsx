@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { AlertTriangle, Clock, Key, Server } from 'lucide-react'
 
 import { authOptions } from '@/packages/lib/auth'
+import { isCloudEnabled } from '@/packages/lib/config/env'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { provisionBucketForUserSubscription } from '@/packages/lib/storage/bucket-provisioning'
@@ -15,6 +16,8 @@ export const metadata = buildPageMetadata({
 })
 
 export default async function BucketPage() {
+  if (!isCloudEnabled()) redirect('/dashboard')
+
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/auth/signin')
 

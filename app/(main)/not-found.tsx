@@ -1,16 +1,16 @@
 import Link from 'next/link'
 
 import {
-    ArrowRight,
-    BookOpen,
-    FileQuestion,
-    Home,
-    LayoutDashboard,
-    MessageCircle,
-    Scale,
-    Search,
-    Settings,
-    Sparkles,
+  ArrowRight,
+  BookOpen,
+  FileQuestion,
+  Home,
+  LayoutDashboard,
+  MessageCircle,
+  Scale,
+  Search,
+  Settings,
+  Sparkles,
 } from 'lucide-react'
 
 import MiniGame from '@/packages/components/games/mini-game'
@@ -18,165 +18,198 @@ import { Button } from '@/packages/components/ui/button'
 import { Badge } from '@/packages/components/ui/badge'
 import { DynamicBackground } from '@/packages/components/layout/dynamic-background'
 import { DashboardNav } from '@/packages/components/dashboard/nav'
+import { isCloudEnabled } from '@/packages/lib/config/env'
+import { DISCORD_INVITE_URL } from '@/packages/lib/constants/site'
 
 // Reusable GlassCard component
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-    return (
-        <div className={`glass-card overflow-hidden ${className}`}>
-            {children}
-        </div>
-    )
+function GlassCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`glass-card overflow-hidden ${className}`}>{children}</div>
+  )
 }
 
 const SUGGESTED_PAGES = [
-    {
-        icon: LayoutDashboard,
-        title: 'Dashboard',
-        description: 'Return to your files',
-        href: '/dashboard',
-        color: 'text-primary',
-        bg: 'bg-primary/10',
-    },
-    {
-        icon: Settings,
-        title: 'Settings',
-        description: 'Manage your account',
-        href: '/dashboard/settings',
-        color: 'text-blue-500',
-        bg: 'bg-blue-500/10',
-    },
-    {
-        icon: MessageCircle,
-        title: 'Discord',
-        description: 'Get help from the community',
-        href: '/discord',
-        color: 'text-indigo-500',
-        bg: 'bg-indigo-500/10',
-    },
-    {
-        icon: BookOpen,
-        title: 'Blog',
-        description: 'Read the latest updates',
-        href: '/blog',
-        color: 'text-emerald-500',
-        bg: 'bg-emerald-500/10',
-    },
+  {
+    icon: LayoutDashboard,
+    title: 'Dashboard',
+    description: 'Return to your files',
+    href: '/dashboard',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+  },
+  {
+    icon: Settings,
+    title: 'Settings',
+    description: 'Manage your account',
+    href: '/dashboard/settings',
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+  },
+  {
+    icon: MessageCircle,
+    title: 'Discord',
+    description: 'Get help from the community',
+    href: DISCORD_INVITE_URL,
+    external: true,
+    color: 'text-indigo-500',
+    bg: 'bg-indigo-500/10',
+  },
+  {
+    icon: BookOpen,
+    title: 'Blog',
+    description: 'Read the latest updates',
+    href: '/blog',
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500/10',
+    cloudOnly: true,
+  },
 ]
 
 export default function NotFound() {
-    return (
-        <div className="relative flex flex-col min-h-screen">
-            <DynamicBackground />
+  const cloudEnabled = isCloudEnabled()
+  const suggestedPages = SUGGESTED_PAGES.filter(
+    (page) => !page.cloudOnly || cloudEnabled
+  )
 
-            <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4">
-                <div className="max-w-7xl mx-auto">
-                    <div className="relative glass-elevated rounded-2xl gradient-border-animated transition-all duration-300">
-                        <div className="relative">
-                            <DashboardNav />
-                        </div>
-                    </div>
-                </div>
-            </header>
+  return (
+    <div className="relative flex flex-col min-h-screen">
+      <DynamicBackground />
 
-            <main className="flex-1 w-full pt-28 relative z-10">
-                <div className="max-w-6xl mx-auto py-8 px-4 md:px-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Main Content */}
-                        <GlassCard>
-                            <div className="p-8 md:p-10">
-                                {/* 404 Badge */}
-                                <Badge className="mb-6 bg-primary/20 text-primary border-primary/30 text-lg px-4 py-1">
-                                    <FileQuestion className="h-4 w-4 mr-2" />
-                                    404
-                                </Badge>
-
-                                {/* Title */}
-                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
-                                    Page not
-                                    <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                                        found
-                                    </span>
-                                </h1>
-
-                                {/* Description */}
-                                <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-md">
-                                    The page you're looking for doesn't exist or has been moved.
-                                    Don't worry - let's get you back on track.
-                                </p>
-
-                                {/* Actions */}
-                                <div className="mt-8 flex flex-wrap items-center gap-3">
-                                    <Button size="lg" asChild className="group">
-                                        <Link href="/dashboard">
-                                            <LayoutDashboard className="h-4 w-4 mr-2" />
-                                            Go to Dashboard
-                                            <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                                        </Link>
-                                    </Button>
-                                    <MiniGame />
-                                </div>
-
-                                {/* Fun Message */}
-                                <div className="mt-8 p-4 rounded-xl bg-muted/30 border border-border/30">
-                                    <div className="flex items-start gap-3">
-                                        <Sparkles className="h-5 w-5 text-primary mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-medium">While you're here...</p>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Why not play a quick game? Click "Play a Game" and try to beat your high score!
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </GlassCard>
-
-                        {/* Suggested Pages */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 px-1">
-                                <Search className="h-5 w-5 text-muted-foreground" />
-                                <h2 className="text-lg font-semibold">Looking for something?</h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-                                {SUGGESTED_PAGES.map((page) => (
-                                    <GlassCard key={page.href} className="group hover:border-primary/30 transition-colors">
-                                        <Link href={page.href} className="block p-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-3 rounded-xl ${page.bg}`}>
-                                                    <page.icon className={`h-5 w-5 ${page.color}`} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium group-hover:text-primary transition-colors">
-                                                        {page.title}
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        {page.description}
-                                                    </div>
-                                                </div>
-                                                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                                            </div>
-                                        </Link>
-                                    </GlassCard>
-                                ))}
-                            </div>
-
-                            {/* Additional Help */}
-                            <GlassCard>
-                                <div className="p-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        Still can't find what you need?{' '}
-                                        <Link href="/contact" className="text-primary hover:underline">
-                                            Contact us
-                                        </Link>
-                                        {' '}and we'll help you out.
-                                    </p>
-                                </div>
-                            </GlassCard>
-                        </div>
-                    </div>
-                </div>
-            </main>
+      <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="relative glass-elevated rounded-2xl gradient-border-animated transition-all duration-300">
+            <div className="relative">
+              <DashboardNav />
+            </div>
+          </div>
         </div>
-    )
+      </header>
+
+      <main className="flex-1 w-full pt-28 relative z-10">
+        <div className="max-w-6xl mx-auto py-8 px-4 md:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Main Content */}
+            <GlassCard>
+              <div className="p-8 md:p-10">
+                {/* 404 Badge */}
+                <Badge className="mb-6 bg-primary/20 text-primary border-primary/30 text-lg px-4 py-1">
+                  <FileQuestion className="h-4 w-4 mr-2" />
+                  404
+                </Badge>
+
+                {/* Title */}
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
+                  Page not
+                  <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
+                    found
+                  </span>
+                </h1>
+
+                {/* Description */}
+                <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-md">
+                  The page you're looking for doesn't exist or has been moved.
+                  Don't worry - let's get you back on track.
+                </p>
+
+                {/* Actions */}
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Button size="lg" asChild className="group">
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      Go to Dashboard
+                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
+                  <MiniGame />
+                </div>
+
+                {/* Fun Message */}
+                <div className="mt-8 p-4 rounded-xl bg-muted/30 border border-border/30">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">
+                        While you're here...
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Why not play a quick game? Click "Play a Game" and try
+                        to beat your high score!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Suggested Pages */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                <Search className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">
+                  Looking for something?
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                {suggestedPages.map((page) => (
+                  <GlassCard
+                    key={page.href}
+                    className="group hover:border-primary/30 transition-colors"
+                  >
+                    <Link
+                      href={page.href}
+                      className="block p-4"
+                      {...(page.external
+                        ? { target: '_blank', rel: 'noopener noreferrer' }
+                        : {})}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-xl ${page.bg}`}>
+                          <page.icon className={`h-5 w-5 ${page.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium group-hover:text-primary transition-colors">
+                            {page.title}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {page.description}
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </Link>
+                  </GlassCard>
+                ))}
+              </div>
+
+              {/* Additional Help */}
+              <GlassCard>
+                <div className="p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Still can't find what you need?{' '}
+                    <Link
+                      href={cloudEnabled ? '/contact' : DISCORD_INVITE_URL}
+                      className="text-primary hover:underline"
+                      {...(cloudEnabled
+                        ? {}
+                        : { target: '_blank', rel: 'noopener noreferrer' })}
+                    >
+                      Contact us
+                    </Link>{' '}
+                    and we'll help you out.
+                  </p>
+                </div>
+              </GlassCard>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
 }

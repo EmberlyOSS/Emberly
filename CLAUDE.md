@@ -227,7 +227,8 @@ DISCORD_OAUTH_*        # Discord OAuth app credentials
 GITHUB_OAUTH_*         # GitHub OAuth app credentials
 VIRUSTOTAL_API_KEY     # File scanning (optional in dev)
 NEXT_PUBLIC_SENTRY_DSN # Error tracking (optional in dev)
-EMBERLY_RUN_CLOUD      # Set true to enable cloud features
+EMBERLY_RUN_CLOUD      # Set true to enable cloud features (billing, Nexium, custom domains, marketing pages)
+NEXT_PUBLIC_EMBERLY_RUN_CLOUD # Same value, mirrored for client-side nav/UI — must match EMBERLY_RUN_CLOUD
 EMBERLY_RUN_EVENT_WORKER # Set true to run the event worker
 ```
 

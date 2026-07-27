@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 
 import { Badge } from '@/packages/components/ui/badge'
+import { SystemHealthPanel } from '@/packages/components/admin/system-health'
 
 interface AdminOverviewProps {
   userCount: number
@@ -25,23 +26,86 @@ interface AdminOverviewProps {
   pendingReports: number
   pendingApplications: number
   isSuperAdmin: boolean
+  cloudEnabled: boolean
 }
 
 const adminSections = [
-  { href: '/admin/blog', label: 'Blogs', description: 'Publish and curate blog posts', icon: BookOpen },
-  { href: '/admin/legal', label: 'Legal', description: 'Manage policies and legal documents', icon: Gavel },
-  { href: '/admin/users', label: 'Users', description: 'Manage user accounts and roles', icon: Users },
-  { href: '/admin/reports', label: 'Reports', description: 'Review user and content reports', icon: ShieldAlert },
-  { href: '/admin/applications', label: 'Applications', description: 'Review user applications', icon: ClipboardList },
-  { href: '/admin/products', label: 'Products', description: 'Manage plan products and pricing', icon: CreditCard },
-  { href: '/admin/partners', label: 'Partners', description: 'Manage partner entries', icon: Handshake },
-  { href: '/admin/testimonials', label: 'Testimonials', description: 'Manage user testimonials', icon: MessageSquare },
+  {
+    href: '/admin/blog',
+    label: 'Blogs',
+    description: 'Publish and curate blog posts',
+    icon: BookOpen,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/legal',
+    label: 'Legal',
+    description: 'Manage policies and legal documents',
+    icon: Gavel,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/users',
+    label: 'Users',
+    description: 'Manage user accounts and roles',
+    icon: Users,
+  },
+  {
+    href: '/admin/reports',
+    label: 'Reports',
+    description: 'Review user and content reports',
+    icon: ShieldAlert,
+  },
+  {
+    href: '/admin/applications',
+    label: 'Applications',
+    description: 'Review user applications',
+    icon: ClipboardList,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/products',
+    label: 'Products',
+    description: 'Manage plan products and pricing',
+    icon: CreditCard,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/partners',
+    label: 'Partners',
+    description: 'Manage partner entries',
+    icon: Handshake,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/testimonials',
+    label: 'Testimonials',
+    description: 'Manage user testimonials',
+    icon: MessageSquare,
+    cloudOnly: true,
+  },
 ]
 
 const superAdminSections = [
-  { href: '/admin/email', label: 'Email', description: 'Send broadcasts and announcements', icon: Mail },
-  { href: '/admin/logs', label: 'Audit Logs', description: 'Review system events and actions', icon: ChartBar },
-  { href: '/admin/settings', label: 'Settings', description: 'Configure platform-wide settings', icon: Settings },
+  {
+    href: '/admin/email',
+    label: 'Email',
+    description: 'Send broadcasts and announcements',
+    icon: Mail,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/logs',
+    label: 'Audit Logs',
+    description: 'Review system events and actions',
+    icon: ChartBar,
+  },
+  {
+    href: '/admin/settings',
+    label: 'Settings',
+    description: 'Configure platform-wide settings',
+    icon: Settings,
+  },
 ]
 
 export function AdminOverviewContent({
@@ -50,10 +114,11 @@ export function AdminOverviewContent({
   pendingReports,
   pendingApplications,
   isSuperAdmin,
+  cloudEnabled,
 }: AdminOverviewProps) {
-  const sections = isSuperAdmin
-    ? [...adminSections, ...superAdminSections]
-    : adminSections
+  const sections = (
+    isSuperAdmin ? [...adminSections, ...superAdminSections] : adminSections
+  ).filter((s) => !s.cloudOnly || cloudEnabled)
 
   return (
     <div className="space-y-6">
@@ -86,16 +151,22 @@ export function AdminOverviewContent({
             <p className="text-sm text-muted-foreground">Pending reports</p>
           </div>
         </div>
-        <div className="glass-card p-6 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-primary/10 ring-1 ring-primary/20">
-            <ClipboardList className="h-5 w-5 text-primary" />
+        {cloudEnabled && (
+          <div className="glass-card p-6 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 ring-1 ring-primary/20">
+              <ClipboardList className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{pendingApplications}</p>
+              <p className="text-sm text-muted-foreground">
+                Pending applications
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-2xl font-bold">{pendingApplications}</p>
-            <p className="text-sm text-muted-foreground">Pending applications</p>
-          </div>
-        </div>
+        )}
       </div>
+
+      <SystemHealthPanel />
 
       {/* Quick Navigation */}
       <div>
@@ -124,11 +195,12 @@ export function AdminOverviewContent({
                   {pendingReports} pending
                 </Badge>
               )}
-              {section.href === '/admin/applications' && pendingApplications > 0 && (
-                <Badge variant="secondary" className="w-fit">
-                  {pendingApplications} pending
-                </Badge>
-              )}
+              {section.href === '/admin/applications' &&
+                pendingApplications > 0 && (
+                  <Badge variant="secondary" className="w-fit">
+                    {pendingApplications} pending
+                  </Badge>
+                )}
             </Link>
           ))}
         </div>

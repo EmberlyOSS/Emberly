@@ -253,19 +253,20 @@ Redis is optional for local development but required in production.
 
 Copy `.env.template` → `.env` to get started. Critical variables:
 
-| Variable                                | Purpose                            |
-| --------------------------------------- | ---------------------------------- |
-| `DATABASE_URL`                          | PostgreSQL connection string       |
-| `REDIS_URL`                             | Redis connection string            |
-| `NEXTAUTH_SECRET`                       | Session signing key (≥32 chars)    |
-| `NEXTAUTH_URL` / `NEXT_PUBLIC_BASE_URL` | App base URL                       |
-| `DISCORD_OAUTH_CLIENT_ID/SECRET`        | Discord OAuth                      |
-| `GITHUB_OAUTH_CLIENT_ID/SECRET`         | GitHub OAuth                       |
-| `VIRUSTOTAL_API_KEY`                    | Malware scanning for uploads       |
-| `VULTR_API_KEY`                         | S3 bucket provisioning             |
-| `NEXT_PUBLIC_SENTRY_DSN`                | Client-side error tracking         |
-| `EMBERLY_RUN_CLOUD`                     | Enable cloud/marketing features    |
-| `EMBERLY_RUN_EVENT_WORKER`              | Enable background event processing |
+| Variable                                | Purpose                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL`                          | PostgreSQL connection string                                              |
+| `REDIS_URL`                             | Redis connection string                                                   |
+| `NEXTAUTH_SECRET`                       | Session signing key (≥32 chars)                                           |
+| `NEXTAUTH_URL` / `NEXT_PUBLIC_BASE_URL` | App base URL                                                              |
+| `DISCORD_OAUTH_CLIENT_ID/SECRET`        | Discord OAuth                                                             |
+| `GITHUB_OAUTH_CLIENT_ID/SECRET`         | GitHub OAuth                                                              |
+| `VIRUSTOTAL_API_KEY`                    | Malware scanning for uploads                                              |
+| `VULTR_API_KEY`                         | S3 bucket provisioning                                                    |
+| `NEXT_PUBLIC_SENTRY_DSN`                | Client-side error tracking                                                |
+| `EMBERLY_RUN_CLOUD`                     | Enable cloud features (billing, Nexium, custom domains, marketing pages)  |
+| `NEXT_PUBLIC_EMBERLY_RUN_CLOUD`         | Same value, mirrored for client-side nav — must match `EMBERLY_RUN_CLOUD` |
+| `EMBERLY_RUN_EVENT_WORKER`              | Enable background event processing                                        |
 
 Never commit `.env`. Never log env vars. `SENTRY_AUTH_TOKEN` is build-time only (CI).
 

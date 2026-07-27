@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react'
 
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import { ScrollIndicator } from '@/packages/components/ui/scroll-indicator'
 
 const dashboardRoutes = [
@@ -32,15 +33,39 @@ const dashboardRoutes = [
   { href: '/dashboard/upload', label: 'Upload', icon: Upload },
   { href: '/dashboard/paste', label: 'Paste', icon: Clipboard },
   { href: '/dashboard/urls', label: 'Links', icon: LinkIcon },
-  { href: '/dashboard/domains', label: 'Domains', icon: Globe },
+  {
+    href: '/dashboard/domains',
+    label: 'Domains',
+    icon: Globe,
+    cloudOnly: true,
+  },
   { href: '/dashboard/analytics', label: 'Analytics', icon: ChartBar },
-  { href: '/dashboard/bucket', label: 'Buckets', icon: Database },
-  { href: '/dashboard/verification-codes', label: 'Verification Codes', icon: KeyRound },
+  {
+    href: '/dashboard/bucket',
+    label: 'Buckets',
+    icon: Database,
+    cloudOnly: true,
+  },
+  {
+    href: '/dashboard/verification-codes',
+    label: 'Verification Codes',
+    icon: KeyRound,
+  },
 ]
 
 const discoveryChildren = [
-  { href: '/dashboard/discovery', label: 'Talent Profile', icon: User, params: '?tab=talent' },
-  { href: '/dashboard/discovery', label: 'Squads', icon: Users, params: '?tab=squads' },
+  {
+    href: '/dashboard/discovery',
+    label: 'Talent Profile',
+    icon: User,
+    params: '?tab=talent',
+  },
+  {
+    href: '/dashboard/discovery',
+    label: 'Squads',
+    icon: Users,
+    params: '?tab=squads',
+  },
 ]
 
 const talentSubLinks = [
@@ -54,7 +79,13 @@ const talentSubLinks = [
 export function DashboardSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const isOnDiscovery = pathname === '/dashboard/discovery' || pathname.startsWith('/dashboard/discovery/')
+  const cloudEnabled = isCloudEnabledClient()
+  const visibleRoutes = dashboardRoutes.filter(
+    (r) => !r.cloudOnly || cloudEnabled
+  )
+  const isOnDiscovery =
+    pathname === '/dashboard/discovery' ||
+    pathname.startsWith('/dashboard/discovery/')
   const [discoveryOpen, setDiscoveryOpen] = useState(isOnDiscovery)
 
   const currentTab = searchParams.get('tab') ?? 'talent'
@@ -70,7 +101,7 @@ export function DashboardSidebar() {
       {/* Mobile: horizontal scrollable tab strip */}
       <ScrollIndicator className="lg:hidden glass-subtle rounded-xl p-1.5">
         <div className="flex gap-1 w-max">
-          {dashboardRoutes.map((route) => {
+          {visibleRoutes.map((route) => {
             const active = isActive(route.href)
             return (
               <Link
@@ -87,18 +118,20 @@ export function DashboardSidebar() {
               </Link>
             )
           })}
-          {/* Discovery as expandable on mobile too */}
-          <Link
-            href="/dashboard/discovery"
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
-              isOnDiscovery
-                ? 'bg-primary/10 text-primary font-medium border border-primary/20'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5 shrink-0" />
-            {isOnDiscovery && 'Discovery'}
-          </Link>
+          {/* Discovery as expandable on mobile too (cloud-only feature) */}
+          {cloudEnabled && (
+            <Link
+              href="/dashboard/discovery"
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
+                isOnDiscovery
+                  ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              {isOnDiscovery && 'Discovery'}
+            </Link>
+          )}
         </div>
       </ScrollIndicator>
 
@@ -107,7 +140,7 @@ export function DashboardSidebar() {
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
           Dashboard
         </p>
-        {dashboardRoutes.map((route) => {
+        {visibleRoutes.map((route) => {
           const active = isActive(route.href)
           return (
             <Link
@@ -125,70 +158,74 @@ export function DashboardSidebar() {
           )
         })}
 
-        {/* Discovery — expandable */}
-        <button
-          type="button"
-          onClick={() => setDiscoveryOpen((v) => !v)}
-          className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
-            isOnDiscovery
-              ? 'bg-primary/10 text-primary font-medium border border-primary/20'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <Sparkles className="h-4 w-4 shrink-0" />
-            Discovery
-          </span>
-          <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform duration-200 ${
-              discoveryOpen ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
-        {discoveryOpen && (
-          <div className="space-y-0.5 pl-2 border-l border-border/40 ml-5">
-            {discoveryChildren.map((child) => {
-              const tabVal = child.params.replace('?tab=', '')
-              const active = isOnDiscovery && currentTab === tabVal
-              return (
-                <Link
-                  key={child.label}
-                  href={`${child.href}${child.params}`}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 text-sm rounded-lg transition-all duration-150 ${
-                    active
-                      ? 'bg-primary/10 text-primary font-medium border border-primary/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                  }`}
-                >
-                  <child.icon className="h-3.5 w-3.5 shrink-0" />
-                  {child.label}
-                </Link>
-              )
-            })}
-
-            {/* Talent sub-sections when on talent tab */}
-            {isOnDiscovery && currentTab === 'talent' && (
-              <div className="space-y-0.5 pl-2 border-l border-border/40 ml-3 mt-1">
-                {talentSubLinks.map((sub) => {
-                  const active = currentSection === sub.section
+        {/* Discovery — expandable (cloud-only feature) */}
+        {cloudEnabled && (
+          <>
+            <button
+              type="button"
+              onClick={() => setDiscoveryOpen((v) => !v)}
+              className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
+                isOnDiscovery
+                  ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                Discovery
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                  discoveryOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            {discoveryOpen && (
+              <div className="space-y-0.5 pl-2 border-l border-border/40 ml-5">
+                {discoveryChildren.map((child) => {
+                  const tabVal = child.params.replace('?tab=', '')
+                  const active = isOnDiscovery && currentTab === tabVal
                   return (
                     <Link
-                      key={sub.section}
-                      href={`/dashboard/discovery?tab=talent&section=${sub.section}`}
-                      className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-all duration-150 ${
+                      key={child.label}
+                      href={`${child.href}${child.params}`}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 text-sm rounded-lg transition-all duration-150 ${
                         active
                           ? 'bg-primary/10 text-primary font-medium border border-primary/20'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
                       }`}
                     >
-                      <sub.icon className="h-3 w-3 shrink-0" />
-                      {sub.label}
+                      <child.icon className="h-3.5 w-3.5 shrink-0" />
+                      {child.label}
                     </Link>
                   )
                 })}
+
+                {/* Talent sub-sections when on talent tab */}
+                {isOnDiscovery && currentTab === 'talent' && (
+                  <div className="space-y-0.5 pl-2 border-l border-border/40 ml-3 mt-1">
+                    {talentSubLinks.map((sub) => {
+                      const active = currentSection === sub.section
+                      return (
+                        <Link
+                          key={sub.section}
+                          href={`/dashboard/discovery?tab=talent&section=${sub.section}`}
+                          className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-all duration-150 ${
+                            active
+                              ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                          }`}
+                        >
+                          <sub.icon className="h-3 w-3 shrink-0" />
+                          {sub.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </nav>

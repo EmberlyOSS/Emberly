@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-07-27
+
+### Added
+
+- **Self-hosting mode (`EMBERLY_RUN_CLOUD`)** — the flag is now actually enforced instead of being a no-op. When unset (the self-hosted default), billing/Stripe, Nexium (squads/discovery/talent), custom domains, per-user storage buckets, and all Emberly-brand marketing/company content (homepage, pricing, blog, press, changelogs, contact, discord, legal hub, "join the team"/partner/verification/ban-appeal applications) are hidden from navigation and blocked at the route level. Enforcement happens in three layers: `proxy.ts` (`CLOUD_ONLY_PAGE_PATHS` / `CLOUD_ONLY_API_PATHS` in `packages/lib/middleware/constants.ts`), a central redirect in the new `app/(marketing)/layout.tsx`, and per-page defense-in-depth guards on cloud-only dashboard/admin pages. `packages/lib/config/env.ts` adds `isCloudEnabled()` (server) and `isCloudEnabledClient()` (client, via `NEXT_PUBLIC_EMBERLY_RUN_CLOUD`) as the single source of truth.
+- **`(marketing)` route group** — all marketing/company pages moved from `app/(main)/` into `app/(marketing)/` (URLs unchanged — route groups don't affect paths). A single layout-level `isCloudEnabled()` check replaces the need for scattered per-page guards on those routes.
+- **Admin cloud-only gating** — extended beyond pages into the admin panel itself: the overview quick-nav tiles and pending-applications stat, the user list's Plan/Grant Storage/Grant Custom Domains/Plan-selector fields, the Squad Reports tab in `/admin/reports`, and the Stripe / Cloudflare / GitHub / Vultr / Linode / OVHcloud integration sections in `/admin/settings` are now hidden on self-hosted instances. Discord integration keeps its webhook/bot-token fields (used for general admin alerts) but hides the booster-perks-only Supporter Role ID field.
+- **Configurable site name & meta description** — new `general.siteName` / `general.metaDescription` fields in the config schema, editable from a new "Branding" section in `/admin/settings`. `app/layout.tsx`'s `generateMetadata()` and `buildSiteMetadata()` (`packages/lib/embeds/metadata.ts`) now read these instead of hardcoding "Emberly", so self-hosters can rebrand the browser tab title, OG site name, and meta description. Favicon upload already worked and is unchanged.
+- **`GET /api/health`** — replaced the placeholder `{status: 'ok'}` stub with real checks: Postgres (`SELECT 1`), Redis (`PING`), a real write+delete round-trip through the active storage provider (cached 30s to avoid churning production storage under frequent polling), BullMQ event-queue depth plus whether a worker is actually consuming it, VirusTotal configuration, and (cloud instances only) Stripe configuration. Reports overall `ok` / `degraded` / `down` (503 only when the database is unreachable) and flags `EMBERLY_RUN_CLOUD` / `NEXT_PUBLIC_EMBERLY_RUN_CLOUD` mismatches as a warning. New `SystemHealthPanel` (`packages/components/admin/system-health.tsx`) surfaces all of this on the `/admin` overview page with auto-refresh.
+- **Discord support link always available** — a "Support" link (shared `DISCORD_INVITE_URL` constant in `packages/lib/constants/site.ts`) now appears in the nav's Extras menu, the footer, and both 404/error page variants regardless of cloud mode, so self-hosted users aren't cut off from community support just because the full `/discord` marketing page is gated.
+
+### Fixed
+
+- **BullMQ worker singleton crossing module instances** — `packages/lib/events/init.ts` tracked the running `Worker` in a plain module-level variable, which Next.js instantiates separately per route bundle/hot-reload. `isWorkerRunning()` (used by the new health check) read from a copy of the module where the worker always looked `null`, even though it was genuinely running. Fixed by moving the worker/initialized state onto `globalThis`, the same pattern already used for the Prisma client singleton.
+- **`/setup` unreachable on fresh self-hosted instances** — the new self-hosted homepage redirect in `proxy.ts` ran before the app ever checked whether initial setup was needed, so a brand-new instance briefly flashed the login page before the client-side `SetupChecker` caught it. `proxy.ts` now checks `/api/setup/check` first and redirects straight to `/setup` when incomplete.
+- **Cloud-only leaks in nav/dashboard surfaces** — `DashboardShell`'s independent tab strip, the dashboard overview quick-actions grid, the nav's external "Status" link, the footer's "Legal Hub" link, and the `/me` profile page's public-profile/Discovery/Applications link row were all still visible/reachable on self-hosted instances despite the underlying pages being gated. All now respect `isCloudEnabled()` / `isCloudEnabledClient()`.
+
+### Changed
+
+- **Nav dropdown layout** — desktop nav dropdown menus (e.g. the "Extras" menu) switched from a 2-column grid to a single-column list; empty sections (all self-hosted, e.g. "Base" when every item is cloud-only) are now filtered out entirely instead of rendering an empty menu.
+- **Mobile nav accordion** — expanded sections now get a left-border indent guide and an active background on the header row, matching the dashboard sidebar's existing expandable-section style.
+
 ## [2.5.1] - 2026-07-26
 
 ### Fixed

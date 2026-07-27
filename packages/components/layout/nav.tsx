@@ -36,10 +36,21 @@ import {
   Shield,
 } from 'lucide-react'
 
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
+import { DISCORD_INVITE_URL } from '@/packages/lib/constants/site'
 import { Icons } from '@/packages/components/shared/icons'
-import { Avatar, AvatarFallback, AvatarImage } from '@/packages/components/ui/avatar'
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/packages/components/ui/avatar'
 import { Button } from '@/packages/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/packages/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from '@/packages/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,14 +61,18 @@ import {
 // ─── Route definitions ────────────────────────────────────────────────────────
 
 const baseRoutes = [
-  { href: '/', label: 'Home', icon: House },
-  { href: '/about', label: 'About', icon: BookOpen },
-  { href: '/contact', label: 'Contact', icon: Mail },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Users },
-  { href: '/discovery', label: 'Discovery', icon: Sparkles },
-  { href: '/applications', label: 'Apply', icon: ClipboardList },
-  { href: '/blog', label: 'Blog', icon: Rss },
-  { href: 'https://docs.embrly.ca', label: 'Docs', icon: FileText },
+  { href: '/', label: 'Home', icon: House, cloudOnly: true },
+  { href: '/about', label: 'About', icon: BookOpen, cloudOnly: true },
+  { href: '/contact', label: 'Contact', icon: Mail, cloudOnly: true },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Users, cloudOnly: true },
+  { href: '/discovery', label: 'Discovery', icon: Sparkles, cloudOnly: true },
+  {
+    href: '/applications',
+    label: 'Apply',
+    icon: ClipboardList,
+    cloudOnly: true,
+  },
+  { href: '/blog', label: 'Blog', icon: Rss, cloudOnly: true },
 ]
 
 const dashboardRoutes = [
@@ -66,38 +81,106 @@ const dashboardRoutes = [
   { href: '/dashboard/upload', label: 'Upload', icon: Upload },
   { href: '/dashboard/paste', label: 'Paste', icon: Clipboard },
   { href: '/dashboard/urls', label: 'Links', icon: LinkIcon },
-  { href: '/dashboard/domains', label: 'Domains', icon: Globe },
+  {
+    href: '/dashboard/domains',
+    label: 'Domains',
+    icon: Globe,
+    cloudOnly: true,
+  },
   { href: '/dashboard/analytics', label: 'Analytics', icon: ChartBar },
-  { href: '/dashboard/discovery', label: 'Discovery', icon: Sparkles },
-  { href: '/dashboard/bucket', label: 'Buckets', icon: Database },
+  {
+    href: '/dashboard/discovery',
+    label: 'Discovery',
+    icon: Sparkles,
+    cloudOnly: true,
+  },
+  {
+    href: '/dashboard/bucket',
+    label: 'Buckets',
+    icon: Database,
+    cloudOnly: true,
+  },
 ]
 
 const extrasRoutes = [
-  { href: '/pricing', label: 'Pricing', icon: CreditCard },
-  { href: 'https://emberlystat.us', label: 'Status', icon: ChartBar },
-  { href: '/changelogs', label: 'Changelogs', icon: GitGraph },
-  { href: '/press', label: 'Press Kit', icon: FileText },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard, cloudOnly: true },
+  {
+    href: 'https://emberlystat.us',
+    label: 'Status',
+    icon: ChartBar,
+    cloudOnly: true,
+  },
+  { href: '/changelogs', label: 'Changelogs', icon: GitGraph, cloudOnly: true },
+  { href: '/press', label: 'Press Kit', icon: FileText, cloudOnly: true },
+  { href: DISCORD_INVITE_URL, label: 'Support', icon: MessageSquare },
+  { href: 'https://docs.embrly.ca', label: 'Docs', icon: FileText },
 ]
 
 const adminRoutesBase = [
   { href: '/admin', label: 'Admin', icon: Shield },
-  { href: '/admin/blog', label: 'Blogs', icon: BookOpen },
-  { href: '/admin/legal', label: 'Legal', icon: Gavel },
+  { href: '/admin/blog', label: 'Blogs', icon: BookOpen, cloudOnly: true },
+  { href: '/admin/legal', label: 'Legal', icon: Gavel, cloudOnly: true },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: ShieldAlert },
-  { href: '/admin/applications', label: 'Applications', icon: ClipboardList },
-  { href: '/admin/products', label: 'Products', icon: CreditCard },
-  { href: '/admin/email', label: 'Email', icon: Mail, superAdminOnly: true },
-  { href: '/admin/partners', label: 'Partners', icon: Handshake },
-  { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
-  { href: '/admin/logs', label: 'Audit Logs', icon: ChartBar, superAdminOnly: true },
-  { href: '/admin/settings', label: 'Settings', icon: Settings, superAdminOnly: true },
+  {
+    href: '/admin/applications',
+    label: 'Applications',
+    icon: ClipboardList,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/products',
+    label: 'Products',
+    icon: CreditCard,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/email',
+    label: 'Email',
+    icon: Mail,
+    superAdminOnly: true,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/partners',
+    label: 'Partners',
+    icon: Handshake,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/testimonials',
+    label: 'Testimonials',
+    icon: MessageSquare,
+    cloudOnly: true,
+  },
+  {
+    href: '/admin/logs',
+    label: 'Audit Logs',
+    icon: ChartBar,
+    superAdminOnly: true,
+  },
+  {
+    href: '/admin/settings',
+    label: 'Settings',
+    icon: Settings,
+    superAdminOnly: true,
+  },
 ]
 
 const sectionsTemplate = [
   { id: 'base', title: 'Base', icon: House, items: baseRoutes },
-  { id: 'dashboard', title: 'Dashboard', icon: LayoutDashboard, items: dashboardRoutes },
-  { id: 'admin', title: 'Administration', icon: Settings, items: adminRoutesBase },
+  {
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    items: dashboardRoutes,
+  },
+  {
+    id: 'admin',
+    title: 'Administration',
+    icon: Settings,
+    items: adminRoutesBase,
+  },
   { id: 'extras', title: 'Extras', icon: GitGraph, items: extrasRoutes },
 ]
 
@@ -105,8 +188,13 @@ const sectionsTemplate = [
 
 function isActive(pathname: string, href: string) {
   if (!href || href.startsWith('http')) return false
-  if (href === '/' || href === '/dashboard' || href === '/admin') return pathname === href
-  return pathname === href || pathname.startsWith(href + '/') || pathname.startsWith(href)
+  if (href === '/' || href === '/dashboard' || href === '/admin')
+    return pathname === href
+  return (
+    pathname === href ||
+    pathname.startsWith(href + '/') ||
+    pathname.startsWith(href)
+  )
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -123,24 +211,36 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
 
   const isSuperAdmin = role === 'SUPERADMIN'
   const isAdmin = role === 'ADMIN' || isSuperAdmin
+  const cloudEnabled = isCloudEnabledClient()
 
   // Build admin routes filtered by role
   const adminItems = useMemo(
-    () => adminRoutesBase.filter((r) => !r.superAdminOnly || isSuperAdmin),
-    [isSuperAdmin]
+    () =>
+      adminRoutesBase.filter(
+        (r) =>
+          (!r.superAdminOnly || isSuperAdmin) && (!r.cloudOnly || cloudEnabled)
+      ),
+    [isSuperAdmin, cloudEnabled]
   )
 
   // Build visible sections based on auth state
   const sections = useMemo(
     () =>
       sectionsTemplate
-        .map((sec) => (sec.id === 'admin' ? { ...sec, items: adminItems } : sec))
+        .map((sec) => ({
+          ...sec,
+          items:
+            sec.id === 'admin'
+              ? adminItems
+              : sec.items.filter((r) => !r.cloudOnly || cloudEnabled),
+        }))
         .filter((sec) => {
+          if (sec.items.length === 0) return false
           if (sec.id === 'admin') return isAdmin
           if (sec.id === 'dashboard') return !!session
           return true
         }),
-    [adminItems, isAdmin, session]
+    [adminItems, isAdmin, session, cloudEnabled]
   )
 
   const initials = session?.user?.name
@@ -151,8 +251,14 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sectionsTemplate.map((s) => [s.id, s.id === 'base' || s.id === 'extras']))
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    () =>
+      Object.fromEntries(
+        sectionsTemplate.map((s) => [
+          s.id,
+          s.id === 'base' || s.id === 'extras',
+        ])
+      )
   )
 
   const toggleSection = (id: string) =>
@@ -195,7 +301,10 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
   return (
     <div className="relative flex h-16 items-center px-6 mt-1">
       {/* Logo */}
-      <Link href={logoHref} className="flex items-center space-x-2.5 group shrink-0">
+      <Link
+        href={logoHref}
+        className="flex items-center space-x-2.5 group shrink-0"
+      >
         <Icons.logo className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
         <span className="emberly-text text-lg font-medium">Emberly</span>
       </Link>
@@ -215,7 +324,9 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                   key={sec.id}
                   variant="ghost"
                   className={`h-9 px-4 rounded-xl font-medium transition-all duration-200 hover:bg-background/90 focus-visible:ring-0 ${
-                    active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                    active
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                   asChild
                 >
@@ -230,7 +341,9 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
             return (
               <DropdownMenu
                 key={sec.id}
-                onOpenChange={(open) => setOpenMenus((prev) => ({ ...prev, [sec.id]: open }))}
+                onOpenChange={(open) =>
+                  setOpenMenus((prev) => ({ ...prev, [sec.id]: open }))
+                }
               >
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -249,20 +362,24 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                 <DropdownMenuContent
                   sideOffset={8}
                   align="center"
-                  className="min-w-72 p-1.5"
+                  className="w-56 p-1.5"
                 >
-                  <div className="grid grid-cols-2 gap-0.5">
+                  <div className="flex flex-col gap-0.5">
                     {sec.items.map((route) => {
                       const active = isActive(pathname, route.href)
                       return (
                         <DropdownMenuItem asChild key={route.href}>
                           <Link
                             href={route.href}
-                            className={`inline-flex items-center w-full gap-2 px-3 py-1.5 text-sm rounded-md ${
-                              active ? 'bg-secondary text-foreground font-medium' : ''
+                            className={`flex items-center w-full gap-2.5 px-2.5 py-2 text-sm rounded-md ${
+                              active
+                                ? 'bg-secondary text-foreground font-medium'
+                                : ''
                             }`}
                           >
-                            <route.icon className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                            <route.icon
+                              className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground'}`}
+                            />
                             {route.label}
                           </Link>
                         </DropdownMenuItem>
@@ -282,7 +399,10 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
           <Button variant="ghost" className="h-9 w-9 rounded-full p-0" asChild>
             <Link href="/me">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? ''} />
+                <AvatarImage
+                  src={session.user?.image ?? undefined}
+                  alt={session.user?.name ?? ''}
+                />
                 <AvatarFallback className="text-xs">{initials}</AvatarFallback>
               </Avatar>
             </Link>
@@ -306,15 +426,24 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
             <Button variant="ghost" size="icon">
               {session ? (
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? ''} />
-                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                  <AvatarImage
+                    src={session.user?.image ?? undefined}
+                    alt={session.user?.name ?? ''}
+                  />
+                  <AvatarFallback className="text-xs">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
               ) : (
                 <Menu className="h-5 w-5" />
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent ref={drawerRef} side="bottom" className="flex flex-col bg-background/80 backdrop-blur-xl border-border/50 p-0 max-h-[85dvh] rounded-t-2xl [&>button:has(.sr-only)]:hidden">
+          <SheetContent
+            ref={drawerRef}
+            side="bottom"
+            className="flex flex-col bg-background/80 backdrop-blur-xl border-border/50 p-0 max-h-[85dvh] rounded-t-2xl [&>button:has(.sr-only)]:hidden"
+          >
             {/* Drag handle / bezel */}
             <div
               className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
@@ -327,53 +456,59 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
             </div>
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             <div className="flex-1 overflow-auto px-4 pb-6 space-y-2">
-              {sections.filter(s => s.id !== 'dashboard' && s.id !== 'admin').map((sec) => {
-                const SectionIcon = sec.icon
-                const isOpen = openSections[sec.id]
-                return (
-                  <div key={sec.id}>
-                    <button
-                      type="button"
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-background/60"
-                      onClick={() => toggleSection(sec.id)}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 rounded-lg bg-primary/10">
-                          <SectionIcon className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <span>{sec.title}</span>
-                      </div>
-                      <ChevronDown
-                        className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${
-                          isOpen ? 'rotate-180' : ''
+              {sections
+                .filter((s) => s.id !== 'dashboard' && s.id !== 'admin')
+                .map((sec) => {
+                  const SectionIcon = sec.icon
+                  const isOpen = openSections[sec.id]
+                  return (
+                    <div key={sec.id}>
+                      <button
+                        type="button"
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-background/60 ${
+                          isOpen ? 'bg-background/60' : ''
                         }`}
-                      />
-                    </button>
-                    {isOpen && (
-                      <div className="mt-1 ml-3 space-y-0.5">
-                        {sec.items.map((route) => {
-                          const active = isActive(pathname, route.href)
-                          return (
-                            <Link
-                              key={route.href}
-                              href={route.href}
-                              onClick={() => setSheetOpen(false)}
-                              className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all ${
-                                active
-                                  ? 'bg-primary/10 text-primary font-medium'
-                                  : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
-                              }`}
-                            >
-                              <route.icon className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : ''}`} />
-                              {route.label}
-                            </Link>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                        onClick={() => toggleSection(sec.id)}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-lg bg-primary/10">
+                            <SectionIcon className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <span>{sec.title}</span>
+                        </div>
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${
+                            isOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                      {isOpen && (
+                        <div className="mt-1 mb-1 ml-5 pl-3 border-l border-border/40 space-y-0.5">
+                          {sec.items.map((route) => {
+                            const active = isActive(pathname, route.href)
+                            return (
+                              <Link
+                                key={route.href}
+                                href={route.href}
+                                onClick={() => setSheetOpen(false)}
+                                className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all ${
+                                  active
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                                }`}
+                              >
+                                <route.icon
+                                  className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : ''}`}
+                                />
+                                {route.label}
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
             </div>
 
             {/* Mobile footer auth */}
@@ -386,8 +521,13 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                     onClick={() => setSheetOpen(false)}
                   >
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? ''} />
-                      <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+                      <AvatarImage
+                        src={session.user?.image ?? undefined}
+                        alt={session.user?.name ?? ''}
+                      />
+                      <AvatarFallback className="text-[10px]">
+                        {initials}
+                      </AvatarFallback>
                     </Avatar>
                     Profile
                   </Link>
@@ -433,7 +573,10 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                     Sign In
                   </Button>
                   <Button asChild size="sm">
-                    <Link href="/auth/register" onClick={() => setSheetOpen(false)}>
+                    <Link
+                      href="/auth/register"
+                      onClick={() => setSheetOpen(false)}
+                    >
                       Register
                     </Link>
                   </Button>

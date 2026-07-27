@@ -106,6 +106,7 @@ import {
   TooltipTrigger,
 } from '@/packages/components/ui/tooltip'
 
+import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import { formatFileSize } from '@/packages/lib/utils'
 import { cn } from '@/packages/lib/utils'
 import { sanitizeUrl } from '@/packages/lib/utils/url'
@@ -423,6 +424,7 @@ export function UserList() {
 
   const { data: session } = useSession()
   const isSuperAdmin = (session as any)?.user?.role === 'SUPERADMIN'
+  const cloudEnabled = isCloudEnabledClient()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isViewingFiles, setIsViewingFiles] = useState(false)
@@ -478,6 +480,8 @@ export function UserList() {
   >([])
 
   useEffect(() => {
+    if (!isCloudEnabledClient()) return
+
     fetch('/api/products/catalog')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -1004,7 +1008,7 @@ export function UserList() {
             <TableRow className="hover:bg-transparent border-border/50">
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Plan</TableHead>
+              {cloudEnabled && <TableHead>Plan</TableHead>}
               <TableHead>URL ID</TableHead>
               <TableHead>Files</TableHead>
               <TableHead>Storage</TableHead>
@@ -1015,7 +1019,7 @@ export function UserList() {
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-32">
+                <TableCell colSpan={cloudEnabled ? 8 : 7} className="h-32">
                   <div className="flex flex-col items-center justify-center text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
                       <Users className="h-6 w-6 text-primary" />
@@ -1078,24 +1082,26 @@ export function UserList() {
                       })}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {user.subscriptions?.[0]?.product ? (
-                      <Badge
-                        variant="secondary"
-                        className="gap-1 text-xs bg-primary/10 text-primary border-0"
-                      >
-                        <Zap className="h-3 w-3" />
-                        {user.subscriptions[0].product.name}
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-muted/50 border-0"
-                      >
-                        Free
-                      </Badge>
-                    )}
-                  </TableCell>
+                  {cloudEnabled && (
+                    <TableCell>
+                      {user.subscriptions?.[0]?.product ? (
+                        <Badge
+                          variant="secondary"
+                          className="gap-1 text-xs bg-primary/10 text-primary border-0"
+                        >
+                          <Zap className="h-3 w-3" />
+                          {user.subscriptions[0].product.name}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-muted/50 border-0"
+                        >
+                          Free
+                        </Badge>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <code className="relative rounded-md bg-muted/50 px-2 py-1 font-mono text-xs">
                       {user.urlId}
@@ -1463,88 +1469,95 @@ export function UserList() {
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="grantStorageGB">
-                          Grant Storage (GB)
-                        </Label>
-                        <Input
-                          id="grantStorageGB"
-                          type="number"
-                          value={formData.grantStorageGB ?? ''}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              grantStorageGB:
-                                e.target.value === ''
-                                  ? undefined
-                                  : Number(e.target.value),
-                            })
-                          }
-                          min="0"
-                          placeholder="e.g. 10"
-                        />
-                      </div>
+                      {cloudEnabled && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="grantStorageGB">
+                              Grant Storage (GB)
+                            </Label>
+                            <Input
+                              id="grantStorageGB"
+                              type="number"
+                              value={formData.grantStorageGB ?? ''}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  grantStorageGB:
+                                    e.target.value === ''
+                                      ? undefined
+                                      : Number(e.target.value),
+                                })
+                              }
+                              min="0"
+                              placeholder="e.g. 10"
+                            />
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="grantCustomDomains">
-                          Grant Custom Domain Slots
-                        </Label>
-                        <Input
-                          id="grantCustomDomains"
-                          type="number"
-                          value={formData.grantCustomDomains ?? ''}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              grantCustomDomains:
-                                e.target.value === ''
-                                  ? undefined
-                                  : Number(e.target.value),
-                            })
-                          }
-                          min="0"
-                          placeholder="e.g. 2"
-                        />
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="grantCustomDomains">
+                              Grant Custom Domain Slots
+                            </Label>
+                            <Input
+                              id="grantCustomDomains"
+                              type="number"
+                              value={formData.grantCustomDomains ?? ''}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  grantCustomDomains:
+                                    e.target.value === ''
+                                      ? undefined
+                                      : Number(e.target.value),
+                                })
+                              }
+                              min="0"
+                              placeholder="e.g. 2"
+                            />
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="plan">Plan</Label>
-                        {editingUser?.subscriptions?.[0]?.product && (
-                          <p className="text-xs text-muted-foreground">
-                            Current:{' '}
-                            <span className="font-medium text-foreground">
-                              {editingUser.subscriptions[0].product.name}
-                            </span>
-                            {' · '}
-                            {editingUser.subscriptions[0].product
-                              .storageQuotaGB == null
-                              ? '∞'
-                              : `${editingUser.subscriptions[0].product.storageQuotaGB} GB`}{' '}
-                            storage
-                          </p>
-                        )}
-                        <Select
-                          value={(formData.planSlug as string) || 'keep'}
-                          onValueChange={(value: string) =>
-                            setFormData({
-                              ...formData,
-                              planSlug: value === 'keep' ? undefined : value,
-                            })
-                          }
-                        >
-                          <SelectTrigger id="plan">
-                            <SelectValue placeholder="Keep current" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="keep">Keep current</SelectItem>
-                            {availablePlans.map((plan) => (
-                              <SelectItem key={plan.slug} value={plan.slug}>
-                                {plan.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="plan">Plan</Label>
+                            {editingUser?.subscriptions?.[0]?.product && (
+                              <p className="text-xs text-muted-foreground">
+                                Current:{' '}
+                                <span className="font-medium text-foreground">
+                                  {editingUser.subscriptions[0].product.name}
+                                </span>
+                                {' · '}
+                                {editingUser.subscriptions[0].product
+                                  .storageQuotaGB == null
+                                  ? '∞'
+                                  : `${editingUser.subscriptions[0].product.storageQuotaGB} GB`}{' '}
+                                storage
+                              </p>
+                            )}
+                            <Select
+                              value={(formData.planSlug as string) || 'keep'}
+                              onValueChange={(value: string) =>
+                                setFormData({
+                                  ...formData,
+                                  planSlug:
+                                    value === 'keep' ? undefined : value,
+                                })
+                              }
+                            >
+                              <SelectTrigger id="plan">
+                                <SelectValue placeholder="Keep current" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="keep">
+                                  Keep current
+                                </SelectItem>
+                                {availablePlans.map((plan) => (
+                                  <SelectItem key={plan.slug} value={plan.slug}>
+                                    {plan.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">

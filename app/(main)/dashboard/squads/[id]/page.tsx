@@ -3,12 +3,17 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { isCloudEnabled } from '@/packages/lib/config/env'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
 import { SquadDashboardClient } from './client'
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params
   const squad = await prisma.nexiumSquad.findUnique({
     where: { id },
@@ -20,7 +25,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   })
 }
 
-export default async function SquadDashboardPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SquadDashboardPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  if (!isCloudEnabled()) redirect('/dashboard')
+
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/auth/login')
 
