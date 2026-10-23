@@ -37,6 +37,12 @@ export async function getPostById(id: string) {
   return prisma.blogPost.findUnique({ where: { id } })
 }
 
+/** Reading time in minutes, at ~200 words per minute. */
+export function estimateReadTime(content: string): number {
+  const words = content.trim().split(/\s+/).length
+  return Math.max(1, Math.ceil(words / 200))
+}
+
 export async function listPosts(opts?: {
   publishedOnly?: boolean
   limit?: number

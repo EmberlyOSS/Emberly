@@ -27,18 +27,8 @@ export default async function AdminPage() {
 
   return (
     <AdminShell
-      header={
-        <div className="glass-card overflow-hidden gradient-border-animated">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Admin <span className="text-gradient">Overview</span>
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Platform administration and management.
-            </p>
-          </div>
-        </div>
-      }
+      title="Admin Overview"
+      description="Platform administration and management."
     >
       <AdminOverviewContent
         userCount={userCount}

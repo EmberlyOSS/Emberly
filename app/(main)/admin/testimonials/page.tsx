@@ -8,17 +8,12 @@ export const metadata = buildPageMetadata({
 })
 
 export default async function TestimonialsPage() {
-
-    return (
-        <AdminShell header={
-            <div className="glass-card">
-                <div className="p-8">
-                    <h1 className="text-3xl font-bold tracking-tight">Testimonial Management</h1>
-                    <p className="text-muted-foreground mt-2">Manage user-submitted testimonials shown on the site.</p>
-                </div>
-            </div>
-        }>
-            <TestimonialList />
-        </AdminShell>
-    )
+  return (
+    <AdminShell
+      title="Testimonial Management"
+      description="Manage user-submitted testimonials shown on the site."
+    >
+      <TestimonialList />
+    </AdminShell>
+  )
 }

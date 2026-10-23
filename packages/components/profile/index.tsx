@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { ProfileClientProps } from '@/packages/types/components/profile'
 import { isCloudEnabledClient } from '@/packages/lib/config/env'
+import { useBillingEnabled } from '@/packages/components/providers/billing-provider'
 
 import { Button } from '@/packages/components/ui/button'
 import { format } from 'date-fns'
@@ -82,24 +83,47 @@ const profileSections = [
         icon: MessageSquare,
         cloudOnly: true,
       },
-      { value: 'referrals', label: 'Referrals', icon: Users, cloudOnly: true },
+      {
+        value: 'referrals',
+        label: 'Referrals',
+        icon: Users,
+        cloudOnly: true,
+        billingOnly: true,
+      },
       { value: 'perks', label: 'Perks', icon: Gift, cloudOnly: true },
     ],
   },
   {
     group: 'Billing & Data',
     items: [
-      { value: 'billing', label: 'Billing', icon: CreditCard, cloudOnly: true },
+      {
+        value: 'billing',
+        label: 'Billing',
+        icon: CreditCard,
+        cloudOnly: true,
+        billingOnly: true,
+      },
       { value: 'data', label: 'Data', icon: Database },
     ],
   },
 ]
 
-function visibleProfileSections(cloudEnabled: boolean) {
+function visibleProfileSections(
+  cloudEnabled: boolean,
+  billingEnabled: boolean,
+  hasSubscription: boolean
+) {
   return profileSections
     .map((s) => ({
       ...s,
-      items: s.items.filter((i) => !i.cloudOnly || cloudEnabled),
+      items: s.items.filter(
+        (i) =>
+          (!i.cloudOnly || cloudEnabled) &&
+          // Subscribers keep the Billing tab in free mode so they can cancel
+          (!('billingOnly' in i) ||
+            billingEnabled ||
+            (i.value === 'billing' && hasSubscription))
+      ),
     }))
     .filter((s) => s.items.length > 0)
 }
@@ -170,9 +194,11 @@ export function ProfileClient({
   const searchParams = useSearchParams()
   const [selectedTab, setSelectedTab] = useState<string>('')
   const cloudEnabled = isCloudEnabledClient()
+  const billingEnabled = useBillingEnabled()
+  const hasSubscription = Boolean(user.subscription)
   const sections = useMemo(
-    () => visibleProfileSections(cloudEnabled),
-    [cloudEnabled]
+    () => visibleProfileSections(cloudEnabled, billingEnabled, hasSubscription),
+    [cloudEnabled, billingEnabled, hasSubscription]
   )
   const visibleTabs = useMemo(
     () => sections.flatMap((s) => s.items),
@@ -406,17 +432,18 @@ export function ProfileClient({
                   >
                     <a href="/api/payments/portal">Manage billing</a>
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => (window.location.href = '/pricing')}
-                    className="border-border/50 hover:bg-muted/30 transition-colors"
-                  >
-                    View plans
-                  </Button>
+                  {billingEnabled && (
+                    <Button
+                      variant="outline"
+                      onClick={() => (window.location.href = '/pricing')}
+                      className="border-border/50 hover:bg-muted/30 transition-colors"
+                    >
+                      View plans
+                    </Button>
+                  )}
                 </div>
 
-                {/* Billing Credits Section */}
-                <BillingCreditsSection />
+                {billingEnabled && <BillingCreditsSection />}
               </div>
             </GlassCardContent>
           </GlassCard>

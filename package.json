@@ -1,6 +1,6 @@
 {
   "name": "@emberly/website",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "license": "AGPL-3.0-only",
   "author": "CodeMeAPixel",
   "homepage": "https://github.com/EmberlyOSS/Emberly",
@@ -28,6 +28,8 @@
     "format:check": "npx prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "postinstall": "prisma generate",
     "media-kit": "npx tsx scripts/generate-media-kit.ts",
+    "branding": "node scripts/generate-branding.mjs",
+    "branding:discord": "node scripts/generate-discord-emotes.mjs",
     "worker": "npx tsx scripts/worker.ts",
     "prepare": "husky install"
   },
@@ -92,7 +94,7 @@
     "github-slugger": "^2.0.0",
     "lucide-react": "^0.525.0",
     "nanoid": "^5.1.5",
-    "next": "^16.2.6",
+    "next": "^16.4.2",
     "next-auth": "^4.24.14",
     "next-themes": "^0.4.6",
     "nodemailer": "^9.0.1",

@@ -23,6 +23,30 @@ body {
 }
 
 @layer base {
+  /* Fallback palette (Emberly default). Themes override these on :root. */
+  :root {
+    --background: 20 14% 4%;
+    --foreground: 30 20% 96%;
+    --card: 20 12% 6.5%;
+    --card-foreground: 30 20% 96%;
+    --popover: 20 12% 7%;
+    --popover-foreground: 30 20% 96%;
+    --primary: 24.6 95% 53.1%;
+    --primary-foreground: 20 30% 8%;
+    --secondary: 20 10% 13%;
+    --secondary-foreground: 30 20% 96%;
+    --muted: 20 10% 13%;
+    --muted-foreground: 25 8% 64%;
+    --accent: 20 10% 14%;
+    --accent-foreground: 30 20% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 20 9% 15%;
+    --input: 20 9% 17%;
+    --ring: 24.6 95% 53.1%;
+    --radius: 0.75rem;
+  }
+
   * {
     @apply border-border;
   }
@@ -37,15 +61,17 @@ body {
 /* ─── Surface tiers ───────────────────────────────────────────────────────── */
 
 .glass {
-  @apply bg-background/80 backdrop-blur-lg border border-border/50;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  @apply bg-card/80 backdrop-blur-lg border border-border/70;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--foreground) / 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .glass-hover {
   @apply transition-all duration-200;
 }
 .glass-hover:hover {
-  @apply bg-background/90 border-border;
+  @apply bg-card border-border;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -55,7 +81,7 @@ body {
 
 /* Elevated surface — for navbars, headers, prominent containers */
 .glass-elevated {
-  @apply bg-background/70 backdrop-blur-xl border border-border/40;
+  @apply bg-card/75 backdrop-blur-xl border border-border/70;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.08),
     0 4px 16px -4px rgba(0, 0, 0, 0.12);
@@ -63,7 +89,7 @@ body {
 
 /* Subtle surface — for nested panels inside other containers */
 .glass-subtle {
-  @apply bg-background/80 backdrop-blur-lg border border-border/50 rounded-xl;
+  @apply bg-muted/30 border border-border/60 rounded-xl;
 }
 
 /* ─── Glow utilities ──────────────────────────────────────────────────────── */
@@ -80,51 +106,6 @@ body {
   box-shadow:
     0 0 12px -2px hsl(var(--primary) / 0.18),
     0 0 40px -8px hsl(var(--primary) / 0.1);
-}
-
-/* ─── Gradient borders (animated) ─────────────────────────────────────────── */
-
-.gradient-border-animated {
-  position: relative;
-  border: none !important;
-}
-.gradient-border-animated::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary) / 0.4),
-    hsl(var(--primary) / 0.08) 40%,
-    transparent 60%,
-    hsl(var(--primary) / 0.08) 80%,
-    hsl(var(--primary) / 0.4)
-  );
-  background-size: 300% 300%;
-  animation: gradient-rotate 8s ease infinite;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-@keyframes gradient-rotate {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
 }
 
 /* Static gradient border */
@@ -239,7 +220,13 @@ body {
 /* ─── Text utilities ──────────────────────────────────────────────────────── */
 
 .text-gradient {
-  @apply bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent;
+  /* Primary into a lighter tint of itself, so it stays readable on any theme */
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--primary)),
+    color-mix(in srgb, hsl(var(--primary)) 65%, white)
+  );
+  @apply bg-clip-text text-transparent;
 }
 
 .text-gradient-subtle {

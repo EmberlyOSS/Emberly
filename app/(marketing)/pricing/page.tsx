@@ -1,3 +1,5 @@
+import { notFound } from 'next/navigation'
+
 import { getServerSession } from 'next-auth/next'
 
 import { authOptions } from '@/packages/lib/auth'
@@ -12,6 +14,9 @@ import {
   getPlanPricing,
 } from '@/packages/lib/products/pricing'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
+import { isBillingEnabled } from '@/packages/lib/config'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = buildPageMetadata({
   title: 'Pricing',
@@ -20,6 +25,9 @@ export const metadata = buildPageMetadata({
 })
 
 export default async function PricingPage() {
+  // No plans to show while Emberly is running free
+  if (!(await isBillingEnabled())) notFound()
+
   const session = await getServerSession(authOptions)
 
   const activeProducts = await prisma.product.findMany({

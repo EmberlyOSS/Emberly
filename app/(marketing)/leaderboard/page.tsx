@@ -1,16 +1,21 @@
 import { Leaderboard } from '@/packages/components/leaderboard'
-import HomeShell from '@/packages/components/layout/home-shell'
-import { Metadata } from 'next'
+import PageShell from '@/packages/components/layout/PageShell'
+import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
-export const metadata: Metadata = {
-  title: 'Leaderboard | Emberly',
-  description: 'Top contributors and power users in the Emberly community.',
-}
+export const metadata = buildPageMetadata({
+  title: 'Leaderboard',
+  description:
+    'Top contributors, Discovery profiles and squads in the Emberly community.',
+})
 
 export default function LeaderboardPage() {
   return (
-    <HomeShell>
+    <PageShell
+      eyebrow="Community"
+      title="Leaderboard"
+      subtitle="The most active contributors, Discovery profiles and squads in the community."
+    >
       <Leaderboard />
-    </HomeShell>
+    </PageShell>
   )
 }

@@ -59,11 +59,10 @@ export function SetupChecker({ children }: SetupCheckerProps) {
   useEffect(() => {
     if (isLoading || !shouldCheckSetup) return
 
+    // A failed check (DB/network hiccup) says nothing about setup state, so
+    // don't bounce an already-configured instance to /setup over it
     if (error) {
       console.error('Setup check failed:', error)
-      if (!pathname.startsWith('/setup')) {
-        router.push('/setup')
-      }
       return
     }
 

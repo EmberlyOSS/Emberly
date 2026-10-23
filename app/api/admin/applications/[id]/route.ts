@@ -3,17 +3,28 @@ import { z } from 'zod'
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAdmin } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
-import { sendTemplateEmail, ApplicationStatusEmail } from '@/packages/lib/emails'
+import {
+  sendTemplateEmail,
+  ApplicationStatusEmail,
+} from '@/packages/lib/emails'
 import { events } from '@/packages/lib/events'
-import { addGrant, getDefaultGrantForApplicationType } from '@/packages/lib/grants'
+import {
+  addGrant,
+  getDefaultGrantForApplicationType,
+} from '@/packages/lib/grants'
 import { loggers } from '@/packages/lib/logger'
-import { ApplicationStatus, ApplicationType } from '@/prisma/generated/prisma/client'
+import {
+  ApplicationStatus,
+  ApplicationType,
+} from '@/prisma/generated/prisma/client'
 
 const logger = loggers.api.getChildLogger('admin-applications-review')
 
 const ReviewSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED', 'REVIEWING'], {
-    errorMap: () => ({ message: 'Status must be APPROVED, REJECTED, or REVIEWING' }),
+    errorMap: () => ({
+      message: 'Status must be APPROVED, REJECTED, or REVIEWING',
+    }),
   }),
   reviewNotes: z
     .string()
@@ -21,6 +32,9 @@ const ReviewSchema = z.object({
     .optional(),
   /** Optional grant to award when approving a STAFF application */
   grantToAward: z.string().optional(),
+  /** Amounts to award when approving a LIMIT_INCREASE application */
+  grantStorageGB: z.coerce.number().int().min(0).max(10000).optional(),
+  grantDomains: z.coerce.number().int().min(0).max(100).optional(),
 })
 
 export async function PATCH(
@@ -50,8 +64,66 @@ export async function PATCH(
       return apiError(parsed.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
     }
 
-    const { status, reviewNotes, grantToAward } = parsed.data
+    const { status, reviewNotes, grantToAward, grantStorageGB, grantDomains } =
+      parsed.data
     const isFinalDecision = status === 'APPROVED' || status === 'REJECTED'
+
+    if (
+      status === 'APPROVED' &&
+      existing.type === ApplicationType.LIMIT_INCREASE
+    ) {
+      if (existing.status === ApplicationStatus.APPROVED) {
+        return apiError('Application already approved', HTTP_STATUS.CONFLICT)
+      }
+
+      const requested = existing.answers as {
+        storageGB?: number
+        domains?: number
+      }
+      const storageGB = grantStorageGB ?? requested.storageGB ?? 0
+      const domains = grantDomains ?? requested.domains ?? 0
+      const metadata = {
+        source: 'application',
+        applicationId: id,
+        grantedBy: adminUser.id,
+      }
+
+      // Free grants reuse the add-on purchase records so the existing
+      // quota and domain-slot calculations pick them up unchanged
+      await prisma.oneOffPurchase.createMany({
+        data: [
+          ...(storageGB > 0
+            ? [
+                {
+                  userId: existing.userId,
+                  type: 'extra_storage',
+                  quantity: storageGB,
+                  amountCents: 0,
+                  metadata,
+                },
+              ]
+            : []),
+          ...(domains > 0
+            ? [
+                {
+                  userId: existing.userId,
+                  type: 'custom_domain',
+                  quantity: domains,
+                  amountCents: 0,
+                  metadata,
+                },
+              ]
+            : []),
+        ],
+      })
+
+      logger.info('Limit increase granted via application', {
+        userId: existing.userId,
+        applicationId: id,
+        storageGB,
+        domains,
+      })
+    }
 
     // APPROVED + BAN_APPEAL → automatically unban the user
     if (status === 'APPROVED' && existing.type === ApplicationType.BAN_APPEAL) {
@@ -114,7 +186,8 @@ export async function PATCH(
     // Send "under review" email directly for REVIEWING status changes
     if (status === 'REVIEWING' && existing.user.email) {
       const applicationType =
-        existing.type.charAt(0) + existing.type.slice(1).toLowerCase().replace('_', ' ')
+        existing.type.charAt(0) +
+        existing.type.slice(1).toLowerCase().replace('_', ' ')
       const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://embrly.ca'
       sendTemplateEmail({
         to: existing.user.email,
@@ -131,7 +204,7 @@ export async function PATCH(
         logger.warn('Failed to send reviewing notification email', {
           applicationId: id,
           error: err?.message,
-        }),
+        })
       )
     }
 

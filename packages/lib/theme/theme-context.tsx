@@ -1,11 +1,26 @@
 'use client'
 
-import React, { createContext, useContext, useCallback, useEffect, useState, useRef, useMemo } from 'react'
-import { THEME_METADATA_MAP, DEFAULT_THEME_CONFIG, type ThemeConfiguration, type ThemeMetadata, type BackgroundEffect, type AnimationSpeed } from './theme-types'
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+} from 'react'
+import {
+  THEME_METADATA_MAP,
+  DEFAULT_THEME_CONFIG,
+  type ThemeConfiguration,
+  type ThemeMetadata,
+} from './theme-types'
+import { generateHueColors, parseHueThemeId } from './hue'
+
+export { generateHueColors }
 
 // Storage keys
 const EFFECTS_ENABLED_KEY = 'emberly-effects-enabled'
-const PREVIEW_THEME_KEY = 'emberly-preview-theme'
 
 // Theme priority: user > system > default
 export type ThemeSource = 'user' | 'system' | 'default'
@@ -44,7 +59,7 @@ export interface ThemeContextValue extends ThemeState {
   isValidTheme: (themeId: string) => boolean
   /** Get metadata for any theme ID */
   getThemeMetadata: (themeId: string) => ThemeMetadata | null
-  /** Reset to system default */
+  /** Preview the system default; saving it clears the user's own theme */
   resetToDefault: () => void
 }
 
@@ -60,8 +75,11 @@ export interface ThemeProviderProps {
   systemTheme?: string
   /** System custom colors from config */
   systemColors?: Record<string, string>
-  /** Callback to persist user theme to database */
-  onSaveUserTheme?: (themeId: string, colors: Record<string, string>) => Promise<boolean>
+  /** Callback to persist user theme to database. A null themeId clears it (follow system theme). */
+  onSaveUserTheme?: (
+    themeId: string | null,
+    colors: Record<string, string>
+  ) => Promise<boolean>
 }
 
 /**
@@ -70,7 +88,7 @@ export interface ThemeProviderProps {
  */
 function buildThemeConfig(themeId: string): ThemeConfiguration {
   const metadata = THEME_METADATA_MAP[themeId]
-  
+
   if (metadata) {
     // Known theme - use its explicit configuration
     return {
@@ -78,14 +96,16 @@ function buildThemeConfig(themeId: string): ThemeConfiguration {
       type: metadata.type,
       backgroundEffect: metadata.backgroundEffect,
       animationSpeed: metadata.animationSpeed,
-      enableAnimations: metadata.supportsFx && metadata.backgroundEffect !== 'none',
-      enableBackgroundEffect: metadata.supportsFx && metadata.backgroundEffect !== 'none',
+      enableAnimations:
+        metadata.supportsFx && metadata.backgroundEffect !== 'none',
+      enableBackgroundEffect:
+        metadata.supportsFx && metadata.backgroundEffect !== 'none',
       particleCount: metadata.type === 'gaming' ? 80 : 50,
       glitchIntensity: 0.2,
       parallaxFactor: 0.5,
     }
   }
-  
+
   // Hue-based themes (e.g., "hue:220") - NO effects
   if (themeId.startsWith('hue:')) {
     return {
@@ -97,7 +117,7 @@ function buildThemeConfig(themeId: string): ThemeConfiguration {
       enableBackgroundEffect: false,
     }
   }
-  
+
   // Unknown theme - use defaults with NO effects
   // This prevents random effects from appearing on unknown themes
   return {
@@ -110,14 +130,37 @@ function buildThemeConfig(themeId: string): ThemeConfiguration {
   }
 }
 
+// Variables we've set inline, so switching themes can clear ones the new theme doesn't define
+let appliedColorKeys = new Set<string>()
+
 /**
- * Apply CSS variables to :root
+ * Apply a theme's colors to :root, replacing whatever the previous theme set.
+ * Hue themes saved without colors get their palette generated, matching ThemeInitializer.
  */
-function applyCSSVariables(colors: Record<string, string>) {
-  Object.entries(colors).forEach(([key, value]) => {
-    const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
-    document.documentElement.style.setProperty(`--${cssKey}`, value)
-  })
+function applyCSSVariables(themeId: string, colors: Record<string, string>) {
+  const root = document.documentElement
+  let resolved = colors
+  if (Object.keys(resolved).length === 0) {
+    const hue = parseHueThemeId(themeId)
+    if (hue !== null) resolved = generateHueColors(hue)
+  }
+
+  const nextKeys = new Set<string>()
+  for (const [key, value] of Object.entries(resolved)) {
+    const cssKey = `--${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`
+    root.style.setProperty(cssKey, value)
+    nextKeys.add(cssKey)
+  }
+  for (const cssKey of appliedColorKeys) {
+    if (!nextKeys.has(cssKey)) root.style.removeProperty(cssKey)
+  }
+  appliedColorKeys = nextKeys
+
+  // Inline vars now carry the theme; empty the server-rendered colors so
+  // variables the new theme omits fall back to globals.css, not the old theme.
+  // Emptied rather than removed because React owns the node.
+  const serverColors = document.getElementById('theme-initializer-colors')
+  if (serverColors?.textContent) serverColors.textContent = ''
 }
 
 /**
@@ -129,7 +172,7 @@ function applyThemeAttribute(themeId: string) {
     document.documentElement.dispatchEvent(
       new CustomEvent('emberly:theme-changed', { detail: themeId })
     )
-  } catch (e) {
+  } catch {
     // Ignore errors in event dispatch
   }
 }
@@ -138,22 +181,35 @@ function applyThemeAttribute(themeId: string) {
  * Apply effect classes to the effects root element
  * Only applies classes when theme explicitly supports effects
  */
-function applyEffectClasses(metadata: ThemeMetadata | null, effectsEnabled: boolean) {
+function applyEffectClasses(
+  metadata: ThemeMetadata | null,
+  effectsEnabled: boolean
+) {
   const rootEl = document.getElementById('theme-effects-root')
   if (!rootEl) return
-  
+
   // ALWAYS clear existing classes first
-  rootEl.classList.remove('theme-glitch', 'theme-gradient-shift', 'theme-aurora', 'theme-arcade')
-  
+  rootEl.classList.remove(
+    'theme-glitch',
+    'theme-gradient-shift',
+    'theme-aurora',
+    'theme-arcade'
+  )
+
   // Only add classes if:
   // 1. Effects are enabled
   // 2. We have valid metadata (not an unknown theme)
   // 3. The theme explicitly supports effects (supportsFx: true)
   // 4. The background effect is not 'none'
-  if (!effectsEnabled || !metadata || !metadata.supportsFx || metadata.backgroundEffect === 'none') {
+  if (
+    !effectsEnabled ||
+    !metadata ||
+    !metadata.supportsFx ||
+    metadata.backgroundEffect === 'none'
+  ) {
     return
   }
-  
+
   // Add appropriate classes based on the explicit effect type
   switch (metadata.backgroundEffect) {
     case 'glitch':
@@ -166,64 +222,48 @@ function applyEffectClasses(metadata: ThemeMetadata | null, effectsEnabled: bool
       rootEl.classList.add('theme-aurora')
       break
   }
-  
+
   if (metadata.isGaming) {
     rootEl.classList.add('theme-arcade')
   }
 }
 
 /**
- * Generate hue-based colors
- * Exported so other components (e.g. AppearancePanel) can compute the same colors
+ * Returns a referentially stable copy of a value that only changes when its
+ * contents change. Server props arrive as fresh objects on every render (and
+ * `systemColors = {}` defaults likewise), which would otherwise re-run the
+ * sync effect and wipe in-progress previews.
  */
-export function generateHueColors(hue: number): Record<string, string> {
-  const BASE_COLORS: Record<string, string> = {
-    background: '222.2 84% 4.9%',
-    foreground: '210 40% 98%',
-    card: '222.2 84% 4.9%',
-    cardForeground: '210 40% 98%',
-    popover: '222.2 84% 4.9%',
-    popoverForeground: '210 40% 98%',
-    primary: '210 40% 98%',
-    primaryForeground: '222.2 47.4% 11.2%',
-    secondary: '217.2 32.6% 17.5%',
-    secondaryForeground: '210 40% 98%',
-    muted: '217.2 32.6% 17.5%',
-    mutedForeground: '215 20.2% 65.1%',
-    accent: '217.2 32.6% 17.5%',
-    accentForeground: '210 40% 98%',
-    destructive: '0 62.8% 30.6%',
-    destructiveForeground: '210 40% 98%',
-    border: '217.2 32.6% 17.5%',
-    input: '217.2 32.6% 17.5%',
-    ring: '212.7 26.8% 83.9%',
+function useStableValue<T>(value: T): T {
+  const ref = useRef(value)
+  const key = JSON.stringify(value ?? null)
+  const keyRef = useRef(key)
+  if (keyRef.current !== key) {
+    keyRef.current = key
+    ref.current = value
   }
-  
-  const result: Record<string, string> = {}
-  
-  Object.entries(BASE_COLORS).forEach(([key, value]) => {
-    // Keep destructive colors red
-    if (key === 'destructive' || key === 'destructiveForeground') {
-      result[key] = value
-      return
-    }
-    const [, s, l] = value.split(' ')
-    result[key] = `${hue} ${s} ${l}`
-  })
-  
-  return result
+  return ref.current
 }
+
+const EMPTY_COLORS: Record<string, string> = {}
 
 export function EmberlyThemeProvider({
   children,
   initialUserTheme,
-  initialUserColors,
+  initialUserColors: initialUserColorsProp,
   systemTheme = 'default-dark',
-  systemColors = {},
+  systemColors: systemColorsProp,
   onSaveUserTheme,
 }: ThemeProviderProps) {
+  const initialUserColors = useStableValue(initialUserColorsProp)
+  const systemColors = useStableValue(systemColorsProp ?? EMPTY_COLORS)
+
   // Determine initial theme based on priority: user > system > hardcoded default
-  const getInitialTheme = useCallback((): { themeId: string; source: ThemeSource; colors: Record<string, string> } => {
+  const getInitialTheme = useCallback((): {
+    themeId: string
+    source: ThemeSource
+    colors: Record<string, string>
+  } => {
     // Priority 1: User's saved theme
     if (initialUserTheme) {
       return {
@@ -247,31 +287,48 @@ export function EmberlyThemeProvider({
       colors: {},
     }
   }, [initialUserTheme, initialUserColors, systemTheme, systemColors])
-  
+
   const initial = getInitialTheme()
-  
+
   // Core state
   const [themeId, setThemeId] = useState(initial.themeId)
   const [source, setSource] = useState<ThemeSource>(initial.source)
-  const [customColors, setCustomColors] = useState<Record<string, string>>(initial.colors)
+  const [customColors, setCustomColors] = useState<Record<string, string>>(
+    initial.colors
+  )
   const [effectsEnabled, setEffectsEnabledState] = useState(true)
   const [isPreview, setIsPreview] = useState(false)
-  const originalThemeRef = useRef<{ themeId: string; colors: Record<string, string> } | null>(null)
-  
+  const originalThemeRef = useRef<{
+    themeId: string
+    colors: Record<string, string>
+  } | null>(null)
+  // Set while previewing "Reset to Default" so saving clears the user's theme
+  const resetPendingRef = useRef(false)
+  const isFirstSyncRef = useRef(true)
+
   // Derived state
   const metadata = useMemo(() => THEME_METADATA_MAP[themeId] || null, [themeId])
   const config = useMemo(() => buildThemeConfig(themeId), [themeId])
-  
+
   // Load effects preference from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(EFFECTS_ENABLED_KEY)
     const enabled = stored === null ? true : stored === 'true'
     setEffectsEnabledState(enabled)
-    document.documentElement.setAttribute('data-effects-disabled', (!enabled).toString())
+    document.documentElement.setAttribute(
+      'data-effects-disabled',
+      (!enabled).toString()
+    )
   }, [])
 
-  // Sync theme when initialUserTheme changes (e.g., after login/logout)
+  // Sync theme when server-provided values change (login/logout, saves elsewhere)
   useEffect(() => {
+    if (isFirstSyncRef.current) {
+      isFirstSyncRef.current = false
+      return
+    }
+    originalThemeRef.current = null
+    resetPendingRef.current = false
     if (initialUserTheme) {
       // User logged in - use their theme
       setThemeId(initialUserTheme)
@@ -286,47 +343,55 @@ export function EmberlyThemeProvider({
       setIsPreview(false)
     }
   }, [initialUserTheme, initialUserColors, systemTheme, systemColors])
-  
+
   // Apply theme visuals when state changes
   useEffect(() => {
     applyThemeAttribute(themeId)
-    if (Object.keys(customColors).length > 0) {
-      applyCSSVariables(customColors)
-    }
+    applyCSSVariables(themeId, customColors)
     applyEffectClasses(metadata, effectsEnabled)
   }, [themeId, customColors, metadata, effectsEnabled])
-  
+
   // Preview a theme without saving
-  const previewTheme = useCallback((newThemeId: string, colors?: Record<string, string>) => {
-    // Store original theme on first preview
-    if (!isPreview) {
-      originalThemeRef.current = { themeId, colors: customColors }
-      setIsPreview(true)
-    }
-    
-    setThemeId(newThemeId)
-    if (colors) {
-      setCustomColors(colors)
-    }
-  }, [isPreview, themeId, customColors])
-  
+  const previewTheme = useCallback(
+    (newThemeId: string, colors?: Record<string, string>) => {
+      // Store original theme on first preview
+      if (!isPreview) {
+        originalThemeRef.current = { themeId, colors: customColors }
+        setIsPreview(true)
+      }
+
+      resetPendingRef.current = false
+      setThemeId(newThemeId)
+      setCustomColors(colors ?? {})
+    },
+    [isPreview, themeId, customColors]
+  )
+
   // Preview a hue-based theme
-  const previewHue = useCallback((hue: number) => {
-    const hueColors = generateHueColors(hue)
-    previewTheme(`hue:${hue}`, hueColors)
-  }, [previewTheme])
-  
+  const previewHue = useCallback(
+    (hue: number) => {
+      const hueColors = generateHueColors(hue)
+      previewTheme(`hue:${hue}`, hueColors)
+    },
+    [previewTheme]
+  )
+
   // Save the current preview as user's theme
   const saveTheme = useCallback(async (): Promise<boolean> => {
     if (!onSaveUserTheme) {
       console.warn('[Theme] No onSaveUserTheme callback provided')
       return false
     }
-    
+
     try {
-      const success = await onSaveUserTheme(themeId, customColors)
+      const clearing = resetPendingRef.current
+      const success = await onSaveUserTheme(
+        clearing ? null : themeId,
+        customColors
+      )
       if (success) {
-        setSource('user')
+        resetPendingRef.current = false
+        setSource(clearing ? (systemTheme ? 'system' : 'default') : 'user')
         setIsPreview(false)
         originalThemeRef.current = null
       }
@@ -335,8 +400,8 @@ export function EmberlyThemeProvider({
       console.error('[Theme] Failed to save user theme:', error)
       return false
     }
-  }, [themeId, customColors, onSaveUserTheme])
-  
+  }, [themeId, customColors, onSaveUserTheme, systemTheme])
+
   // Cancel preview and revert
   const cancelPreview = useCallback(() => {
     if (originalThemeRef.current) {
@@ -344,36 +409,40 @@ export function EmberlyThemeProvider({
       setCustomColors(originalThemeRef.current.colors)
       originalThemeRef.current = null
     }
+    resetPendingRef.current = false
     setIsPreview(false)
   }, [])
-  
+
   // Toggle effects
-  const setEffectsEnabled = useCallback((enabled: boolean) => {
-    setEffectsEnabledState(enabled)
-    localStorage.setItem(EFFECTS_ENABLED_KEY, enabled.toString())
-    document.documentElement.setAttribute('data-effects-disabled', (!enabled).toString())
-    applyEffectClasses(metadata, enabled)
-  }, [metadata])
-  
+  const setEffectsEnabled = useCallback(
+    (enabled: boolean) => {
+      setEffectsEnabledState(enabled)
+      localStorage.setItem(EFFECTS_ENABLED_KEY, enabled.toString())
+      document.documentElement.setAttribute(
+        'data-effects-disabled',
+        (!enabled).toString()
+      )
+      applyEffectClasses(metadata, enabled)
+    },
+    [metadata]
+  )
+
   // Validate theme ID
   const isValidTheme = useCallback((id: string): boolean => {
     return id in THEME_METADATA_MAP || id.startsWith('hue:')
   }, [])
-  
+
   // Get metadata for any theme
   const getThemeMetadata = useCallback((id: string): ThemeMetadata | null => {
     return THEME_METADATA_MAP[id] || null
   }, [])
-  
-  // Reset to system default
+
+  // Preview the system default; Save then clears the user's own theme
   const resetToDefault = useCallback(() => {
-    setThemeId(systemTheme || 'default-dark')
-    setCustomColors(systemColors || {})
-    setSource(systemTheme ? 'system' : 'default')
-    setIsPreview(false)
-    originalThemeRef.current = null
-  }, [systemTheme, systemColors])
-  
+    previewTheme(systemTheme || 'default-dark', systemColors)
+    resetPendingRef.current = true
+  }, [previewTheme, systemTheme, systemColors])
+
   const value: ThemeContextValue = {
     themeId,
     source,
@@ -392,12 +461,8 @@ export function EmberlyThemeProvider({
     getThemeMetadata,
     resetToDefault,
   }
-  
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  )
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 /**

@@ -83,7 +83,7 @@ export default function NotFound() {
 
       <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="relative glass-elevated rounded-2xl gradient-border-animated transition-all duration-300">
+          <div className="relative glass-elevated rounded-2xl transition-all duration-300">
             <div className="relative">
               <DashboardNav />
             </div>
@@ -106,9 +106,7 @@ export default function NotFound() {
                 {/* Title */}
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
                   Page not
-                  <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                    found
-                  </span>
+                  <span className="block text-gradient">found</span>
                 </h1>
 
                 {/* Description */}

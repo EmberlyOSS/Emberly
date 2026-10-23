@@ -10,11 +10,13 @@
 !.yarn/releases
 !.yarn/versions
 package-lock.json
+tsconfig.claudecheck.json
 yarn.lock
 bun.lock
 bun.lockb
 tmp/TODO.md
 .claude/
+.private
 
 # testing
 /coverage

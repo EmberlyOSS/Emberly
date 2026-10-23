@@ -1310,6 +1310,34 @@ export function SettingsManager() {
             )}
           </SettingsSection>
 
+          {cloudEnabled && (
+            <SettingsSection
+              icon={CreditCard}
+              title="Billing"
+              description="Control whether Emberly Cloud accepts payments"
+            >
+              <SettingRow
+                label="Accept Payments"
+                description="Turn off to make Emberly fully free. Checkout is disabled and users request storage or domain increases through Applications. Existing subscribers can still manage or cancel billing."
+                changed={isFieldChanged('general', ['billing', 'enabled'])}
+              >
+                <Switch
+                  checked={workingConfig.settings.general.billing.enabled}
+                  disabled={!isSuperAdmin}
+                  onCheckedChange={(checked) =>
+                    handleSettingChange('general', {
+                      billing: {
+                        ...workingConfig.settings.general.billing,
+                        enabled: checked,
+                      },
+                    })
+                  }
+                  className={getFieldClasses('general', ['billing', 'enabled'])}
+                />
+              </SettingRow>
+            </SettingsSection>
+          )}
+
           {/* Credits */}
           <SettingsSection
             icon={Heart}

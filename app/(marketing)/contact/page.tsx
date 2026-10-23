@@ -54,8 +54,8 @@ const CONTACT_CHANNELS = [
     href: 'https://github.com/orgs/EmberlyOSS/discussions',
     label: 'Join discussions',
     external: true,
-    color: 'text-chart-3',
-    bg: 'bg-chart-3/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Users,
@@ -64,8 +64,8 @@ const CONTACT_CHANNELS = [
     href: '/discord',
     label: 'Join Discord',
     external: false,
-    color: 'text-chart-1',
-    bg: 'bg-chart-1/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Twitter,
@@ -74,8 +74,8 @@ const CONTACT_CHANNELS = [
     href: 'https://twitter.com/TryEmberly',
     label: 'Follow us',
     external: true,
-    color: 'text-chart-5',
-    bg: 'bg-chart-5/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
 ]
 
@@ -142,9 +142,7 @@ export default function ContactPage() {
               </Badge>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
                 We'd love to
-                <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                  hear from you.
-                </span>
+                <span className="block text-gradient">hear from you.</span>
               </h1>
               <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
                 Questions, feedback, partnership inquiries, or just want to say
@@ -241,8 +239,8 @@ export default function ContactPage() {
             <GlassCard>
               <div className="p-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-chart-4/10">
-                    <Clock className="h-5 w-5 text-chart-4" />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Clock className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <div className="font-medium">Response Time</div>

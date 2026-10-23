@@ -21,14 +21,14 @@ export function useSetupStatus(enabled = true) {
     queryKey: SETUP_STATUS_QUERY_KEY,
     queryFn: fetchSetupStatus,
     enabled,
-    // Cache for 10 minutes - setup status rarely changes after initial setup
-    staleTime: 10 * 60 * 1000,
+    // Completed never reverts, so cache it; always recheck an incomplete result
+    staleTime: (query) => (query.state.data?.completed ? 10 * 60 * 1000 : 0),
     gcTime: 30 * 60 * 1000,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     // Reduce unnecessary refetches - setup status is stable
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     refetchOnReconnect: false,
     // Only refetch in background when truly stale
     refetchInterval: false,

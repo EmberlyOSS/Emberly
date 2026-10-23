@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next'
 
 import { listPosts } from '@/packages/lib/blog'
-import { listLegal } from '@/packages/lib/legal/service'
+import { isBillingEnabled } from '@/packages/lib/config'
+import { LEGAL_DOCUMENTS } from '@/packages/lib/legal/documents'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,6 +94,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const billingEnabled = await isBillingEnabled()
   const abs = (path: string) => `${BASE_URL}${path}`
 
   // Blog posts
@@ -114,21 +116,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Legal pages
-  let legalRoutes: MetadataRoute.Sitemap = []
-  try {
-    const legal = await listLegal({ publishedOnly: true, limit: 100 })
-    legalRoutes = legal.map((page) => ({
-      url: abs(`/legal/${page.slug}`),
-      lastModified: page.updatedAt ?? page.publishedAt ?? new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    }))
-  } catch {
-    // non-fatal
-  }
+  const legalRoutes: MetadataRoute.Sitemap = LEGAL_DOCUMENTS.map((doc) => ({
+    url: abs(`/legal/${doc.slug}`),
+    lastModified: new Date(`${doc.updatedAt}T00:00:00Z`),
+    changeFrequency: 'monthly' as const,
+    priority: 0.5,
+  }))
 
   return [
-    ...STATIC_ROUTES.map((r) => ({ ...r, url: abs(r.url as string) })),
+    ...STATIC_ROUTES.filter((r) => billingEnabled || r.url !== '/pricing').map(
+      (r) => ({ ...r, url: abs(r.url as string) })
+    ),
     ...blogRoutes,
     ...legalRoutes,
   ]

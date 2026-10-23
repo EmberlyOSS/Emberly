@@ -113,9 +113,7 @@ export default function PressPage() {
                 </Badge>
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
                   Press
-                  <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                    Resources
-                  </span>
+                  <span className="block text-gradient">Resources</span>
                 </h1>
                 <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
                   Everything you need to write about Emberly. Download our media

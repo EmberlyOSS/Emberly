@@ -1,5 +1,6 @@
 'use client'
 
+import { formatBytes } from '@/packages/lib/utils'
 import { useState, useEffect } from 'react'
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
@@ -814,7 +815,7 @@ export function PublicProfile({
                     {files.slice(0, 20).map((file) => (
                       <a
                         key={file.id}
-                        href={`https://embrly.ca/${file.url}`}
+                        href={file.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors group"
@@ -824,7 +825,8 @@ export function PublicProfile({
                           {file.name}
                         </span>
                         <span className="text-[10px] text-muted-foreground shrink-0">
-                          {(file.size / 1024 / 1024).toFixed(1)} MB
+                          {/* File.size is stored in MB */}
+                          {formatBytes(file.size * 1024 * 1024)}
                         </span>
                         <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5">
                           <Eye className="w-2.5 h-2.5" />

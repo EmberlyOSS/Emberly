@@ -13,11 +13,15 @@ export async function GET() {
   try {
     const completed = await checkSetupCompletion()
 
+    // Only "completed" is safe to cache: setup never un-completes, but a
+    // cached "incomplete" keeps bouncing users to /setup after it finishes
     return NextResponse.json(
       { completed },
       {
         headers: {
-          'Cache-Control': `public, max-age=${CACHE_MAX_AGE}, s-maxage=${CACHE_S_MAXAGE}, stale-while-revalidate=60`,
+          'Cache-Control': completed
+            ? `public, max-age=${CACHE_MAX_AGE}, s-maxage=${CACHE_S_MAXAGE}, stale-while-revalidate=60`
+            : 'no-store',
         },
       }
     )
@@ -34,4 +38,3 @@ export async function GET() {
     )
   }
 }
-

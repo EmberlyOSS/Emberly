@@ -19,6 +19,7 @@ import {
   Undo2,
   ChevronDown,
   MessageSquare,
+  HardDrive,
 } from 'lucide-react'
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
@@ -37,7 +38,7 @@ import { ApplicationReplies } from '@/packages/components/applications/applicati
 
 interface Application {
   id: string
-  type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL'
+  type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL' | 'LIMIT_INCREASE'
   status: 'PENDING' | 'REVIEWING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
   answers: Record<string, unknown>
   reviewNotes?: string | null
@@ -46,18 +47,69 @@ interface Application {
 }
 
 const TYPE_CONFIG = {
-  STAFF: { label: 'Staff Application', icon: Briefcase, color: 'text-chart-1', bg: 'bg-chart-1/10', border: 'border-chart-1/30' },
-  PARTNER: { label: 'Partnership', icon: Handshake, color: 'text-chart-3', bg: 'bg-chart-3/10', border: 'border-chart-3/30' },
-  VERIFICATION: { label: 'Verification', icon: BadgeCheck, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
-  BAN_APPEAL: { label: 'Ban Appeal', icon: Scale, color: 'text-chart-5', bg: 'bg-chart-5/10', border: 'border-chart-5/30' },
+  STAFF: {
+    label: 'Staff Application',
+    icon: Briefcase,
+    color: 'text-chart-1',
+    bg: 'bg-chart-1/10',
+    border: 'border-chart-1/30',
+  },
+  PARTNER: {
+    label: 'Partnership',
+    icon: Handshake,
+    color: 'text-chart-3',
+    bg: 'bg-chart-3/10',
+    border: 'border-chart-3/30',
+  },
+  VERIFICATION: {
+    label: 'Verification',
+    icon: BadgeCheck,
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+    border: 'border-primary/30',
+  },
+  BAN_APPEAL: {
+    label: 'Ban Appeal',
+    icon: Scale,
+    color: 'text-chart-5',
+    bg: 'bg-chart-5/10',
+    border: 'border-chart-5/30',
+  },
+  LIMIT_INCREASE: {
+    label: 'Limit Increase',
+    icon: HardDrive,
+    color: 'text-chart-2',
+    bg: 'bg-chart-2/10',
+    border: 'border-chart-2/30',
+  },
 }
 
 const STATUS_CONFIG = {
-  PENDING: { label: 'Pending', icon: Clock, className: 'bg-amber-500/10 text-amber-500 border-amber-500/30' },
-  REVIEWING: { label: 'In Review', icon: AlertCircle, className: 'bg-blue-500/10 text-blue-500 border-blue-500/30' },
-  APPROVED: { label: 'Approved', icon: CheckCircle2, className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' },
-  REJECTED: { label: 'Rejected', icon: XCircle, className: 'bg-destructive/10 text-destructive border-destructive/30' },
-  WITHDRAWN: { label: 'Withdrawn', icon: Undo2, className: 'bg-muted/50 text-muted-foreground border-border/50' },
+  PENDING: {
+    label: 'Pending',
+    icon: Clock,
+    className: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+  },
+  REVIEWING: {
+    label: 'In Review',
+    icon: AlertCircle,
+    className: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+  },
+  APPROVED: {
+    label: 'Approved',
+    icon: CheckCircle2,
+    className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+  },
+  REJECTED: {
+    label: 'Rejected',
+    icon: XCircle,
+    className: 'bg-destructive/10 text-destructive border-destructive/30',
+  },
+  WITHDRAWN: {
+    label: 'Withdrawn',
+    icon: Undo2,
+    className: 'bg-muted/50 text-muted-foreground border-border/50',
+  },
 }
 
 export function ApplicationsDashboard() {
@@ -75,7 +127,11 @@ export function ApplicationsDashboard() {
       const data = await res.json()
       setApplications(data.data ?? data)
     } catch {
-      toast({ title: 'Error', description: 'Failed to load applications', variant: 'destructive' })
+      toast({
+        title: 'Error',
+        description: 'Failed to load applications',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
@@ -89,12 +145,21 @@ export function ApplicationsDashboard() {
     if (!withdrawId) return
     setWithdrawing(true)
     try {
-      const res = await fetch(`/api/applications/${withdrawId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/applications/${withdrawId}`, {
+        method: 'DELETE',
+      })
       if (!res.ok) throw new Error('Failed to withdraw')
-      toast({ title: 'Withdrawn', description: 'Your application has been withdrawn.' })
+      toast({
+        title: 'Withdrawn',
+        description: 'Your application has been withdrawn.',
+      })
       fetchApplications()
     } catch {
-      toast({ title: 'Error', description: 'Failed to withdraw application', variant: 'destructive' })
+      toast({
+        title: 'Error',
+        description: 'Failed to withdraw application',
+        variant: 'destructive',
+      })
     } finally {
       setWithdrawing(false)
       setWithdrawId(null)
@@ -114,7 +179,9 @@ export function ApplicationsDashboard() {
       {/* Header with link to submit new */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {applications.length === 0 ? 'You haven\'t submitted any applications yet.' : `${applications.length} application${applications.length !== 1 ? 's' : ''}`}
+          {applications.length === 0
+            ? "You haven't submitted any applications yet."
+            : `${applications.length} application${applications.length !== 1 ? 's' : ''}`}
         </p>
         <Button variant="outline" size="sm" asChild>
           <Link href="/applications">
@@ -132,7 +199,8 @@ export function ApplicationsDashboard() {
           <div>
             <h3 className="font-medium">No applications</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Submit an application to join our team, become a partner, or request verification.
+              Submit an application to join our team, become a partner, or
+              request verification.
             </p>
           </div>
           <Button asChild>
@@ -149,7 +217,8 @@ export function ApplicationsDashboard() {
             const statusConf = STATUS_CONFIG[app.status]
             const TypeIcon = typeConf.icon
             const StatusIcon = statusConf.icon
-            const canWithdraw = app.status === 'PENDING' || app.status === 'REVIEWING'
+            const canWithdraw =
+              app.status === 'PENDING' || app.status === 'REVIEWING'
 
             return (
               <div
@@ -158,15 +227,22 @@ export function ApplicationsDashboard() {
               >
                 <div
                   className="p-4 flex items-center gap-4 group cursor-pointer"
-                  onClick={() => setExpandedId(expandedId === app.id ? null : app.id)}
+                  onClick={() =>
+                    setExpandedId(expandedId === app.id ? null : app.id)
+                  }
                 >
                   <div className={`p-2.5 rounded-lg ${typeConf.bg} shrink-0`}>
                     <TypeIcon className={`h-5 w-5 ${typeConf.color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{typeConf.label}</span>
-                      <Badge variant="outline" className={`text-xs ${statusConf.className}`}>
+                      <span className="font-medium text-sm">
+                        {typeConf.label}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${statusConf.className}`}
+                      >
                         <StatusIcon className="h-3 w-3 mr-1" />
                         {statusConf.label}
                       </Badge>
@@ -194,7 +270,9 @@ export function ApplicationsDashboard() {
                         Withdraw
                       </Button>
                     )}
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedId === app.id ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${expandedId === app.id ? 'rotate-180' : ''}`}
+                    />
                   </div>
                 </div>
                 {expandedId === app.id && (
@@ -212,17 +290,25 @@ export function ApplicationsDashboard() {
       )}
 
       {/* Withdraw confirmation */}
-      <AlertDialog open={!!withdrawId} onOpenChange={(open) => !open && setWithdrawId(null)}>
+      <AlertDialog
+        open={!!withdrawId}
+        onOpenChange={(open) => !open && setWithdrawId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Withdraw Application</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to withdraw this application? This action cannot be undone.
+              Are you sure you want to withdraw this application? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={withdrawing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleWithdraw} disabled={withdrawing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleWithdraw}
+              disabled={withdrawing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {withdrawing ? 'Withdrawing...' : 'Withdraw'}
             </AlertDialogAction>
           </AlertDialogFooter>

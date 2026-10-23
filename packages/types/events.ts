@@ -652,7 +652,7 @@ export type EventTypeMap = {
     userId: string
     userName: string
     userEmail: string
-    type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL'
+    type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL' | 'LIMIT_INCREASE'
   }
 
   'application.reviewed': {
@@ -660,7 +660,7 @@ export type EventTypeMap = {
     userId: string
     userName: string
     userEmail: string
-    type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL'
+    type: 'STAFF' | 'PARTNER' | 'VERIFICATION' | 'BAN_APPEAL' | 'LIMIT_INCREASE'
     status: 'APPROVED' | 'REJECTED'
     reviewerName: string
     reviewNotes?: string

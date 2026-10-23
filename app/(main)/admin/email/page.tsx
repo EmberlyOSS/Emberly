@@ -30,18 +30,8 @@ export default async function AdminEmailPage() {
 
   return (
     <AdminShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Email Broadcasts
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Send announcements and operational emails to users.
-            </p>
-          </div>
-        </div>
-      }
+      title="Email Broadcasts"
+      description="Send announcements and operational emails to users."
     >
       <AdminEmailManager />
     </AdminShell>

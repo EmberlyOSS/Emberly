@@ -7,17 +7,13 @@ import { buildSiteMetadata } from '@/packages/lib/embeds/metadata'
 import {
   ArrowRight,
   Check,
-  ChevronDown,
-  Cloud,
   Code2,
   Copy,
   Download,
-  ExternalLink,
   FileUp,
   Globe,
   Link2,
   Lock,
-  MessageSquare,
   Rocket,
   Share2,
   Shield,
@@ -40,6 +36,7 @@ import HomeShell from '@/packages/components/layout/home-shell'
 
 import { authOptions } from '@/packages/lib/auth'
 import { checkSetupCompletion } from '@/packages/lib/database/setup'
+import { isBillingEnabled } from '@/packages/lib/config'
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildSiteMetadata()
@@ -73,8 +70,8 @@ const FEATURES = [
     title: 'Secure by Design',
     description:
       'End-to-end encryption, optional password protection, and configurable file expirations.',
-    color: 'text-chart-1',
-    bg: 'bg-chart-1/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Zap,
@@ -89,32 +86,32 @@ const FEATURES = [
     title: 'Rich Embeds',
     description:
       'Beautiful previews on Discord, Twitter, Slack, and more with customizable metadata.',
-    color: 'text-chart-3',
-    bg: 'bg-chart-3/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Globe,
     title: 'Custom Domains',
     description:
       'Bring your own domain to serve files under your brand with full SSL support.',
-    color: 'text-chart-4',
-    bg: 'bg-chart-4/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Code2,
     title: 'Developer Friendly',
     description:
       'Simple REST API, ShareX/Flameshot support, and webhook integrations.',
-    color: 'text-chart-5',
-    bg: 'bg-chart-5/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Users,
     title: 'Team Ready',
     description:
       'Collaborate with teammates, manage permissions, and track usage analytics.',
-    color: 'text-chart-2',
-    bg: 'bg-chart-2/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
 ]
 
@@ -142,7 +139,7 @@ const HOW_IT_WORKS = [
   },
 ]
 
-const FAQ_ITEMS = [
+const faqItems = (billingEnabled: boolean) => [
   {
     question: 'How do I upload files?',
     answer:
@@ -160,8 +157,9 @@ const FAQ_ITEMS = [
   },
   {
     question: 'What file sizes are supported?',
-    answer:
-      'Spark (free) supports up to 500 MB per file. Paid plans increase this up to unlimited on Ember and Enterprise tiers.',
+    answer: billingEnabled
+      ? 'Spark (free) supports up to 500 MB per file. Paid plans increase this up to unlimited on Ember and Enterprise tiers.'
+      : 'Every account can upload files up to 500 MB. Need more? Request a limit increase from the Applications page.',
   },
   {
     question: 'Is there an API?',
@@ -183,6 +181,7 @@ export default async function HomePage() {
   }
 
   const session = await getServerSession(authOptions)
+  const billingEnabled = await isBillingEnabled()
 
   const partners = await prisma.partner.findMany({
     where: { active: true },
@@ -249,7 +248,9 @@ export default async function HomePage() {
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'USD',
-          description: 'Free plan available. Paid plans from $5/mo.',
+          description: billingEnabled
+            ? 'Free plan available. Paid plans from $5/mo.'
+            : 'Free for everyone.',
         },
         featureList: [
           'File sharing with expiry and password protection',
@@ -315,10 +316,7 @@ export default async function HomePage() {
                   asChild
                   className="bg-background/50"
                 >
-                  <Link href="/about">
-                    Learn More
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </Link>
+                  <Link href="/about">Learn More</Link>
                 </Button>
               </div>
 
@@ -339,7 +337,7 @@ export default async function HomePage() {
             {/* Right: Interactive Preview */}
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 rounded-3xl blur-2xl opacity-40" />
-              <GlassCard className="relative gradient-border-animated animate-float">
+              <GlassCard className="relative animate-float">
                 <div className="p-6 md:p-8">
                   {/* Preview Header */}
                   <div className="flex items-center justify-between mb-6">
@@ -431,9 +429,9 @@ export default async function HomePage() {
         {/* Features Section */}
         <section>
           <div className="text-center mb-12">
-            <Badge className="mb-4 bg-primary/20 text-primary border-primary/30">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               Features
-            </Badge>
+            </p>
             <h2 className="text-3xl md:text-4xl font-bold">
               Built for teams and builders
             </h2>
@@ -452,9 +450,9 @@ export default async function HomePage() {
               >
                 <div className="p-6">
                   <div
-                    className={`inline-flex p-3 rounded-xl ${feature.bg} group-hover:scale-110 transition-transform`}
+                    className={`inline-flex p-2.5 rounded-xl ring-1 ring-primary/20 ${feature.bg}`}
                   >
-                    <feature.icon className={`h-6 w-6 ${feature.color}`} />
+                    <feature.icon className={`h-5 w-5 ${feature.color}`} />
                   </div>
                   <h3 className="mt-4 font-semibold text-lg">
                     {feature.title}
@@ -471,9 +469,9 @@ export default async function HomePage() {
         {/* How it Works Section */}
         <section>
           <div className="text-center mb-12">
-            <Badge className="mb-4 bg-primary/20 text-primary border-primary/30">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               How it works
-            </Badge>
+            </p>
             <h2 className="text-3xl md:text-4xl font-bold">
               Three simple steps
             </h2>
@@ -502,9 +500,8 @@ export default async function HomePage() {
 
                     {/* Step circle */}
                     <div className="relative flex-shrink-0 z-10">
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-                      <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <item.icon className="h-6 w-6 text-primary-foreground" />
+                      <div className="relative w-14 h-14 rounded-2xl bg-card ring-1 ring-primary/30 shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)] flex items-center justify-center">
+                        <item.icon className="h-6 w-6 text-primary" />
                       </div>
                     </div>
 
@@ -554,9 +551,9 @@ export default async function HomePage() {
         {/* FAQ Section */}
         <section>
           <div className="text-center mb-12">
-            <Badge className="mb-4 bg-primary/20 text-primary border-primary/30">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               FAQ
-            </Badge>
+            </p>
             <h2 className="text-3xl md:text-4xl font-bold">
               Frequently Asked Questions
             </h2>
@@ -565,7 +562,7 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <FAQAccordion items={FAQ_ITEMS} />
+          <FAQAccordion items={faqItems(billingEnabled)} />
         </section>
 
         {/* CTA Section */}
@@ -580,8 +577,10 @@ export default async function HomePage() {
               </h2>
               <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
                 Join developers and teams who use Emberly for secure file
-                sharing, collaboration, and talent discovery. Free to start, no
-                credit card required.
+                sharing, collaboration, and talent discovery.{' '}
+                {billingEnabled
+                  ? 'Free to start, no credit card required.'
+                  : 'Completely free.'}
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 {session ? (

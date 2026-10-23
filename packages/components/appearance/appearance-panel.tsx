@@ -4,12 +4,21 @@ import { useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Sparkles, Zap, RotateCcw } from 'lucide-react'
 import { Card } from '@/packages/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/packages/components/ui/tabs'
 import { Button } from '@/packages/components/ui/button'
 import { Switch } from '@/packages/components/ui/switch'
 import { Label } from '@/packages/components/ui/label'
-import { PRESET_HUES, THEME_PRESETS } from '@/packages/components/theme/theme-customizer'
-import { sortCategories, getCategoryLabel, getCategoryIcon } from '@/packages/lib/theme/theme-categories'
+import { PRESET_HUES, THEME_PRESETS } from '@/packages/lib/theme/presets'
+import {
+  sortCategories,
+  getCategoryLabel,
+  getCategoryIcon,
+} from '@/packages/lib/theme/theme-categories'
 import { useTheme, generateHueColors } from '@/packages/lib/theme/theme-context'
 import { useToast } from '@/packages/hooks/use-toast'
 import { cn } from '@/packages/lib/utils'
@@ -41,7 +50,10 @@ interface AppearancePanelProps {
  * - Works for both user and admin flows via optional onSave / onThemeChange callbacks
  * - Effects toggle integrated
  */
-export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps = {}) {
+export function AppearancePanel({
+  onSave,
+  onThemeChange,
+}: AppearancePanelProps = {}) {
   const router = useRouter()
   const { toast } = useToast()
   const {
@@ -60,33 +72,43 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
 
   // Group themes by category
   const themesByCategory = useMemo(() => {
-    return THEME_PRESETS.reduce((acc, preset) => {
-      const category = preset.category || 'basic'
-      if (!acc[category]) {
-        acc[category] = []
-      }
-      acc[category].push(preset)
-      return acc
-    }, {} as Record<string, typeof THEME_PRESETS>)
+    return THEME_PRESETS.reduce(
+      (acc, preset) => {
+        const category = preset.category || 'basic'
+        if (!acc[category]) {
+          acc[category] = []
+        }
+        acc[category].push(preset)
+        return acc
+      },
+      {} as Record<string, typeof THEME_PRESETS>
+    )
   }, [])
 
   // Handle preset selection
-  const handlePresetSelect = useCallback((preset: typeof THEME_PRESETS[0]) => {
-    const presetThemeId = preset.themeId || preset.name.replace(/[^\w-]/g, '').toLowerCase()
-    const presetColors = preset.colors as unknown as Record<string, string>
-    previewTheme(presetThemeId, presetColors)
-    onThemeChange?.(presetThemeId, presetColors, {
-      backgroundEffect: preset.backgroundEffect,
-      animationSpeed: preset.animationSpeed,
-    })
-  }, [previewTheme, onThemeChange])
+  const handlePresetSelect = useCallback(
+    (preset: (typeof THEME_PRESETS)[0]) => {
+      const presetThemeId =
+        preset.themeId || preset.name.replace(/[^\w-]/g, '').toLowerCase()
+      const presetColors = preset.colors as unknown as Record<string, string>
+      previewTheme(presetThemeId, presetColors)
+      onThemeChange?.(presetThemeId, presetColors, {
+        backgroundEffect: preset.backgroundEffect,
+        animationSpeed: preset.animationSpeed,
+      })
+    },
+    [previewTheme, onThemeChange]
+  )
 
   // Handle hue selection
-  const handleHueSelect = useCallback((hue: number) => {
-    previewHue(hue)
-    const hueColors = generateHueColors(hue)
-    onThemeChange?.(`hue:${hue}`, hueColors)
-  }, [previewHue, onThemeChange])
+  const handleHueSelect = useCallback(
+    (hue: number) => {
+      previewHue(hue)
+      const hueColors = generateHueColors(hue)
+      onThemeChange?.(`hue:${hue}`, hueColors)
+    },
+    [previewHue, onThemeChange]
+  )
 
   // Handle cancel preview
   const handleCancelPreview = useCallback(() => {
@@ -101,25 +123,36 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
   const handleResetToDefault = useCallback(() => {
     resetToDefault()
     toast({
-      title: 'Theme reset',
-      description: 'Switched to system default theme',
+      title: 'Previewing default theme',
+      description: 'Click Save to go back to the system default',
     })
   }, [resetToDefault, toast])
 
   // Handle effects toggle
-  const handleEffectsToggle = useCallback((enabled: boolean) => {
-    setEffectsEnabled(enabled)
-    toast({
-      title: enabled ? 'Effects enabled' : 'Effects disabled',
-      description: enabled 
-        ? 'Visual effects and animations are now active'
-        : 'Visual effects have been turned off',
-    })
-  }, [setEffectsEnabled, toast])
+  const handleEffectsToggle = useCallback(
+    (enabled: boolean) => {
+      setEffectsEnabled(enabled)
+      toast({
+        title: enabled ? 'Effects enabled' : 'Effects disabled',
+        description: enabled
+          ? 'Visual effects and animations are now active'
+          : 'Visual effects have been turned off',
+      })
+    },
+    [setEffectsEnabled, toast]
+  )
 
   // Handle save — admin passes onSave to override the user-profile destination
   const handleSave = useCallback(async () => {
-    const success = onSave ? await onSave(themeId, customColors) : await saveTheme()
+    const success = onSave
+      ? await onSave(themeId, customColors)
+      : await saveTheme()
+    if (success && onSave) {
+      // The admin saved the system theme, not their own. Drop the preview so
+      // their view returns to their own theme; if they follow the system theme,
+      // the refresh below delivers the new one.
+      cancelPreview()
+    }
     if (success) {
       toast({
         title: 'Theme saved',
@@ -135,10 +168,19 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
         variant: 'destructive',
       })
     }
-  }, [saveTheme, router, toast, metadata, customColors, onSave])
+  }, [
+    saveTheme,
+    cancelPreview,
+    router,
+    toast,
+    metadata,
+    themeId,
+    customColors,
+    onSave,
+  ])
 
   // Get the theme ID for a preset (for selection matching)
-  const getPresetThemeId = (preset: typeof THEME_PRESETS[0]) => {
+  const getPresetThemeId = (preset: (typeof THEME_PRESETS)[0]) => {
     return preset.themeId || preset.name.replace(/[^\w-]/g, '').toLowerCase()
   }
 
@@ -185,7 +227,9 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
             <div className="text-2xl">{metadata.emoji || '🎨'}</div>
             <div className="flex-1">
               <div className="font-medium">{metadata.name}</div>
-              <div className="text-xs text-muted-foreground">{metadata.description}</div>
+              <div className="text-xs text-muted-foreground">
+                {metadata.description}
+              </div>
             </div>
             {isPreview && (
               <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
@@ -199,78 +243,87 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
       {/* Theme Presets */}
       <Card className="p-4 glass-subtle">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList 
-            className="grid w-full glass-subtle p-1" 
-            style={{ gridTemplateColumns: `repeat(${Object.keys(themesByCategory).length}, 1fr)` }}
+          <TabsList
+            className="grid w-full glass-subtle p-1"
+            style={{
+              gridTemplateColumns: `repeat(${Object.keys(themesByCategory).length}, 1fr)`,
+            }}
           >
-            {sortCategories(Object.keys(themesByCategory) as any[]).map((category) => (
-              <TabsTrigger 
-                key={category} 
-                value={category} 
-                className="text-xs sm:text-sm gap-1.5 data-[state=active]:bg-primary/20"
-              >
-                <span>{getCategoryIcon(category)}</span>
-                <span className="hidden sm:inline">{getCategoryLabel(category)}</span>
-              </TabsTrigger>
-            ))}
+            {sortCategories(Object.keys(themesByCategory) as any[]).map(
+              (category) => (
+                <TabsTrigger
+                  key={category}
+                  value={category}
+                  className="text-xs sm:text-sm gap-1.5 data-[state=active]:bg-primary/20"
+                >
+                  <span>{getCategoryIcon(category)}</span>
+                  <span className="hidden sm:inline">
+                    {getCategoryLabel(category)}
+                  </span>
+                </TabsTrigger>
+              )
+            )}
           </TabsList>
 
-          {sortCategories(Object.keys(themesByCategory) as any[]).map((category) => (
-            <TabsContent key={category} value={category} className="mt-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {themesByCategory[category].map((preset) => {
-                  const presetId = getPresetThemeId(preset)
-                  const isSelected = themeId === presetId
-                  
-                  return (
-                    <button
-                      key={preset.name}
-                      onClick={() => handlePresetSelect(preset)}
-                      className={cn(
-                        "group relative overflow-hidden rounded-xl border p-4 text-left transition-all",
-                        "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10",
-                        isSelected
-                          ? "border-primary ring-2 ring-primary/30"
-                          : "border-border/50 bg-muted/30"
-                      )}
-                    >
-                      {/* Gradient Preview Background */}
-                      <div
-                        className="absolute inset-0 opacity-60"
-                        style={{
-                          background: `linear-gradient(120deg, hsl(${preset.colors.primary}), hsl(${preset.colors.accent}))`,
-                        }}
-                      />
-                      
-                      {/* Theme Info */}
-                      <div className="relative space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold leading-tight">
-                            {preset.name}
-                          </span>
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-primary-foreground" />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-snug">
-                          {preset.description}
-                        </p>
-                      </div>
+          {sortCategories(Object.keys(themesByCategory) as any[]).map(
+            (category) => (
+              <TabsContent key={category} value={category} className="mt-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {themesByCategory[category].map((preset) => {
+                    const presetId = getPresetThemeId(preset)
+                    const isSelected = themeId === presetId
 
-                      {/* Gaming/Animated Badge */}
-                      {(preset.isGaming || preset.category === 'animated') && (
-                        <div className="absolute top-2 right-2">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/30 text-white font-medium backdrop-blur-sm">
-                            {preset.isGaming ? 'FX' : '✨'}
-                          </span>
+                    return (
+                      <button
+                        key={preset.name}
+                        onClick={() => handlePresetSelect(preset)}
+                        className={cn(
+                          'group relative overflow-hidden rounded-xl border p-4 text-left transition-all',
+                          'hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10',
+                          isSelected
+                            ? 'border-primary ring-2 ring-primary/30'
+                            : 'border-border/50 bg-muted/30'
+                        )}
+                      >
+                        {/* Gradient Preview Background */}
+                        <div
+                          className="absolute inset-0 opacity-60"
+                          style={{
+                            background: `linear-gradient(120deg, hsl(${preset.colors.primary}), hsl(${preset.colors.accent}))`,
+                          }}
+                        />
+
+                        {/* Theme Info */}
+                        <div className="relative space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold leading-tight">
+                              {preset.name}
+                            </span>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-primary-foreground" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            {preset.description}
+                          </p>
                         </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </TabsContent>
-          ))}
+
+                        {/* Gaming/Animated Badge */}
+                        {(preset.isGaming ||
+                          preset.category === 'animated') && (
+                          <div className="absolute top-2 right-2">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/30 text-white font-medium backdrop-blur-sm">
+                              {preset.isGaming ? 'FX' : '✨'}
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </TabsContent>
+            )
+          )}
         </Tabs>
       </Card>
 
@@ -288,14 +341,14 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
                 key={hue}
                 onClick={() => handleHueSelect(hue)}
                 className={cn(
-                  "group relative aspect-square rounded-lg border-2 transition-all duration-200",
-                  "hover:scale-105 hover:shadow-lg",
+                  'group relative aspect-square rounded-lg border-2 transition-all duration-200',
+                  'hover:scale-105 hover:shadow-lg',
                   isSelected
-                    ? "border-white ring-2 ring-white/50"
-                    : "border-transparent hover:border-border/50"
+                    ? 'border-white ring-2 ring-white/50'
+                    : 'border-transparent hover:border-border/50'
                 )}
-                style={{ 
-                  background: `linear-gradient(135deg, hsl(${hue}, ${saturation}%, ${lightness}%), hsl(${hue}, ${saturation}%, ${lightness - 15}%))` 
+                style={{
+                  background: `linear-gradient(135deg, hsl(${hue}, ${saturation}%, ${lightness}%), hsl(${hue}, ${saturation}%, ${lightness - 15}%))`,
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-lg" />
@@ -325,7 +378,8 @@ export function AppearancePanel({ onSave, onThemeChange }: AppearancePanelProps 
                 Theme Effects & Animations
               </Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Enable visual effects like particles, glitch, and special animations
+                Enable visual effects like particles, glitch, and special
+                animations
               </p>
             </div>
           </div>

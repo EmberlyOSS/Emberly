@@ -6,17 +6,23 @@ import {
   hasAnalytics,
   hasAdvancedAnalytics,
 } from '@/packages/lib/plans'
+import { getFeaturePlan } from '@/packages/lib/plans/features'
+import { calculateDomainSlotBonus } from '@/packages/lib/perks'
 import {
   getEffectiveQuotaMB,
   getPlanLimits,
+  getPurchasedDomainSlots,
 } from '@/packages/lib/storage/quota'
 
 export async function GET(req: Request) {
   try {
     const user = await getAuthenticatedUser(req)
+    // Without a user every query below would aggregate (and list) all users' files
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // prefer per-user metrics when authenticated (dashboard context)
-    let userId = user?.id
+    let userId = user.id
     // some session setups don't include `id` on `user`; fallback to lookup by email
     if (!userId && user?.email) {
       const u = await prisma.user.findUnique({
@@ -117,6 +123,8 @@ export async function GET(req: Request) {
       planName: string
       uploadSizeCapMB: number | null
       customDomainsLimit: number | null
+      /** Plan limit plus granted/purchased slots and perk bonuses; null = unlimited */
+      customDomainsAllowed: number | null
       storageQuotaGB: number | null
     } | null = null
 
@@ -125,21 +133,27 @@ export async function GET(req: Request) {
         where: { userId: user?.id, status: 'active' },
         include: { product: true },
       })
-      if (subs.length > 0) {
-        const bestPlan =
-          subs.map((s) => planKeyForProduct(s.product)).sort()[0] || 'free'
-        allowed.topFiles = hasAnalytics(bestPlan)
-        allowed.topUrls = hasAnalytics(bestPlan)
-        allowed.exportCSV = hasAdvancedAnalytics(bestPlan)
-      }
+      const bestPlan = await getFeaturePlan(
+        subs.map((s) => planKeyForProduct(s.product)).sort()[0] || 'free'
+      )
+      allowed.topFiles = hasAnalytics(bestPlan)
+      allowed.topUrls = hasAnalytics(bestPlan)
+      allowed.exportCSV = hasAdvancedAnalytics(bestPlan)
 
       // Fetch quota and plan limit info (non-critical)
       if (userId) {
         try {
-          const [quota, limits] = await Promise.all([
-            getEffectiveQuotaMB(userId),
-            getPlanLimits(userId),
-          ])
+          const [quota, limits, extraDomainSlots, perkUser] = await Promise.all(
+            [
+              getEffectiveQuotaMB(userId),
+              getPlanLimits(userId),
+              getPurchasedDomainSlots(userId),
+              prisma.user.findUnique({
+                where: { id: userId },
+                select: { perkRoles: true },
+              }),
+            ]
+          )
           quotaInfo = {
             quotaMB: quota.quotaMB,
             usedMB: quota.usedMB,
@@ -150,6 +164,12 @@ export async function GET(req: Request) {
             planName: limits.planName,
             uploadSizeCapMB: limits.uploadSizeCapMB,
             customDomainsLimit: limits.customDomainsLimit,
+            customDomainsAllowed:
+              limits.customDomainsLimit === null
+                ? null
+                : limits.customDomainsLimit +
+                  extraDomainSlots +
+                  calculateDomainSlotBonus(perkUser?.perkRoles || []),
             storageQuotaGB: limits.storageQuotaGB,
           }
         } catch (e) {

@@ -15,18 +15,8 @@ export default async function DomainsPage() {
 
   return (
     <DashboardShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Custom Domains
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Connect your own domains to serve files from branded URLs.
-            </p>
-          </div>
-        </div>
-      }
+      title="Custom Domains"
+      description="Connect your own domains to serve files from branded URLs."
     >
       <ProfileDomains />
     </DashboardShell>

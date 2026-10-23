@@ -39,26 +39,18 @@ export default async function UploadPage() {
 
   return (
     <DashboardShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">Upload Files</h1>
-            <p className="text-muted-foreground mt-2">
-              Upload and share files with optional password protection
-            </p>
-          </div>
-        </div>
-      }
+      title="Upload Files"
+      description="Upload and share files with optional password protection"
     >
       <UploadForm
-            user={{
-              id: user.id,
-              defaultFileExpiration: user.defaultFileExpiration,
-              defaultFileExpirationAction: user.defaultFileExpirationAction,
-            }}
-            maxSize={maxSizeBytes}
-            formattedMaxSize={formattedMaxSize}
-          />
+        user={{
+          id: user.id,
+          defaultFileExpiration: user.defaultFileExpiration,
+          defaultFileExpirationAction: user.defaultFileExpirationAction,
+        }}
+        maxSize={maxSizeBytes}
+        formattedMaxSize={formattedMaxSize}
+      />
     </DashboardShell>
   )
 }

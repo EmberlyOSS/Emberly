@@ -37,6 +37,7 @@ import {
   getUploadBucketForSquad,
 } from '@/packages/lib/storage'
 import { bytesToMB, urlForHost } from '@/packages/lib/utils'
+import { getLimitIncreaseHint } from '@/packages/lib/plans/features'
 
 const logger = loggers.files
 
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
         const maxUploadBytes = planLimits.uploadSizeCapMB * 1024 * 1024
         if (uploadedFile.size > maxUploadBytes) {
           return apiError(
-            `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+            `File exceeds the ${planLimits.uploadSizeCapMB}MB upload limit. ${await getLimitIncreaseHint()}`,
             HTTP_STATUS.PAYLOAD_TOO_LARGE
           )
         }

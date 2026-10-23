@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
-import { checkFileAccess } from '@/packages/lib/files/access'
+import {
+  NO_STORE,
+  checkFileAccess,
+  fileCacheControl,
+} from '@/packages/lib/files/access'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { getProviderForStoredFile } from '@/packages/lib/storage'
@@ -57,7 +61,10 @@ export async function GET(
     }
 
     if (!file) {
-      return new Response(null, { status: 404 })
+      return new Response(null, {
+        status: 404,
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
 
     const deny = await checkFileAccess(file, {
@@ -80,7 +87,6 @@ export async function GET(
     const storageProvider = await getProviderForStoredFile(
       file.storageBucket?.id
     )
-    const isVideo = file.mimeType.startsWith('video/')
     const range = request.headers.get('range')
     const size = await storageProvider.getFileSize(file.path)
 
@@ -101,7 +107,7 @@ export async function GET(
         'Content-Length': chunkSize.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `${shouldForceDownload ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
-        'Cache-Control': isVideo ? 'public, max-age=31536000' : 'no-cache',
+        'Cache-Control': fileCacheControl(file),
         ...getCORSHeaders(),
       }
 
@@ -117,7 +123,7 @@ export async function GET(
       'Content-Disposition': `${shouldForceDownload ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
-      'Cache-Control': isVideo ? 'public, max-age=31536000' : 'no-cache',
+      'Cache-Control': fileCacheControl(file),
       ...getCORSHeaders(),
     }
 
@@ -137,6 +143,10 @@ export async function GET(
       // ignore logging errors
     }
 
-    return new Response(null, { status: 404 })
+    // A storage failure is not "not found"; never let it be cached as one
+    return new Response(null, {
+      status: 502,
+      headers: { 'Cache-Control': NO_STORE },
+    })
   }
 }

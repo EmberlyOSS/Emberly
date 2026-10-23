@@ -2,12 +2,20 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
 import LegalArticle from '@/packages/components/legal/LegalArticle'
-import { getLegalBySlug } from '@/packages/lib/legal/service'
+import {
+  LEGAL_DOCUMENTS,
+  getLegalDocument,
+} from '@/packages/lib/legal/documents'
 
 type Params = { slug: string[] }
 
-function normalizeSlug(slugParts: string[]) {
-  return slugParts.join('/').toLowerCase()
+function resolve(slug: string[] | string) {
+  const parts = Array.isArray(slug) ? slug : [slug]
+  return getLegalDocument(parts.join('/'))
+}
+
+export function generateStaticParams(): Params[] {
+  return LEGAL_DOCUMENTS.map((doc) => ({ slug: [doc.slug] }))
 }
 
 export async function generateMetadata({
@@ -15,48 +23,30 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>
 }): Promise<Metadata> {
-  const resolvedParams = await params
-  const slug = Array.isArray(resolvedParams.slug)
-    ? resolvedParams.slug
-    : [resolvedParams.slug]
-  const slugKey = normalizeSlug(slug)
-
-  const legal = await getLegalBySlug(slugKey, true)
-
-  if (!legal) {
+  const doc = resolve((await params).slug)
+  if (!doc) {
     return {
       title: 'Legal Document Not Found',
       description: 'The requested legal document could not be found.',
     }
   }
-
-  return {
-    title: legal.title,
-    description:
-      legal.excerpt || `${legal.title} - Emberly legal documentation.`,
-  }
+  return { title: doc.title, description: doc.summary }
 }
 
-export default async function LegalCatchallPage({
+export default async function LegalDocumentPage({
   params,
 }: {
   params: Promise<Params>
 }) {
-  const resolvedParams = await params
-  const slug = Array.isArray(resolvedParams.slug)
-    ? resolvedParams.slug
-    : [resolvedParams.slug]
-  const slugKey = normalizeSlug(slug)
-
-  const legal = await getLegalBySlug(slugKey, true)
-  if (!legal) return notFound()
+  const doc = resolve((await params).slug)
+  if (!doc) notFound()
 
   return (
     <LegalArticle
-      title={legal.title}
-      subtitle={legal.excerpt ?? ''}
-      content={legal.content}
-      updatedAt={legal.updatedAt ?? legal.publishedAt ?? null}
+      title={doc.title}
+      subtitle={doc.summary}
+      content={doc.content.trim()}
+      updatedAt={new Date(`${doc.updatedAt}T12:00:00Z`)}
     />
   )
 }

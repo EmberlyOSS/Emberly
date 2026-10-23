@@ -4,6 +4,99 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [2.7.0] - 2026-10-23
+
+A big one: Emberly can now run completely free, custom domains can be set up automatically through Cloudflare, the whole site has a new ember-orange look, and there's a new status page at [emberlystat.us](https://emberlystat.us). This release also fixes several security issues, so self-hosters should upgrade.
+
+### Upgrading
+
+- Run `bun run db:deploy`. Two migrations apply: `20261023000000_add_limit_increase_application` (new application type) and `20261023120000_remove_legal_pages`, which **permanently drops the `LegalPage` table**. Back it up first if you want to keep old database-stored legal documents; legal pages are now served from `packages/lib/legal/documents.ts`.
+- If Cloudflare sits in front of your instance, **purge its cache** after deploying. Earlier versions let it cache error responses and private files on file URLs (see Security), and a "Bypass cache" rule for `/api/*` is recommended.
+- Optional: set `STATUS_PAGE_URL` to show a live status indicator in the footer (hosted Emberly defaults to `https://emberlystat.us`).
+- Existing instances and users still on the exact old default palette are moved onto the new ember palette automatically; custom themes are untouched.
+
+### Security
+
+- **CDN caching of file responses** — the file routes sent no `Cache-Control` on not-found, denied and error responses, so Cloudflare cached them like static assets on image-like URLs. One transient failure (e.g. a storage hiccup, which `/api/files/...` also misreported as 404) left a file showing as broken for everyone, owner included, for hours. Worse, `/raw` (and `/api/files/...` for videos) sent `public, max-age=31536000, immutable` for **every** file, including private and password-protected ones, so a CDN could store an owner's private file and serve it publicly for a year. All file routes now use shared helpers in `packages/lib/files/access.ts`:
+  - Only public, password-free files are cacheable, and only for an hour, so deletes and visibility changes take effect.
+  - Everything else, and every error or denial, is `private, no-store`.
+  - Storage failures return 502 instead of 404.
+- **Thumbnail password bypass** — `/api/files/:id/thumbnail` serves the original image but skipped the password check, so anyone with the file's ID could view a password-protected image. Owners and admins still bypass it; everyone else now needs the password.
+- **Analytics endpoints exposed other users' data** — `GET /api/analytics/overview` and `/api/analytics/top-items` answered unauthenticated requests with aggregates across _all_ users, including recent and largest uploads and top files/links. `/api/analytics/metrics/activity` had no auth at all and was never scoped to the user, so every dashboard's upload and URL trend charts showed site-wide numbers. All three now require a signed-in user and return only that user's data.
+
+### Added
+
+- **Free mode (billing switch)** — superadmins can turn off payments on cloud instances from a new "Billing" section in `/admin/settings` (`settings.general.billing.enabled`). `isBillingEnabled()` in `packages/lib/config` is the server-side source of truth (always `false` when not running in cloud mode); a new `BillingProvider` / `useBillingEnabled()` exposes it to client components. While billing is off:
+  - `POST /api/payments/checkout` and `/api/payments/purchase` return 403; the billing portal and Stripe webhook keep working so existing subscribers can still cancel.
+  - `/pricing` returns 404 and is left out of the sitemap; the Pricing nav, footer and manifest links, Buckets dashboard tab, Referrals and Billing profile tabs (Billing stays for users with an active subscription), billing credits, and every upgrade prompt are hidden.
+  - All plan-gated analytics (top files/links, URL trends, engagement, CSV export) are unlocked for everyone via `getFeaturePlan()` (`packages/lib/plans/features.ts`).
+  - Upload/storage/domain limit errors point users at limit-increase requests instead of upgrades (`getLimitIncreaseHint()`); self-hosted instances say "contact an administrator".
+- **Limit Increase applications** — new `LIMIT_INCREASE` application type (migration `20261023000000_add_limit_increase_application`) for requesting extra storage (GB) and custom domain slots, available from `/applications` while billing is off. On approval, admins can adjust the amounts before granting; grants are written as $0 `OneOffPurchase` rows so the existing quota and domain-slot calculations apply them unchanged, and approving the same request twice is rejected server-side.
+- **Automatic Cloudflare DNS setup for custom domains** — unverified domains get a "Set up with Cloudflare" action. Users paste a scoped Cloudflare API token (step-by-step instructions are shown in the dialog); `POST /api/domains/:id/cloudflare-setup` finds their zone, creates the required CNAME/TXT records, and asks for confirmation before replacing conflicting records. The token is used for that single request only and is never stored, logged, or returned.
+- **Live status indicator** — the footer's status dot was a hardcoded green link. It now shows the real state from the Emberly status page:
+  - It covers operational, minor, partial or major outage, maintenance, and unreachable, and links to the active incident when there is one.
+  - Emberly fetches `/api/status/summary` server-side through the new `GET /api/status-indicator`, with a 4-second timeout and a 30-second cache, and serves the last good value briefly if the status page is unreachable (`packages/lib/status-page`).
+  - It's configured with `STATUS_PAGE_URL`: hosted Emberly defaults to `https://emberlystat.us`, and self-hosted instances opt in. The indicator is hidden when nothing is configured.
+- **Required DNS records computed server-side** — `GET /api/domains` now returns `requiredRecords` per domain (`packages/lib/domain/dns-records.ts`), built from the Cloudflare custom-hostname object and the `CNAME_TARGET` setting.
+- **Brand asset kit** — `public/branding/` now contains logo marks (SVG + PNG, on-dark/on-light/mono), app icons, wordmarks, a Twitter/X header and avatar, a Discord server icon, server banner, invite splash and profile banner, an Open Graph card, and nameplates. Regenerate them with `bun run branding` (`scripts/generate-branding.mjs`).
+- **Discord emojis & stickers** — `public/branding/discord/emojis/` has 7 static (PNG) and 5 animated (GIF) 128×128 emojis; `public/branding/discord/stickers/` has 4 static and 2 animated (APNG) 320×320 stickers, all within Discord's size limits. Regenerate them with `bun run branding:discord` (`scripts/generate-discord-emotes.mjs`, which includes a small APNG encoder). Shared drawing helpers live in `scripts/branding-shared.mjs`.
+
+### Changed
+
+- **Ember-orange default palette** — the default theme moves from navy surfaces with a near-white primary to warm near-black surfaces with the brand orange (`#F97316`) as primary. Instances and users still on the exact old default palette are moved onto the new one automatically (`upgradeLegacyDefaultColors()`); custom themes are untouched. `app/globals.css` now also defines the default palette on `:root`, so pages have colours even when a theme supplies none.
+- **Unified dashboard & admin layout** — the dashboard (which used a top tab bar) and admin (a differently styled sidebar) now share one `SectionShell` (`packages/components/layout/section-shell.tsx`):
+  - On desktop, a sticky sidebar with grouped sections: Content / Account / Community, and Community / Content / Platform.
+  - On mobile, a labelled horizontal strip.
+  - On every page, a compact title row with the active section's icon and optional actions.
+
+  `DashboardShell` and `AdminShell` are now thin wrappers that only supply their items and filters, and gain `title` / `description` / `actions` props. These replace the large title-only header cards on every dashboard and admin page, including Files, Discovery, paste edit/suggest, squad detail and application review. Squad detail previously had no shell at all.
+
+- **Overview pages** — the dashboard's Quick Actions grid and admin's Manage grid, which both duplicated the navigation, are removed. Admin stat cards link to their pages and highlight pending reports and applications. Discovery no longer has a stray Log out button.
+- **Navigation** — the nested pill inside the nav bar is gone, the active section is highlighted, the "Base" and "Extras" menus are renamed "Explore" and "Resources", and the dashboard nav now sits at the same height as the site nav.
+- **Surfaces** — `.glass*` card styles use the `card` colour with a stronger border, so cards stand out from the page background instead of blending into it.
+- **Dashboard home** — the Quick Actions grid (which duplicated the tab bar and still showed Buckets in free mode) is replaced with Upload / New paste actions, a storage stat with a quota bar, and recent uploads and recent links lists with empty states.
+- **Analytics** — upload and link trend charts show an empty state when every day is zero instead of a flat line, and single-series charts use the theme's primary colour.
+- **Domains** — the oversized "Cloudflare Recommended" banner is now a one-line tip pointing to the new automatic setup.
+- **Homepage** — feature icons share one accent colour, the "How it works" steps no longer render as grey blobs, section labels are lighter, and the file-size FAQ, structured data and closing call-to-action no longer mention paid plans when billing is off.
+- **Footer** — rebuilt with brand, link columns (cloud only; Pricing hidden in free mode), icon social links and a status row. It no longer overflows on phones.
+- **Marketing pages** — About, Contact, Discord and Discovery use the primary accent instead of a rainbow of chart colours, and icon tiles no longer scale on hover. The rotating `gradient-border-animated` border is removed everywhere (including admin, error, 404 and leaderboard pages), along with its CSS.
+- **Content pages: Changelog, Blog, Leaderboard**
+  - `PageShell` no longer wraps pages in the dashboard wrapper, which had put the global upload drop zone on reading pages and needed a `-mt-16` hack. It now uses `HomeShell` with a plain header: optional eyebrow, title, subtitle and actions.
+  - The changelog is a timeline with release notes visible by default (long ones clipped with "Show full notes"), rendered with the shared GFM-enabled `MarkdownRenderer`.
+  - The blog index has a featured latest post and a grid with author, date and read time; the redundant sidebar is gone.
+  - Blog posts get a slim byline instead of an author card, and the table of contents only shows when a post has headings.
+  - The leaderboard has a calmer podium (no pulsing glow or hover jump, no duplicated name), a single ranked list with medal-coloured rank chips, URL-encoded profile links, and fixes the doubled "| Emberly" page title.
+- **Marketing page spacing** — `HomeShell` added a second 96px top offset on top of the layout's nav spacer, leaving a large gap above every marketing page.
+- **Static legal pages** — `/legal` and `/legal/:slug` are now served from `packages/lib/legal/documents.ts` instead of the `LegalPage` database table. Six documents ship with it: Terms of Service, Privacy Policy, Acceptable Use, Cookie, Copyright (DMCA / notice-and-notice) and Security (responsible disclosure). The privacy and cookie policies reflect what the code actually does: VirusTotal hash-only lookups, k-anonymity breach checks, no third-party analytics. The sitemap uses the same list. The `LegalPage` model and `LegalStatus` enum are dropped (migration `20261023120000_remove_legal_pages`), along with `/api/legal`, `packages/lib/legal/service.ts`, the admin legal editor, `/admin/legal` and its nav links.
+- **Favicon, app icons and social cards** — the favicon is the new rounded app icon (`public/favicon.svg`, plus `apple-touch-icon.png`). The manifest gains 192/512/maskable PNG icons, the darker background colour and an Analytics shortcut in place of Pricing. `public/icon.svg` and the fallback embed `public/banner.png` use the new brand. The code-generated Open Graph/Twitter images (which used an old red/blue theme) are replaced with static `app/opengraph-image.png` and `app/twitter-image.png`. All of these are written by `bun run branding`.
+- **X/Twitter header** — redesigned as a centred lockup so it survives X's mobile crop and the corner buttons and avatar.
+- **Gradient text** — `.text-gradient` faded into the dark `accent` colour and became hard to read; it now runs from the primary colour to a lighter tint of it, and pages that hand-rolled the same gradient use the shared class.
+
+### Fixed
+
+- **Setup redirect loop** — after setup completed (or a database was restored), users kept getting bounced back to `/setup`, and resubmitting failed with "Setup already completed". An "incomplete" setup status was cached for up to 10 minutes client-side and in the HTTP/Redis/memory caches; now only "completed" is ever cached, the setup page notifies `SetupChecker` before navigating, and a failed setup check no longer redirects to `/setup`.
+- **Concurrent config initialisation** — simultaneous first requests on a database without a config row raced on Prisma's non-atomic `upsert`, failed the unique constraint, and fell back to default config. The losing requests now read the row the winner created.
+- **Theme bugs**:
+  - Switching themes left the previous theme's colours applied for any variable the new theme didn't define, including server-rendered ones.
+  - In-progress theme previews were wiped on re-render, because `systemColors` defaulted to a new `{}` on every render.
+  - "Reset to Default" was never saved, so the old theme came back on reload. It is now a preview that saves as "follow the system theme" (`theme: null`).
+  - Saving the system theme in admin settings left the admin's own view stuck in preview mode.
+  - Hue themes rendered different colours on the server and the client; both now share `packages/lib/theme/hue.ts`, which also accepts decimal hues.
+- **Public profile file links** — links pointed to `https://embrly.ca///<id>/<file>` (the API and the component each added a leading slash on top of `urlPath`'s own, and the domain was hardcoded, which also broke self-hosted instances). File sizes showed as "0.0 MB" because the size, stored in MB, was divided as if it were bytes.
+- **Chunked uploads rejected on unlimited plans** — a `null` upload cap was treated as 0 MB.
+- **Usage card ignored extra limits** — the analytics "Plan & Usage" card showed only the base plan's storage and domain limits, leaving out purchased/granted extras and perk bonuses.
+- **Custom domain DNS instructions** — the CNAME host showed only the first label (wrong for nested subdomains), TXT validation records were read from a field Cloudflare doesn't return so they never appeared, and the target was hardcoded instead of using `CNAME_TARGET`.
+- **Hydration warnings from browser extensions** — dark-mode extensions that tag `<style>` elements no longer trigger hydration mismatch warnings on the theme style tags.
+
+### Removed
+
+- Unused `ThemeCustomizer` component (preset data moved to `packages/lib/theme/presets.ts`) and ten unused analytics card components.
+- `app/(main)/globals.css`, an unimported duplicate of `app/globals.css`.
+- `AdminSidebar` and the unused `DashboardSidebar` (replaced by `SectionShell`).
+- `app/opengraph-image.tsx`, `app/twitter-image.tsx` and their `app/(main)/` copies (replaced by static images).
+
 ## [2.6.0] - 2026-07-27
 
 ### Added

@@ -3,17 +3,24 @@ import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
+import { isBillingEnabled } from '@/packages/lib/config'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { ApplicationForm } from '@/packages/components/applications/application-form'
 import HomeShell from '@/packages/components/layout/home-shell'
 
-type ApplicationType = 'staff' | 'partner' | 'verification' | 'ban-appeal'
+type ApplicationType =
+  | 'staff'
+  | 'partner'
+  | 'verification'
+  | 'ban-appeal'
+  | 'limit-increase'
 
 const VALID_TYPES: ApplicationType[] = [
   'staff',
   'partner',
   'verification',
   'ban-appeal',
+  'limit-increase',
 ]
 
 const TYPE_META: Record<
@@ -36,6 +43,11 @@ const TYPE_META: Record<
     title: 'Ban Appeal',
     description: 'Submit an appeal to have your account suspension reviewed.',
   },
+  'limit-increase': {
+    title: 'Limit Increase Request',
+    description:
+      'Request extra storage or custom domain slots for your account.',
+  },
 }
 
 interface PageProps {
@@ -54,6 +66,10 @@ export default async function ApplicationTypePage({ params }: PageProps) {
 
   if (!VALID_TYPES.includes(type as ApplicationType)) {
     notFound()
+  }
+
+  if (type === 'limit-increase' && (await isBillingEnabled())) {
+    redirect('/pricing')
   }
 
   const session = await getServerSession(authOptions)

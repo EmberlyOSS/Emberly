@@ -6,11 +6,13 @@ import {
   BadgeCheck,
   Briefcase,
   Handshake,
+  HardDrive,
   LogIn,
   Scale,
 } from 'lucide-react'
 
 import { authOptions } from '@/packages/lib/auth'
+import { isBillingEnabled } from '@/packages/lib/config'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { Button } from '@/packages/components/ui/button'
 import { Badge } from '@/packages/components/ui/badge'
@@ -31,7 +33,7 @@ function GlassCard({
 export const metadata = buildPageMetadata({
   title: 'Applications',
   description:
-    'Apply to join the Emberly team, become a partner, request verification, or appeal a ban.',
+    'Apply to join the Emberly team, become a partner, request verification or more space, or appeal a ban.',
 })
 
 const APPLICATION_CARDS = [
@@ -77,8 +79,24 @@ const APPLICATION_CARDS = [
   },
 ]
 
+const LIMIT_INCREASE_CARD = {
+  type: 'limit-increase',
+  icon: HardDrive,
+  title: 'Request More Space',
+  description:
+    'Need extra storage or more custom domains? Tell us what you need.',
+  color: 'text-chart-2',
+  bg: 'bg-chart-2/10',
+  badge: 'Limit Increase',
+}
+
+export const dynamic = 'force-dynamic'
+
 export default async function ApplicationsPage() {
   const session = await getServerSession(authOptions)
+  const cards = (await isBillingEnabled())
+    ? APPLICATION_CARDS
+    : [LIMIT_INCREASE_CARD, ...APPLICATION_CARDS]
 
   return (
     <HomeShell>
@@ -93,13 +111,12 @@ export default async function ApplicationsPage() {
               </Badge>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
                 Get involved with
-                <span className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                  Emberly.
-                </span>
+                <span className="block text-gradient">Emberly.</span>
               </h1>
               <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
                 Whether you want to join our team, partner with us, get
-                verified, or appeal a decision submit your application below.
+                verified, request more space, or appeal a decision, submit your
+                application below.
               </p>
             </div>
           </div>
@@ -129,7 +146,7 @@ export default async function ApplicationsPage() {
         ) : (
           /* Logged in — show cards */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {APPLICATION_CARDS.map((card) => (
+            {cards.map((card) => (
               <GlassCard
                 key={card.type}
                 className="group hover:border-primary/30 transition-colors"

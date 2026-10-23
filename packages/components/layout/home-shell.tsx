@@ -21,7 +21,7 @@ export default function HomeShell({
       )}
     >
       <DynamicBackground />
-      <div className="flex-1 w-full pt-24 relative z-10">
+      <div className="flex-1 w-full relative z-10">
         <div className={cn('max-w-7xl mx-auto py-6 px-4', containerClassName)}>
           {children}
         </div>
