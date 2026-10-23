@@ -2,6 +2,8 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Trailing slashes are handled in proxy.ts so file links don't redirect
+  skipTrailingSlashRedirect: true,
   serverExternalPackages: ['tesseract.js'],
   outputFileTracingIncludes: {
     '/api/**/*': ['./node_modules/**/*.wasm', './node_modules/**/*.proto'],
@@ -16,7 +18,7 @@ const nextConfig: NextConfig = {
       {
         protocol: 'http',
         hostname: '**',
-      }
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,
@@ -46,7 +48,7 @@ const nextConfig: NextConfig = {
   },
   typescript: {
     ignoreBuildErrors: true,
-  }
+  },
 }
 
 // withSentryConfig wraps webpack — it is incompatible with Turbopack and causes

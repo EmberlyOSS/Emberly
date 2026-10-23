@@ -122,6 +122,8 @@ export async function buildRichMetadata({
     openGraphImages = [
       {
         url: rawUrl,
+        secureUrl: rawUrl,
+        type: mimeType,
         alt: fileName,
       },
     ]
@@ -331,7 +333,7 @@ export async function buildSiteMetadata(overrides?: {
   const baseUrl = await getBaseUrl()
 
   const siteName = config.settings.general.siteName || 'Emberly'
-  const title = overrides?.title || siteName
+  const title = overrides?.title || `${siteName} | ${SITE_TAGLINE}`
   const description =
     overrides?.description ||
     config.settings.general.metaDescription ||
@@ -343,10 +345,9 @@ export async function buildSiteMetadata(overrides?: {
 
   return {
     metadataBase: new URL(baseUrl),
-    title: {
-      default: siteName,
-      template: `%s | ${siteName}`,
-    },
+    // Absolute, so the root layout's "%s | Emberly" template isn't applied
+    // on top and the tab doesn't read "Emberly | Emberly"
+    title: { absolute: title },
     description,
     keywords: SITE_KEYWORDS,
     authors: [{ name: siteName, url: baseUrl }],
@@ -398,6 +399,8 @@ export async function buildSiteMetadata(overrides?: {
     manifest: '/manifest.webmanifest',
   }
 }
+
+const SITE_TAGLINE = 'Share Files. Build Together.'
 
 const SITE_DESCRIPTION =
   'Emberly is an open-source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly — with custom domains, expiring links, password protection, and squad (team) collaboration.'

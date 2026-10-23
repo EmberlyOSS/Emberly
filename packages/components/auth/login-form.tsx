@@ -11,7 +11,14 @@ import { Icons } from '@/packages/components/shared/icons'
 import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs'
+
+import { getCallbackUrl } from './callback-url'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/packages/components/ui/tabs'
 import { TwoFactorForm } from './two-factor-form'
 
 interface LoginFormProps {
@@ -29,7 +36,10 @@ export function LoginForm({
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [magicEmail, setMagicEmail] = useState('')
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
-  const [pendingCredentials, setPendingCredentials] = useState<{ emailOrUsername: string; password: string } | null>(null)
+  const [pendingCredentials, setPendingCredentials] = useState<{
+    emailOrUsername: string
+    password: string
+  } | null>(null)
 
   async function onPasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -45,7 +55,7 @@ export function LoginForm({
         emailOrUsername,
         password,
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl: getCallbackUrl(),
       })
 
       // If 2FA is required, show 2FA form instead of error
@@ -60,7 +70,10 @@ export function LoginForm({
         return
       }
 
-      router.push((result?.url as string) || '/dashboard')
+      const next = getCallbackUrl()
+      // API routes (such as the Discord linked roles flow) need a full page load
+      if (next.startsWith('/api/')) window.location.assign(next)
+      else router.push((result?.url as string) || next)
     } catch {
       setError('An error occurred. Please try again.')
     } finally {
@@ -122,7 +135,9 @@ export function LoginForm({
       <TabsContent value="password" className="space-y-4">
         <form onSubmit={onPasswordSubmit}>
           <div className="space-y-2 text-center pb-6">
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Welcome back
+            </h1>
             <p className="text-base text-muted-foreground">
               {registrationsEnabled ? (
                 <>
@@ -172,7 +187,12 @@ export function LoginForm({
               />
             </div>
             {error && (
-              <div role="alert" aria-live="assertive" aria-atomic="true" className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
+              <div
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true"
+                className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2"
+              >
                 <Icons.alertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -205,7 +225,9 @@ export function LoginForm({
       <TabsContent value="magic-link" className="space-y-4">
         <form onSubmit={onMagicLinkSubmit}>
           <div className="space-y-2 text-center pb-6">
-            <h1 className="text-2xl font-semibold tracking-tight">Sign in with Magic Link</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Sign in with Magic Link
+            </h1>
             <p className="text-base text-muted-foreground">
               Get a sign in link sent to your email
             </p>
@@ -213,7 +235,10 @@ export function LoginForm({
 
           {magicLinkSent ? (
             <div className="space-y-4">
-              <div role="status" className="text-sm text-green-600 bg-green-600/10 p-4 rounded-md flex items-start space-x-3">
+              <div
+                role="status"
+                className="text-sm text-green-600 bg-green-600/10 p-4 rounded-md flex items-start space-x-3"
+              >
                 <Icons.check className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium">Check your email</p>
@@ -258,7 +283,12 @@ export function LoginForm({
               </div>
 
               {error && (
-                <div role="alert" aria-live="assertive" aria-atomic="true" className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
+                  className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2"
+                >
                   <Icons.alertCircle className="h-4 w-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>

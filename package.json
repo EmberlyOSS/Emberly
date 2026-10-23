@@ -1,6 +1,6 @@
 {
   "name": "@emberly/website",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "license": "AGPL-3.0-only",
   "author": "CodeMeAPixel",
   "homepage": "https://github.com/EmberlyOSS/Emberly",
@@ -30,6 +30,7 @@
     "media-kit": "npx tsx scripts/generate-media-kit.ts",
     "branding": "node scripts/generate-branding.mjs",
     "branding:discord": "node scripts/generate-discord-emotes.mjs",
+    "branding:warden": "node scripts/generate-warden-branding.mjs",
     "worker": "npx tsx scripts/worker.ts",
     "prepare": "husky install"
   },
