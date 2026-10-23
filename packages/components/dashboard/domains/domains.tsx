@@ -5,13 +5,12 @@ import {
   Globe,
   Plus,
   Search,
-  ExternalLink,
   Info,
   CheckCircle2,
   Clock,
-  Shield,
   Sparkles,
 } from 'lucide-react'
+import { SiCloudflare } from 'react-icons/si'
 
 import { Icons } from '@/packages/components/shared/icons'
 import { Button } from '@/packages/components/ui/button'
@@ -28,11 +27,13 @@ import { Badge } from '@/packages/components/ui/badge'
 import { TooltipProvider } from '@/packages/components/ui/tooltip'
 
 import { useToast } from '@/packages/hooks/use-toast'
+import { useBillingEnabled } from '@/packages/components/providers/billing-provider'
 
 import DomainList from './DomainList'
 import type { Domain } from './types'
 
 export function ProfileDomains() {
+  const billingEnabled = useBillingEnabled()
   const [domains, setDomains] = useState<Domain[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
@@ -89,7 +90,11 @@ export function ProfileDomains() {
       domainLimit.unlimited !== true &&
       (domainLimit.remaining ?? 1) <= 0
     ) {
-      setError('Domain limit reached. Upgrade your plan to add more domains.')
+      setError(
+        billingEnabled
+          ? 'Domain limit reached. Upgrade your plan to add more domains.'
+          : 'Domain limit reached. Request more slots from the Applications page.'
+      )
       setAdding(false)
       return
     }
@@ -376,61 +381,19 @@ export function ProfileDomains() {
           </div>
         </div>
 
-        {/* Cloudflare Recommendation Banner */}
-        <div className="rounded-xl border border-orange-500/20 bg-gradient-to-r from-orange-500/5 via-orange-500/10 to-amber-500/5 p-4">
-          <div className="flex flex-col sm:flex-row items-start gap-4">
-            <div className="p-2 rounded-lg bg-orange-500/10 shrink-0">
-              <Shield className="h-5 w-5 text-orange-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-orange-200">
-                  Cloudflare Recommended
-                </h3>
-                <Badge
-                  variant="outline"
-                  className="text-xs border-orange-500/30 text-orange-300"
-                >
-                  Optional
-                </Badge>
-              </div>
-              <p className="text-sm text-orange-200/70 mb-3">
-                While not required, using Cloudflare as your DNS provider
-                enables automatic TLS certificate provisioning and faster domain
-                verification. Any DNS provider that supports CNAME records will
-                work.
-              </p>
-              <div className="flex flex-wrap gap-4 text-xs text-orange-200/60">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>Automatic TLS certificates</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>Faster verification</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>DDoS protection</span>
-                </div>
-              </div>
-            </div>
-            <a
-              href="https://www.cloudflare.com/products/registrar/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0"
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-orange-500/30 hover:bg-orange-500/10"
-              >
-                Learn More
-                <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-              </Button>
-            </a>
-          </div>
+        {/* Cloudflare tip */}
+        <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
+          <SiCloudflare className="mt-0.5 h-5 w-5 shrink-0 text-[#F38020]" />
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">
+              Using Cloudflare?
+            </span>{' '}
+            We can add the DNS records for you. Open a domain and choose{' '}
+            <span className="font-medium text-foreground">
+              Set up with Cloudflare
+            </span>
+            . Any DNS provider that supports CNAME records works too.
+          </p>
         </div>
 
         {/* Search and Actions Bar */}
@@ -472,7 +435,7 @@ export function ProfileDomains() {
               <span>
                 Using {domainLimit.used} of {domainLimit.allowed} domain slots
                 {(domainLimit.purchased ?? 0) > 0 &&
-                  ` (${domainLimit.purchased} purchased)`}
+                  ` (${domainLimit.purchased} ${billingEnabled ? 'purchased' : 'extra'})`}
               </span>
             )}
             {!domainLimit.unlimited &&

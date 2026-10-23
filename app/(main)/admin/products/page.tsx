@@ -15,16 +15,8 @@ export default async function AdminProductsPage() {
 
   return (
     <AdminShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage plan products, pricing, and promo codes.
-            </p>
-          </div>
-        </div>
-      }
+      title="Products"
+      description="Manage plan products, pricing, and promo codes."
     >
       <AdminProductManager />
     </AdminShell>

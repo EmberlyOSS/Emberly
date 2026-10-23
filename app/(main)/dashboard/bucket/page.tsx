@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { AlertTriangle, Clock, Key, Server } from 'lucide-react'
 
 import { authOptions } from '@/packages/lib/auth'
+import { isBillingEnabled } from '@/packages/lib/config'
 import { isCloudEnabled } from '@/packages/lib/config/env'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
@@ -67,6 +68,11 @@ export default async function BucketPage() {
   let bucket = user?.storageBucket
   const activeStorageSub = user?.subscriptions?.[0]
   const hasStorageSubscription = Boolean(activeStorageSub)
+
+  // Buckets are a paid add-on; in free mode only existing holders keep the page
+  if (!bucket && !hasStorageSubscription && !(await isBillingEnabled())) {
+    redirect('/dashboard')
+  }
   let autoProvisionFailed = false
 
   if (!bucket && user && activeStorageSub?.stripeSubscriptionId) {
@@ -119,23 +125,8 @@ export default async function BucketPage() {
   if (!bucket) {
     return (
       <DashboardShell
-        header={
-          <div className="glass-card">
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 rounded-xl bg-primary/20">
-                  <Server className="h-5 w-5 text-primary" />
-                </div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Storage Bucket
-                </h1>
-              </div>
-              <p className="text-muted-foreground mt-2">
-                Dedicated S3-compatible storage with unlimited capacity.
-              </p>
-            </div>
-          </div>
-        }
+        title="Storage Bucket"
+        description="Dedicated S3-compatible storage with unlimited capacity."
       >
         {/* No bucket assigned */}
         <div className="glass-card">
@@ -174,29 +165,7 @@ export default async function BucketPage() {
   }
 
   return (
-    <DashboardShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 rounded-xl bg-primary/20">
-                <Server className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Storage Bucket
-                </h1>
-                <p className="text-sm text-muted-foreground">{bucket.name}</p>
-              </div>
-            </div>
-            <p className="text-muted-foreground mt-2">
-              Your dedicated S3-compatible bucket. All storage quotas and upload
-              size limits are removed while your subscription is active.
-            </p>
-          </div>
-        </div>
-      }
-    >
+    <DashboardShell title="Storage Bucket" description={bucket.name}>
       {/* Coming soon notice */}
       <div className="flex items-start gap-3 rounded-lg border border-blue-500/40 bg-blue-500/10 px-5 py-4 text-sm text-blue-700 dark:text-blue-400">
         <Clock className="mt-0.5 h-4 w-4 shrink-0" />

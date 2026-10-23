@@ -14,6 +14,7 @@ import {
   Clock,
   Shield,
 } from 'lucide-react'
+import { SiCloudflare } from 'react-icons/si'
 import { Button } from '@/packages/components/ui/button'
 import {
   Dialog,
@@ -31,8 +32,15 @@ import {
 import { Badge } from '@/packages/components/ui/badge'
 import { Icons } from '@/packages/components/shared/icons'
 import { writeToClipboard } from '@/packages/lib/utils/clipboard'
-import { Domain } from './types'
+import { CloudflareSetupDialog } from './CloudflareSetupDialog'
+import { Domain, type RequiredDnsRecord } from './types'
 import { useToast } from '@/packages/hooks/use-toast'
+
+const RECORD_PURPOSE_LABELS: Record<RequiredDnsRecord['purpose'], string> = {
+  routing: 'Required: points your domain at Emberly',
+  ownership: 'Required: proves you own the domain',
+  certificate: 'Required: issues the TLS certificate',
+}
 
 interface Props {
   d: Domain
@@ -52,6 +60,15 @@ export default function DomainRow({
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showCfSetup, setShowCfSetup] = useState(false)
+  const records: RequiredDnsRecord[] = d.requiredRecords ?? [
+    {
+      type: 'CNAME',
+      name: d.domain,
+      value: 'cname.emberly.site',
+      purpose: 'routing',
+    },
+  ]
   const { toast } = useToast()
 
   const copy = async (text: string, label?: string) => {
@@ -225,140 +242,65 @@ export default function DomainRow({
                 </h4>
 
                 <div className="space-y-3">
-                  {/* Required CNAME */}
-                  <div className="glass-subtle p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
+                  {records.map((r) => (
+                    <div
+                      key={`${r.type}-${r.name}-${r.value}`}
+                      className="glass-subtle p-3"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline" className="text-xs">
-                          CNAME
+                          {r.type}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          Required
+                          {RECORD_PURPOSE_LABELS[r.purpose]}
                         </span>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Name / Host
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 text-sm font-mono bg-muted/50 px-2 py-1 rounded truncate">
-                            {d.domain.includes('.')
-                              ? d.domain.split('.')[0]
-                              : d.domain}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            onClick={() =>
-                              copy(
-                                d.domain.includes('.')
-                                  ? d.domain.split('.')[0]
-                                  : d.domain,
-                                'Host copied'
-                              )
-                            }
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Target / Value
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 text-sm font-mono bg-muted/50 px-2 py-1 rounded truncate">
-                            cname.emberly.site
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            onClick={() =>
-                              copy('cname.emberly.site', 'Target copied')
-                            }
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Validation Records */}
-                  {Array.isArray(d.cfMeta?.validation_records) &&
-                    d.cfMeta.validation_records.map((r: any, i: number) => (
-                      <div key={i} className="glass-subtle p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {(r.type || 'TXT').toUpperCase()}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              Validation Record
-                            </span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {(
+                          [
+                            ['Name', r.name],
+                            ['Value', r.value],
+                          ] as const
+                        ).map(([label, value]) => (
+                          <div key={label} className="min-w-0">
                             <p className="text-xs text-muted-foreground mb-1">
-                              Name
+                              {label}
                             </p>
                             <div className="flex items-center gap-2">
-                              <code className="flex-1 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
-                                {r.txt_name || r.name || '@'}
+                              <code className="flex-1 min-w-0 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
+                                {value}
                               </code>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 shrink-0"
-                                onClick={() =>
-                                  copy(
-                                    r.txt_name || r.name || '@',
-                                    'Name copied'
-                                  )
-                                }
+                                onClick={() => copy(value, `${label} copied`)}
                               >
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Value
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <code className="flex-1 text-xs font-mono bg-muted/50 px-2 py-1 rounded truncate">
-                                {r.txt_value || r.value || ''}
-                              </code>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 shrink-0"
-                                onClick={() =>
-                                  copy(
-                                    r.txt_value || r.value || '',
-                                    'Value copied'
-                                  )
-                                }
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                  ))}
 
-                  {/* No metadata yet */}
-                  {!d.cfMeta && !d.verified && (
-                    <p className="text-sm text-muted-foreground">
-                      Add the CNAME record above, then click the refresh button
-                      to check verification status.
-                    </p>
+                  {!d.verified && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <p className="text-sm text-muted-foreground">
+                        Add these records at your DNS provider (CNAME set to DNS
+                        only, not proxied), then refresh to verify.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 gap-2"
+                        onClick={() => setShowCfSetup(true)}
+                      >
+                        <SiCloudflare className="h-4 w-4 text-[#F38020]" />
+                        Set up with Cloudflare
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -366,6 +308,14 @@ export default function DomainRow({
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      <CloudflareSetupDialog
+        domainId={d.id}
+        domain={d.domain}
+        open={showCfSetup}
+        onOpenChange={setShowCfSetup}
+        onConfigured={() => onRecheck(d.id)}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { user, response } = await requireAuth(req)
+  if (response) return response
+
   try {
     const days = 30
     const now = new Date()
@@ -16,11 +20,11 @@ export async function GET() {
       end.setDate(start.getDate() + 1)
 
       const ucount = await prisma.file.count({
-        where: { uploadedAt: { gte: start, lt: end } },
+        where: { userId: user.id, uploadedAt: { gte: start, lt: end } },
       })
 
       const rcount = await prisma.shortenedUrl.count({
-        where: { createdAt: { gte: start, lt: end } },
+        where: { userId: user.id, createdAt: { gte: start, lt: end } },
       })
       uploads.push({ date: start.toISOString().slice(0, 10), count: ucount })
       urls.push({ date: start.toISOString().slice(0, 10), count: rcount })

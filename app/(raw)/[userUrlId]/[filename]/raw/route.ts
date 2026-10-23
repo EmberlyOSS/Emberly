@@ -5,7 +5,11 @@ import { Readable } from 'stream'
 
 import { authOptions } from '@/packages/lib/auth'
 import { prisma } from '@/packages/lib/database/prisma'
-import { checkFileAccess } from '@/packages/lib/files/access'
+import {
+  NO_STORE,
+  checkFileAccess,
+  fileCacheControl,
+} from '@/packages/lib/files/access'
 import { findFileByUrlPath } from '@/packages/lib/files/lookup'
 import { loggers } from '@/packages/lib/logger'
 import { getProviderForStoredFile } from '@/packages/lib/storage'
@@ -133,7 +137,10 @@ export async function HEAD(
     const file = await findFileByUrlPath(userUrlId, filename)
 
     if (!file) {
-      return new Response(null, { status: 404, headers: CORS_HEADERS })
+      return new Response(null, {
+        status: 404,
+        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+      })
     }
 
     const deny = await checkFileAccess(file, {
@@ -141,7 +148,10 @@ export async function HEAD(
       providedPassword,
     })
     if (deny)
-      return new Response(null, { status: deny.status, headers: CORS_HEADERS })
+      return new Response(null, {
+        status: deny.status,
+        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+      })
 
     const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     const size = await storageProvider.getFileSize(file.path)
@@ -154,12 +164,15 @@ export async function HEAD(
         'Content-Length': size.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': fileCacheControl(file),
       },
     })
   } catch (error) {
     console.error('HEAD request error:', error)
-    return new Response(null, { status: 500, headers: CORS_HEADERS })
+    return new Response(null, {
+      status: 500,
+      headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+    })
   }
 }
 
@@ -177,7 +190,10 @@ export async function GET(
     const file = await findFileByUrlPath(userUrlId, filename)
 
     if (!file) {
-      return new Response(null, { status: 404, headers: CORS_HEADERS })
+      return new Response(null, {
+        status: 404,
+        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+      })
     }
 
     const deny = await checkFileAccess(file, {
@@ -185,7 +201,10 @@ export async function GET(
       providedPassword,
     })
     if (deny)
-      return new Response(null, { status: deny.status, headers: CORS_HEADERS })
+      return new Response(null, {
+        status: deny.status,
+        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+      })
 
     const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     logger.info('raw route storage debug', {
@@ -223,7 +242,7 @@ export async function GET(
         'Content-Length': chunkSize.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': fileCacheControl(file),
         Connection: 'keep-alive',
         'Keep-Alive': 'timeout=300, max=1000',
       }
@@ -245,7 +264,7 @@ export async function GET(
       'Content-Length': size.toString(),
       'Content-Type': file.mimeType,
       'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': fileCacheControl(file),
       Connection: 'keep-alive',
       'Keep-Alive': 'timeout=300, max=1000',
     }
@@ -254,8 +273,14 @@ export async function GET(
   } catch (error) {
     console.error('File serve error:', error)
     if (error instanceof Error && error.message.includes('NoSuchKey')) {
-      return new Response(null, { status: 404, headers: CORS_HEADERS })
+      return new Response(null, {
+        status: 404,
+        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+      })
     }
-    return new Response(null, { status: 500, headers: CORS_HEADERS })
+    return new Response(null, {
+      status: 500,
+      headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
+    })
   }
 }

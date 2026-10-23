@@ -9,7 +9,9 @@ import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { prisma } from '@/packages/lib/database/prisma'
 
 import { DashboardShell } from '@/packages/components/dashboard/dashboard-shell'
-import { LogoutButton } from '../../me/logout-button'
+import { ArrowUpRight } from 'lucide-react'
+
+import { Button } from '@/packages/components/ui/button'
 import { NexiumDashboardClient } from './client'
 
 export const metadata = buildPageMetadata({
@@ -31,43 +33,25 @@ export default async function NexiumDashboardPage() {
 
   return (
     <DashboardShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Discovery</h1>
-                <p className="text-muted-foreground mt-2">
-                  Manage your talent profile, squads, signals, and team
-                  resources
-                </p>
-                <div className="flex gap-3 mt-4 flex-wrap">
-                  {user?.isProfilePublic && (
-                    <Link
-                      href={`/user/${user.name}`}
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      View Public Profile ↗
-                    </Link>
-                  )}
-                  <Link
-                    href="/me"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  >
-                    Profile Settings ↗
-                  </Link>
-                  <Link
-                    href="/applications"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  >
-                    Applications ↗
-                  </Link>
-                </div>
-              </div>
-              <LogoutButton />
-            </div>
-          </div>
-        </div>
+      title="Discovery"
+      description="Manage your talent profile, squads, signals, and team resources"
+      actions={
+        <>
+          {user?.isProfilePublic && (
+            <Button asChild size="sm">
+              <Link href={`/user/${user.name}`}>
+                View public profile
+                <ArrowUpRight className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+          <Button asChild size="sm" variant="outline">
+            <Link href="/me">Profile settings</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/applications">Applications</Link>
+          </Button>
+        </>
       }
     >
       <NexiumDashboardClient />

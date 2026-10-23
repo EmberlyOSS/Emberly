@@ -67,6 +67,9 @@ export async function GET(req: Request) {
               disabledMessage:
                 config.settings.general.registrations.disabledMessage,
             },
+            billing: {
+              enabled: config.settings.general.billing.enabled,
+            },
           },
           appearance: {
             theme: config.settings.appearance.theme,
@@ -103,6 +106,9 @@ export async function GET(req: Request) {
             enabled: config.settings.general.registrations.enabled,
             disabledMessage:
               config.settings.general.registrations.disabledMessage,
+          },
+          billing: {
+            enabled: config.settings.general.billing.enabled,
           },
         },
         appearance: {

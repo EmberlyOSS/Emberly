@@ -50,25 +50,54 @@ interface AccessOptions {
  *  - Password-protected files: non-owners must supply the correct password →
  *    401 when no password given, 401 when password is wrong.
  */
+/**
+ * Cache-Control for responses that must never be stored by a CDN or browser:
+ * errors, denials, and anything private or password-protected. Without it,
+ * Cloudflare caches responses on image-like URLs (e.g. a transient 404) and
+ * serves them to everyone.
+ */
+export const NO_STORE = 'private, no-store'
+
+/**
+ * Cache-Control for serving a file's bytes. Only public, password-free files
+ * may be cached, and only briefly so deletes and visibility changes take effect.
+ */
+export function fileCacheControl(
+  file: Pick<FileAccessFields, 'visibility' | 'password'>
+): string {
+  return file.visibility === 'PUBLIC' && !file.password
+    ? 'public, max-age=3600'
+    : NO_STORE
+}
+
 export async function checkFileAccess(
   file: FileAccessFields,
-  { userId, providedPassword, privateStatus = 404 }: AccessOptions,
+  { userId, providedPassword, privateStatus = 404 }: AccessOptions
 ): Promise<Response | null> {
   const isOwner = !!userId && userId === file.userId
 
   // Private-visibility gate
   if (file.visibility === 'PRIVATE' && !isOwner) {
-    return new Response(null, { status: privateStatus })
+    return new Response(null, {
+      status: privateStatus,
+      headers: { 'Cache-Control': NO_STORE },
+    })
   }
 
   // Password gate (owners bypass)
   if (file.password && !isOwner) {
     if (!providedPassword) {
-      return new Response(null, { status: 401 })
+      return new Response(null, {
+        status: 401,
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
     const valid = await compare(providedPassword, file.password)
     if (!valid) {
-      return new Response(null, { status: 401 })
+      return new Response(null, {
+        status: 401,
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
   }
 

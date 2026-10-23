@@ -1,48 +1,53 @@
 import React from 'react'
-import { DashboardWrapper } from '@/packages/components/dashboard/dashboard-wrapper'
-import { getConfig } from '@/packages/lib/config'
+
+import HomeShell from '@/packages/components/layout/home-shell'
 
 interface PageShellProps {
-    title?: string
-    subtitle?: string
-    children: React.ReactNode
-    /**
-     * Wraps the main content in a glass card. For docs we sometimes want a plain canvas.
-     * Defaults to `card` to preserve existing pages.
-     */
-    bodyVariant?: 'card' | 'plain'
+  /** Small label above the title, e.g. "Resources" */
+  eyebrow?: string
+  title?: string
+  subtitle?: React.ReactNode
+  /** Buttons etc. aligned to the right of the title on wide screens */
+  actions?: React.ReactNode
+  children: React.ReactNode
 }
 
-export default async function PageShell({ title, subtitle, children, bodyVariant = 'card' }: PageShellProps) {
-    const config = await getConfig()
-    const { value, unit } = config.settings.general.storage.maxUploadSize
-    const maxSizeBytes = value * (unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
-
-    const hasTitle = Boolean(title)
-    const hasSubtitle = Boolean(subtitle)
-
-    if ((hasTitle && !hasSubtitle) || (!hasTitle && hasSubtitle)) {
-        throw new Error('PageShell requires both title and subtitle together, or neither.')
-    }
-
-    return (
-        <DashboardWrapper nav="base" showFooter={config.settings.general.credits.showFooter} maxUploadSize={maxSizeBytes}>
-            <div className="container space-y-8 -mt-16">
-                {hasTitle && hasSubtitle ? (
-                    <div className="glass-card">
-                        <div className="p-8">
-                            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-                            <p className="text-muted-foreground mt-1">{subtitle}</p>
-                        </div>
-                    </div>
-                ) : null}
-
-                {bodyVariant === 'plain' ? (
-                    <div className={hasTitle ? '' : 'relative -mt-8'}>{children}</div>
-                ) : (
-                    <div>{children}</div>
-                )}
+/**
+ * Standard content page (blog, legal, changelogs…): the marketing background,
+ * a plain page header, and the page body.
+ */
+export default function PageShell({
+  eyebrow,
+  title,
+  subtitle,
+  actions,
+  children,
+}: PageShellProps) {
+  return (
+    <HomeShell>
+      <div className="space-y-8">
+        {title && (
+          <header className="flex flex-col gap-4 border-b border-border/60 pb-8 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-3xl space-y-3">
+              {eyebrow && (
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                  {eyebrow}
+                </p>
+              )}
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                {title}
+              </h1>
+              {subtitle && (
+                <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
+                  {subtitle}
+                </p>
+              )}
             </div>
-        </DashboardWrapper>
-    )
+            {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+          </header>
+        )}
+        {children}
+      </div>
+    </HomeShell>
+  )
 }

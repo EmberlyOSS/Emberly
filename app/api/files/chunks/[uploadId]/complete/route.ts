@@ -16,6 +16,7 @@ import { processImageOCR } from '@/packages/lib/ocr'
 import { getProviderForStoredFile } from '@/packages/lib/storage'
 import { bytesToMB } from '@/packages/lib/utils'
 import { getConfig } from '@/packages/lib/config'
+import { getLimitIncreaseHint } from '@/packages/lib/plans/features'
 
 const logger = loggers.files
 
@@ -193,8 +194,7 @@ export async function POST(
         return NextResponse.json(
           {
             error: 'Storage quota exceeded',
-            message:
-              'Upload would exceed your storage quota. Purchase additional storage to continue.',
+            message: `Upload would exceed your storage quota. ${await getLimitIncreaseHint()}`,
             action: 'upgrade',
           },
           { status: 413 }

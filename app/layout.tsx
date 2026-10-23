@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 
 import { CustomHead } from '@/packages/components/layout/custom-head'
 import { AuthProvider } from '@/packages/components/providers/auth-provider'
+import { BillingProvider } from '@/packages/components/providers/billing-provider'
 import { QueryProvider } from '@/packages/components/providers/query-provider'
 import { ThemeProviderWrapper } from '@/packages/components/providers/theme-provider-wrapper'
 import { SetupChecker } from '@/packages/components/setup-checker'
@@ -15,8 +16,9 @@ import { ThemeInitializer } from '@/packages/components/theme/theme-initializer'
 import { ThemeProvider } from '@/packages/components/theme/theme-provider'
 import { Toaster } from '@/packages/components/ui/toaster'
 import { authOptions } from '@/packages/lib/auth'
-import { getConfig } from '@/packages/lib/config'
+import { getConfig, isBillingEnabled } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
+import { upgradeLegacyDefaultColors } from '@/packages/lib/theme/presets'
 import { getServerSession } from 'next-auth'
 
 import './globals.css'
@@ -53,13 +55,14 @@ export async function generateMetadata(): Promise<Metadata> {
       ? {
           icon: [
             { url: '/api/favicon', type: 'image/png', sizes: '32x32' },
-            { url: '/icon.svg', type: 'image/svg+xml' },
+            { url: '/favicon.svg', type: 'image/svg+xml' },
           ],
+          apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
         }
       : {
-          icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-          apple: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-          shortcut: '/icon.svg',
+          icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+          apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+          shortcut: '/favicon.svg',
         },
     manifest: '/manifest.webmanifest',
   }
@@ -73,6 +76,7 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const config = await getConfig()
+  const billingEnabled = await isBillingEnabled()
   const customCSS = config.settings.advanced?.customCSS || ''
   const hasCustomFont =
     typeof customCSS === 'string' ? customCSS.includes('font-family') : false
@@ -88,18 +92,21 @@ export default async function RootLayout({
       select: { theme: true, customColors: true },
     })
     userTheme = user?.theme ?? null
-    userCustomColors = (user?.customColors as Record<string, string>) ?? null
+    userCustomColors = upgradeLegacyDefaultColors(
+      (user?.customColors as Record<string, string>) ?? null
+    )
   }
 
   const defaultTheme =
     typeof config.settings.appearance.theme === 'string'
       ? config.settings.appearance.theme
       : 'default-dark'
-  const systemColors =
+  const systemColors = upgradeLegacyDefaultColors(
     typeof config.settings.appearance.customColors === 'object' &&
-    config.settings.appearance.customColors
+      config.settings.appearance.customColors
       ? config.settings.appearance.customColors
       : {}
+  )
 
   return (
     <html
@@ -139,11 +146,13 @@ export default async function RootLayout({
             <ThemeEffectsContainer />
             <QueryProvider>
               <AuthProvider>
-                <SetupChecker>
-                  <ThemeEffectsWrapper>
-                    <div className="flex-1">{children}</div>
-                  </ThemeEffectsWrapper>
-                </SetupChecker>
+                <BillingProvider enabled={billingEnabled}>
+                  <SetupChecker>
+                    <ThemeEffectsWrapper>
+                      <div className="flex-1">{children}</div>
+                    </ThemeEffectsWrapper>
+                  </SetupChecker>
+                </BillingProvider>
               </AuthProvider>
             </QueryProvider>
             <div suppressHydrationWarning>

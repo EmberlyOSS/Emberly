@@ -116,16 +116,8 @@ export default async function AdminReportsPage({
 
   return (
     <AdminShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-            <p className="text-muted-foreground mt-2">
-              Review and resolve user and squad reports
-            </p>
-          </div>
-        </div>
-      }
+      title="Reports"
+      description="Review and resolve user and squad reports"
     >
       <div>
         {/* Type tabs */}

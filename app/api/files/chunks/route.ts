@@ -23,6 +23,7 @@ import {
   getUploadBucketForUser,
 } from '@/packages/lib/storage'
 import { bytesToMB } from '@/packages/lib/utils'
+import { getLimitIncreaseHint } from '@/packages/lib/plans/features'
 
 const logger = loggers.files
 
@@ -150,14 +151,13 @@ export async function POST(req: Request) {
       const planLimits = await getPlanLimits(user.id)
       const fileSizeMB = bytesToMB(size)
 
-      // Check plan upload size cap
-      const uploadSizeCapMB = planLimits.uploadSizeCapMB ?? 0
-      const maxUploadBytes = uploadSizeCapMB * 1024 * 1024
-      if (size > maxUploadBytes) {
+      // Check plan upload size cap (null = unlimited)
+      const uploadSizeCapMB = planLimits.uploadSizeCapMB
+      if (uploadSizeCapMB !== null && size > uploadSizeCapMB * 1024 * 1024) {
         return NextResponse.json(
           {
-            error: `File exceeds ${planLimits.planName} plan limit`,
-            message: `Maximum file size for ${planLimits.planName} is ${uploadSizeCapMB}MB. Upgrade your plan to upload larger files.`,
+            error: 'File exceeds upload size limit',
+            message: `Maximum file size is ${uploadSizeCapMB}MB. ${await getLimitIncreaseHint()}`,
             action: 'upgrade',
           },
           { status: 413 }
@@ -172,7 +172,7 @@ export async function POST(req: Request) {
             error: 'Storage quota exceeded',
             message:
               uploadCheck.reason ||
-              'You have reached your storage quota. Purchase additional storage to continue uploading.',
+              `You have reached your storage quota. ${await getLimitIncreaseHint()}`,
             action: 'upgrade',
           },
           { status: 413 }

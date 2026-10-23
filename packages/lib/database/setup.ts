@@ -37,8 +37,13 @@ export async function checkSetupCompletion(): Promise<boolean> {
   }
 
   // Fall back to in-memory cache
-  if (setupCache.isComplete !== null && now - setupCache.checkedAt < CACHE_TTL_MS) {
-    logger.trace('Setup check (memory cached)', { isSetup: setupCache.isComplete })
+  if (
+    setupCache.isComplete !== null &&
+    now - setupCache.checkedAt < CACHE_TTL_MS
+  ) {
+    logger.trace('Setup check (memory cached)', {
+      isSetup: setupCache.isComplete,
+    })
     return setupCache.isComplete
   }
 
@@ -46,12 +51,13 @@ export async function checkSetupCompletion(): Promise<boolean> {
     const userCount = await prisma.user.count()
     const isComplete = userCount > 0
 
-    // Update Redis cache
-    await configCache.setSetupStatus(isComplete)
-
-    // Update in-memory cache as fallback
-    setupCache.isComplete = isComplete
-    setupCache.checkedAt = now
+    // Only cache completion; an incomplete result must be re-checked so the
+    // first user created (setup, restore, seed) is picked up immediately
+    if (isComplete) {
+      await configCache.setSetupStatus(true)
+      setupCache.isComplete = true
+      setupCache.checkedAt = now
+    }
 
     logger.trace('Setup check completed', { userCount, isSetup: isComplete })
     return isComplete

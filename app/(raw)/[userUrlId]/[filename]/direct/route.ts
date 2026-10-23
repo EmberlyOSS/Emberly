@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/packages/lib/auth'
-import { checkFileAccess } from '@/packages/lib/files/access'
+import { NO_STORE, checkFileAccess } from '@/packages/lib/files/access'
 import { buildRawUrl, findFileByUrlPath } from '@/packages/lib/files/lookup'
 import { getStorageProvider } from '@/packages/lib/storage'
 
@@ -21,15 +21,25 @@ export async function GET(
     const file = await findFileByUrlPath(userUrlId, filename)
 
     if (!file) {
-      return new Response(null, { status: 404 })
+      return new Response(null, {
+        status: 404,
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
 
-    const deny = await checkFileAccess(file, { userId: session?.user?.id, providedPassword })
+    const deny = await checkFileAccess(file, {
+      userId: session?.user?.id,
+      providedPassword,
+    })
     if (deny) return deny
 
     const isVideo = file.mimeType.startsWith('video/')
     if (!isVideo) {
-      return new Response(null, { status: 400, statusText: 'Not a video file' })
+      return new Response(null, {
+        status: 400,
+        statusText: 'Not a video file',
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
 
     const storageProvider = await getStorageProvider()
@@ -37,9 +47,16 @@ export async function GET(
     // Always route through our raw proxy endpoint — never return a direct storage URL.
     // This ensures storage provider hostnames (e.g. vultrobjects.com) are never exposed.
     void storageProvider // provider confirmed to exist
-    return NextResponse.json({ url: buildRawUrl(urlPath, providedPassword) })
+    // May embed the password, so it must never be cached
+    return NextResponse.json(
+      { url: buildRawUrl(urlPath, providedPassword) },
+      { headers: { 'Cache-Control': NO_STORE } }
+    )
   } catch (error) {
     console.error('Direct URL error:', error)
-    return new Response(null, { status: 500 })
+    return new Response(null, {
+      status: 500,
+      headers: { 'Cache-Control': NO_STORE },
+    })
   }
 }

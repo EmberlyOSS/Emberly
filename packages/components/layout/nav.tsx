@@ -27,7 +27,6 @@ import {
   GitGraph,
   Sparkles,
   Handshake,
-  Gavel,
   Flag,
   ClipboardList,
   ShieldAlert,
@@ -38,6 +37,7 @@ import {
 
 import { isCloudEnabledClient } from '@/packages/lib/config/env'
 import { DISCORD_INVITE_URL } from '@/packages/lib/constants/site'
+import { useBillingEnabled } from '@/packages/components/providers/billing-provider'
 import { Icons } from '@/packages/components/shared/icons'
 import {
   Avatar,
@@ -103,7 +103,13 @@ const dashboardRoutes = [
 ]
 
 const extrasRoutes = [
-  { href: '/pricing', label: 'Pricing', icon: CreditCard, cloudOnly: true },
+  {
+    href: '/pricing',
+    label: 'Pricing',
+    icon: CreditCard,
+    cloudOnly: true,
+    billingOnly: true,
+  },
   {
     href: 'https://emberlystat.us',
     label: 'Status',
@@ -119,7 +125,6 @@ const extrasRoutes = [
 const adminRoutesBase = [
   { href: '/admin', label: 'Admin', icon: Shield },
   { href: '/admin/blog', label: 'Blogs', icon: BookOpen, cloudOnly: true },
-  { href: '/admin/legal', label: 'Legal', icon: Gavel, cloudOnly: true },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: ShieldAlert },
   {
@@ -168,7 +173,7 @@ const adminRoutesBase = [
 ]
 
 const sectionsTemplate = [
-  { id: 'base', title: 'Base', icon: House, items: baseRoutes },
+  { id: 'base', title: 'Explore', icon: House, items: baseRoutes },
   {
     id: 'dashboard',
     title: 'Dashboard',
@@ -181,7 +186,7 @@ const sectionsTemplate = [
     icon: Settings,
     items: adminRoutesBase,
   },
-  { id: 'extras', title: 'Extras', icon: GitGraph, items: extrasRoutes },
+  { id: 'extras', title: 'Resources', icon: GitGraph, items: extrasRoutes },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -212,6 +217,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
   const isSuperAdmin = role === 'SUPERADMIN'
   const isAdmin = role === 'ADMIN' || isSuperAdmin
   const cloudEnabled = isCloudEnabledClient()
+  const billingEnabled = useBillingEnabled()
 
   // Build admin routes filtered by role
   const adminItems = useMemo(
@@ -232,7 +238,11 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
           items:
             sec.id === 'admin'
               ? adminItems
-              : sec.items.filter((r) => !r.cloudOnly || cloudEnabled),
+              : sec.items.filter(
+                  (r) =>
+                    (!r.cloudOnly || cloudEnabled) &&
+                    (!('billingOnly' in r) || billingEnabled)
+                ),
         }))
         .filter((sec) => {
           if (sec.items.length === 0) return false
@@ -240,7 +250,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
           if (sec.id === 'dashboard') return !!session
           return true
         }),
-    [adminItems, isAdmin, session, cloudEnabled]
+    [adminItems, isAdmin, session, cloudEnabled, billingEnabled]
   )
 
   const initials = session?.user?.name
@@ -299,7 +309,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
   }, [setSheetOpen])
 
   return (
-    <div className="relative flex h-16 items-center px-6 mt-1">
+    <div className="relative flex h-16 items-center px-4 sm:px-6">
       {/* Logo */}
       <Link
         href={logoHref}
@@ -311,7 +321,7 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
 
       {/* Desktop nav — centered dropdown pill */}
       <div className="hidden md:flex flex-1 justify-center">
-        <div className="flex items-center space-x-0.5 bg-background/80 backdrop-blur-lg rounded-2xl p-1.5 border border-border/50 shadow-lg shadow-black/5">
+        <div className="flex items-center gap-1">
           {sections.map((sec) => {
             const SectionIcon = sec.icon
 
@@ -323,10 +333,10 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                 <Button
                   key={sec.id}
                   variant="ghost"
-                  className={`h-9 px-4 rounded-xl font-medium transition-all duration-200 hover:bg-background/90 focus-visible:ring-0 ${
+                  className={`h-9 px-3.5 rounded-lg font-medium transition-colors focus-visible:ring-0 ${
                     active
-                      ? 'text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'bg-secondary text-foreground [&_svg]:text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                   }`}
                   asChild
                 >
@@ -348,7 +358,11 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-9 px-4 rounded-xl font-medium transition-all duration-200 text-muted-foreground hover:text-foreground hover:bg-background/90 focus-visible:ring-0"
+                    className={`h-9 px-3.5 rounded-lg font-medium transition-colors focus-visible:ring-0 hover:bg-secondary/60 ${
+                      sec.items.some((r) => isActive(pathname, r.href))
+                        ? 'text-foreground [&_svg:first-child]:text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   >
                     <SectionIcon className="h-4 w-4" />
                     <span className="mx-1.5">{sec.title}</span>
@@ -398,12 +412,14 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
         {session ? (
           <Button variant="ghost" className="h-9 w-9 rounded-full p-0" asChild>
             <Link href="/me">
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-9 w-9 ring-1 ring-border transition-shadow hover:ring-primary/50">
                 <AvatarImage
                   src={session.user?.image ?? undefined}
                   alt={session.user?.name ?? ''}
                 />
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
             </Link>
           </Button>

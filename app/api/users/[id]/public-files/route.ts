@@ -47,11 +47,15 @@ export async function GET(
     return NextResponse.json({
       files: user.files.map((file) => ({
         ...file,
-        url: `/${file.urlPath}`,
+        // urlPath already includes its leading slash
+        url: `/${file.urlPath.replace(/^\/+/, '')}`,
       })),
     })
   } catch (error) {
     console.error('[GET /api/users/[id]/public-files]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

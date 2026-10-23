@@ -4,7 +4,6 @@ export const FILE_URL_PATTERN =
 export const SUPERADMIN_PATHS = [
   '/admin/logs',
   '/admin/email',
-  '/admin/legal',
   '/admin/settings',
 ]
 
@@ -36,7 +35,6 @@ export const CLOUD_ONLY_PAGE_PATHS = [
   '/admin/partners',
   '/admin/testimonials',
   '/admin/applications',
-  '/admin/legal',
   '/admin/email',
 ]
 
@@ -58,7 +56,6 @@ export const CLOUD_ONLY_API_PATHS = [
   '/api/partners',
   '/api/testimonials',
   '/api/admin/applications',
-  '/api/legal',
   '/api/admin/email',
   '/api/admin/emails',
   '/api/admin/storage/buckets',

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
+import { Input } from '@/packages/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -20,6 +21,8 @@ interface ApplicationReviewFormProps {
   currentStatus: string
   currentReviewNotes?: string | null
   applicationType?: string
+  requestedStorageGB?: number
+  requestedDomains?: number
 }
 
 const STATUS_OPTIONS = [
@@ -36,11 +39,11 @@ const DECISION_STYLES: Record<string, string> = {
 
 /** Grants available to award on STAFF application approval */
 const STAFF_GRANT_OPTIONS = [
-  { value: 'SUPPORT',   label: 'Support' },
+  { value: 'SUPPORT', label: 'Support' },
   { value: 'DEVELOPER', label: 'Developer' },
   { value: 'MODERATOR', label: 'Moderator' },
-  { value: 'DESIGNER',  label: 'Designer' },
-  { value: 'STAFF',     label: 'Staff (general)' },
+  { value: 'DESIGNER', label: 'Designer' },
+  { value: 'STAFF', label: 'Staff (general)' },
 ] as const
 
 export function ApplicationReviewForm({
@@ -48,11 +51,17 @@ export function ApplicationReviewForm({
   currentStatus,
   currentReviewNotes,
   applicationType,
+  requestedStorageGB = 0,
+  requestedDomains = 0,
 }: ApplicationReviewFormProps) {
   const router = useRouter()
   const [status, setStatus] = useState<string>('')
   const [reviewNotes, setReviewNotes] = useState(currentReviewNotes ?? '')
   const [grantToAward, setGrantToAward] = useState<string>('')
+  const [grantStorageGB, setGrantStorageGB] = useState(
+    String(requestedStorageGB)
+  )
+  const [grantDomains, setGrantDomains] = useState(String(requestedDomains))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -60,6 +69,8 @@ export function ApplicationReviewForm({
   const isFinal = currentStatus === 'APPROVED' || currentStatus === 'REJECTED'
   const isStaffApp = applicationType === 'STAFF'
   const showGrantPicker = isStaffApp && status === 'APPROVED'
+  const showLimitInputs =
+    applicationType === 'LIMIT_INCREASE' && status === 'APPROVED'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -76,6 +87,10 @@ export function ApplicationReviewForm({
       }
       if (status === 'APPROVED' && grantToAward) {
         body.grantToAward = grantToAward
+      }
+      if (showLimitInputs) {
+        body.grantStorageGB = Number(grantStorageGB) || 0
+        body.grantDomains = Number(grantDomains) || 0
       }
 
       const res = await fetch(`/api/admin/applications/${applicationId}`, {
@@ -138,7 +153,9 @@ export function ApplicationReviewForm({
         <div className="space-y-2">
           <label className="text-sm font-medium">
             Grant to Award{' '}
-            <span className="text-muted-foreground font-normal">(optional)</span>
+            <span className="text-muted-foreground font-normal">
+              (optional)
+            </span>
           </label>
           <Select value={grantToAward} onValueChange={setGrantToAward}>
             <SelectTrigger>
@@ -154,6 +171,42 @@ export function ApplicationReviewForm({
           </Select>
           <p className="text-xs text-muted-foreground">
             This badge will appear on the applicant&apos;s public profile.
+          </p>
+        </div>
+      )}
+
+      {showLimitInputs && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Amount to Grant</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">
+                Storage (GB)
+              </span>
+              <Input
+                type="number"
+                min={0}
+                max={10000}
+                value={grantStorageGB}
+                onChange={(e) => setGrantStorageGB(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">
+                Domain slots
+              </span>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={grantDomains}
+                onChange={(e) => setGrantDomains(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Prefilled with what the user asked for. Added on top of their
+            current limits.
           </p>
         </div>
       )}

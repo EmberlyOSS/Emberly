@@ -15,6 +15,7 @@ import {
   calculateStorageBonusGB,
   calculateDomainSlotBonus,
 } from '@/packages/lib/perks'
+import { getLimitIncreaseHint } from '@/packages/lib/plans/features'
 import { syncUserSubscriptionsFromStripe } from '@/packages/lib/stripe/billing'
 
 // Per-user TTL cache: only attempt one Stripe sync per user per 5-minute window
@@ -313,7 +314,7 @@ export async function canUploadSize(
   ) {
     return {
       allowed: false,
-      reason: `File exceeds ${planLimits.planName} plan limit of ${planLimits.uploadSizeCapMB}MB. Upgrade your plan or purchase larger file size add-on.`,
+      reason: `File exceeds the ${planLimits.uploadSizeCapMB}MB upload limit. ${await getLimitIncreaseHint()}`,
     }
   }
 
@@ -324,7 +325,7 @@ export async function canUploadSize(
   if (!canFit) {
     return {
       allowed: false,
-      reason: `Uploading this file would exceed your storage quota. You have ${quota.remainingMB.toFixed(0)}MB remaining.`,
+      reason: `Uploading this file would exceed your storage quota. You have ${quota.remainingMB.toFixed(0)}MB remaining. ${await getLimitIncreaseHint()}`,
     }
   }
 

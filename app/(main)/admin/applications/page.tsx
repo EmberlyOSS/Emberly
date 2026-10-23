@@ -6,7 +6,10 @@ import { AdminShell } from '@/packages/components/admin/admin-shell'
 import { Badge } from '@/packages/components/ui/badge'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
-import { ApplicationStatus, ApplicationType } from '@/prisma/generated/prisma/client'
+import {
+  ApplicationStatus,
+  ApplicationType,
+} from '@/prisma/generated/prisma/client'
 
 export const metadata = buildPageMetadata({
   title: 'Applications',
@@ -26,10 +29,23 @@ const TYPE_STYLES: Record<ApplicationType, string> = {
   PARTNER: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   VERIFICATION: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
   BAN_APPEAL: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  LIMIT_INCREASE: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 }
 
-const VALID_STATUSES = ['PENDING', 'REVIEWING', 'APPROVED', 'REJECTED', 'WITHDRAWN'] as const
-const VALID_TYPES = ['STAFF', 'PARTNER', 'VERIFICATION', 'BAN_APPEAL'] as const
+const VALID_STATUSES = [
+  'PENDING',
+  'REVIEWING',
+  'APPROVED',
+  'REJECTED',
+  'WITHDRAWN',
+] as const
+const VALID_TYPES = [
+  'STAFF',
+  'PARTNER',
+  'VERIFICATION',
+  'BAN_APPEAL',
+  'LIMIT_INCREASE',
+] as const
 
 export default async function AdminApplicationsPage({
   searchParams,
@@ -54,7 +70,15 @@ export default async function AdminApplicationsPage({
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
-        user: { select: { id: true, name: true, email: true, urlId: true, image: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            urlId: true,
+            image: true,
+          },
+        },
       },
     }),
     prisma.application.groupBy({
@@ -63,7 +87,9 @@ export default async function AdminApplicationsPage({
     }),
   ])
 
-  const countByStatus = Object.fromEntries(counts.map((c) => [c.status, c._count._all]))
+  const countByStatus = Object.fromEntries(
+    counts.map((c) => [c.status, c._count._all])
+  )
   const pendingCount = countByStatus['PENDING'] ?? 0
   const reviewingCount = countByStatus['REVIEWING'] ?? 0
 
@@ -76,45 +102,30 @@ export default async function AdminApplicationsPage({
   }
 
   return (
-    <AdminShell header={
-      <div className="glass-card overflow-hidden">
-        <div className="p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/20 border border-primary/30">
-                <ClipboardList className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Applications</h1>
-                <p className="text-muted-foreground mt-1">
-                  Review and manage staff, partner, verification, and ban appeal applications
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="glass-subtle rounded-xl px-4 py-3 flex items-center gap-2.5">
-                <Clock className="h-4 w-4 text-yellow-400" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Pending</p>
-                  <p className="text-lg font-bold leading-none">{pendingCount}</p>
-                </div>
-              </div>
-              <div className="glass-subtle rounded-xl px-4 py-3 flex items-center gap-2.5">
-                <FileSearch className="h-4 w-4 text-blue-400" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Reviewing</p>
-                  <p className="text-lg font-bold leading-none">{reviewingCount}</p>
-                </div>
-              </div>
-            </div>
+    <AdminShell
+      title="Applications"
+      description="Review staff, partner, verification, limit increase and ban appeal applications"
+      actions={
+        <>
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-sm">
+            <Clock className="h-4 w-4 text-yellow-400" />
+            <span className="text-muted-foreground">Pending</span>
+            <span className="font-semibold tabular-nums">{pendingCount}</span>
           </div>
-        </div>
-      </div>
-    }>
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-sm">
+            <FileSearch className="h-4 w-4 text-blue-400" />
+            <span className="text-muted-foreground">Reviewing</span>
+            <span className="font-semibold tabular-nums">{reviewingCount}</span>
+          </div>
+        </>
+      }
+    >
       {/* Filters */}
       <div className="flex flex-col gap-3">
         <div>
-          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold">Status</p>
+          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold">
+            Status
+          </p>
           <div className="flex gap-2 flex-wrap">
             {([undefined, ...VALID_STATUSES] as const).map((s) => (
               <Link
@@ -132,7 +143,9 @@ export default async function AdminApplicationsPage({
           </div>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold">Type</p>
+          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold">
+            Type
+          </p>
           <div className="flex gap-2 flex-wrap">
             {([undefined, ...VALID_TYPES] as const).map((t) => (
               <Link
@@ -153,7 +166,8 @@ export default async function AdminApplicationsPage({
 
       {/* Results */}
       <p className="text-sm text-muted-foreground">
-        Showing {applications.length} application{applications.length !== 1 ? 's' : ''}
+        Showing {applications.length} application
+        {applications.length !== 1 ? 's' : ''}
       </p>
 
       {applications.length === 0 ? (
@@ -162,13 +176,18 @@ export default async function AdminApplicationsPage({
             <div className="p-3 rounded-xl bg-muted/30">
               <ClipboardList className="h-8 w-8 text-muted-foreground/50" />
             </div>
-            <p className="text-muted-foreground">No applications found for the selected filters.</p>
+            <p className="text-muted-foreground">
+              No applications found for the selected filters.
+            </p>
           </div>
         </div>
       ) : (
         <div className="space-y-3">
           {applications.map((app) => (
-            <div key={app.id} className="glass-card overflow-hidden glass-hover">
+            <div
+              key={app.id}
+              className="glass-card overflow-hidden glass-hover"
+            >
               <div className="p-5 flex items-center gap-5">
                 {/* Avatar */}
                 <div className="relative shrink-0">
@@ -190,21 +209,32 @@ export default async function AdminApplicationsPage({
                 {/* User + meta */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold truncate">{app.user.name ?? '—'}</span>
+                    <span className="font-semibold truncate">
+                      {app.user.name ?? '—'}
+                    </span>
                     <Badge className={TYPE_STYLES[app.type]} variant="outline">
                       {app.type.replace('_', ' ')}
                     </Badge>
-                    <Badge className={STATUS_STYLES[app.status]} variant="outline">
+                    <Badge
+                      className={STATUS_STYLES[app.status]}
+                      variant="outline"
+                    >
                       {app.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate mt-0.5">{app.user.email}</p>
+                  <p className="text-sm text-muted-foreground truncate mt-0.5">
+                    {app.user.email}
+                  </p>
                 </div>
 
                 {/* Date + action */}
                 <div className="shrink-0 flex items-center gap-4">
                   <span className="text-xs text-muted-foreground hidden sm:block">
-                    {app.createdAt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    {app.createdAt.toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </span>
                   <Link
                     href={`/admin/applications/${app.id}`}

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { EmberlyThemeProvider, type ThemeProviderProps } from '@/packages/lib/theme/theme-context'
+import { EmberlyThemeProvider } from '@/packages/lib/theme/theme-context'
 
 interface ThemeProviderWrapperProps {
   children: React.ReactNode
@@ -23,12 +23,19 @@ export function ThemeProviderWrapper({
   systemColors,
 }: ThemeProviderWrapperProps) {
   // Save user theme via profile API
-  const handleSaveUserTheme = async (themeId: string, colors: Record<string, string>): Promise<boolean> => {
+  const handleSaveUserTheme = async (
+    themeId: string | null,
+    colors: Record<string, string>
+  ): Promise<boolean> => {
     try {
       const response = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme: themeId, customColors: colors }),
+        body: JSON.stringify(
+          themeId === null
+            ? { theme: null, customColors: null }
+            : { theme: themeId, customColors: colors }
+        ),
       })
       return response.ok
     } catch (error) {

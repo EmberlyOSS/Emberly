@@ -17,6 +17,7 @@ function formatType(type: string): string {
     PARTNER: 'Partner',
     VERIFICATION: 'Verification',
     BAN_APPEAL: 'Ban Appeal',
+    LIMIT_INCREASE: 'Limit Increase',
   }
   return map[type] ?? type.charAt(0) + type.slice(1).toLowerCase()
 }

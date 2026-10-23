@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { configCache } from '@/packages/lib/cache/config-cache'
 import { prisma } from '@/packages/lib/database/prisma'
+import { isCloudEnabled } from '@/packages/lib/config/env'
 import { loggers } from '@/packages/lib/logger'
 
 const logger = loggers.config
@@ -59,6 +60,13 @@ export const configSchema = z
               .passthrough()
               .optional()
               .default({ enabled: true, disabledMessage: '' }),
+            billing: z
+              .object({
+                enabled: z.boolean().optional().default(true),
+              })
+              .passthrough()
+              .optional()
+              .default({ enabled: true }),
             storage: z
               .object({
                 provider: z.enum(['local', 's3']).optional().default('local'),
@@ -277,6 +285,9 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
         enabled: true,
         disabledMessage: '',
       },
+      billing: {
+        enabled: true,
+      },
       storage: {
         provider: 'local',
         s3: {
@@ -315,25 +326,25 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
       enableBackgroundEffect: false,
       favicon: null,
       customColors: {
-        background: '222.2 84% 4.9%',
-        foreground: '210 40% 98%',
-        card: '222.2 84% 4.9%',
-        cardForeground: '210 40% 98%',
-        popover: '222.2 84% 4.9%',
-        popoverForeground: '210 40% 98%',
-        primary: '210 40% 98%',
-        primaryForeground: '222.2 47.4% 11.2%',
-        secondary: '217.2 32.6% 17.5%',
-        secondaryForeground: '210 40% 98%',
-        muted: '217.2 32.6% 17.5%',
-        mutedForeground: '215 20.2% 65.1%',
-        accent: '217.2 32.6% 17.5%',
-        accentForeground: '210 40% 98%',
-        destructive: '0 62.8% 30.6%',
-        destructiveForeground: '210 40% 98%',
-        border: '217.2 32.6% 17.5%',
-        input: '217.2 32.6% 17.5%',
-        ring: '212.7 26.8% 83.9%',
+        background: '20 14% 4%',
+        foreground: '30 20% 96%',
+        card: '20 12% 6.5%',
+        cardForeground: '30 20% 96%',
+        popover: '20 12% 7%',
+        popoverForeground: '30 20% 96%',
+        primary: '24.6 95% 53.1%',
+        primaryForeground: '20 30% 8%',
+        secondary: '20 10% 13%',
+        secondaryForeground: '30 20% 96%',
+        muted: '20 10% 13%',
+        mutedForeground: '25 8% 64%',
+        accent: '20 10% 14%',
+        accentForeground: '30 20% 96%',
+        destructive: '0 72% 51%',
+        destructiveForeground: '0 0% 98%',
+        border: '20 9% 15%',
+        input: '20 9% 17%',
+        ring: '24.6 95% 53.1%',
       },
       systemThemes: {},
     },
@@ -392,15 +403,29 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
 
 export async function initConfig(): Promise<EmberlyConfig> {
   try {
-    // Use upsert to handle race conditions - if a config row already exists, use it
-    const configRow = await prisma.config.upsert({
-      where: { key: 'site_config' },
-      update: {}, // Don't update if it exists
-      create: {
-        key: 'site_config',
-        value: DEFAULT_CONFIG as Prisma.InputJsonValue,
-      },
-    })
+    let configRow
+    try {
+      configRow = await prisma.config.upsert({
+        where: { key: 'site_config' },
+        update: {}, // Don't update if it exists
+        create: {
+          key: 'site_config',
+          value: DEFAULT_CONFIG as Prisma.InputJsonValue,
+        },
+      })
+    } catch (error) {
+      // Prisma's upsert is select-then-insert, so concurrent first requests
+      // race on the unique key; the loser just reads the row the winner made
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2002'
+      ) {
+        throw error
+      }
+      configRow = await prisma.config.findUniqueOrThrow({
+        where: { key: 'site_config' },
+      })
+    }
 
     // Use safeParse and merge - never fail
     const parsed = configSchema.safeParse(configRow.value)
@@ -498,6 +523,10 @@ export async function updateConfig(
           registrations: {
             ...currentConfig.settings.general.registrations,
             ...(newConfig.settings?.general?.registrations || {}),
+          },
+          billing: {
+            ...currentConfig.settings.general.billing,
+            ...(newConfig.settings?.general?.billing || {}),
           },
           storage: {
             ...currentConfig.settings.general.storage,
@@ -644,4 +673,16 @@ export async function updateConfigSection<
 export async function getIntegrations() {
   const config = await getConfig()
   return config.settings.integrations ?? DEFAULT_CONFIG.settings.integrations!
+}
+
+/**
+ * Whether payments are offered at all. Billing is a cloud-only feature, and a
+ * superadmin can also switch it off on cloud to run Emberly fully free: no
+ * checkout, no plan gating, and limit increases go through applications.
+ * Existing subscribers keep portal access so they can still cancel.
+ */
+export async function isBillingEnabled(): Promise<boolean> {
+  if (!isCloudEnabled()) return false
+  const config = await getConfig()
+  return config.settings.general.billing?.enabled !== false
 }

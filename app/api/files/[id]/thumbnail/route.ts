@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { NO_STORE, fileCacheControl } from '@/packages/lib/files/access'
 import { getAuthenticatedUser } from '@/packages/lib/auth/api-auth'
 
 import { prisma } from '@/packages/lib/database/prisma'
@@ -39,7 +40,10 @@ export async function GET(
     })
 
     if (!file) {
-      return new NextResponse('File not found', { status: 404 })
+      return new NextResponse('File not found', {
+        status: 404,
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
 
     const isImage = file.mimeType.startsWith('image/')
@@ -59,7 +63,10 @@ export async function GET(
     const isPrivate = file.visibility === 'PRIVATE' && !isOwner && !isAdmin
 
     if (isPrivate) {
-      return new NextResponse('File not found', { status: 404 })
+      return new NextResponse('File not found', {
+        status: 404,
+        headers: { 'Cache-Control': NO_STORE },
+      })
     }
 
     // For video files, redirect to banner since we can't generate thumbnails easily
@@ -70,7 +77,14 @@ export async function GET(
       return NextResponse.redirect(`${protocol}://${baseUrl}/banner.png`)
     }
 
-    // Skip password check for thumbnails (thumbnails should be accessible if file is accessible)
+    // The "thumbnail" is the original image, so it must honour the password too
+    if (file.password && !isOwner && !isAdmin) {
+      return new NextResponse('Password required', {
+        status: 401,
+        headers: { 'Cache-Control': NO_STORE },
+      })
+    }
+
     const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     const fileStream = await storageProvider.getFileStream(file.path)
 
@@ -78,12 +92,15 @@ export async function GET(
     return new NextResponse(fileStream as unknown as BodyInit, {
       headers: {
         'Content-Type': file.mimeType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': fileCacheControl(file),
         ...getCORSHeaders(),
       },
     })
   } catch (error) {
     logger.error('Error serving thumbnail:', error as Error)
-    return new NextResponse('Error serving thumbnail', { status: 500 })
+    return new NextResponse('Error serving thumbnail', {
+      status: 500,
+      headers: { 'Cache-Control': NO_STORE },
+    })
   }
 }

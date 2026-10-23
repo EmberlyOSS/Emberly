@@ -187,9 +187,21 @@ export default function SetupPage() {
         body: JSON.stringify(data),
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.message || 'Failed to complete setup')
+        const err = await res.json().catch(() => ({}))
+        if (err.error === 'Setup already completed') {
+          window.dispatchEvent(
+            new CustomEvent('setup-completed', { detail: { completed: true } })
+          )
+          router.push('/auth/login')
+          return
+        }
+        throw new Error(err.error || err.message || 'Failed to complete setup')
       }
+      // Tell SetupChecker before navigating, or its cached "incomplete"
+      // status redirects straight back here
+      window.dispatchEvent(
+        new CustomEvent('setup-completed', { detail: { completed: true } })
+      )
       const result = await signIn('credentials', {
         emailOrUsername: data.admin.email,
         password: data.admin.password,

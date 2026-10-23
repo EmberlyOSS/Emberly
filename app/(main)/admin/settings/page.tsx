@@ -26,14 +26,10 @@ export default async function AdminSettingsPage() {
   }
 
   return (
-    <AdminShell header={
-      <div className="glass-card">
-        <div className="p-8">
-          <h1 className="text-3xl font-bold tracking-tight">Platform Settings</h1>
-          <p className="text-muted-foreground mt-2">Configure system-wide controls, limits, and defaults.</p>
-        </div>
-      </div>
-    }>
+    <AdminShell
+      title="Platform Settings"
+      description="Configure system-wide controls, limits, and defaults."
+    >
       <SettingsManager />
     </AdminShell>
   )

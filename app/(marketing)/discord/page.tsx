@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/packages/components/ui/badge'
 import { Button } from '@/packages/components/ui/button'
 import HomeShell from '@/packages/components/layout/home-shell'
+import { isBillingEnabled } from '@/packages/lib/config'
 import { DISCORD_INVITE_URL } from '@/packages/lib/constants/site'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 
@@ -45,8 +46,8 @@ const COMMUNITY_FEATURES = [
     title: 'Community Support',
     description:
       'Ask questions and get help from the community and team members.',
-    color: 'text-chart-1',
-    bg: 'bg-chart-1/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Bell,
@@ -59,15 +60,15 @@ const COMMUNITY_FEATURES = [
     icon: Star,
     title: 'Showcase',
     description: 'Share projects and integrations built with Emberly.',
-    color: 'text-chart-3',
-    bg: 'bg-chart-3/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Code,
     title: 'Integrations',
     description: 'Discuss plugins, tooling, and API usage with fellow devs.',
-    color: 'text-chart-4',
-    bg: 'bg-chart-4/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
 ]
 
@@ -100,12 +101,17 @@ const BOOSTER_PERKS = [
   'Early access to features',
 ]
 
-export default function DiscordPage() {
+export default async function DiscordPage() {
+  // Perks are listed with the paid add-ons; in free mode that page is just a notice
+  const perksHref = (await isBillingEnabled())
+    ? '/pricing#user-add-ons'
+    : '/me?tab=perks'
+
   return (
     <HomeShell>
       <div className="container space-y-8">
         {/* Hero Section */}
-        <GlassCard className="gradient-border-animated">
+        <GlassCard>
           <div className="p-8 md:p-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="space-y-6">
@@ -144,7 +150,7 @@ export default function DiscordPage() {
                     asChild
                     className="bg-background/50"
                   >
-                    <Link href="/pricing">
+                    <Link href={perksHref}>
                       <Gift className="h-4 w-4 mr-2" />
                       Booster Perks
                     </Link>
@@ -185,7 +191,7 @@ export default function DiscordPage() {
                       </div>
                       <Badge
                         variant="secondary"
-                        className="ml-auto bg-chart-4/10 text-chart-4 border-chart-4/20 text-xs"
+                        className="ml-auto bg-primary/10 text-primary border-primary/20 text-xs"
                       >
                         Online
                       </Badge>
@@ -215,9 +221,7 @@ export default function DiscordPage() {
           {COMMUNITY_FEATURES.map((feature) => (
             <GlassCard key={feature.title} className="glass-hover group">
               <div className="p-6">
-                <div
-                  className={`inline-flex p-3 rounded-xl ${feature.bg} group-hover:scale-110 transition-transform`}
-                >
+                <div className={`inline-flex p-3 rounded-xl ${feature.bg}`}>
                   <feature.icon className={`h-6 w-6 ${feature.color}`} />
                 </div>
                 <h3 className="mt-4 font-semibold text-lg">{feature.title}</h3>
@@ -287,7 +291,7 @@ export default function DiscordPage() {
                 className="mt-6 w-full bg-background/50"
                 asChild
               >
-                <Link href="/pricing#user-add-ons">Learn More</Link>
+                <Link href={perksHref}>Learn More</Link>
               </Button>
             </div>
           </GlassCard>
@@ -298,8 +302,8 @@ export default function DiscordPage() {
           <GlassCard>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-chart-1/10">
-                  <Shield className="h-5 w-5 text-chart-1" />
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <Shield className="h-5 w-5 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">Community Guidelines</h3>
               </div>
@@ -324,8 +328,8 @@ export default function DiscordPage() {
           <GlassCard>
             <div className="p-6 h-full flex flex-col">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-chart-3/10">
-                  <Heart className="h-5 w-5 text-chart-3" />
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <Heart className="h-5 w-5 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">Need Help?</h3>
               </div>
@@ -354,7 +358,7 @@ export default function DiscordPage() {
         </div>
 
         {/* CTA Section */}
-        <GlassCard className="gradient-border-animated">
+        <GlassCard>
           <div className="p-8 text-center">
             <h2 className="text-2xl md:text-3xl font-bold">Ready to join?</h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">

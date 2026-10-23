@@ -1,4 +1,7 @@
-import { ProfileResponse, UpdateProfileSchema } from '@/packages/types/dto/profile'
+import {
+  ProfileResponse,
+  UpdateProfileSchema,
+} from '@/packages/types/dto/profile'
 import { Prisma } from '@/prisma/generated/prisma/client'
 import { compare, hash } from 'bcryptjs'
 import { unlink } from 'fs/promises'
@@ -10,7 +13,10 @@ import { sessionCache } from '@/packages/lib/cache/session-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { events } from '@/packages/lib/events'
 import { loggers } from '@/packages/lib/logger'
-import { checkPasswordReuse, recordPasswordHistory } from '@/packages/lib/security/password-reuse-checker'
+import {
+  checkPasswordReuse,
+  recordPasswordHistory,
+} from '@/packages/lib/security/password-reuse-checker'
 
 const logger = loggers.users
 
@@ -77,7 +83,10 @@ export async function GET(req: Request) {
       return apiError('User not found', HTTP_STATUS.NOT_FOUND)
     }
 
-    logger.info('Profile fetched', { userId: user.id, emailVerified: userData.emailVerified })
+    logger.info('Profile fetched', {
+      userId: user.id,
+      emailVerified: userData.emailVerified,
+    })
     return apiResponse(userData)
   } catch (error) {
     logger.error('Profile fetch error:', error as Error)
@@ -140,7 +149,10 @@ export async function PUT(req: Request) {
       // Check if new password is being reused
       const reuseCheck = await checkPasswordReuse(user.id, body.newPassword)
       if (reuseCheck.isReused) {
-        return apiError('Cannot reuse a recent password. Please use a different password.', HTTP_STATUS.BAD_REQUEST)
+        return apiError(
+          'Cannot reuse a recent password. Please use a different password.',
+          HTTP_STATUS.BAD_REQUEST
+        )
       }
     }
 
@@ -165,6 +177,11 @@ export async function PUT(req: Request) {
       updateData.enableRichEmbeds = body.enableRichEmbeds
     if (typeof body.theme === 'string') updateData.theme = body.theme
     if (body.customColors) updateData.customColors = body.customColors
+    // theme: null clears the user's choice so they follow the system theme again
+    if (body.theme === null) {
+      updateData.theme = null
+      updateData.customColors = Prisma.DbNull
+    }
     if (body.defaultFileExpiration)
       updateData.defaultFileExpiration = body.defaultFileExpiration
     if (body.defaultFileExpirationAction)
@@ -178,8 +195,12 @@ export async function PUT(req: Request) {
         where: { id: user.id },
         select: { emailPreferences: true },
       })
-      const existingPrefs = (existingUser?.emailPreferences as Record<string, boolean>) || {}
-      updateData.emailPreferences = { ...existingPrefs, ...body.emailPreferences }
+      const existingPrefs =
+        (existingUser?.emailPreferences as Record<string, boolean>) || {}
+      updateData.emailPreferences = {
+        ...existingPrefs,
+        ...body.emailPreferences,
+      }
     }
     if (body.discordWebhookUrl !== undefined)
       updateData.discordWebhookUrl = body.discordWebhookUrl
@@ -190,8 +211,12 @@ export async function PUT(req: Request) {
         where: { id: user.id },
         select: { discordPreferences: true },
       })
-      const existingPrefs = (existingUser?.discordPreferences as Record<string, boolean>) || {}
-      updateData.discordPreferences = { ...existingPrefs, ...body.discordPreferences }
+      const existingPrefs =
+        (existingUser?.discordPreferences as Record<string, boolean>) || {}
+      updateData.discordPreferences = {
+        ...existingPrefs,
+        ...body.discordPreferences,
+      }
     }
 
     // Public profile fields
@@ -201,9 +226,12 @@ export async function PUT(req: Request) {
     if (body.twitter !== undefined) updateData.twitter = body.twitter
     if (body.github !== undefined) updateData.github = body.github
     if (body.discord !== undefined) updateData.discord = body.discord
-    if (typeof body.isProfilePublic === 'boolean') updateData.isProfilePublic = body.isProfilePublic
-    if (typeof body.showLinkedAccounts === 'boolean') updateData.showLinkedAccounts = body.showLinkedAccounts
-    if (body.profileVisibility) updateData.profileVisibility = body.profileVisibility
+    if (typeof body.isProfilePublic === 'boolean')
+      updateData.isProfilePublic = body.isProfilePublic
+    if (typeof body.showLinkedAccounts === 'boolean')
+      updateData.showLinkedAccounts = body.showLinkedAccounts
+    if (body.profileVisibility)
+      updateData.profileVisibility = body.profileVisibility
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -238,23 +266,33 @@ export async function PUT(req: Request) {
 
     // Emit auditable event (fire-and-forget)
     if (body.newPassword) {
-      void events.emit('auth.password-changed', {
-        userId: user.id,
-        email: updatedUser.email!,
-        changedBy: 'user',
-      }).catch((err) => console.error('[Events] Failed to emit auth.password-changed', err))
+      void events
+        .emit('auth.password-changed', {
+          userId: user.id,
+          email: updatedUser.email!,
+          changedBy: 'user',
+        })
+        .catch((err) =>
+          console.error('[Events] Failed to emit auth.password-changed', err)
+        )
     } else {
-      void events.emit('account.profile-updated', {
-        userId: user.id,
-        email: updatedUser.email!,
-        fields: Object.keys(updateData),
-      }).catch((err) => console.error('[Events] Failed to emit account.profile-updated', err))
+      void events
+        .emit('account.profile-updated', {
+          userId: user.id,
+          email: updatedUser.email!,
+          fields: Object.keys(updateData),
+        })
+        .catch((err) =>
+          console.error('[Events] Failed to emit account.profile-updated', err)
+        )
     }
 
     const profileResponse: ProfileResponse = {
       ...updatedUser,
-      emailPreferences: updatedUser.emailPreferences as ProfileResponse['emailPreferences'],
-      discordPreferences: updatedUser.discordPreferences as ProfileResponse['discordPreferences'],
+      emailPreferences:
+        updatedUser.emailPreferences as ProfileResponse['emailPreferences'],
+      discordPreferences:
+        updatedUser.discordPreferences as ProfileResponse['discordPreferences'],
     }
     return apiResponse<ProfileResponse>(profileResponse)
   } catch (error) {
@@ -293,7 +331,13 @@ export async function DELETE(req: Request) {
 
     if (userData.image?.startsWith('/avatars/')) {
       try {
-        await unlink(join(/*turbopackIgnore: true*/ process.cwd(), 'public', userData.image))
+        await unlink(
+          join(
+            /*turbopackIgnore: true*/ process.cwd(),
+            'public',
+            userData.image
+          )
+        )
       } catch (error) {
         logger.error('Error deleting avatar:', error as Error)
       }
@@ -304,11 +348,15 @@ export async function DELETE(req: Request) {
     })
 
     // Emit auditable event (fire-and-forget)
-    void events.emit('account.deleted', {
-      userId: user.id,
-      email: userData.email!,
-      deletedBy: 'user',
-    }).catch((err) => console.error('[Events] Failed to emit account.deleted', err))
+    void events
+      .emit('account.deleted', {
+        userId: user.id,
+        email: userData.email!,
+        deletedBy: 'user',
+      })
+      .catch((err) =>
+        console.error('[Events] Failed to emit account.deleted', err)
+      )
 
     return new Response(null, { status: HTTP_STATUS.NO_CONTENT })
   } catch (error) {
@@ -316,4 +364,3 @@ export async function DELETE(req: Request) {
     return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
   }
 }
-

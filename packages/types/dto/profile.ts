@@ -2,10 +2,10 @@ import { z } from 'zod'
 
 // Email preferences schema
 export const EmailPreferencesSchema = z.object({
-  security: z.boolean().default(true),    // Login alerts, password changes, 2FA
-  account: z.boolean().default(true),     // Welcome, verification, profile changes
-  billing: z.boolean().default(true),     // Payments, subscriptions, invoices
-  marketing: z.boolean().default(false),  // Promotions, newsletters
+  security: z.boolean().default(true), // Login alerts, password changes, 2FA
+  account: z.boolean().default(true), // Welcome, verification, profile changes
+  billing: z.boolean().default(true), // Payments, subscriptions, invoices
+  marketing: z.boolean().default(false), // Promotions, newsletters
   productUpdates: z.boolean().default(true), // Feature announcements, changelogs
 })
 
@@ -13,16 +13,26 @@ export type EmailPreferences = z.infer<typeof EmailPreferencesSchema>
 export type DiscordPreferences = z.infer<typeof EmailPreferencesSchema>
 
 export const UpdateProfileSchema = z.object({
-  name: z.string().min(2).trim().refine((name) => !name.includes(' '), 'Name cannot contain spaces').optional(),
+  name: z
+    .string()
+    .min(2)
+    .trim()
+    .refine((name) => !name.includes(' '), 'Name cannot contain spaces')
+    .optional(),
   fullName: z.string().max(100).nullable().optional(),
-  email: z.string().email('Invalid email address').max(255, 'Email too long').trim().optional(),
+  email: z
+    .string()
+    .email('Invalid email address')
+    .max(255, 'Email too long')
+    .trim()
+    .optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).optional(),
   image: z.string().optional(),
   randomizeFileUrls: z.boolean().optional(),
   enableRichEmbeds: z.boolean().optional(),
-  theme: z.string().optional(),
-  customColors: z.record(z.string()).optional(),
+  theme: z.string().nullable().optional(),
+  customColors: z.record(z.string()).nullable().optional(),
   defaultFileExpiration: z.enum(['HOUR', 'DAY', 'WEEK', 'MONTH']).optional(),
   defaultFileExpirationAction: z.enum(['DELETE', 'SET_PRIVATE']).optional(),
   // Email notification preferences

@@ -24,17 +24,8 @@ export default async function SquadsPage() {
 
   return (
     <DashboardShell
-      header={
-        <div className="glass-card">
-          <div className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight">Squads</h1>
-            <p className="text-muted-foreground mt-2">
-              Create and manage teams with shared uploads, domains, and
-              resources
-            </p>
-          </div>
-        </div>
-      }
+      title="Squads"
+      description="Create and manage teams with shared uploads, domains, and resources"
     >
       <SquadsClient />
     </DashboardShell>

@@ -71,7 +71,7 @@ export default async function NexiumDiscoveryPage({
     <HomeShell>
       <div className="container space-y-8">
         {/* -- Hero -- */}
-        <div className="glass-card overflow-hidden gradient-border-animated">
+        <div className="glass-card overflow-hidden">
           <div className="p-8 md:p-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-3">

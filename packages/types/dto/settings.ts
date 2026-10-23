@@ -8,6 +8,9 @@ export interface PublicSettings {
         enabled: boolean
         disabledMessage: string | null
       }
+      billing: {
+        enabled: boolean
+      }
     }
     appearance: {
       theme: string

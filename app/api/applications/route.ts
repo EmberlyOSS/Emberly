@@ -2,14 +2,24 @@ import { z } from 'zod'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAuth } from '@/packages/lib/auth/api-auth'
+import { isBillingEnabled } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { events } from '@/packages/lib/events'
 import { loggers } from '@/packages/lib/logger'
-import { ApplicationStatus, ApplicationType } from '@/prisma/generated/prisma/client'
+import {
+  ApplicationStatus,
+  ApplicationType,
+} from '@/prisma/generated/prisma/client'
 
 const logger = loggers.api.getChildLogger('applications')
 
-const VALID_STAFF_ROLES = ['moderator', 'developer', 'designer', 'support', 'other'] as const
+const VALID_STAFF_ROLES = [
+  'moderator',
+  'developer',
+  'designer',
+  'support',
+  'other',
+] as const
 
 const StaffAnswersSchema = z.object({
   why: z
@@ -20,9 +30,15 @@ const StaffAnswersSchema = z.object({
     .string()
     .min(100, 'Experience must be at least 100 characters')
     .max(2000, 'Experience must be at most 2000 characters'),
-  availability: z.union([z.string().min(1, 'Availability is required'), z.number()]),
+  availability: z.union([
+    z.string().min(1, 'Availability is required'),
+    z.number(),
+  ]),
   role: z.enum(VALID_STAFF_ROLES, {
-    errorMap: () => ({ message: 'Role must be one of: moderator, developer, designer, support, other' }),
+    errorMap: () => ({
+      message:
+        'Role must be one of: moderator, developer, designer, support, other',
+    }),
   }),
 })
 
@@ -55,6 +71,19 @@ const BanAppealAnswersSchema = z.object({
   evidence: z.string().optional(),
 })
 
+const LimitIncreaseAnswersSchema = z
+  .object({
+    storageGB: z.coerce.number().int().min(0).max(10000).default(0),
+    domains: z.coerce.number().int().min(0).max(100).default(0),
+    reason: z
+      .string()
+      .min(50, 'Reason must be at least 50 characters')
+      .max(2000, 'Reason must be at most 2000 characters'),
+  })
+  .refine((a) => a.storageGB > 0 || a.domains > 0, {
+    message: 'Request at least some extra storage or domain slots',
+  })
+
 const SubmitSchema = z.object({
   type: z.nativeEnum(ApplicationType, {
     errorMap: () => ({ message: 'Invalid application type' }),
@@ -62,7 +91,10 @@ const SubmitSchema = z.object({
   answers: z.record(z.string(), z.unknown()),
 })
 
-function validateAnswers(type: ApplicationType, answers: Record<string, unknown>) {
+function validateAnswers(
+  type: ApplicationType,
+  answers: Record<string, unknown>
+) {
   switch (type) {
     case ApplicationType.STAFF:
       return StaffAnswersSchema.safeParse(answers)
@@ -72,6 +104,8 @@ function validateAnswers(type: ApplicationType, answers: Record<string, unknown>
       return VerificationAnswersSchema.safeParse(answers)
     case ApplicationType.BAN_APPEAL:
       return BanAppealAnswersSchema.safeParse(answers)
+    case ApplicationType.LIMIT_INCREASE:
+      return LimitIncreaseAnswersSchema.safeParse(answers)
   }
 }
 
@@ -108,7 +142,18 @@ export async function POST(req: Request) {
     // Validate answers for the specific application type
     const answersResult = validateAnswers(type, answers)
     if (!answersResult.success) {
-      return apiError(answersResult.error.issues[0].message, HTTP_STATUS.BAD_REQUEST)
+      return apiError(
+        answersResult.error.issues[0].message,
+        HTTP_STATUS.BAD_REQUEST
+      )
+    }
+
+    // LIMIT_INCREASE replaces paid add-ons, so it's only open while billing is off
+    if (type === ApplicationType.LIMIT_INCREASE && (await isBillingEnabled())) {
+      return apiError(
+        'Limit increases are available as add-ons on the pricing page',
+        HTTP_STATUS.BAD_REQUEST
+      )
     }
 
     // BAN_APPEAL: user must actually be banned
@@ -118,7 +163,10 @@ export async function POST(req: Request) {
         select: { bannedAt: true },
       })
       if (!dbUser?.bannedAt) {
-        return apiError('You must be banned to submit a ban appeal', HTTP_STATUS.BAD_REQUEST)
+        return apiError(
+          'You must be banned to submit a ban appeal',
+          HTTP_STATUS.BAD_REQUEST
+        )
       }
     }
 
@@ -127,7 +175,9 @@ export async function POST(req: Request) {
       where: {
         userId: user.id,
         type,
-        status: { in: [ApplicationStatus.PENDING, ApplicationStatus.REVIEWING] },
+        status: {
+          in: [ApplicationStatus.PENDING, ApplicationStatus.REVIEWING],
+        },
       },
     })
     if (duplicate) {
@@ -165,4 +215,3 @@ export async function POST(req: Request) {
     return apiError('Internal server error')
   }
 }
-

@@ -47,8 +47,8 @@ const CORE_VALUES = [
     title: 'Privacy First',
     description:
       'Your files, your control. We never scan, index, or monetize your content.',
-    color: 'text-chart-1',
-    bg: 'bg-chart-1/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Zap,
@@ -63,15 +63,15 @@ const CORE_VALUES = [
     title: 'Open Source',
     description:
       'Fully transparent codebase. Audit it, fork it, contribute to it.',
-    color: 'text-chart-4',
-    bg: 'bg-chart-4/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     icon: Server,
     title: 'Self-Hostable',
     description: 'Deploy on your own infrastructure with Docker or bare metal.',
-    color: 'text-chart-3',
-    bg: 'bg-chart-3/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
 ]
 
@@ -208,7 +208,7 @@ export default async function AboutPage() {
     <HomeShell>
       <div className="container space-y-8">
         {/* Hero Section */}
-        <GlassCard className="gradient-border-animated">
+        <GlassCard>
           <div className="p-8 md:p-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div>
@@ -299,9 +299,7 @@ export default async function AboutPage() {
           {CORE_VALUES.map((value) => (
             <GlassCard key={value.title} className="glass-hover group">
               <div className="p-6">
-                <div
-                  className={`inline-flex p-3 rounded-xl ${value.bg} group-hover:scale-110 transition-transform`}
-                >
+                <div className={`inline-flex p-3 rounded-xl ${value.bg}`}>
                   <value.icon className={`h-6 w-6 ${value.color}`} />
                 </div>
                 <h3 className="mt-4 font-semibold text-lg">{value.title}</h3>
@@ -428,7 +426,7 @@ export default async function AboutPage() {
         )}
 
         {/* CTA Section */}
-        <GlassCard className="gradient-border-animated">
+        <GlassCard>
           <div className="p-8 text-center">
             <h2 className="text-2xl md:text-3xl font-bold">
               Ready to get started?
