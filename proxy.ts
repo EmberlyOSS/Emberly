@@ -71,10 +71,12 @@ export async function proxy(request: NextRequest) {
   // file links ending in "/" are served directly: Discord drops the embed
   // image when a share link redirects. Every other path still redirects.
   if (pathname !== normalizedPathname && !FILE_URL_PATTERN.test(pathname)) {
-    return new NextResponse(null, {
-      status: 308,
-      headers: { Location: `${normalizedPathname}${request.nextUrl.search}` },
-    })
+    // Must be an absolute URL: Next rejects a relative Location from the proxy
+    // (500). It relativizes same-host redirects itself, so the request's host
+    // is kept rather than the internal one.
+    const url = request.nextUrl.clone()
+    url.pathname = normalizedPathname
+    return NextResponse.redirect(url, 308)
   }
 
   const incomingHost = request.headers.get('host')?.replace(/:\d+$/, '')
