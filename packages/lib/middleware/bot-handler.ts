@@ -75,11 +75,12 @@ export async function handleBotRequest(
     }
     return NextResponse.next()
   } else {
-    // Rich embeds disabled: redirect to raw file
+    // Rich embeds disabled: serve the raw file at this URL. A rewrite, not a
+    // redirect: Discord is inconsistent about embedding media behind one.
     if (!isRawPath && !isDirectPath) {
       const url = new URL(request.url)
       url.pathname = `${pathname}/raw`
-      return NextResponse.redirect(url)
+      return NextResponse.rewrite(url)
     }
     return NextResponse.next()
   }

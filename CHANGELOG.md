@@ -6,6 +6,17 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-10-23
+
+### Fixed
+
+- **Every URL ending in `/` returned a 500 error** (regression in 2.8.0) — the new trailing-slash redirect in `proxy.ts` sent a relative `Location`, which Next.js rejects from the proxy (`TypeError: Invalid URL`). Pages like `/about/` and `/dashboard/` redirect to `/about` and `/dashboard` again.
+- **Images missing from Discord when rich embeds are off** — crawlers were redirected (307) from the file link to `/raw`, and Discord embeds media behind a redirect only some of the time. The file is now served directly at the link, so no file URL redirects for crawlers in either mode.
+
+### Known issues
+
+- A link to a file that doesn't exist shows the "not found" page but still answers with status 200 rather than 404, contrary to the 2.8.0 notes.
+
 ## [2.8.0] - 2026-10-23
 
 Discord linked roles, reliable image embeds, and a split of the Discord bot into two: the public **Emberly** app and **Warden**, the Emberly server's own moderation and support bot. The docs get the ember look and a full pass for outdated paths.
