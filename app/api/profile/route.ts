@@ -4,8 +4,6 @@ import {
 } from '@/packages/types/dto/profile'
 import { Prisma } from '@/prisma/generated/prisma/client'
 import { compare, hash } from 'bcryptjs'
-import { unlink } from 'fs/promises'
-import { join } from 'path'
 
 import { HTTP_STATUS, apiError, apiResponse } from '@/packages/lib/api/response'
 import { requireAuth } from '@/packages/lib/auth/api-auth'
@@ -13,6 +11,11 @@ import { sessionCache } from '@/packages/lib/cache/session-cache'
 import { prisma } from '@/packages/lib/database/prisma'
 import { events } from '@/packages/lib/events'
 import { loggers } from '@/packages/lib/logger'
+import {
+  getProviderForStoredFile,
+  getStorageProvider,
+} from '@/packages/lib/storage'
+import { storagePathFromMediaUrl } from '@/packages/lib/storage/public-media'
 import {
   checkPasswordReuse,
   recordPasswordHistory,
@@ -312,6 +315,7 @@ export async function DELETE(req: Request) {
         files: {
           select: {
             path: true,
+            storageBucketId: true,
           },
         },
       },
@@ -323,23 +327,23 @@ export async function DELETE(req: Request) {
 
     for (const file of userData.files) {
       try {
-        await unlink(join(/*turbopackIgnore: true*/ process.cwd(), file.path))
+        const storage = await getProviderForStoredFile(file.storageBucketId)
+        await storage.deleteFile(file.path)
       } catch (error) {
         logger.error(`Error deleting file ${file.path}:`, error as Error)
       }
     }
 
-    if (userData.image?.startsWith('/avatars/')) {
+    for (const [url, kind] of [
+      [userData.image, 'avatars'],
+      [userData.banner, 'banners'],
+    ] as const) {
+      const mediaPath = storagePathFromMediaUrl(url, kind)
+      if (!mediaPath) continue
       try {
-        await unlink(
-          join(
-            /*turbopackIgnore: true*/ process.cwd(),
-            'public',
-            userData.image
-          )
-        )
+        await (await getStorageProvider()).deleteFile(mediaPath)
       } catch (error) {
-        logger.error('Error deleting avatar:', error as Error)
+        logger.error(`Error deleting ${kind} image:`, error as Error)
       }
     }
 

@@ -1,6 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { prisma } from '@/packages/lib/database/prisma'
+
 import { FILE_URL_PATTERN, VIDEO_EXTENSIONS } from './constants'
+
+const RICH_EMBED_TTL_MS = 60_000
+const richEmbedCache = new Map<string, { enabled: boolean; expires: number }>()
+
+function decodeSegment(segment: string) {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return segment
+  }
+}
+
+async function richEmbedsEnabled(urlPath: string): Promise<boolean> {
+  const cached = richEmbedCache.get(urlPath)
+  if (cached && cached.expires > Date.now()) return cached.enabled
+
+  try {
+    const file = await prisma.file.findUnique({
+      where: { urlPath },
+      select: { user: { select: { enableRichEmbeds: true } } },
+    })
+    const enabled = file?.user?.enableRichEmbeds !== false
+    if (richEmbedCache.size > 5000) richEmbedCache.clear()
+    richEmbedCache.set(urlPath, {
+      enabled,
+      expires: Date.now() + RICH_EMBED_TTL_MS,
+    })
+    return enabled
+  } catch {
+    return true
+  }
+}
 
 export function isBotRequest(userAgent: string): boolean {
   userAgent = userAgent.toLowerCase()
@@ -43,28 +77,9 @@ export async function handleBotRequest(
   }
 
   const [, userUrlId, filename] = pathMatch
-  const urlPath = `/${userUrlId}/${filename}`
-
-  // Check user's enableRichEmbeds setting via internal API
-  // This is necessary because middleware runs on Edge runtime and can't use Prisma directly
-  let enableRichEmbeds = true // default to true
-  try {
-    // Call the app directly rather than round-tripping through the CDN:
-    // unfurlers like Discord give up on slow pages
-    const internalBase = `http://localhost:${process.env.PORT || 3000}`
-
-    const response = await fetch(
-      `${internalBase}/api/internal/file-settings?urlPath=${encodeURIComponent(urlPath)}`,
-      { signal: AbortSignal.timeout(2000) }
-    )
-    if (response.ok) {
-      const data = await response.json()
-      enableRichEmbeds = data.enableRichEmbeds !== false
-    }
-  } catch {
-    // If lookup fails, default to allowing rich embeds
-    enableRichEmbeds = true
-  }
+  const enableRichEmbeds = await richEmbedsEnabled(
+    `/${decodeSegment(userUrlId)}/${decodeSegment(filename)}`
+  )
 
   if (enableRichEmbeds) {
     // Rich embeds enabled: serve the page with branded metadata

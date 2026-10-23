@@ -6,6 +6,29 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Upgrading
+
+- Run `bun run db:deploy`. Migration `20261023200000_add_device_authorization` adds the `DeviceAuthorization` table.
+
+### Added
+
+- **Sign in to apps from the browser** — desktop apps such as Flicker can ask for a short code, open `/activate`, and receive their own API key once you approve, so they never handle your password. Approving again from the same app and device replaces its old key, and every key can be revoked in Profile → API. Endpoints: `POST /api/device/code`, `POST /api/device/approve` (signed in) and `POST /api/device/token`.
+- **`GET /api/instance`** — public details about the server for apps: name, version, whether it's the hosted cloud, whether billing is on, and which features are available.
+
+### Fixed
+
+- **Link previews that switched between the image and the page** — when Discord or another app previewed a file, Emberly checked the uploader's rich-embed setting through an internal request with a two-second timeout. When that request was slow it assumed rich embeds were on, so files from people who turned them off sometimes previewed as the Emberly page instead of the image. The setting is now read directly from the database and cached for a minute. Older files with spaces or special characters in their names were also never matched and always used the rich page.
+- **Changing the favicon reported an error** even though it saved. It also wrote a copy of the whole instance configuration to storage, where on S3-compatible storage it ended up in the bucket. That copy was never read and is no longer written.
+- **Deleting an account left files behind on S3-compatible storage**, and left avatars and banners behind on every storage type. Files are now removed through whichever storage they were uploaded to.
+
+### Security
+
+- **File password hashes in file lists** — `GET /api/files` returned each file's password hash alongside `hasPassword`. In a squad's file list that meant any member could read the password hashes of other members' files and try to crack them offline. Lists now return only `hasPassword`.
+
+### Documentation
+
+- **Analytics API docs** showed the wrong response shapes for `/api/analytics/summary` and `/api/analytics/storage`, and sizes in bytes. They now match the API, note that sizes are in megabytes, and list upload tokens and API keys as accepted auth.
+
 ## [2.8.1] - 2026-10-23
 
 ### Fixed

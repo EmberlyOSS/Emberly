@@ -538,9 +538,9 @@ export async function GET(request: Request) {
       const expirationMap = await getFileExpirationInfoBatch(
         files.map((f) => f.id)
       )
-      const filesList = files.map((file) => ({
+      const filesList = files.map(({ password, ...file }) => ({
         ...file,
-        hasPassword: Boolean(file.password),
+        hasPassword: Boolean(password),
         expiresAt: expirationMap.get(file.id) ?? null,
       }))
 
@@ -662,9 +662,9 @@ export async function GET(request: Request) {
     const expirationMap = await getFileExpirationInfoBatch(
       files.map((f) => f.id)
     )
-    const filesList = files.map((file) => ({
+    const filesList = files.map(({ password, ...file }) => ({
       ...file,
-      hasPassword: Boolean(file.password),
+      hasPassword: Boolean(password),
       expiresAt: expirationMap.get(file.id) ?? null,
     })) as (FileMetadata & { expiresAt: Date | null })[]
 

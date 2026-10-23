@@ -107,7 +107,7 @@ export async function GET(req: Request) {
       uploadsPerDay.push({ date: start.toISOString().slice(0, 10), count })
     }
 
-    const storageUsedBytes = storageAgg._sum?.size ?? 0
+    const storageUsedMB = storageAgg._sum?.size ?? 0
     const totalViews = totalsAgg._sum?.views ?? 0
     const totalDownloads = totalsAgg._sum?.downloads ?? 0
 
@@ -185,7 +185,7 @@ export async function GET(req: Request) {
         totalFiles,
         totalUrls,
         totalUrlClicks,
-        storageUsed: storageUsedBytes,
+        storageUsed: storageUsedMB,
         totalViews,
         totalDownloads,
         domainsCount: domainsCount,
