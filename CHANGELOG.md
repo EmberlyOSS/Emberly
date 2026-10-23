@@ -84,6 +84,13 @@ A big one: Emberly can now run completely free, custom domains can be set up aut
   - "Reset to Default" was never saved, so the old theme came back on reload. It is now a preview that saves as "follow the system theme" (`theme: null`).
   - Saving the system theme in admin settings left the admin's own view stuck in preview mode.
   - Hue themes rendered different colours on the server and the client; both now share `packages/lib/theme/hue.ts`, which also accepts decimal hues.
+- **Avatars, banners and the custom favicon broken on S3 storage:**
+  - Avatars redirected browsers to an unsigned URL in the private bucket (403, or 502 when storage was down), which also exposed the storage hostname.
+  - Banners were saved as presigned URLs, so they expired after 6 hours.
+  - On local storage, banner URLs pointed at routes that didn't exist.
+
+  All three now stream through Emberly (`/api/avatars/:file`, the new `/api/banners/:file`, `/api/favicon`) via `packages/lib/storage/public-media.ts`. Uploads store a versioned Emberly path (`?v=`), so re-uploads aren't masked by caches, and replacing a banner with a different file type now removes the old file.
+
 - **Public profile file links** — links pointed to `https://embrly.ca///<id>/<file>` (the API and the component each added a leading slash on top of `urlPath`'s own, and the domain was hardcoded, which also broke self-hosted instances). File sizes showed as "0.0 MB" because the size, stored in MB, was divided as if it were bytes.
 - **Chunked uploads rejected on unlimited plans** — a `null` upload cap was treated as 0 MB.
 - **Usage card ignored extra limits** — the analytics "Plan & Usage" card showed only the base plan's storage and domain limits, leaving out purchased/granted extras and perk bonuses.
