@@ -2,7 +2,12 @@ import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { Lock } from 'lucide-react'
 import { PublicProfile } from '@/packages/components/profile/public-profile'
-import { calculateStorageBonusGB, calculateDomainSlotBonus, getContributorMilestone, getDiscordBoosterMilestone } from '@/packages/lib/perks'
+import {
+  calculateStorageBonusGB,
+  calculateDomainSlotBonus,
+  getContributorMilestone,
+  getDiscordBoosterMilestone,
+} from '@/packages/lib/perks'
 import { prisma } from '@/packages/lib/database/prisma'
 import { buildPageMetadata } from '@/packages/lib/embeds/metadata'
 import { authOptions } from '@/packages/lib/auth'
@@ -16,7 +21,7 @@ interface PublicProfilePageProps {
 export async function generateMetadata({ params }: PublicProfilePageProps) {
   try {
     const { username } = await params
-    
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -40,8 +45,9 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
     }
 
     return buildPageMetadata({
-      title: `${user.name || 'User'} | Emberly`,
-      description: user.bio || `View ${user.name || 'this user'}'s Emberly profile`,
+      title: user.name || 'User',
+      description:
+        user.bio || `View ${user.name || 'this user'}'s Emberly profile`,
     })
   } catch (error) {
     return buildPageMetadata({
@@ -51,12 +57,12 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
   }
 }
 
-export default async function PublicProfilePage({ params }: PublicProfilePageProps) {
+export default async function PublicProfilePage({
+  params,
+}: PublicProfilePageProps) {
   const { username } = await params
 
-  const [session] = await Promise.all([
-    getServerSession(authOptions),
-  ])
+  const [session] = await Promise.all([getServerSession(authOptions)])
 
   const user = await prisma.user.findFirst({
     where: {
@@ -116,8 +122,12 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
             <Lock className="h-7 w-7 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">{user.name || 'This user'}</h1>
-            <p className="text-sm text-muted-foreground mt-1">This profile is private.</p>
+            <h1 className="text-xl font-semibold">
+              {user.name || 'This user'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              This profile is private.
+            </p>
           </div>
         </div>
       </div>
@@ -129,25 +139,37 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   const domainBonus = calculateDomainSlotBonus(user.perkRoles)
 
   // Get perk milestone info for contributor
-  const contributorPerk = user.perkRoles.find((role) => role.startsWith('CONTRIBUTOR:'))
-  let contributorLOC = contributorPerk ? parseInt(contributorPerk.split(':')[1] || '0') : 0
-  
+  const contributorPerk = user.perkRoles.find((role) =>
+    role.startsWith('CONTRIBUTOR:')
+  )
+  let contributorLOC = contributorPerk
+    ? parseInt(contributorPerk.split(':')[1] || '0')
+    : 0
+
   // Legacy compatibility
   if (contributorLOC > 0 && contributorLOC < 100) {
     contributorLOC = contributorLOC * 1000
   }
-  
+
   const contributorMilestone = getContributorMilestone(contributorLOC)
 
   // Get Discord booster milestone info
-  const boosterPerk = user.perkRoles.find((role) => role.startsWith('DISCORD_BOOSTER:'))
-  const boostMonths = boosterPerk ? parseInt(boosterPerk.split(':')[1] || '0') : 0
+  const boosterPerk = user.perkRoles.find((role) =>
+    role.startsWith('DISCORD_BOOSTER:')
+  )
+  const boostMonths = boosterPerk
+    ? parseInt(boosterPerk.split(':')[1] || '0')
+    : 0
   const boosterMilestone = getDiscordBoosterMilestone(boostMonths)
 
   // Get linked account usernames
   const linkedAccounts = {
-    github: user.linkedAccounts.find((a) => a.provider === 'github')?.providerUsername || undefined,
-    discord: user.linkedAccounts.find((a) => a.provider === 'discord')?.providerUsername || undefined,
+    github:
+      user.linkedAccounts.find((a) => a.provider === 'github')
+        ?.providerUsername || undefined,
+    discord:
+      user.linkedAccounts.find((a) => a.provider === 'discord')
+        ?.providerUsername || undefined,
   }
 
   // Calculate leaderboard rank if profile is public
@@ -156,7 +178,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     try {
       const publicFileCount = user._count.files
       // Count users with more public files
-      const rankResult = await prisma.$queryRaw`
+      const rankResult = (await prisma.$queryRaw`
         SELECT COUNT(*) as rank_higher
         FROM (
           SELECT u.id, COUNT(f.id) as file_count
@@ -166,8 +188,8 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
           GROUP BY u.id
         ) as user_counts
         WHERE file_count > ${publicFileCount}
-      ` as any[]
-      
+      `) as any[]
+
       if (rankResult && rankResult[0]) {
         leaderboardRank = Number(rankResult[0].rank_higher) + 1
       }
@@ -198,11 +220,26 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
           },
         },
         skills: {
-          select: { id: true, name: true, level: true, category: true, yearsExperience: true },
+          select: {
+            id: true,
+            name: true,
+            level: true,
+            category: true,
+            yearsExperience: true,
+          },
           orderBy: { sortOrder: 'asc' },
         },
         signals: {
-          select: { id: true, type: true, title: true, url: true, description: true, imageUrl: true, metadata: true, verified: true },
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            url: true,
+            description: true,
+            imageUrl: true,
+            metadata: true,
+            verified: true,
+          },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -211,27 +248,35 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     .catch(() => null)
 
   return (
-    <PublicProfile 
-      user={user} 
-      storageBonus={storageBonus} 
+    <PublicProfile
+      user={user}
+      storageBonus={storageBonus}
       domainBonus={domainBonus}
       linkedAccounts={linkedAccounts}
       leaderboardRank={leaderboardRank}
       currentUserId={session?.user?.id ?? null}
-      contributorInfo={contributorMilestone ? {
-        linesOfCode: contributorLOC,
-        tier: contributorMilestone.tier,
-        icon: contributorMilestone.icon,
-        storageGB: contributorMilestone.storageGB,
-        domainSlots: contributorMilestone.domainSlots,
-      } : undefined}
-      boosterInfo={boosterMilestone ? {
-        months: boostMonths,
-        tier: boosterMilestone.tier,
-        icon: boosterMilestone.icon,
-        storageGB: boosterMilestone.storageGB,
-        domainSlots: boosterMilestone.domainSlots,
-      } : undefined}
+      contributorInfo={
+        contributorMilestone
+          ? {
+              linesOfCode: contributorLOC,
+              tier: contributorMilestone.tier,
+              icon: contributorMilestone.icon,
+              storageGB: contributorMilestone.storageGB,
+              domainSlots: contributorMilestone.domainSlots,
+            }
+          : undefined
+      }
+      boosterInfo={
+        boosterMilestone
+          ? {
+              months: boostMonths,
+              tier: boosterMilestone.tier,
+              icon: boosterMilestone.icon,
+              storageGB: boosterMilestone.storageGB,
+              domainSlots: boosterMilestone.domainSlots,
+            }
+          : undefined
+      }
       nexiumProfile={nexiumProfile as any}
     />
   )

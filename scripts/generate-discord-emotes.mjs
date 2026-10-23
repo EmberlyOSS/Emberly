@@ -120,7 +120,17 @@ const STATIC_EMOJIS = {
     `${flame100(null, { x: 18, y: 14, size: 70 })}
      <path d="${sparkle(80, 22, 13)}" fill="${C.amber}"/>
      <path d="${sparkle(16, 70, 9)}" fill="${C.ember}"/>`,
+  ember_warning: () =>
+    `<path d="M50 8 L95 88 H5 Z" fill="url(#emberGrad)" stroke="url(#emberGrad)" stroke-width="8" stroke-linejoin="round"/>
+     <path d="M50 36 V60" stroke="${C.bg}" stroke-width="10" stroke-linecap="round"/>
+     <circle cx="50" cy="75" r="6" fill="${C.bg}"/>`,
+  // Warden's mark: the flame inside a shield (see scripts/generate-warden-branding.mjs)
+  ember_shield: () =>
+    `<path d="${SHIELD100}" fill="${C.surface}" stroke="url(#emberGrad)" stroke-width="7" stroke-linejoin="round"/>
+     ${flame100(null, { x: 21, y: 18, size: 59 })}`,
 }
+
+const SHIELD100 = 'M50 4 L90 17 V47 C90 71 73 87 50 96 C27 87 10 71 10 47 V17 Z'
 
 const ANIMATED_EMOJIS = {
   // Flickering flame with embers rising off it

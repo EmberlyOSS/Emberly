@@ -116,8 +116,9 @@ export async function generateMetadata({
     },
   })
 
+  // A real 404 (not a 200 error page) so link previews don't show a blank card
   if (!file || !file.user) {
-    return {}
+    notFound()
   }
 
   // Check access permissions
@@ -129,7 +130,10 @@ export async function generateMetadata({
   const host = headersList.get('host') || 'localhost:3000'
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
   const baseUrl = `${protocol}://${host}`
-  const rawUrl = `${baseUrl}${urlPath}/raw`
+  // Build from the stored path, not the requested one, which may be a
+  // space or %20 variant of it
+  const canonicalPath = encodeURI(file.urlPath)
+  const rawUrl = `${baseUrl}${canonicalPath}/raw`
 
   // Return minimal metadata for inaccessible or protected files
   if (isPrivate || isPasswordProtected) {
@@ -149,7 +153,7 @@ export async function generateMetadata({
   // Build rich metadata for accessible files with rich embeds enabled
   return buildRichMetadata({
     baseUrl,
-    fileUrlPath: urlPath,
+    fileUrlPath: canonicalPath,
     rawUrl,
     fileName: file.name,
     mimeType: file.mimeType,

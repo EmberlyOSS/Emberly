@@ -19,7 +19,7 @@ export function useFileActions(options: FileActionsOptions = {}) {
     if (!options.urlPath) return
 
     const baseUrl = window.location.origin
-    const url = `${baseUrl}${options.urlPath}/`
+    const url = `${baseUrl}${options.urlPath}`
     writeToClipboard(url)
       .then(() => {
         toast({

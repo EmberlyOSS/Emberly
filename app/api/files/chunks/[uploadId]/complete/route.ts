@@ -336,7 +336,7 @@ export async function POST(
 
     const responseData: FileUploadResponse = {
       id: fileRecord.id,
-      url: `${finalFullUrl}${metadata.urlPath}/`,
+      url: `${finalFullUrl}${metadata.urlPath}`,
       name: metadata.filename,
       size: metadata.totalSize,
       type: metadata.mimeType,

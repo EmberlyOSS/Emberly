@@ -49,10 +49,13 @@ export async function handleBotRequest(
   // This is necessary because middleware runs on Edge runtime and can't use Prisma directly
   let enableRichEmbeds = true // default to true
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://embrly.ca'
+    // Call the app directly rather than round-tripping through the CDN:
+    // unfurlers like Discord give up on slow pages
+    const internalBase = `http://localhost:${process.env.PORT || 3000}`
 
     const response = await fetch(
-      `${baseUrl}/api/internal/file-settings?urlPath=${encodeURIComponent(urlPath)}`
+      `${internalBase}/api/internal/file-settings?urlPath=${encodeURIComponent(urlPath)}`,
+      { signal: AbortSignal.timeout(2000) }
     )
     if (response.ok) {
       const data = await response.json()

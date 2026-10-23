@@ -9,6 +9,8 @@ import { Button } from '@/packages/components/ui/button'
 import { Input } from '@/packages/components/ui/input'
 import { Label } from '@/packages/components/ui/label'
 
+import { getCallbackUrl } from './callback-url'
+
 interface TwoFactorFormProps {
   emailOrUsername: string
   password: string
@@ -42,7 +44,7 @@ export function TwoFactorForm({
         password,
         twoFactorCode: code,
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl: getCallbackUrl(),
       })
 
       if (result?.error) {
@@ -52,7 +54,10 @@ export function TwoFactorForm({
       }
 
       if (result?.ok) {
-        router.push((result?.url as string) || '/dashboard')
+        const next = getCallbackUrl()
+        // API routes (such as the Discord linked roles flow) need a full page load
+        if (next.startsWith('/api/')) window.location.assign(next)
+        else router.push((result?.url as string) || next)
       }
     } catch {
       setError('An error occurred. Please try again.')
@@ -65,9 +70,12 @@ export function TwoFactorForm({
     <div className="space-y-4">
       <form onSubmit={onSubmit}>
         <div className="space-y-2 text-center pb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Two Factor Authentication</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Two Factor Authentication
+          </h1>
           <p className="text-base text-muted-foreground">
-            Please enter the 6 digit code provided by your configured authenticator app.
+            Please enter the 6 digit code provided by your configured
+            authenticator app.
           </p>
         </div>
 
@@ -95,13 +103,18 @@ export function TwoFactorForm({
               required
             />
             <p className="text-xs text-muted-foreground">
-              If you lost access to your device or authenticator app,
-              please contact our support team for assistance.
+              If you lost access to your device or authenticator app, please
+              contact our support team for assistance.
             </p>
           </div>
 
           {error && (
-            <div role="alert" aria-live="assertive" aria-atomic="true" className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
+            <div
+              role="alert"
+              aria-live="assertive"
+              aria-atomic="true"
+              className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2"
+            >
               <Icons.alertCircle className="h-4 w-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
