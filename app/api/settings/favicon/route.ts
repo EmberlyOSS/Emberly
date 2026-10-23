@@ -67,18 +67,11 @@ export async function POST(req: Request) {
 
     config.settings.appearance.favicon = publicPath
 
-    // Persist updated config under the new Emberly key and write config file
     await prisma.config.upsert({
       where: { key: 'emberly_config' },
       create: { key: 'emberly_config', value: config as Prisma.InputJsonValue },
       update: { value: config as Prisma.InputJsonValue },
     })
-
-    await storageProvider.uploadFile(
-      Buffer.from(JSON.stringify(config, null, 2)),
-      join(process.cwd(), 'emberly.config.json'),
-      'application/json'
-    )
 
     return new NextResponse('Favicon updated successfully', { status: 200 })
   } catch (error) {
