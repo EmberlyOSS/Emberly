@@ -5,6 +5,7 @@ const ProfileClient = dynamic(() =>
 
 import { getServerSession } from 'next-auth/next'
 import Link from 'next/link'
+import { ArrowUpRight, User as UserIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
 import { authOptions } from '@/packages/lib/auth'
@@ -13,6 +14,7 @@ import { getConfig } from '@/packages/lib/config'
 import { isCloudEnabled } from '@/packages/lib/config/env'
 import { prisma } from '@/packages/lib/database/prisma'
 import { formatFileSize } from '@/packages/lib/utils'
+import { Button } from '@/packages/components/ui/button'
 
 export const metadata = buildPageMetadata({
   title: 'Profile Settings',
@@ -127,45 +129,7 @@ export default async function ProfilePage() {
   const usagePercentage = quotasEnabled ? (user.storageUsed / quotaMB) * 100 : 0
 
   return (
-    <div className="space-y-6">
-      <div className="glass-card">
-        <div className="p-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
-              <p className="text-muted-foreground mt-2">
-                Manage your account settings, preferences, and usage statistics
-              </p>
-              {isCloudEnabled() && (
-                <div className="flex gap-3 mt-4 flex-wrap">
-                  {user.isProfilePublic && (
-                    <Link
-                      href={`/user/${user.name}`}
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      View Public Profile ↗
-                    </Link>
-                  )}
-                  <Link
-                    href="/dashboard/discovery"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-chart-3/10 text-chart-3 hover:bg-chart-3/20 transition-colors"
-                  >
-                    Discovery ↗
-                  </Link>
-                  <Link
-                    href="/applications"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  >
-                    Applications ↗
-                  </Link>
-                </div>
-              )}
-            </div>
-            <LogoutButton />
-          </div>
-        </div>
-      </div>
-
+    <div>
       <ProfileClient
         user={{
           id: user.id,
@@ -216,6 +180,46 @@ export default async function ProfilePage() {
         formattedUsed={formattedUsed}
         usagePercentage={usagePercentage}
         isAdmin={user.role === 'ADMIN'}
+        header={
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+                <UserIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Profile
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Manage your account settings, preferences, and usage
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {isCloudEnabled() && (
+                <>
+                  {user.isProfilePublic && (
+                    <Button asChild size="sm">
+                      <Link
+                        href={`/user/${encodeURIComponent(user.name ?? '')}`}
+                      >
+                        View public profile
+                        <ArrowUpRight className="ml-1.5 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/dashboard/discovery">Discovery</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/applications">Applications</Link>
+                  </Button>
+                </>
+              )}
+              <LogoutButton />
+            </div>
+          </div>
+        }
       />
     </div>
   )

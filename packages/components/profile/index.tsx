@@ -189,6 +189,7 @@ export function ProfileClient({
   formattedQuota,
   formattedUsed,
   usagePercentage,
+  header,
 }: ProfileClientProps) {
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -274,7 +275,7 @@ export function ProfileClient({
       {/* Sidebar Navigation — full on desktop, horizontal scroll on mobile */}
       <nav className="lg:w-56 shrink-0">
         {/* Mobile: horizontal scrollable strip */}
-        <ScrollIndicator className="lg:hidden glass-subtle rounded-xl p-1.5">
+        <ScrollIndicator className="lg:hidden glass-card p-1.5">
           <div className="flex gap-1 w-max">
             {visibleTabs.map((item) => {
               const Icon = item.icon
@@ -283,14 +284,17 @@ export function ProfileClient({
                 <button
                   key={item.value}
                   onClick={() => handleTabChange(item.value)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all duration-150 ${
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
                     isActive
-                      ? 'bg-primary/10 text-primary font-medium border border-primary/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                      ? 'bg-secondary text-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  {isActive && item.label}
+                  <Icon
+                    className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary' : ''}`}
+                  />
+                  {item.label}
                 </button>
               )
             })}
@@ -298,10 +302,13 @@ export function ProfileClient({
         </ScrollIndicator>
 
         {/* Desktop: full grouped sidebar */}
-        <div className="hidden lg:block glass-subtle rounded-xl p-2 lg:sticky lg:top-24 space-y-3">
+        <div className="hidden lg:block glass-card p-2 lg:sticky lg:top-28 space-y-3">
+          <p className="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+            Profile
+          </p>
           {sections.map((section) => (
             <div key={section.group}>
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              <p className="px-3 pb-1 text-xs font-medium text-muted-foreground/60">
                 {section.group}
               </p>
               <div className="space-y-0.5">
@@ -312,13 +319,16 @@ export function ProfileClient({
                     <button
                       key={item.value}
                       onClick={() => handleTabChange(item.value)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-primary/10 text-primary font-medium shadow-sm border border-primary/20'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                          ? 'bg-secondary text-foreground font-medium'
+                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
                       }`}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary' : ''}`}
+                      />
                       {item.label}
                     </button>
                   )
@@ -331,6 +341,7 @@ export function ProfileClient({
 
       {/* Content Area */}
       <div className="flex-1 min-w-0 space-y-6">
+        {header}
         {selectedTab === 'profile' && (
           <>
             <GlassCard>
