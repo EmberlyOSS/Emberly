@@ -1,0 +1,39 @@
+# emberlystat.us
+
+> Emberly Status - Real-time service status and uptime monitoring
+
+## 🎯 Purpose
+
+This site is Emberly's status page: live service health, incident tracking, and scheduled maintenance for Emberly infrastructure.
+
+### Technology Stack
+- **Framework**: Next.js (React 19)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: NextAuth.js
+- **Package Manager**: Bun
+
+## 🌟 Features
+
+- **Uptime Monitoring**: HTTP, PING, and TCP checks with configurable intervals
+- **Incident Tracking**: Timelined incident updates, per-component status overrides
+- **Scheduled Maintenance**: Planned maintenance windows with update timelines
+- **Alerting**: Discord, Slack, and generic webhook notifications on status changes
+- **Email Subscriptions**: Opt-in incident/maintenance email updates
+- **Admin Dashboard**: Full CRUD for components, monitors, incidents, maintenance, and alert rules
+- **Status Page**: Public, real-time system health overview
+
+## 📝 Standards
+
+This site follows modern web development best practices:
+- Semantic HTML5
+- WCAG 2.1 AA accessibility standards
+- Progressive Web App capabilities
+- Mobile-first responsive design
+- Core Web Vitals optimization
+- Open Graph and Twitter Card support
+
+---
+
+Made with ❤️ by humans, enhanced with AI assistance.

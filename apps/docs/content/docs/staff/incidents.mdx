@@ -1,0 +1,711 @@
+---
+title: Incident Response
+description: How to respond to outages, security incidents, and other critical issues.
+---
+
+This document covers what to do when things go very wrong.
+
+---
+
+## Incident Severity Levels
+
+### P0 - Critical (All Hands)
+
+**The service is down or severely impaired.**
+
+- Users cannot access Emberly at all
+- Database is corrupted or down
+- Data loss is occurring
+- Security breach is active
+- Major data leak detected
+
+**Response:**
+- ALL engineers drop what they're doing
+- Ops lead declares P0
+- Updates posted every 15 minutes
+- Estimated recovery: < 1 hour
+- Post-incident review mandatory
+
+---
+
+### P1 - Major (Urgent Response)
+
+**Core functionality is broken.**
+
+- Uploads failing for many users
+- Downloads broken
+- Auth system down (can't log in)
+- Payments system broken
+- Email system down
+
+**Response:**
+- Senior engineers engage immediately
+- Updates posted every 30 minutes
+- Estimated recovery: < 4 hours
+- Post-incident review required
+
+---
+
+### P2 - Moderate (Prompt Response)
+
+**Important feature is broken but service works.**
+
+- OCR not processing
+- Custom domains not working
+- 2FA broken for some users
+- Specific storage quotas calculate wrong
+- Report system not functioning
+
+**Response:**
+- Relevant team notified
+- Updates posted every 2 hours
+- Estimated recovery: < 24 hours
+- Brief incident summary after fix
+
+---
+
+### P3 - Low (Normal Troubleshooting)
+
+**Small feature or edge case broken.**
+
+- One user's storage shows wrong
+- Minor UI bug
+- Particular browser incompatibility
+- Documentation typo
+
+**Response:**
+- File ticket, normal priority
+- Fix when team has capacity
+- No status updates needed
+- No incident review
+
+---
+
+## P0 Incident Response
+
+### Phase 1: Declare & Investigate (0-15 min)
+
+**Immediately (first 5 minutes):**
+
+1. **Confirm the incident is real**
+   - Is Emberly.ca down?
+   - Can you reproduce it?
+   - Is it affecting all users or specific ones?
+
+2. **Sound the alarm**
+   - Slack: Post in `#incidents` channel
+   - Format: `[P0 INCIDENT] Service is down - [brief description]`
+   - @channel to notify everyone
+   - Start incident thread
+
+3. **Determine scope**
+   ```
+   Affected: [all users / specific region / specific feature]
+   Estimated impact: [X users]
+   Started at: [time]
+   Last known good: [time]
+   ```
+
+4. **Assign incident commander**
+   - Usually the senior eng available
+   - Their job: Coordinate response, post updates, make decisions
+   - Post in Slack: `[Name] is incident commander`
+
+**By 15 minutes:**
+- [ ] Slack alert posted
+- [ ] Scope determined
+- [ ] Incident commander assigned
+- [ ] Team notified
+- [ ] Initial update posted: "We're investigating [issue]"
+
+---
+
+### Phase 2: Status Updates (Ongoing)
+
+Post updates every 15 minutes while investigating:
+
+```
+[15 min] Confirmed issue affects file uploads. Database connection pool 
+at max. Investigating cause.
+
+[30 min] Root cause identified: Database connections exhausted. 
+Restarting connection pool. ETA resolution: 15 minutes.
+
+[45 min] Connection pool restarted. Testing uploads. Looks good so far.
+
+[60 min] RESOLVED. Uploads are working again. All clear.
+```
+
+---
+
+### Phase 3: Fix & Restore (Varies)
+
+**Actions depend on the issue:**
+
+#### Database Down
+```
+1. Check database server status
+2. Restart database service if crashed
+3. Check disk space (full disk would crash DB)
+4. Check if under attack (unusual connections)
+5. Restore from backup if needed
+6. Verify data integrity after restore
+```
+
+#### Deployment Gone Wrong
+```
+1. Revert to last known good version
+   git revert [bad commit]
+   Deploy immediately
+2. Do NOT continue debugging
+3. Use post-incident review for deep dive
+4. Once stable, deploy fixed version
+```
+
+#### Security Breach / Data Leak
+```
+1. Isolate affected systems immediately
+   - Block suspicious API keys
+   - Kill compromised sessions
+   - Disable affected accounts
+2. Preserve evidence (logs, files)
+3. Notify security team and exec
+4. Do NOT publicly admit breach yet
+5. Let comms team handle announcements
+```
+
+#### Out of Capacity
+```
+1. Scale up infrastructure immediately
+   - More database replicas
+   - More app servers
+   - Clear caches
+2. Block non-essential features to reduce load
+3. Scale down after incident resolves
+```
+
+---
+
+### Phase 4: Communicate (Every Phase)
+
+#### To Users
+
+**Slack/Discord (public announcements):**
+```
+INCIDENT: We're aware uploads are failing for some users. 
+Our team is working on it. Updates every 15 min.
+
+https://emberlystat.us
+```
+
+**Status page (emberlystat.us):**
+- Update status to "Investigating" → "Identified" → "Monitoring" → "Resolved"
+- Post updates as things change
+- Include ETA when confident
+
+**Email to affected users (if major + prolonged):**
+```
+Subject: Emberly Service Disruption - We're Fixing It
+
+We're currently experiencing issues with file uploads. Our team is 
+working on a fix. We expect to be back to normal within 1 hour.
+
+Thank you for your patience.
+
+Status: https://emberlystat.us
+```
+
+#### To Team Email (if public incident)
+
+Send internal email after 30 min of any P0:
+```
+Subject: [P0 INCIDENT] File uploads down
+
+What's happening:
+- Users cannot upload files
+- Error message: "Upload failed"
+- Started: [time]
+
+What we're doing:
+- Debugging database connection issues
+- Working on fix
+- Will update in 15 minutes
+
+What you should do:
+- Keep monitoring Slack #incidents
+- Do NOT post to social media yet
+- Comms team handles public messaging
+```
+
+---
+
+### Phase 5: Resolution
+
+When the issue is fixed:
+
+1. **Verify fix is real**
+   - Test from multiple clients
+   - Check monitoring for stability
+   - Ask a customer to test
+   - Run smoke tests
+
+2. **Update status**
+   ```
+   Slack: [RESOLVED] Uploads are working again. All systems normal.
+   Status page: Change to "Resolved"
+   Email: Optional, only if incident was public
+   ```
+
+3. **Stand down incident**
+   ```
+   [Time]: All systems stable. Monitoring for 30 min.
+   [Time + 30 min]: INCIDENT CLOSED. No further issues detected.
+   ```
+
+---
+
+### Phase 6: Post-Incident Review (Next Day)
+
+**Schedule within 24 hours of resolution.**
+
+**Attendees:**
+- Incident commander
+- Engineers involved in fix
+- On-call lead
+- Someone from ops/management
+
+**Agenda:**
+1. What happened? (timeline)
+2. Why did it happen? (root cause)
+3. Why didn't we catch it? (monitoring gaps)
+4. How do we prevent it next time? (action items)
+
+**Output:**
+- Write incident report
+- Assign fixes to teams
+- Update monitoring/alerts
+- Update runbooks
+
+**Example report:**
+```
+# P0 Incident Report: Upload Service Down
+
+## Timeline
+- 14:32 - Users report uploads failing
+- 14:35 - Confirmed database connection pool exhausted
+- 14:42 - Root cause identified: connection leak in upload handler
+- 14:55 - Fix deployed, uploads working again
+
+## Root Cause
+Connection pool set to 20 max connections. During bursty upload period,
+connections accumulated faster than they were closed. No connection 
+timeout was set, so stuck connections blocked new uploads.
+
+## Why We Didn't Catch It
+- No alerts on connection pool usage
+- Load test didn't simulate sustained uploads
+- Code review missed the connection leak
+
+## Fixes
+1. Add alert when connection pool > 80% (OWNER: [name])
+2. Increase timeout on DB connections from infinite → 5min (OWNER: [name])
+3. Add load test for sustained uploads (OWNER: [name])
+4. Code review checklist should include connection management (OWNER: [name])
+
+## Prevention
+All of above by [date]. Follow up review [date].
+```
+
+---
+
+## P1 Incident Response
+
+Similar to P0 but less urgent:
+
+- [ ] Post alert to Slack
+- [ ] Assign incident owner (senior eng)
+- [ ] Update status page
+- [ ] Post updates every 30 minutes
+- [ ] Post resolution
+- [ ] Brief postmortem summary (less formal than P0)
+
+Timeline: Try to resolve within 4 hours.
+
+---
+
+## P2 Incident Response
+
+- [ ] File ticket
+- [ ] Assign to relevant team
+- [ ] Update every 2 hours if public-facing
+- [ ] Resolve within 24 hours
+- [ ] No special review needed
+
+---
+
+## Common Incident Scenarios
+
+### Database Connection Pool Exhaustion
+
+**Symptoms:**
+- Uploads failing with "database unavailable"
+- Non-upload features working fine
+- Intermittent (works sometimes, fails others)
+
+**Quick Fix:**
+```bash
+# Check connection pool status
+SELECT count(*) FROM pg_stat_activity;
+# If number is close to max_connections setting in postgres.conf
+
+# Restart connection pool
+# In app code: reconnect() / reload()
+
+# Or restart entire database service
+sudo systemctl restart postgresql
+```
+
+**Root Cause Check:**
+```
+Is a specific endpoint leaking connections?
+Are there long-running queries blocking?
+Is there a connection timeout?
+```
+
+**Prevention:**
+- Alert when pool > 80%
+- Set connection timeout to 5 minutes
+- Monitor slowest queries
+
+---
+
+### Out of Disk Space
+
+**Symptoms:**
+- All uploads start failing
+- Errors: "no space left on device"
+- Database might go into read-only mode
+
+**Quick Fix:**
+```bash
+# Check disk usage
+df -h /data
+# If 100%:
+
+# Find large files
+du -sh /data/* | sort -h | tail
+
+# Delete old logs/temp files
+rm -rf /data/logs/*
+rm -rf /tmp/*
+
+# Once space is freed, restart services
+sudo systemctl restart postgres
+sudo systemctl restart emberly-api
+```
+
+**Prevention:**
+- Alert when disk > 80%
+- Set up log rotation
+- Archive old data periodically
+- Monitor largest directories
+
+---
+
+### Deployment Broken Production
+
+**Symptoms:**
+- New deploy caused 500 errors
+- Specific feature now broken
+- Errors started after recent deployment
+
+**Quick Fix:**
+```bash
+# Revert to previous version
+git revert [bad commit] --no-edit
+git push
+npm run deploy
+
+# Once stable, investigate offline
+# Do NOT try to fix in production immediately
+```
+
+**Root Cause:**
+- Was change tested?
+- Did it pass code review?
+- Did automated tests pass?
+- Did it work in staging?
+
+**Prevention:**
+- Require staging test before production deploy
+- Add automated test requirements
+- Have peer review on all changes
+- Practice deployments in staging first
+
+---
+
+### Security Incident - API Key Leaked
+
+**Symptoms:**
+- API key appears in GitHub issues or logs
+- Unauthorized API calls from unknown source
+- Multiple failed login attempts
+
+**Immediately:**
+```
+1. Revoke the leaked API key
+   DELETE FROM api_keys WHERE id = [key]
+
+2. Kill all sessions from that key
+   DELETE FROM sessions WHERE api_key = [key]
+
+3. Check what the attacker did
+   SELECT * FROM audit_logs WHERE api_key = [key]
+
+4. If they accessed data:
+   - Note what was accessed
+   - Notify affected users
+   - Notify legal/security team
+
+5. Rotate other keys as precaution
+```
+
+**Investigation:**
+- How was it leaked? (GitHub, logs, email?)
+- Fix the leak (remove from history, restrict logs)
+- How long was it exposed?
+- Did attacker use it?
+
+**Prevention:**
+- Use environment variables for secrets, not code
+- Scan GitHub for leaked secrets
+- Rotate keys periodically
+- Monitor API key usage for anomalies
+
+---
+
+### Customer Data Corruption
+
+**Symptoms:**
+- Customer files are gone or wrong
+- Database has impossible state
+- File sizes don't match storage quota
+
+**Immediate:**
+```
+1. DO NOT write more data
+2. Take database backup immediately
+3. Isolate the problem
+   - Is it one user or many?
+   - Is it specific file type?
+   - Is it correlated to specific event?
+
+4. Investigate query logs
+   SELECT * FROM query_log WHERE timestamp > [incident_time] LIMIT 100
+
+5. Notify executive team immediately
+```
+
+**Analysis:**
+- Is data actually lost or just showing wrong?
+- Can we restore from backup?
+- How many records affected?
+- Can we notify users proactively?
+
+**Prevention:**
+- Test database restore procedures monthly
+- Have automated backups every hour
+- Monitor for data anomalies
+- Have data integrity checks
+
+---
+
+## Runbooks
+
+### Database Reboot Runbook
+
+```
+Goal: Safely restart database without data loss
+
+Prerequisites:
+- Have SSH access to database server
+- Know how to log into postgres
+- Have backup of critical data
+
+Steps:
+1. Notify team in Slack "Restarting database in 5 min"
+2. Wait for confirmations
+3. Tell app to close connections
+   App API: /admin/maintenance/pause-new-connections
+4. Wait 30 seconds for existing connections to drain
+5. SSH into database server
+6. sudo systemctl stop postgresql
+7. Wait 10 seconds
+8. sudo systemctl start postgresql
+9. Check it started: sudo systemctl status postgresql
+10. Tell app to resume connections
+    App API: /admin/maintenance/resume-connections
+11. Test: Try uploading a file
+12. Update Slack: "Database restart complete"
+
+Rollback:
+If database won't start:
+1. Check logs: sudo journalctl -u postgresql | tail -100
+2. If corrupted: Restore from backup
+3. If full disk: Delete old logs, try again
+```
+
+---
+
+### App Server Restart Runbook
+
+```
+Goal: Restart application without losing user data
+
+Prerequisites:
+- Multiple app servers running (for zero-downtime)
+- Load balancer configured
+- Enough replicas to replace one
+
+Steps:
+1. Remove one app server from load balancer
+2. Wait for existing requests to finish (< 5 min)
+3. sudo systemctl restart emberly-app
+4. Check health: curl http://localhost:3000/health
+5. Add back to load balancer
+6. Monitor error rates for 5 min
+7. Repeat for other servers one at a time
+
+If something goes wrong:
+1. Add server back to load balancer immediately
+2. Other servers will handle traffic
+3. Debug offline
+4. Don't restart again until fixed
+```
+
+---
+
+## Escalation Chain
+
+**Who to notify for different incidents:**
+
+### All P0s
+1. Notify all engineers (@channel)
+2. CTO / Engineering lead
+3. CEO (within 30 min if user-facing)
+
+### All P1s
+1. Notify relevant team
+2. Engineering lead
+
+### P0 Ongoing > 1 hour
+1. Notify CEO directly
+2. Notify customers if public-facing
+3. Prepare public status update
+
+### Security incident
+1. Security team immediately
+2. Legal team immediately
+3. CTO
+4. CEO if data breach
+
+### Billing-related
+1. Finance team
+2. CEO
+3. Customer success team
+
+---
+
+## Communication Templates
+
+### Initial Alert (First 5 min)
+
+```
+[P0 INCIDENT] Service disruption
+Issue: [Brief description]
+Started: [Time]
+Impact: [Users affected]
+
+Updates: https://emberlystat.us
+#incidents on Slack
+```
+
+### 30-Minute Update (No Progress Yet)
+
+```
+Still investigating. Database team identified issue could be 
+[A], [B], or [C]. Testing fix for [A]. ETA 30 min.
+```
+
+### 60-Minute Update (Found Fix)
+
+```
+Root cause found: [explanation]. Deploying fix now. 
+ETA resolution: 15 minutes.
+```
+
+### Resolution
+
+```
+RESOLVED - Service fully restored. All systems nominal.
+Incident report will be published tomorrow.
+```
+
+### Post-Incident Summary
+
+```
+INCIDENT SUMMARY
+
+What: [Brief description]
+Duration: [Start] to [End] = [X minutes]
+Impact: [N] users affected
+Root cause: [One sentence]
+Fix: [What we did]
+
+Post-incident review:
+Date: [date]
+Findings: Will share in engineering channel
+
+Thanks for your patience!
+```
+
+---
+
+## Tools & Resources
+
+- **Status Page:** https://emberlystat.us (update live)
+- **Incident Slack Channel:** #incidents (ping @channel for P0)
+- **Database:** Direct SSH access, Prisma Studio for viewing
+- **Logs:** Check ELK stack or CloudWatch (depends on setup)
+- **Monitoring:** [Depends on your monitoring tool]
+- **Playbooks:** Store in internal wiki
+- **On-call Schedule:** [Link to schedule]
+
+---
+
+## P0 Quick Reference
+
+```
+INCIDENT DECLARED
+├─ Slack alert posted
+├─ Owner assigned
+├─ Status page updated
+└─ Updates every 15 min
+
+INVESTIGATING
+├─ Check recent changes
+├─ Check infrastructure health
+├─ Check database
+└─ Check logs
+
+FIX IDENTIFIED
+├─ Test fix in staging
+├─ Deploy (revert if broken)
+└─ Verify with real traffic
+
+RESOLVED
+├─ Monitor for 30 min
+├─ Update status page
+├─ Post to Slack
+└─ Schedule post-incident review
+```

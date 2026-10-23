@@ -1,0 +1,16 @@
+{
+  "title": "API Reference",
+  "root": true,
+  "pages": [
+    "index",
+    "files",
+    "urls",
+    "domains",
+    "billing",
+    "analytics",
+    "profile",
+    "discovery",
+    "user-reference",
+    "staff-admin-reference"
+  ]
+}

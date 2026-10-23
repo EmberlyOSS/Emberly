@@ -1,0 +1,5 @@
+Contact: https://github.com/ByteSendApp/ByteSend/security/advisories/new
+Contact: mailto:security@nodebyte.co.uk
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://status.bytesend.cloud/.well-known/security.txt

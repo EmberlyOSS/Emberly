@@ -1,0 +1,93 @@
+---
+title: Paste (Code Snippets)
+description: Share code snippets and plain text with syntax highlighting using Emberly Paste.
+---
+
+Emberly Paste lets you create shareable code snippets directly from your dashboard. Pastes are stored as files and support syntax highlighting for 20+ languages.
+
+---
+
+## Creating a Paste
+
+1. Go to [embrly.ca/dashboard/paste](https://embrly.ca/dashboard/paste)
+2. Select a **language** from the dropdown
+3. Type or paste your code into the editor
+4. Optionally set a **filename**, **visibility**, and **password**
+5. Click **Create Paste**
+
+You'll receive a shareable link immediately.
+
+---
+
+## Supported Languages
+
+| Language | Extension |
+|----------|-----------|
+| Plain Text | `.txt` |
+| Markdown | `.md` |
+| JavaScript | `.js` |
+| TypeScript | `.ts` |
+| JSX | `.jsx` |
+| TSX | `.tsx` |
+| Python | `.py` |
+| HTML | `.html` |
+| CSS | `.css` |
+| JSON | `.json` |
+| YAML | `.yaml` |
+| SQL | `.sql` |
+| Java | `.java` |
+| C++ | `.cpp` |
+| C | `.c` |
+| Rust | `.rs` |
+| Go | `.go` |
+| PHP | `.php` |
+| XML | `.xml` |
+| Sass / SCSS / Less | `.sass` / `.scss` / `.less` |
+
+---
+
+## Visibility Options
+
+| Option | Who Can View |
+|--------|-------------|
+| **Public** | Anyone with the link |
+| **Private** | Only you |
+| **Password protected** | Anyone with the link + password |
+
+---
+
+## Pastes via API
+
+Pastes are uploaded as regular files with `isPaste: true`. You can create them via the standard file upload endpoint by sending the code as file content.
+
+```bash
+curl -X POST https://embrly.ca/api/files \
+  -H "Authorization: Bearer YOUR_UPLOAD_TOKEN" \
+  -F "file=@snippet.py" \
+  -F "visibility=PUBLIC"
+```
+
+The file's `isPaste` flag is set automatically based on MIME type detection when creating via the dashboard. API uploads are treated as regular files but will render with syntax highlighting if the file extension is recognised.
+
+---
+
+## Managing Pastes
+
+Pastes appear alongside your files in the **Dashboard → Files** view. You can filter by type using the **Pastes** filter chip.
+
+From the file detail view you can:
+- **Copy link** — get the shareable URL
+- **Download** — save the raw file
+- **Delete** — permanently remove the paste
+- **Edit visibility** — change public/private/password
+
+---
+
+## Sharing a Paste
+
+The viewer at `https://embrly.ca/[username]/[filename]` renders the paste with syntax highlighting. Visitors can:
+- Read the code in-browser
+- Copy the raw content
+- Download the file
+
+No account required to view a public paste.

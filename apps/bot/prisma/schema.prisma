@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model LevelConfig {
+  id              Int     @id @default(autoincrement())
+  guildId         String  @unique @map("guild_id")
+  enabled         Boolean @default(false)
+  maxLevel        Int     @default(10) @map("max_level") // Maximum level players can reach
+  baseThreshold   Int     @default(100) @map("base_threshold") // Base activity points for level 1
+  exponentFactor  Float   @default(1.5) @map("exponent_factor") // Exponential multiplier (1.5 = 50% increase per level)
+  decayRate       Float   @default(0.1) @map("decay_rate") // % of points lost per day of inactivity (0.1 = 10%)
+  inactivityDays  Int     @default(7) @map("inactivity_days") // Days before decay starts
+  levelRoleIds    String? @map("level_role_ids") // JSON array of role IDs in order [level1RoleId, level2RoleId, ...]
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("level_configs")
+}
+
+model UserLevel {
+  id              Int      @id @default(autoincrement())
+  guildId         String   @map("guild_id")
+  userId          String   @map("user_id")
+  level           Int      @default(0)
+  activityPoints  Int      @default(0) @map("activity_points")
+  messageCount    Int      @default(0) @map("message_count")
+  reactionCount   Int      @default(0) @map("reaction_count")
+  lastActiveAt    DateTime @default(now()) @map("last_active_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([guildId, userId])
+  @@map("user_levels")
+  @@index([guildId])
+  @@index([userId])
+  @@index([level])
+}
+
+model LinkedEmberlyAccount {
+  id          Int      @id @default(autoincrement())
+  discordId   String   @unique @map("discord_id")
+  uploadToken String   @map("upload_token")
+  linkedAt    DateTime @default(now()) @map("linked_at")
+
+  @@map("linked_emberly_accounts")
+}
+
+model AppConfig {
+  id              Int     @id @default(1) // Singleton: always use id 1
+  guildIds        String? @map("guild_ids") // JSON array of guild IDs ["123", "456", ...]
+  devIds          String? @map("dev_ids") // JSON array of developer user IDs ["789", "101112", ...]
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
+}
+
+model Announcement {
+  id              Int      @id @default(autoincrement())
+  guildId         String   @map("guild_id")
+  channelId       String   @map("channel_id") // Channel where announcement was sent
+  messageId       String?  @map("message_id") // Discord message ID for tracking
+  authorId        String   @map("author_id") // Developer who created it
+  type            String   @default("announcement") // "announcement" or "changelog"
+  title           String
+  content         String   @db.Text
+  color           Int      @default(3447003) // Embed color (default: blurple)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("announcements")
+  @@index([guildId])
+  @@index([channelId])
+  @@index([authorId])
+}

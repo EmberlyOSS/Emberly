@@ -1,0 +1,205 @@
+---
+title: Python SDK
+description: Integrate Emberly file uploads into your Python applications.
+---
+
+There is no official `pip install emberly` package yet. The SDK below is a reference implementation you can copy directly into your project.
+
+## Requirements
+
+```bash
+pip install requests
+```
+
+## Quick Start
+
+```python
+import requests
+
+TOKEN   = "YOUR_UPLOAD_TOKEN"
+BASE_URL = "https://embrly.ca/api"
+
+with open("document.pdf", "rb") as f:
+    response = requests.post(
+        f"{BASE_URL}/files",
+        headers={"Authorization": f"Bearer {TOKEN}"},
+        files={"file": f},
+        data={"visibility": "PUBLIC"},
+    )
+
+response.raise_for_status()
+print(response.json()["data"]["url"])
+```
+
+---
+
+## SDK Implementation
+
+Copy these files into an `emberly/` directory in your project.
+
+### `emberly/exceptions.py`
+
+```python
+class EmberlyError(Exception):
+    def __init__(self, message: str, status_code: int = 0):
+        super().__init__(message)
+        self.status_code = status_code
+```
+
+### `emberly/client.py`
+
+```python
+import os
+from pathlib import Path
+from typing import Optional
+
+import requests
+from .exceptions import EmberlyError
+
+
+class EmberlyClient:
+    """
+    Emberly API client.
+    Pass ``token`` or set the ``EMBERLY_TOKEN`` environment variable.
+    """
+
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        base_url: str = "https://embrly.ca/api",
+    ):
+        self.token = token or os.getenv("EMBERLY_TOKEN")
+        if not self.token:
+            raise EmberlyError("No token provided. Pass token= or set EMBERLY_TOKEN.")
+        self.base_url = base_url.rstrip("/")
+        self.session = requests.Session()
+        self.session.headers["Authorization"] = f"Bearer {self.token}"
+
+    def upload(
+        self,
+        file_path: str | Path,
+        *,
+        visibility: str = "PUBLIC",
+        password: Optional[str] = None,
+        expires_at: Optional[str] = None,
+    ) -> dict:
+        """Upload a file and return the response data dict."""
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        data: dict = {"visibility": visibility}
+        if password:
+            data["password"] = password
+        if expires_at:
+            data["expiresAt"] = expires_at
+
+        with path.open("rb") as f:
+            response = self.session.post(
+                f"{self.base_url}/files",
+                files={"file": (path.name, f)},
+                data=data,
+            )
+
+        if not response.ok:
+            raise EmberlyError(
+                response.json().get("error", response.text),
+                status_code=response.status_code,
+            )
+
+        return response.json()["data"]
+
+    def delete(self, file_id: str) -> None:
+        """Delete a file by ID."""
+        response = self.session.delete(f"{self.base_url}/files/{file_id}")
+        if not response.ok:
+            raise EmberlyError(
+                response.json().get("error", response.text),
+                status_code=response.status_code,
+            )
+```
+
+### `emberly/__init__.py`
+
+```python
+from .client import EmberlyClient
+from .exceptions import EmberlyError
+
+__all__ = ["EmberlyClient", "EmberlyError"]
+```
+
+---
+
+## Usage Examples
+
+```python
+from emberly import EmberlyClient, EmberlyError
+
+client = EmberlyClient()  # reads EMBERLY_TOKEN from environment
+
+# Upload a file
+try:
+    data = client.upload("screenshot.png", visibility="PUBLIC")
+    print(f"URL: {data['url']}")
+    print(f"ID:  {data['id']}")
+except EmberlyError as e:
+    print(f"Upload failed ({e.status_code}): {e}")
+
+# Upload private with password
+data = client.upload(
+    "secret.pdf",
+    visibility="PRIVATE",
+    password="hunter2",
+    expires_at="2026-12-31T23:59:59Z",
+)
+
+# Delete a file
+client.delete(data["id"])
+```
+
+---
+
+## Django / FastAPI Integration
+
+```python
+# Django view
+from emberly import EmberlyClient
+
+def upload_view(request):
+    if request.method == "POST":
+        client = EmberlyClient()
+        uploaded_file = request.FILES["file"]
+        # save to temp, upload, return URL
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=uploaded_file.name) as tmp:
+            for chunk in uploaded_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+        try:
+            data = client.upload(tmp_path)
+            return JsonResponse({"url": data["url"]})
+        finally:
+            os.unlink(tmp_path)
+```
+
+```python
+# FastAPI route
+from fastapi import FastAPI, UploadFile
+from emberly import EmberlyClient
+import tempfile, os
+
+app = FastAPI()
+client = EmberlyClient()
+
+@app.post("/upload")
+async def upload(file: UploadFile):
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file.filename) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+    try:
+        data = client.upload(tmp_path)
+        return {"url": data["url"]}
+    finally:
+        os.unlink(tmp_path)
+```

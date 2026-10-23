@@ -1,0 +1,39 @@
+{
+  "name": "emberly",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "CodeMeAPixel",
+  "homepage": "https://embrly.ca",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EmberlyOSS/Emberly.git"
+  },
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --filter=@emberly/dashboard",
+    "dev:all": "turbo run dev",
+    "build": "turbo run build --filter=@emberly/dashboard",
+    "build:all": "turbo run build",
+    "start": "bun --cwd apps/dashboard run start",
+    "worker": "bun --cwd apps/dashboard run worker",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,md,css}\"",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "bun --cwd packages/db run migrate",
+    "db:deploy": "bun --cwd packages/db run deploy",
+    "db:seed": "bun --cwd apps/dashboard run db:seed",
+    "db:studio": "bun --cwd packages/db run studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.1",
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.3"
+  }
+}

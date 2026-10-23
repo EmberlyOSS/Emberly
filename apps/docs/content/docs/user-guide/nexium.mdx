@@ -1,0 +1,94 @@
+---
+title: Nexium
+description: What Nexium is, how Discovery profiles, squads, and opportunities work, and when to use each.
+---
+
+<Callout type="warn">
+  **Cloud only.** Nexium runs on embrly.ca and isn't available on self-hosted instances — see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted).
+</Callout>
+
+**Nexium** is Emberly's team collaboration and talent discovery layer. It sits alongside your regular Emberly account and adds a public identity, team workspaces, and a way to connect with other builders.
+
+---
+
+## The Three Parts of Nexium
+
+### 1. Discovery Profile
+
+Your **Discovery profile** is a public page that shows your skills, portfolio links (called signals), and availability status. It is separate from your regular Emberly profile — think of it as a professional card you choose to publish.
+
+You control what appears on it:
+
+- **Bio** — a short description of who you are
+- **Skills** — technology and tool tags with experience levels (beginner, intermediate, expert)
+- **Signals** — links to GitHub repos, live projects, videos, or any URL that shows your work
+- **Availability** — whether you are open to freelance, full-time, or other opportunities
+
+You can create, update, or delete your Discovery profile at any time from **Dashboard → Discovery → Profile**.
+
+### 2. Squads
+
+A **squad** is a named team with shared storage, shared custom domains, and role-based access. Squads are the collaboration unit in Nexium — they are where actual work happens.
+
+When you create a squad:
+
+- Members can upload files that belong to the squad (not their personal account)
+- The squad gets its own upload token for integrations like ShareX
+- You can add custom domains for squad file URLs
+- Members have roles: Owner, Admin, Editor, or Viewer
+
+Squads require a **Blaze plan or higher** (or a Discovery shared plan). See [Teams and Squads](/docs/user-guide/teams-and-squads) for a detailed guide.
+
+### 3. Opportunities
+
+**Opportunities** are public listings you post to find collaborators. They can be:
+
+- **Job** — a paid employment role
+- **Freelance** — contract or project work
+- **Bounty** — a specific task with a reward
+- **Open source** — unpaid but visible contribution opportunity
+
+Anyone with a Discovery profile can browse and apply to opportunities. As a poster, you review applications and contact applicants directly.
+
+---
+
+## How It All Fits Together
+
+```
+Emberly Account
+    └─ Files, domains, URLs (your personal account)
+    └─ Discovery Profile (optional public identity)
+           └─ Skills + Signals
+           └─ Opportunities you post
+    └─ Squads (optional team workspace)
+           └─ Shared storage + domains
+           └─ Members with roles
+           └─ Squad upload token
+```
+
+You do not need a Discovery profile to use squads, and you do not need a squad to have a Discovery profile. They are independent but complementary.
+
+---
+
+## When to Use What
+
+| Goal | Use |
+|------|-----|
+| Share your work publicly and be findable | Discovery profile |
+| Collaborate on files with a team | Squad |
+| Post a job or find freelancers | Opportunities |
+| Give a team their own upload domain | Squad + custom domain |
+| Track who applied to your listing | Opportunities + Applications |
+
+---
+
+## Getting Started
+
+1. Go to **Dashboard → Discovery** to create your Discovery profile
+2. Add your skills and link your GitHub repos as signals
+3. If you want a team, go to **Dashboard → Squads → Create Squad** and invite members
+4. To post an opportunity, go to **Dashboard → Discovery → Opportunities → New**
+
+See also:
+- [Teams and Squads guide](/docs/user-guide/teams-and-squads) — creating squads, inviting members, workspaces
+- [Discovery API](/docs/api/discovery) — manage everything programmatically

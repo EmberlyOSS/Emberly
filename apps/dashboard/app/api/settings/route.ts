@@ -1,0 +1,203 @@
+import {
+  PublicSettings,
+  SettingsUpdateResponse,
+  UpdateSettingSectionRequest,
+} from '@/types/dto/settings'
+
+import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
+import { requireAuth, requireSuperAdmin } from '@/lib/auth/api-auth'
+import {
+  EmberlyConfig,
+  getConfig,
+  updateConfig,
+  updateConfigSection,
+} from '@/lib/config'
+import { loggers } from '@/lib/logger'
+import { invalidateStorageProvider } from '@/lib/storage'
+
+const logger = loggers.config
+
+/**
+ * Returns a config safe for ADMIN role:
+ * - All non-secret fields preserved so admins can see/test integrations
+ * - Secret/credential fields blanked out (they're not transmitted to the client)
+ */
+function maskSecretsForAdmin(config: EmberlyConfig): EmberlyConfig {
+  const c = structuredClone(config) as any
+  // S3 storage secrets
+  if (c.settings?.general?.storage?.s3) {
+    c.settings.general.storage.s3.secretAccessKey = ''
+    c.settings.general.storage.s3.accessKeyId = ''
+  }
+  // Integrations
+  const i = c.settings?.integrations ?? {}
+  if (i.stripe) {
+    i.stripe.secretKey = ''
+    i.stripe.webhookSecret = ''
+  }
+  if (i.resend) {
+    i.resend.apiKey = ''
+  }
+  if (i.cloudflare) {
+    i.cloudflare.apiToken = ''
+  }
+  if (i.discord) {
+    i.discord.botToken = ''
+  }
+  if (i.github) {
+    i.github.pat = ''
+  }
+  // Remove any stale legacy integration keys that may still live in DB config
+  delete i.kener
+  delete i.uptimeKuma
+  return c as EmberlyConfig
+}
+
+export async function GET(req: Request) {
+  try {
+    const { user, response } = await requireAuth(req)
+    if (response) {
+      const config = await getConfig()
+      const publicSettings: PublicSettings = {
+        version: config.version,
+        settings: {
+          general: {
+            registrations: {
+              enabled: config.settings.general.registrations.enabled,
+              disabledMessage:
+                config.settings.general.registrations.disabledMessage,
+            },
+            billing: {
+              enabled: config.settings.general.billing.enabled,
+            },
+          },
+          appearance: {
+            theme: config.settings.appearance.theme,
+            favicon: config.settings.appearance.favicon,
+            customColors: config.settings.appearance.customColors,
+          },
+          advanced: {
+            customCSS: config.settings.advanced.customCSS,
+            customHead: config.settings.advanced.customHead,
+          },
+        },
+      }
+      return apiResponse<PublicSettings>(publicSettings)
+    }
+
+    const config = await getConfig()
+
+    if (user.role === 'SUPERADMIN') {
+      // Superadmin gets full config including all secrets
+      return apiResponse<EmberlyConfig>(config)
+    }
+
+    if (user.role === 'ADMIN') {
+      // Admin gets full structure but with secret fields blanked
+      return apiResponse<EmberlyConfig>(maskSecretsForAdmin(config))
+    }
+
+    // Regular users get public settings only
+    const publicSettings: PublicSettings = {
+      version: config.version,
+      settings: {
+        general: {
+          registrations: {
+            enabled: config.settings.general.registrations.enabled,
+            disabledMessage:
+              config.settings.general.registrations.disabledMessage,
+          },
+          billing: {
+            enabled: config.settings.general.billing.enabled,
+          },
+        },
+        appearance: {
+          theme: config.settings.appearance.theme,
+          favicon: config.settings.appearance.favicon,
+          customColors: config.settings.appearance.customColors,
+        },
+        advanced: {
+          customCSS: config.settings.advanced.customCSS,
+          customHead: config.settings.advanced.customHead,
+        },
+      },
+    }
+    return apiResponse<PublicSettings>(publicSettings)
+  } catch (error) {
+    logger.error('Failed to get config', error as Error)
+    return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+  }
+}
+
+type SettingSection = keyof EmberlyConfig['settings']
+
+export async function PATCH(request: Request) {
+  try {
+    // Settings write operations are superadmin-only
+    const { response } = await requireSuperAdmin()
+    if (response) return response
+
+    const body = await request.json()
+    const { section, data } =
+      body as UpdateSettingSectionRequest<SettingSection>
+
+    const config = await getConfig()
+
+    if (section === 'appearance' && 'customColors' in data) {
+      const customColors = data.customColors
+      if (customColors) {
+        let cssContent = config.settings.advanced.customCSS
+
+        cssContent = cssContent.replace(/:root\s*{[^}]*}/, '')
+
+        const cssVars = Object.entries(customColors)
+          .map(
+            ([key, value]) =>
+              `  --${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}: ${value};`
+          )
+          .join('\n')
+
+        const newCssVars = `:root {\n${cssVars}\n}\n\n`
+        config.settings.advanced.customCSS = newCssVars + cssContent
+      }
+    }
+
+    await updateConfigSection(section, data)
+    const updatedConfig = await getConfig()
+    return apiResponse<EmberlyConfig>(updatedConfig)
+  } catch (error) {
+    logger.error('Failed to update config', error as Error)
+    return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    // Settings write operations are superadmin-only
+    const { response } = await requireSuperAdmin()
+    if (response) return response
+
+    const config: EmberlyConfig = await req.json()
+
+    if (config.settings.advanced.customCSS) {
+      config.settings.advanced.customCSS = config.settings.advanced.customCSS
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+    }
+
+    await updateConfig(config)
+
+    if (config.settings?.general?.storage) {
+      invalidateStorageProvider()
+    }
+
+    const responseData: SettingsUpdateResponse = {
+      message: 'Settings updated successfully',
+    }
+
+    return apiResponse<SettingsUpdateResponse>(responseData)
+  } catch (error) {
+    logger.error('Error updating settings', error as Error)
+    return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+  }
+}

@@ -1,0 +1,326 @@
+---
+title: Files API
+description: Upload, retrieve, update, and delete files via the Emberly REST API.
+---
+
+## Endpoints Overview
+
+### Upload
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/files` | Single file upload |
+| `POST` | `/api/files/chunks` | Initialize chunked upload |
+| `GET` | `/api/files/chunks/[id]/part/[n]` | Get presigned S3 URL for a chunk |
+| `POST` | `/api/files/chunks/[id]/complete` | Finalize chunked upload |
+
+### File Management
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/files/[id]` | Get file metadata |
+| `PATCH` | `/api/files/[id]` | Update visibility, password, etc. |
+| `DELETE` | `/api/files/[id]` | Delete a file |
+| `GET` | `/api/files/[id]/download` | Download a file |
+| `POST` | `/api/files/[id]/expiry` | Set file expiration |
+| `DELETE` | `/api/files/[id]/expiry` | Cancel file expiration |
+| `GET` | `/api/files/shared` | List files shared with you |
+
+### Collaboration
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/files/[id]/collaborators` | List a file's collaborators |
+| `POST` | `/api/files/[id]/collaborators` | Add a collaborator |
+| `DELETE` | `/api/files/[id]/collaborators/[collaboratorId]` | Remove a collaborator |
+| `GET` | `/api/files/[id]/collaborators/me` | Get your own collaborator role on a file |
+| `GET` | `/api/files/[id]/suggestions` | List edit suggestions on a file |
+| `GET` | `/api/files/suggestions/pending` | List pending suggestions across all your files |
+
+See [File Collaboration](/docs/user-guide/file-collaboration) for the full collaborator/suggestion workflow and role details (`EDITOR` / `SUGGESTER`).
+
+---
+
+## Single File Upload
+
+### `POST /api/files`
+
+**Content-Type:** `multipart/form-data`  
+**Auth:** Bearer token
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | File | Yes | The file to upload |
+| `visibility` | `PUBLIC` \| `PRIVATE` | No | Default: `PUBLIC` |
+| `password` | string | No | Password-protect the file |
+| `domain` | string | No | Custom domain for the URL |
+| `expiresAt` | ISO 8601 | No | Auto-delete date (must be future) |
+| `allowSuggestions` | `"true"` \| `"false"` | No | Allow edit suggestions |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cm7xabc123",
+    "name": "document.pdf",
+    "size": 2.5,
+    "mimeType": "application/pdf",
+    "url": "https://embrly.ca/yourusername/document.pdf",
+    "urlPath": "/yourusername/document.pdf",
+    "visibility": "PUBLIC",
+    "password": false,
+    "createdAt": "2026-03-29T15:30:00Z",
+    "expiresAt": null,
+    "downloads": 0
+  }
+}
+```
+
+**cURL:**
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@document.pdf" \
+  -F "visibility=PUBLIC" \
+  -F "expiresAt=2026-12-31T23:59:59Z" \
+  https://embrly.ca/api/files
+```
+
+**JavaScript:**
+```javascript
+const form = new FormData();
+form.append("file", fileInput.files[0]);
+form.append("visibility", "PUBLIC");
+
+const res = await fetch("/api/files", {
+  method: "POST",
+  headers: { Authorization: "Bearer YOUR_TOKEN" },
+  body: form,
+});
+const { data } = await res.json();
+console.log(data.url);
+```
+
+### Plan Limits
+
+| Plan | Max file size |
+|------|--------------|
+| Spark (Free) | 500 MB |
+| Paid plans | Based on subscription |
+
+### Security Validation
+
+Every upload runs:
+1. Extension + MIME type checks (50+ blocked types)
+2. Zip bomb detection (max 100:1 ratio)
+3. VirusTotal hash scan (skipped for images, video, and audio — see [VirusTotal Scanning](/docs/security/virustotal) for why)
+
+**Blocked extensions:** `.exe`, `.bat`, `.sh`, `.py`, `.rb`, `.php`, `.dll`, `.jar`, `.msi`, and others.
+
+---
+
+## Chunked Upload
+
+Use chunked upload for large files or unreliable connections. If you lose your connection mid-upload, the session is preserved (via Redis or the filesystem fallback) and can be resumed.
+
+**Auth:** Bearer token or session cookie
+
+---
+
+### Step 1 — Initialize
+
+**`POST /api/files/chunks`**
+
+```json
+{
+  "filename": "large-video.mp4",
+  "mimeType": "video/mp4",
+  "size": 5368709120,
+  "domain": "cdn.example.com"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `filename` | string | Yes | Original file name |
+| `mimeType` | string | Yes | MIME type of the file |
+| `size` | number | Yes | Total file size in bytes |
+| `domain` | string | No | Custom domain for the resulting URL |
+
+**Response (200):**
+
+```json
+{
+  "uploadId": "abc123xyz",
+  "partSize": 5242880
+}
+```
+
+`partSize` is the recommended chunk size in bytes (5 MB by default). Split your file into chunks of this size.
+
+---
+
+### Step 2 — Get a Presigned URL for Each Part
+
+**`GET /api/files/chunks/{uploadId}/part/{partNumber}`**
+
+- `partNumber` is 1-based (first chunk = `1`)
+
+Returns a short-lived presigned S3 URL.
+
+```json
+{
+  "url": "https://s3.amazonaws.com/bucket/...",
+  "partNumber": 1
+}
+```
+
+---
+
+### Step 3 — Upload Each Chunk
+
+`PUT` the chunk binary directly to the presigned URL:
+
+```bash
+curl -X PUT \
+  -H "Content-Type: video/mp4" \
+  --data-binary @chunk_001 \
+  "https://s3.amazonaws.com/bucket/..."
+```
+
+Save the `ETag` header from the response — you'll need it in step 4.
+
+---
+
+### Step 4 — Finalize
+
+**`POST /api/files/chunks/{uploadId}/complete`**
+
+```json
+{
+  "parts": [
+    { "PartNumber": 1, "ETag": "\"abc123\"" },
+    { "PartNumber": 2, "ETag": "\"def456\"" }
+  ],
+  "expiresAt": "2026-12-31T23:59:59Z"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `parts` | array | Yes | List of `{ PartNumber, ETag }` objects in order |
+| `expiresAt` | ISO 8601 | No | Optional auto-delete date |
+
+Returns the same response shape as single file upload upon success. The file undergoes the same VirusTotal and MIME security checks.
+
+<Callout type="info">
+  Chunked uploads are created as `PUBLIC` by default. Use `PATCH /api/files/{id}` after completion to change visibility or add a password.
+</Callout>
+
+---
+
+### JavaScript Example
+
+```javascript
+const CHUNK_SIZE = 5 * 1024 * 1024 // 5 MB
+
+async function chunkedUpload(file, token) {
+  // 1. Initialize
+  const { uploadId, partSize } = await fetch('/api/files/chunks', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ filename: file.name, mimeType: file.type, size: file.size }),
+  }).then(r => r.json())
+
+  // 2. Upload chunks
+  const parts = []
+  let partNumber = 1
+  for (let offset = 0; offset < file.size; offset += partSize) {
+    const chunk = file.slice(offset, offset + partSize)
+
+    // Get presigned URL
+    const { url } = await fetch(`/api/files/chunks/${uploadId}/part/${partNumber}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(r => r.json())
+
+    // Upload chunk
+    const uploadRes = await fetch(url, { method: 'PUT', body: chunk })
+    const etag = uploadRes.headers.get('ETag')
+    parts.push({ PartNumber: partNumber, ETag: etag })
+    partNumber++
+  }
+
+  // 3. Complete
+  const result = await fetch(`/api/files/chunks/${uploadId}/complete`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ parts }),
+  }).then(r => r.json())
+
+  return result.data.url
+}
+```
+
+---
+
+## Update a File
+
+### `PATCH /api/files/[id]`
+
+**Auth:** Session or owner token
+
+```json
+{
+  "visibility": "PRIVATE",
+  "password": "newpassword"
+}
+```
+
+Returns updated file metadata.
+
+---
+
+## Delete a File
+
+### `DELETE /api/files/[id]`
+
+**Auth:** Session or owner token
+
+**Response (200):**
+
+```json
+{ "success": true }
+```
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  https://embrly.ca/api/files/cm7xabc123
+```
+
+---
+
+## Set Expiration
+
+### `POST /api/files/[id]/expiry`
+
+```json
+{ "expiresAt": "2026-12-31T23:59:59Z" }
+```
+
+### `DELETE /api/files/[id]/expiry`
+
+Cancels the scheduled deletion.
+
+---
+
+## Files Shared With You
+
+### `GET /api/files/shared`
+
+Returns a paginated list of files other users have shared with you as a collaborator.

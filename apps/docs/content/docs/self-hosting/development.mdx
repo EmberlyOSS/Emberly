@@ -1,0 +1,274 @@
+---
+title: Development Setup
+description: Get the Emberly development stack running locally from clone to first request.
+---
+
+This guide walks through setting up Emberly for local development. By the end you will have the full stack running: database, cache, file storage, and the Next.js dev server.
+
+## Prerequisites
+
+**System requirements:**
+- OS: Linux, macOS, or Windows (WSL2 recommended on Windows)
+- RAM: 8 GB minimum (16 GB recommended)
+- Disk: 20 GB free
+
+**Required software:**
+
+| Tool | Version | Check |
+|------|---------|-------|
+| [Bun](https://bun.sh) | Latest | `bun --version` |
+| [Node.js](https://nodejs.org) | 18+ | `node --version` |
+| [PostgreSQL](https://www.postgresql.org/download/) | 14+ | `psql --version` |
+| [Redis](https://redis.io/download) | 7+ | `redis-cli --version` |
+| Git | Any | `git --version` |
+| Docker | Optional | `docker --version` |
+
+---
+
+## Step 1: Clone and Install
+
+```bash
+git clone https://github.com/EmberlyOSS/Emberly.git
+cd Emberly
+bun install
+```
+
+Installation takes a few minutes on first run while Bun resolves the lockfile.
+
+---
+
+## Step 2: Set Up Services
+
+You need PostgreSQL and Redis running before the app starts. Docker Compose is the fastest path.
+
+### Option A: Docker Compose (Recommended)
+
+Create a `docker-compose.yml` in the project root:
+
+```yaml
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: emberly_dev
+      POSTGRES_USER: emberly
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emberly -d emberly_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+```
+
+```bash
+docker-compose up -d
+```
+
+### Option B: Local Services
+
+**PostgreSQL:**
+
+```bash
+# macOS (Homebrew)
+brew services start postgresql
+createdb emberly_dev
+
+# Ubuntu / Debian
+sudo systemctl start postgresql
+sudo -u postgres createdb emberly_dev
+
+# Windows (WSL2)
+sudo service postgresql start
+sudo -u postgres createdb emberly_dev
+```
+
+**Redis:**
+
+```bash
+# macOS
+brew services start redis
+
+# Ubuntu / Debian
+sudo systemctl start redis
+```
+
+---
+
+## Step 3: Configure Environment
+
+Copy the template to `.env`:
+
+```bash
+cp .env.template .env
+```
+
+Edit `.env` with your values:
+
+```env
+# Required — set these before first run
+
+# PostgreSQL connection string
+DATABASE_URL="postgresql://emberly:password@localhost:5432/emberly_dev?schema=public"
+
+# Redis connection string
+REDIS_URL="redis://default:@localhost:6379"
+
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_BASE_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-here"   # generate with: openssl rand -base64 32
+
+# GitHub OAuth (get from github.com/settings/applications/new)
+GITHUB_OAUTH_CLIENT_ID="your_github_client_id"
+GITHUB_OAUTH_CLIENT_SECRET="your_github_client_secret"
+
+# Discord OAuth (get from discord.com/developers/applications)
+DISCORD_OAUTH_CLIENT_ID="your_discord_client_id"
+DISCORD_OAUTH_CLIENT_SECRET="your_discord_client_secret"
+
+# Optional — leave blank for local dev
+VIRUSTOTAL_API_KEY=""
+NEXT_PUBLIC_SENTRY_DSN=""
+```
+
+Generate a `NEXTAUTH_SECRET`:
+
+```bash
+openssl rand -base64 32
+```
+
+<Callout type="info" title="OAuth apps">
+  For local development, create GitHub and Discord OAuth apps with the callback URLs `http://localhost:3000/api/auth/link/github/callback` and `http://localhost:3000/api/auth/link/discord/callback`. Both are optional — you can log in with email/password if you skip them.
+</Callout>
+
+<Callout type="info" title="Storage and integrations">
+  S3 storage, Stripe, Resend email, and Cloudflare are configured after first run via **Admin → Settings** (the Storage and Integrations tabs). They are stored in the database, not in `.env`.
+</Callout>
+
+---
+
+## Step 4: Database Setup
+
+```bash
+# Run migrations (creates tables)
+bun run db:migrate
+
+# Regenerate the Prisma client
+bun run db:generate
+
+# Seed subscription plans (required once)
+bun run db:seed
+```
+
+---
+
+## Step 5: Start the Dev Server
+
+```bash
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). On first load with an empty database, you are redirected to **/setup** — a one-time wizard that creates the admin account and configures initial settings. Complete this before anything else.
+
+---
+
+## Project Structure
+
+```
+Emberly/
+├── app/                        # Next.js App Router
+│   ├── api/                    # API route handlers
+│   │   ├── files/              # File upload and management
+│   │   ├── domains/            # Custom domain management
+│   │   ├── urls/               # URL shortener
+│   │   ├── discovery/          # Nexium team/squad API
+│   │   ├── payments/           # Stripe billing
+│   │   └── auth/               # NextAuth
+│   ├── (main)/                 # Dashboard and public pages
+│   └── (shorturl)/             # Short URL redirect handler
+├── packages/
+│   ├── components/             # Shared React components
+│   ├── hooks/                  # Shared React hooks
+│   ├── lib/                    # Business logic and service clients
+│   └── types/                  # Shared TypeScript types
+├── prisma/
+│   ├── schema.prisma           # Database schema (source of truth)
+│   └── migrations/             # Migration history
+└── scripts/                    # Utility scripts (seed-plans, etc.)
+```
+
+---
+
+## Database Management
+
+```bash
+bun run db:migrate    # Create + apply a new migration
+bun run db:deploy     # Apply existing migrations (production only)
+bun run db:push       # Push schema without migration file (prototype only)
+bun run db:generate   # Regenerate Prisma client after schema changes
+bun run db:studio     # Open Prisma Studio browser UI
+bun run db:seed       # Seed subscription plans
+```
+
+After every edit to `prisma/schema.prisma`, run `bun run db:generate`.
+
+Never use `db:push` in staging or production. Always use `db:deploy`.
+
+---
+
+## Common Commands
+
+```bash
+bun dev             # Start dev server (Turbopack)
+bun run build       # Production build
+bun run typecheck   # Type-check without building
+bun run lint        # ESLint
+bun run lint:fix    # ESLint with auto-fix
+bun run format      # Prettier
+```
+
+---
+
+## Architecture Reference
+
+```
+Browser
+  └─ Next.js App Router
+       ├─ Server Components / API Routes
+       │    └─ Prisma ORM → PostgreSQL
+       ├─ File uploads → S3-compatible storage
+       │    └─ VirusTotal hash check (background)
+       │    └─ OCR extraction (background via event worker)
+       └─ Redis  ← chunked upload sessions + caching
+```
+
+Chunked upload flow:
+
+```
+POST /api/files/chunks        → Redis (session init)    → S3 multipart upload
+POST /api/files/chunks/[id]/complete  → finalize S3     → Prisma (metadata)
+```
+
+---
+
+## Event Worker
+
+The event worker processes background jobs (OCR, email, bucket provisioning). In development it runs in-process when `EMBERLY_RUN_EVENT_WORKER=true` is set in `.env`. It is off by default so you can start the app without a Redis connection.
+
+---
+
+## Flicker Desktop App
+
+Flicker is a separate repository — [EmberlyOSS/Flicker](https://github.com/EmberlyOSS/Flicker). Clone and set it up independently. See the [Flicker integration guide](/docs/integrations/flicker) for details.

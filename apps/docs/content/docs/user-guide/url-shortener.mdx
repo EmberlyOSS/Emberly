@@ -1,0 +1,107 @@
+---
+title: URL Shortener
+description: Create and manage short links with Emberly's built-in URL shortener.
+---
+
+Emberly includes a URL shortener that turns any long link into a short `embrly.ca/<code>` URL. Short links are created alongside your file uploads or independently, and all links appear in your dashboard.
+
+---
+
+## Creating a Short URL
+
+### From the Dashboard
+
+1. Go to **Dashboard → Links**
+2. Click **"Shorten URL"**
+3. Paste any valid URL into the input field
+4. Click **"Create"** — your short link is ready to copy
+
+### From the API
+
+Use your **upload token** (found at **Profile → Uploads → Upload Token**):
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/very/long/link"}' \
+  https://embrly.ca/api/urls
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "shortCode": "abc123",
+    "shortUrl": "https://embrly.ca/abc123",
+    "originalUrl": "https://example.com/very/long/link"
+  }
+}
+```
+
+---
+
+## Managing Your URLs
+
+### Viewing All URLs
+
+Go to **Dashboard → Links** to see all your shortened links with:
+- Short code and full short URL
+- Original destination URL
+- Click count
+- Creation date
+
+### Deleting a URL
+
+Click a URL in the dashboard → **Delete**. Deleting a short URL immediately stops it from redirecting — anyone visiting the link will see a 404.
+
+---
+
+## How Redirects Work
+
+When someone visits `embrly.ca/<code>`, Emberly performs a redirect to the original URL. No authentication is required to follow a short link.
+
+<Callout type="info">
+  Each short code is unique — two users cannot share the same short code even if they point to the same destination.
+</Callout>
+
+---
+
+## Tracking Clicks
+
+Each shortened URL tracks its total click count. View clicks in the Dashboard URL list.
+
+For deeper analytics (export, date ranges), see the **[Analytics API](/docs/api/analytics)**.
+
+---
+
+## Custom Short Codes
+
+Custom short codes (vanity URLs) are **not** currently supported. Short codes are auto-generated as 6-character alphanumeric strings.
+
+---
+
+## Rate Limits
+
+URL creation is subject to the same rate limits as file uploads:
+
+| Plan | Requests/min |
+|------|-------------|
+| Spark | 60 |
+| Glow+ | Higher |
+| Enterprise | Unlimited |
+
+---
+
+## API Reference
+
+Full endpoint documentation: **[URL Shortener API](/docs/api/urls)**
+
+**Quick reference:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/urls` | Create a short URL |
+| `GET` | `/api/urls` | List your URLs |
+| `DELETE` | `/api/urls/[id]` | Delete a URL |

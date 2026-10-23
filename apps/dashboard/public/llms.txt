@@ -1,0 +1,41 @@
+# Emberly
+
+> Emberly is an open-source file sharing, URL shortening, and talent discovery platform.
+> Built for developers, creators, and teams who value privacy, speed, and extensibility.
+
+## What Emberly does
+
+- Instant file uploads with direct CDN links, password protection, and configurable expiry
+- Short URL creation with analytics, custom slugs, and vanity domains
+- Custom domain support — map your own domain to your Emberly profile or short links
+- Talent profiles (Nexium) — showcase skills, GitHub signals, and project portfolios
+- Squad (team) collaboration — shared file buckets, member roles, and squad-scoped uploads
+- Storage buckets — dedicated S3-compatible storage attached to a user or squad
+- Open-source under the MIT licence — self-hostable with a single Docker image
+
+## Key pages (publicly accessible)
+
+- Home: https://embrly.ca/
+- Pricing: https://embrly.ca/pricing
+- Blog: https://embrly.ca/blog
+- About: https://embrly.ca/about
+- Changelogs: https://embrly.ca/changelogs
+- Leaderboard: https://embrly.ca/leaderboard
+- Discovery / Talent: https://embrly.ca/discovery
+- Legal Hub: https://embrly.ca/legal
+- Terms of Service: https://embrly.ca/legal/terms
+- Privacy Policy: https://embrly.ca/legal/privacy
+
+## Public REST API (no auth required)
+
+- GET https://embrly.ca/api/health — service health check
+- GET https://embrly.ca/api/status — live uptime / status
+- GET https://embrly.ca/api/products — plan and pricing information
+- GET https://embrly.ca/api/payments/promo-codes — active public discount codes
+- GET https://embrly.ca/api/leaderboard — top contributors
+
+## Optional: Further reading
+
+- GitHub repository: https://github.com/EmberlyOSS/Emberly
+- Discord community: https://embrly.ca/discord
+- Contact: https://embrly.ca/contact

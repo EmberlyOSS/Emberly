@@ -1,0 +1,14 @@
+{
+  "title": "Self-Hosting",
+  "root": true,
+  "pages": [
+    "index",
+    "cloud-vs-self-hosted",
+    "first-time-setup",
+    "development",
+    "production",
+    "environment",
+    "storage",
+    "contributing"
+  ]
+}

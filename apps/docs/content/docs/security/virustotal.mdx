@@ -1,0 +1,81 @@
+---
+title: VirusTotal Scanning
+description: How Emberly scans uploaded files for malware using VirusTotal.
+---
+
+Every file uploaded to Emberly is automatically checked against **VirusTotal's database of 71+ antivirus engines** — including Avast, McAfee, Kaspersky, and Bitdefender.
+
+## Privacy-First Approach
+
+Your files are never sent to VirusTotal. Only the **SHA-256 hash** of the file is transmitted:
+
+1. File is received and stored temporarily
+2. SHA-256 hash is computed locally
+3. Hash is sent to VirusTotal — **not the file**
+4. VirusTotal returns results from 71+ engines
+5. If flagged as malware, the file is rejected
+6. File contents never leave Emberly's servers for scanning
+
+## Upload Flow
+
+```
+User uploads file
+       ↓
+File stored temporarily
+       ↓
+SHA-256 hash calculated
+       ↓
+Hash sent to VirusTotal
+       ↓
+       ├─ Malware detected?
+       │    ├─ File rejected
+       │    ├─ Detection count shown to user
+       │    └─ Link to full VirusTotal report
+       │
+       └─ No detections?
+            └─ File accepted and available
+```
+
+## What Gets Scanned
+
+| File Type | Scanned? | Reason |
+|-----------|----------|--------|
+| Documents (PDF, Office) | Yes | High-risk vector |
+| Archives (ZIP, RAR) | Yes | May contain malware |
+| Plain text / code | Selective | Based on extension |
+| Images (PNG, JPG, GIF) | No | User privacy preference |
+| Video / Audio | No | User privacy preference |
+
+Sensitive media (photos, videos) are excluded by default to prevent uploading private files to external services.
+
+## When Malware Is Detected
+
+If a file is flagged:
+
+<Callout type="error" title="Upload blocked">
+  File detected as malware by VirusTotal (2/71 engines). This file has been rejected and not stored. [View full report &rarr;](https://www.virustotal.com)
+</Callout>
+
+- The file is **not stored** on our servers
+- You see the engine detection count (e.g., `2/71`)
+- A link to the full VirusTotal report is provided
+- The upload fails with `400` error
+
+## False Positives
+
+VirusTotal can occasionally flag legitimate files (especially obfuscated code, game cracks, or security tools). If you believe a file was incorrectly flagged:
+
+1. Click the VirusTotal report link in the error
+2. Review the detection list — if &lt;5 engines flag it, it's likely a false positive
+3. Contact VirusTotal directly to dispute the detection
+4. Contact [support@embrly.ca](mailto:support@embrly.ca) if you need an exception reviewed
+
+## Rate Limits & Availability
+
+Emberly uses VirusTotal's API within its rate limits:
+
+- Free tier: 4 requests/minute
+- If limits are exceeded, the scan is skipped — **not failed**
+- Local extension/MIME checks always run as a fallback
+
+This means uploads are never blocked *solely* due to VirusTotal API limits.

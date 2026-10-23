@@ -1,0 +1,831 @@
+---
+title: Flicker
+description: Professional cross-platform desktop application for fast screenshot capture and file uploads to Emberly cloud storage.
+---
+
+**Flicker** is a modern, feature-rich desktop uploader for Windows, macOS, and Linux. Designed as the native companion to Emberly, it provides instant screenshot capture, system-wide hotkeys, and seamless uploads with a beautiful, customizable interface.
+
+<Cards>
+  <Card title="Getting Flicker" description="Build from source and get started." href="#getting-flicker" />
+  <Card title="User Guide" description="Learn all features and settings." href="#user-guide" />
+  <Card title="Hotkey Reference" description="All default hotkeys and how to customize them." href="#hotkey-reference" />
+  <Card title="For Developers" description="Build Flicker from source or contribute." href="#development" />
+</Cards>
+
+<Callout type="warn">
+Flicker is currently in **early access** (v0.3.0). It's out of beta and stable for daily use, but still under active development expect new features and occasional rough edges. 
+
+* Installers for Windows, macOS, and Linux are published from the [GitHub Releases page](https://github.com/EmberlyOSS/Flicker/releases), but are not yet code-signed you may see an OS warning ("unknown publisher" on Windows, "unidentified developer" on macOS) when installing. 
+* You can also build from source. See [Getting Flicker](#getting-flicker) below and the full [Flicker Development Guide](/docs/integrations/flicker-development) for details.
+</Callout>
+
+---
+
+## Getting Flicker
+
+* **Option 1 - Download a build:** grab the installer for your platform from the [Releases page](https://github.com/EmberlyOSS/Flicker/releases). These are unsigned builds; see the callout above for what to expect on install.
+
+* **Option 2 — Build from source:**
+
+**Prerequisites:**
+- Node.js 18+ and Rust (latest stable)
+- bun (recommended) or npm
+
+**Quick Setup:**
+```bash
+git clone https://github.com/EmberlyOSS/Flicker.git
+cd Flicker
+bun install               # or: npm install
+bun run tauri:dev         # launches Flicker in development mode
+```
+
+`bun run dev` on its own only starts the frontend dev server (Vite) without the desktop shell use `bun run tauri:dev` to run the actual app.
+
+For full build instructions, toolchain setup, and platform-specific requirements, see the [Flicker Development Guide](/docs/integrations/flicker-development).
+
+---
+
+## User Guide
+
+### Getting Started
+
+#### 1. Installation
+
+Download an installer from the [Releases page](https://github.com/EmberlyOSS/Flicker/releases), or build from source see [Getting Flicker](#getting-flicker) above and the [Flicker Development Guide](/docs/integrations/flicker-development) for full setup instructions.
+
+#### 2. First Login
+
+1. Launch Flicker
+2. Click "Login" button
+3. Enter your Emberly email/username and password
+4. If 2FA is enabled, enter your 6-digit code
+5. Click "Authenticate"
+6. You're all set.
+
+**Alternative: Use Upload Token**
+1. Go to [embrly.ca](https://embrly.ca) → **Profile → Uploads**
+2. Copy your **Upload Token**
+3. In Flicker, go to **Settings → Account → Enter Token**
+4. Paste the token and save
+
+---
+
+### Core Features
+
+#### Screenshot Capture
+
+**Fullscreen Screenshot** — Entire primary monitor
+```
+Default hotkey: Ctrl+Shift+S (Windows/Linux)
+                 Cmd+Shift+S (macOS)
+```
+
+**All Monitors** — Stitch all displayed monitors into single image
+```
+Default hotkey: Ctrl+Shift+A (Windows/Linux)
+                 Cmd+Shift+A (macOS)
+```
+
+Region screenshot capture has a working backend command (`capture_region`), but no frontend UI calls it yet — there's no hotkey or button to trigger it in this release.
+
+**Upload from Clipboard** — Upload whatever image is currently on your system clipboard
+```
+Default hotkey: Ctrl+Alt+U
+```
+
+**How Uploads Work:**
+1. Hotkey triggers screenshot capture (or you drag-and-drop / select files in the Upload tab)
+2. Image automatically saved (temporary)
+3. File uploaded to Emberly in background, with a live progress indicator
+4. URL copied to your clipboard (or opened, depending on your Post-Upload Action setting)
+5. Success notification shows
+6. You can paste the URL anywhere
+
+**File Format & Quality:**
+- **Default Format**: PNG (lossless, high quality)
+- **Alternative**: JPG with quality slider (Settings → Capture)
+- **Filename Pattern**: `Screenshot_YYYY-MM-DD_HH-MM-SS.png`
+  - Customize in Settings with: `%Y-%m-%d_%H-%M-%S`
+
+---
+
+#### Upload Management
+
+**Automatic Upload:**
+- Enabled by default
+- Screenshot automatically uploads after capture
+- No additional steps needed
+- Can be toggled in **Settings → Behavior**
+
+**Manual Upload:**
+1. Go to the **Upload** tab
+2. Drag and drop one or more files onto the drop zone, or click "Select Files" to choose files (multi-select supported)
+3. Each file uploads with its own progress bar; failed uploads show a Retry button
+4. Visibility (Public/Private) and password protection set in Settings → Capture apply as the default for new uploads — you can change either per-file afterward from Upload History (see below)
+5. If you've picked a custom upload domain in Settings → Capture, it's used for every upload — screenshots, clipboard, and manual uploads alike
+6. On success, the URL is copied/opened/ignored according to your Post-Upload Action setting
+
+---
+
+#### History & Management
+
+**Upload Listing:**
+- Shows last 100 uploads (most recent first) — metadata and URL only, stored locally; the files themselves stay on Emberly
+- Thumbnail preview of images, grid or list view
+- File size and upload date
+- Direct URL in each entry
+- Search by filename, filter by file type, and sort — all available now
+- Select multiple items to bulk-copy or bulk-delete their URLs
+
+**Quick Actions:**
+```
+Click entry →                  Copy URL to clipboard
+Right-click entry →            Context menu (copy, delete, open)
+Hover for info →              Full filename and size tooltip
+```
+
+**Per-File Management (open an entry's preview):**
+- Toggle visibility between Public and Private
+- Set or clear a password
+- Changes apply immediately on Emberly — no need to visit the website
+
+This is only available for files uploaded from this version onward; entries from older history that predate the file's database ID can still be copied and deleted, just not edited.
+
+**Delete Options:**
+- Deleting an entry (individually or via multi-select bulk delete) also deletes the file from your Emberly account, not just the local history entry — this is best-effort: the local entry is removed either way, even if the server call fails or the file's already gone
+- Deletion of older entries that predate this feature only removes the local record, since there's no file ID to delete by
+
+---
+
+### Settings & Customization
+
+#### Hotkeys
+
+**Default Hotkeys:**
+| Action | Default |
+|--------|---------|
+| Fullscreen screenshot | `Ctrl+Shift+S` |
+| All monitors | `Ctrl+Shift+A` |
+| Upload from clipboard | `Ctrl+Alt+U` |
+| Region screenshot | Backend ready, no UI trigger yet |
+
+**Customize Hotkeys:**
+1. Go to **Settings → Hotkeys**
+2. Click on any hotkey field
+3. Press your desired key combination
+4. Hotkey validates in real-time
+5. Changes apply immediately
+
+**Hotkey Rules:**
+- Must include at least one modifier (Ctrl, Shift, Alt, Cmd)
+- Cannot conflict with system hotkeys
+- Works even when Flicker is minimized
+- Global system-wide registration (not just in-app)
+
+---
+
+#### Appearance
+
+**Themes:**
+```
+1.  Ember (default)             - The Emberly look: ember orange on warm black
+2.  Stranger Things             - Red neon, cyan accents
+3.  Emberly Classic             - Midnight blue
+4.  Dracula                     - Classic purple vampire
+5.  Tokyo Night                 - Deep blue, purple accents
+6.  Nord                        - Arctic bluish-gray
+7.  Rose Pine                   - Soft warm rose tones
+8.  Catppuccin                  - Warm pastel mocha
+9.  Cyberpunk Neon              - Cyan/magenta neon
+10. Vaporwave                   - Purple/pink aesthetic
+11. Dark Matrix                 - Green code hacker
+12. Aurora Borealis             - Cyan/green lights
+13. Sunset                      - Orange/pink warmth
+14. Ocean Deep                  - Deep sea blues
+15. Christmas (seasonal)        - Festive red/green
+16. Pride (seasonal)            - Rainbow colors
+```
+
+**Customizations:**
+- **Theme**: Select from 15 built-in themes
+- **Background Opacity**: 50% to 100% (control window transparency)
+- **Font Scale**: Small, Medium, Large
+- **Font Family**: System, Inter, Roboto, Monospace, Poppins
+- **Border Radius**: None, Small, Medium, Large
+- **Sidebar Position**: Left or Right
+- **Compact Mode**: Reduce whitespace for minimal UI
+- **Animations**: Enable/disable visual effects
+- **Glass Effect**: Apply glassmorphism styling
+
+---
+
+#### Behavior Settings
+
+**Post-Upload Action:**
+```
+After an upload completes, automatically:
+- Copy URL              (recommended, default)
+- Open in browser       (opens the uploaded file's link)
+- Do nothing            (silent upload)
+```
+
+**Clipboard Format:**
+```
+When copying the URL, format as:
+- Direct URL            https://embrly.ca/abc123
+- Raw URL               https://embrly.ca/abc123/raw
+- Markdown              ![Screenshot](https://embrly.ca/abc123)
+- HTML                  <img src="https://embrly.ca/abc123">
+```
+
+**Sounds:**
+
+A master toggle, plus five independently switchable sound cues (Settings → Behavior):
+- Upload success
+- Upload error
+- Copy link
+- Settings saved
+- Notification received
+
+Sounds are short synthesized tones (no audio files to configure or replace).
+
+**System:**
+- Start at login / auto-launch (Windows/macOS)
+
+---
+
+#### Capture Settings
+
+**Image Format:**
+- Format: PNG (recommended) or JPG
+- JPG Quality: 1-100 slider
+- Always include timestamp in filename
+
+**Capture Options:**
+- Include cursor: Yes/No (default: Yes)
+- Delay before capture: 0-10 seconds (for setup time)
+- Filename pattern: Customize with variables
+  - `%Y` = 4-digit year (2026)
+  - `%m` = 2-digit month (01-12)
+  - `%d` = 2-digit day (01-31)
+  - `%H` = Hour (00-23)
+  - `%M` = Minute (00-59)
+  - `%S` = Second (00-59)
+
+**Example Patterns:**
+```
+Screenshot_%Y-%m-%d_%H-%M-%S.png     → Screenshot_2026-01-15_14-30-47.png
+screen_%d_%m_%Y.png                   → screen_15_01_2026.png
+%Y%m%d_%H%M%S.png                     → 20260115_143047.png
+capture_%Y%m%d.jpg                    → capture_20260115.jpg
+```
+
+**Save Locally:**
+- Optional: Keep a local copy of screenshots
+- Enables offline viewing of capture history
+- Storage location shown in Settings
+
+---
+
+#### Account Settings
+
+**Logged In User:**
+- Display name
+- Email address
+- Account tier/plan
+- Avatar (if set)
+
+**Actions:**
+- View full profile link
+- Copy upload token
+- Enable/setup 2FA (TOTP)
+- Change password (opens web)
+- Logout (ends session)
+
+**Upload Token Management:**
+- Copy your private token for API use
+- Useful for scripts and automation
+- Keep this secret (don't share in code)
+- Can be regenerated anytime
+
+**Activity Logs** (Settings → Account → Activity Logs):
+- A local, timestamped log of events that happened in the app (uploads, logins, errors, and other actions) — separate from anything tracked server-side
+- Export the full log to a file, or clear it
+- Useful when reporting a bug: attach the export instead of describing what happened
+
+---
+
+### Domains, Perks & URL Shortener
+
+**Upload Domain** (Settings → Capture): pick which of your verified Emberly domains new uploads use. The dropdown is populated from your account's domains — if you have none set up or verified, uploads fall back to the default `embrly.ca`.
+
+**Perks** (Settings → Account): if your plan or an active perk grants bonus storage or extra domain slots, a summary card shows the active bonuses. The card is hidden entirely if you have no active perks.
+
+**URL Shortener** (Shorten tab): paste a long URL, click Shorten, and copy the resulting short link — no need to open the website.
+
+---
+
+### System Tray Integration
+
+**Tray Icon:**
+- Flicker appears in your system taskbar/menu bar
+- Single icon click restores/minimizes window
+- Right-click for menu options
+
+**Tray Menu:**
+```
+Flicker
+├─ Show Flicker              → Restore window
+├─ Take Screenshot           → Quick fullscreen capture
+├─ Upload File               → Open file picker
+├─ Settings                  → Open settings window
+└─ Quit                      → Close app completely
+```
+
+**Always Running:**
+- When you click the X button, app minimizes to tray
+- It continues running in background
+- System hotkeys still work
+- Click tray icon to restore
+
+---
+
+### Notifications
+
+**Toasts** — ephemeral, auto-dismissing banners for immediate feedback:
+```
+Upload Complete
+   "Screenshot uploaded - URL copied to clipboard"
+   Auto-dismisses after 5 seconds
+
+Upload Failed
+   "Network error: Please check your connection"
+   Shows error details
+
+New Version Available
+   "Flicker v0.3.0 is available - Restart to update"
+   Click to update or dismiss
+```
+
+**Notification Center** — a persistent bell icon in the header that keeps a running list of notifications, separate from toasts. Each notification has:
+- A **category**: Admin, Security, Account, Update, Upload, Error, Info, or Success
+- A **priority**: System and Important notifications persist until dismissed; toast-only notifications don't appear here
+
+From the Notification Center you can mark individual items (or all) as read, dismiss individual items, or clear everything. Security warnings, account issues, and update notices land here even after their toast has disappeared, so you don't miss them.
+
+**Desktop Notifications** (optional):
+- System-level notifications (Windows/macOS/Linux)
+- Shows upload status
+- Can click to interact
+- Toggle in Settings → Behavior
+
+---
+
+### Splash Screen
+
+When Flicker launches, a 2-second splash screen displays with:
+- The Flicker logo with a soft ember glow
+- A loading bar with a shimmer effect
+- Rotating tips and a few easter eggs
+
+---
+
+## Hotkey Reference
+
+### Complete Hotkey List
+
+**Screenshot & Upload Actions:**
+```
+Ctrl+Shift+S         Capture primary monitor fullscreen
+Ctrl+Shift+A         Capture all monitors and stitch
+Ctrl+Alt+U           Upload whatever is on the clipboard
+```
+
+**Backend ready, no UI trigger yet:**
+```
+Region screenshot selection — capture_region command exists, no hotkey/button wired up
+```
+
+### Customizing Hotkeys
+
+1. Open **Settings** from the sidebar
+2. Go to **Hotkeys** tab
+3. Click on any hotkey field
+4. Press your desired key combination (e.g., `Alt+S`)
+5. Real-time validation shows if hotkey is valid
+6. Click elsewhere or press Enter to save
+7. Hotkey active immediately
+
+**Hotkey Requirements:**
+- Must have a modifier: `Ctrl`, `Shift`, `Alt`, or `Cmd` (macOS)
+- One additional non-modifier key
+- Examples: `Ctrl+1`, `Shift+F12`, `Alt+E`
+- Cannot be single key like `S` or `F1`
+- Cannot conflict with system hotkeys
+- Cannot use reserved Windows/macOS hotkeys
+
+**If You Get "Conflict" Error:**
+- That hotkey is used by your OS or another app
+- Try a different combination
+- Examples of conflicts:
+  - `Ctrl+Alt+Delete` (Windows system hotkey)
+  - `Cmd+Tab` (macOS app switcher)
+  - `Ctrl+C` (terminal commands)
+
+---
+
+## Troubleshooting
+
+### Screenshots Aren't Capturing
+
+**Windows:**
+1. Ensure Flicker is running in admin mode
+   - Right-click Flicker in Start Menu
+   - Select "Run as administrator"
+   - Re-test hotkey
+2. Check that hotkeys aren't conflicting with other apps
+3. Restart Flicker and try again
+4. Check Settings → Behavior → "Hotkeys enabled" is ON
+
+**macOS:**
+1. Grant screen recording permissions:
+   - System Preferences → Security & Privacy → Screen Recording
+   - Check "Flicker" is allowed
+2. Restart Flicker after granting permissions
+3. Try screenshot hotkey again
+
+**Linux:**
+1. Ensure GTK 3.0+ is installed: `sudo apt install libgtk-3-0`
+2. May require GStreamer plugins for screenshots
+3. Try running from terminal: `flicker`
+   - Check for error messages
+
+---
+
+### Upload Failing with Network Error
+
+1. **Check internet connection:**
+   ```
+   Windows: Open Command Prompt → `ping embrly.ca`
+   macOS/Linux: `ping embrly.ca`
+   ```
+   Should show responses, not "unreachable"
+
+2. **Check if Emberly is down:**
+   - Visit https://embrly.ca in browser
+   - If site is down, wait for it to come back online
+
+3. **Verify authentication:**
+   - Go to Settings → Account
+   - Check "Logged in as: [your email]"
+   - If not logged in, click "Login"
+
+4. **Check upload token:**
+   - Go to **Settings → Account → Show Token**
+   - Verify it's a long random string (not blank)
+   - If empty, re-login
+
+5. **Firewall/VPN Issue:**
+   - If behind corporate firewall, may need VPN
+   - Try temporarily disabling VPN and retrying
+   - Check network settings allow HTTPS (port 443)
+
+6. **Invalid token:**
+   - Log out completely: Settings → Account → Logout
+   - Log back in: Settings → Account → Login
+   - Try upload again
+
+---
+
+### "Permission Denied" on Startup (Windows)
+
+**Solution:**
+1. Right-click Flicker in Start Menu
+2. Select "Run as Administrator"
+3. Answer "Yes" to UAC prompt
+4. Check "Always run as administrator"
+5. Restart Flicker
+
+This is required for system-wide hotkey capture.
+
+---
+
+### Can't Find Flicker in Applications (macOS)
+
+**Try:**
+1. Press `Cmd+Space` to open Spotlight
+2. Type "Flicker"
+3. Press Enter to launch
+4. Optionally drag to Dock for quick access
+
+**Or:**
+1. Open Finder
+2. Go to Applications folder
+3. Look for "Flicker" application
+4. Double-click to launch
+
+---
+
+### Hotkey Not Working
+
+1. Check if hotkey conflicts with system hotkey
+   - Settings → Hotkeys → check for yellow warning indicator
+   - Try a different hotkey
+
+2. Confirm Flicker is running
+   - Look for Flicker icon in system tray (Windows) or menu bar (macOS)
+   - If not running, restart the app
+
+3. Re-register hotkeys:
+   - Settings → Hotkeys → disable all → enable all
+   - Wait 2 seconds for registration
+   - Try hotkey again
+
+4. Check if hotkey is globally enabled:
+   - Windows: Settings → Behavior → "Global hotkeys" toggle ON
+   - If disabled, enable and restart app
+
+---
+
+### App Crashes or Won't Start
+
+**First, try:**
+```
+1. Restart your computer
+2. Launch Flicker again
+```
+
+**If still crashing:**
+1. Clean your build directory and rebuild from source
+2. Contact support@embrly.ca with the error message
+
+**Check crash logs:**
+```
+Windows: %APPDATA%\Flicker\logs\
+macOS: ~/Library/Logs/Flicker/
+Linux: ~/.local/share/Flicker/logs/
+```
+Copy the latest log file and include in support request.
+
+---
+
+### Screenshots Look Blurry
+
+**Windows:**
+1. Settings → Capture → Format: PNG (for quality)
+2. If using JPG, increase Quality slider to 90+
+3. For high-DPI monitors:
+   - Settings → Display Settings → check DPI scaling
+   - Flicker should auto-detect, but restart to be sure
+
+**macOS:**
+1. Retina displays use 2x resolution automatically
+2. Screenshots should be sharp by default
+3. If not, try updating to latest Flicker version
+
+**Linux:**
+1. Settings → Capture → Format: PNG
+2. High-res monitors: GTK DPI settings may affect
+3. Try: `GDK_SCALE=1 flicker` from terminal
+
+---
+
+## Advanced Usage
+
+### Command Line Usage
+
+**Launch from terminal after building from source:**
+```bash
+# Windows PowerShell
+.\src-tauri\target\release\flicker.exe
+
+# macOS
+open ./src-tauri/target/release/Flicker.app
+
+# Linux
+./src-tauri/target/release/flicker
+```
+
+**Planned CLI features:**
+```bash
+flicker screenshot --all-monitors      # Capture all monitors
+flicker upload --file path/to/file.png # Upload specific file
+flicker screenshot --delay 5            # Delay before capture
+```
+
+---
+
+### Upload via Clipboard
+
+Press `Ctrl+Alt+U` (customizable in Settings → Hotkeys) to upload whatever image is currently on your system clipboard. The resulting URL is copied back to your clipboard automatically, same as a screenshot capture.
+
+---
+
+### Database Cleanup
+
+**If upload history gets too large:**
+
+```
+Windows: Delete %APPDATA%\Flicker\history.json
+macOS: Delete ~/Library/Application Support/Flicker/history.json
+Linux: Delete ~/.local/share/Flicker/history.json
+```
+
+> **Warning:** This deletes all upload history (URLs will still work on server, just lost locally)
+
+---
+
+## Development
+
+### Building from Source
+
+**Prerequisites:**
+- Node.js 18+
+- Rust 1.70+
+- Tauri CLI
+
+**Setup:**
+```bash
+git clone https://github.com/EmberlyOSS/Flicker.git
+cd Flicker
+bun install
+```
+
+**Development Server:**
+```bash
+bun run tauri:dev
+# Opens Flicker in dev mode with hot reload
+```
+
+Note: `bun run dev` alone only starts the Vite frontend dev server — it won't open the desktop app.
+
+**Building Release:**
+```bash
+bun run tauri:build
+# Creates installers for your current platform
+# Outputs to src-tauri/target/release/bundle/
+```
+
+**Platform-Specific Builds:**
+
+Cross-compiling for macOS or Linux from Windows (or vice versa) isn't supported — each platform's installer must be built natively, which is why the project's [release workflow](https://github.com/EmberlyOSS/Flicker/blob/master/.github/workflows/release.yml) runs on a matrix of Windows, macOS (Apple Silicon + Intel), and Ubuntu runners:
+
+```bash
+bun run tauri:build -- --target aarch64-apple-darwin   # Apple Silicon
+bun run tauri:build -- --target x86_64-apple-darwin    # Intel Mac
+```
+
+See the [Contributing Guide](https://github.com/EmberlyOSS/Flicker/blob/master/CONTRIBUTING.md) in the Flicker repository for full development setup.
+
+---
+
+### Architecture
+
+**Frontend:**
+- React 19 + TypeScript
+- Tailwind CSS for styling
+- Context API for state management
+- Tauri JS API for communication with backend
+
+**Backend:**
+- Rust with Tauri 2.0
+- Tokio async runtime
+- Reqwest HTTP client
+- Native screenshot library
+
+**Communication:**
+- Tauri IPC (serialized JSON over bridge)
+- Frontend calls `invoke()` for Rust functions
+- Async/await patterns throughout
+
+---
+
+### Contributing
+
+We welcome contributions! See the [Contributing Guide](https://github.com/EmberlyOSS/Flicker/blob/master/CONTRIBUTING.md) in the Flicker repository for code standards, the PR process, and development setup — it's a separate guide from the main Emberly website's contributing docs.
+
+**Quick Start:**
+```bash
+git clone https://github.com/EmberlyOSS/Flicker.git
+git checkout -b feature/your-feature
+bun run tauri:dev
+# Make changes...
+git commit -m "feat: add your feature"
+git push origin feature/your-feature
+# Open Pull Request on GitHub
+```
+
+---
+
+## FAQ
+
+**Q: Is Flicker free?**
+A: Yes! Flicker is completely free and open source (AGPL-3.0 license). You only pay for Emberly cloud storage if you exceed the free tier.
+
+**Q: Can I use Flicker without Emberly?**
+A: Not currently—Flicker is specifically designed for Emberly uploads. In the future we may add local storage support.
+
+**Q: Does Flicker send my data to anyone?**
+A: No. Flicker only communicates with Emberly (to upload files) and GitHub (to check for updates). All upload history is stored locally on your computer.
+
+**Q: Can I customize what happens after upload?**
+A: Yes! Settings → Behavior → "Post-upload action" lets you choose:
+- Copy URL (default)
+- Open in browser
+- Do nothing
+
+**Q: How do I switch accounts?**
+A: Settings → Account → Logout → Login with different email
+
+**Q: Will there be a mobile version?**
+A: Mobile support is planned for v1.0.0+. Follow releases for announcements.
+
+**Q: Can I use Flicker on multiple computers?**
+A: Yes! Flicker works independently on each computer. Your upload history is per-computer though.
+
+**Q: What image formats are supported?**
+A: PNG (recommended) and JPG. PNG by default for maximum quality.
+
+**Q: Is there a team/organization version?**
+A: Not yet — Flicker currently uploads to your personal Emberly account only. Squad/team-scoped uploading isn't implemented.
+
+---
+
+## Getting Help
+
+- [Report Issues](https://github.com/EmberlyOSS/Flicker/issues)
+- [Discord](https://embrly.ca/discord)
+- [Email Support](mailto:support@embrly.ca)
+- [Official Website](https://embrly.ca)
+
+---
+
+## License
+
+Flicker is open source software licensed under the [GNU Affero General Public License v3.0](https://github.com/EmberlyOSS/Flicker/blob/master/LICENSE).
+
+---
+
+## Changelog
+
+### v0.3.0
+
+Flicker moves out of beta into early access.
+
+**Added:**
+- Stats page with real usage data (files, storage, short URLs, views/downloads, domains, uploads chart)
+- URL Shortener
+- Custom upload domain picker in Settings, respected by every upload path
+- Visibility/password management and server-side delete from Upload History
+- Perks display in Settings for active bonuses
+
+See the [project changelog](https://github.com/EmberlyOSS/Flicker/blob/master/CHANGELOG.md) for the full list.
+
+### v0.2.0-beta
+
+**Added:**
+- Real drag-and-drop uploads (previously accepted the drop visually but never uploaded the file)
+- Multi-file uploads with a per-file progress queue and a retry action on failure
+- Live upload progress, streamed from the backend instead of a plain spinner
+- Upload from Clipboard, fully working end-to-end (hotkey + Settings field)
+- Upload History bulk actions: select multiple items to copy or delete at once
+- Post-Upload Action and Clipboard Format settings now actually take effect
+- Refreshed visual design to match the current embrly.ca styling
+
+### v0.1.0-alpha (January 2, 2026)
+
+**Initial Release:**
+- Screenshot capture (fullscreen, all monitors)
+- Automatic upload to Emberly
+- Global hotkey support
+- System tray integration
+- Upload history with management
+- Customizable settings (hotkeys, appearance, capture)
+- 15 built-in themes
+- Cross-platform (Windows, macOS, Linux)
+- 2FA authentication support
+- Auto-update mechanism
+
+**Planned next:**
+- CLI interface
+- Screen recording features
+- Region screenshot selection UI (backend already exists — see [Hotkey Reference](#hotkey-reference))
+- Screenshot preview before upload
+- Local encryption of stored tokens
+
+**Planned v1.0.0:**
+- Mobile apps (iOS/Android)
+- Team collaboration features
+- Local backup support
+- Additional cloud storage providers (AWS S3, Google Drive, etc.)
+- Plugin system for extensibility
+
+---
+
+## Screenshots
+
+[Coming soon: UI screenshots of main interface, settings, upload flow]
+
+---
+
+For more information, visit the [Flicker GitHub repository](https://github.com/EmberlyOSS/Flicker).

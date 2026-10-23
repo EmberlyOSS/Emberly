@@ -1,0 +1,113 @@
+---
+title: File Management
+description: Upload, organize, share, and manage your files in Emberly.
+---
+
+## Uploading Files
+
+### Web Dashboard
+
+1. Go to **Dashboard → Files**
+2. Click **"Upload"** or drag files onto the page
+3. Files upload automatically — you get a shareable URL instantly
+
+### Supported Upload Methods
+
+| Method | Best For |
+|--------|---------|
+| Web dashboard | Quick one-off uploads |
+| ShareX / Flameshot | Automated screenshot uploads |
+| REST API | Programmatic uploads |
+| Flicker desktop app | Native desktop workflow |
+| PowerShell / Bash | Automation scripts |
+
+---
+
+## File Visibility
+
+| Visibility | Who Can Access |
+|-----------|---------------|
+| **PUBLIC** | Anyone with the URL |
+| **PRIVATE** | Only you and named collaborators |
+
+Change visibility anytime by clicking a file → **Edit**.
+
+---
+
+## Password Protection
+
+Add an optional password to any file:
+
+1. Click a file → **Edit**
+2. Enter a password in the **"Password"** field
+3. Click **"Save"**
+
+Anyone accessing the file will be prompted for the password. Passwords are bcrypt-hashed server-side — we never see them in plain text.
+
+---
+
+## Expiration Dates
+
+Files can auto-delete on a schedule:
+
+- Set on upload or afterward via **Edit**
+- Specify a specific date or days from now
+- You'll receive an email reminder 2 days before deletion
+- Cancel anytime by removing the expiration date
+
+---
+
+## Sharing
+
+### Get a Share Link
+
+Click any file → **Copy URL**. The URL is immediately shareable.
+
+### Collaborators
+
+Add specific people to access files across all plans:
+
+1. Open file details → **"Add Collaborator"**
+2. Enter their email address
+3. Choose **View** (download only) or **Edit** (can modify metadata) permission
+4. They receive an email invite
+
+Revoke access at any time from the collaborators list.
+
+### Edit Suggestions
+
+Collaborators with the **Suggester** role can submit **edit suggestions** without directly modifying the file; **Editor**-role collaborators can edit directly. You review and accept or reject each suggestion — see [File Collaboration](/docs/user-guide/file-collaboration) for the full role breakdown.
+
+---
+
+## File Actions
+
+| Action | How |
+|--------|-----|
+| **Download** | Click file → Download original |
+| **Delete** | Click file → Delete (permanent) |
+| **Edit metadata** | Click file → Edit |
+| **Copy URL** | Click file → Copy URL |
+| **View analytics** | Click file → see download count and access log |
+
+---
+
+## Shared Files
+
+Files shared with you by other users appear in **Dashboard → Files → Shared with Me**. You can download and (with edit permission) update metadata.
+
+---
+
+## Chunked Uploads
+
+Files too large for a single request are uploaded in chunks automatically by supported clients. The API also exposes chunked upload endpoints for custom integrations. See the [Files API](/docs/api/files) for details.
+
+---
+
+## OCR (Text Extraction)
+
+On **all plans**, text is automatically extracted from image uploads:
+
+- Search files by their extracted text
+- Retrieve OCR results via `GET /api/files/[id]/ocr`
+- Processing triggers automatically on upload

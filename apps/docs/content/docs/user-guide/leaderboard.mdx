@@ -1,0 +1,112 @@
+---
+title: Leaderboard
+description: Discover top contributors, active Discovery profiles, and growing squads on Emberly.
+---
+
+<Callout type="warn">
+  **Cloud only.** The leaderboard is part of embrly.ca's public community pages and isn't available on self-hosted instances — see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted).
+</Callout>
+
+The Emberly **Leaderboard** at [embrly.ca/leaderboard](https://embrly.ca/leaderboard) showcases the most active members of the community across three categories.
+
+---
+
+## Categories
+
+### Contributors
+
+Ranks users by the number of **public files** uploaded. Only users with public profiles are listed.
+
+Each entry shows:
+- Name and avatar
+- Number of public files
+- Rank
+
+### Discovery Profiles
+
+Ranks [Nexium Discovery](/docs/api/discovery) profiles by **number of skills** listed. Only visible profiles appear.
+
+Each entry shows:
+- Name, avatar, and professional title
+- Availability status
+- Skill count and signal count
+- Rank
+
+### Squads
+
+Ranks active [Nexium squads](/docs/user-guide/teams-and-squads) by **number of members**.
+
+Each entry shows:
+- Squad name and description
+- Slug (for linking)
+- Member count
+- Rank
+
+---
+
+## API
+
+```http
+GET /api/leaderboard?category=contributors
+```
+
+**Query parameters:**
+
+| Parameter | Options | Default | Description |
+|-----------|---------|---------|-------------|
+| `category` | `contributors`, `discovery`, `squads` | `contributors` | Which leaderboard to fetch |
+
+All three categories return the top **10** results. No authentication required.
+
+---
+
+### Contributors Response
+
+```json
+[
+  {
+    "id": "cluser...",
+    "name": "Jane Smith",
+    "image": "https://...",
+    "urlId": "janesmith",
+    "role": "USER",
+    "alphaUser": false,
+    "fileCount": 142,
+    "rank": 1
+  }
+]
+```
+
+### Discovery Response
+
+```json
+[
+  {
+    "id": "cluser...",
+    "name": "Alex Johnson",
+    "image": "https://...",
+    "urlId": "alexj",
+    "role": "USER",
+    "title": "Full-Stack Engineer",
+    "availability": "OPEN",
+    "skillCount": 18,
+    "signalCount": 5,
+    "rank": 1
+  }
+]
+```
+
+### Squads Response
+
+```json
+[
+  {
+    "id": "clsquad...",
+    "name": "Design Collective",
+    "description": "A team of designers sharing work and feedback.",
+    "slug": "design-collective",
+    "memberCount": 24,
+    "rank": 1
+  }
+]
+```

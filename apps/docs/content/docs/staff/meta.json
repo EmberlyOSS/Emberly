@@ -1,0 +1,12 @@
+{
+  "title": "Staff & Operations",
+  "root": true,
+  "defaultOpen": false,
+  "pages": [
+    "index",
+    "moderation",
+    "support",
+    "incidents",
+    "cloudflare-domains"
+  ]
+}

@@ -1,0 +1,580 @@
+---
+title: Discovery (Nexium) API
+description: Build discovery profiles, manage squads, post opportunities, and collaborate via the Emberly Nexium API.
+---
+
+**Nexium** is Emberly's team collaboration and talent discovery layer. The Discovery API lets you manage your public profile, skills, portfolio signals, squads, opportunities, and applications.
+
+<Callout type="warn">
+  **Cloud only.** Nexium/Discovery runs on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted).
+</Callout>
+
+<Callout type="info">
+  All Discovery endpoints require a **session cookie** (authenticated browser session). Squad file uploads use a squad upload token — see [Squad Tokens](#squad-tokens).
+</Callout>
+
+## Overview
+
+| Resource | Description |
+|----------|-------------|
+| **Profile** | Your public Nexium profile (bio, skills, signals) |
+| **Skills** | Technology/skill tags on your profile |
+| **Signals** | Portfolio links and GitHub repos |
+| **Squads** | Teams with shared storage, roles, and workspaces |
+| **Opportunities** | Job posts, bounties, and project requests |
+| **Applications** | Apply to opportunities |
+| **Invites** | Squad membership invitations |
+
+---
+
+## Discovery Profile
+
+### `GET /api/discovery/profile`
+
+Get your own Nexium discovery profile.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "disc_123",
+    "username": "janedoe",
+    "bio": "Full-stack developer building cool things.",
+    "lookingFor": "freelance",
+    "available": true,
+    "skills": [
+      { "id": "sk_1", "name": "TypeScript", "level": "expert", "order": 0 }
+    ],
+    "signals": [
+      {
+        "id": "sig_1",
+        "type": "github",
+        "url": "https://github.com/EmberlyOSS/Emberly",
+        "title": "Emberly",
+        "description": "Open-source file hosting platform"
+      }
+    ],
+    "createdAt": "2025-09-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+### `POST /api/discovery/profile`
+
+Create your discovery profile.
+
+**Request Body:**
+```json
+{
+  "username": "janedoe",
+  "bio": "Full-stack developer.",
+  "lookingFor": "freelance",
+  "available": true
+}
+```
+
+---
+
+### `PUT /api/discovery/profile`
+
+Update your discovery profile.
+
+**Request Body (all optional):**
+```json
+{
+  "bio": "Updated bio",
+  "lookingFor": "fulltime",
+  "available": false
+}
+```
+
+---
+
+### `DELETE /api/discovery/profile`
+
+Delete your discovery profile (removes it from public search).
+
+---
+
+### `GET /api/discovery/profile/[username]`
+
+Public profile lookup by username. No authentication required.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "username": "janedoe",
+    "bio": "Full-stack developer.",
+    "available": true,
+    "skills": [ { "name": "TypeScript", "level": "expert" } ],
+    "signals": [ { "type": "github", "url": "...", "title": "Emberly" } ]
+  }
+}
+```
+
+---
+
+## Skills
+
+### `GET /api/discovery/skills`
+
+List your skills.
+
+### `POST /api/discovery/skills`
+
+Add a skill, bulk-replace all skills, or reorder existing skills.
+
+**Add a skill:**
+```json
+{ "name": "Rust", "level": "intermediate" }
+```
+
+**Bulk replace:**
+```json
+{
+  "skills": [
+    { "name": "TypeScript", "level": "expert" },
+    { "name": "Rust", "level": "intermediate" }
+  ]
+}
+```
+
+**Reorder:**
+```json
+{ "orderedIds": ["sk_2", "sk_1", "sk_3"] }
+```
+
+### `DELETE /api/discovery/skills/[id]`
+
+Remove a specific skill from your profile.
+
+---
+
+## Signals
+
+Signals are portfolio entries — GitHub repositories, live URLs, YouTube videos, etc.
+
+### `GET /api/discovery/signals`
+
+List your portfolio signals.
+
+### `POST /api/discovery/signals`
+
+Add a signal or reorder existing ones. GitHub URLs are automatically validated via the GitHub API.
+
+**Add a signal:**
+```json
+{
+  "type": "github",
+  "url": "https://github.com/EmberlyOSS/Emberly",
+  "title": "Emberly",
+  "description": "Open-source file hosting"
+}
+```
+
+**Reorder:**
+```json
+{ "orderedIds": ["sig_3", "sig_1", "sig_2"] }
+```
+
+### `DELETE /api/discovery/signals/[id]`
+
+Remove a specific signal.
+
+---
+
+### `GET /api/discovery/repos`
+
+List GitHub repositories from your linked GitHub account (OAuth token required — link GitHub under Settings → Linked Accounts).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 123456789,
+      "name": "my-project",
+      "fullName": "janedoe/my-project",
+      "description": "A cool project",
+      "url": "https://github.com/janedoe/my-project",
+      "stars": 42,
+      "language": "TypeScript",
+      "updatedAt": "2026-03-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Opportunities
+
+Opportunities are public listings for jobs, bounties, freelance work, or open-source projects.
+
+### `GET /api/discovery/opportunities`
+
+List open opportunities.
+
+**Query Parameters:**
+- `type` — Filter by `job`, `bounty`, `freelance`, `opensource`
+- `skill` — Filter by required skill name
+- `mine=true` — List only opportunities you posted (requires auth)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "opp_123",
+      "title": "Frontend Developer",
+      "type": "job",
+      "description": "Join our team...",
+      "requiredSkills": ["React", "TypeScript"],
+      "postedBy": { "username": "acme-corp" },
+      "createdAt": "2026-04-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/discovery/opportunities`
+
+Create a new opportunity (requires a Discovery profile).
+
+**Request Body:**
+```json
+{
+  "title": "TypeScript Developer",
+  "type": "freelance",
+  "description": "Looking for help with our API integration.",
+  "requiredSkills": ["TypeScript", "Node.js"],
+  "budget": "$500–$1000",
+  "contactEmail": "hire@example.com"
+}
+```
+
+---
+
+### `GET /api/discovery/opportunities/[id]`
+
+Get a specific opportunity. Public — no auth required.
+
+### `PUT /api/discovery/opportunities/[id]`
+
+Update an opportunity (poster only).
+
+### `DELETE /api/discovery/opportunities/[id]`
+
+Remove an opportunity (poster only).
+
+---
+
+## Applications
+
+### `GET /api/discovery/opportunities/[id]/apply`
+
+List applications for an opportunity (poster only).
+
+### `POST /api/discovery/opportunities/[id]/apply`
+
+Apply to an opportunity. Requires a Discovery profile.
+
+**Request Body:**
+```json
+{
+  "message": "I'd love to help with this project...",
+  "portfolioUrl": "https://janedoe.dev"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": { "id": "app_456", "status": "pending" }
+}
+```
+
+---
+
+### `GET /api/discovery/applications`
+
+List all opportunities you have applied to.
+
+---
+
+## Squads
+
+Squads are teams with shared storage, custom domains, upload tokens, and role-based access.
+
+### `GET /api/discovery/squads`
+
+List all public squads.
+
+**Query Parameters:**
+- `skill` — Filter by skill
+- `status` — Filter by status
+- `mine=true` — List only squads you are a member of
+
+---
+
+### `POST /api/discovery/squads`
+
+Create a new squad.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | 3-60 characters |
+| `description` | string | No | Up to 500 characters |
+| `skills` | string[] | No | Up to 20 skill tags |
+| `maxSize` | number | No | Member cap, 2 to the squad-size limit for your plan |
+| `isPublic` | boolean | No | Whether the squad is listed publicly |
+
+```json
+{
+  "name": "Design Collective",
+  "description": "A group of designers sharing assets.",
+  "skills": ["figma", "branding"],
+  "maxSize": 10,
+  "isPublic": true
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "squad_789",
+    "name": "Design Collective",
+    "slug": "design-collective",
+    "ownerId": "user_123",
+    "createdAt": "2026-04-12T00:00:00Z"
+  }
+}
+```
+
+---
+
+### `GET /api/discovery/squads/[id]`
+
+Get squad details. Public squads are accessible without auth.
+
+### `PUT /api/discovery/squads/[id]`
+
+Update squad info (owner only).
+
+### `DELETE /api/discovery/squads/[id]`
+
+Disband a squad (owner only). Deletes all squad data.
+
+---
+
+## Squad Members
+
+### `GET /api/discovery/squads/[id]/members`
+
+List squad members (members only).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "userId": "user_123",
+      "name": "Jane Doe",
+      "role": "OWNER",
+      "joinedAt": "2026-04-01T00:00:00Z"
+    },
+    {
+      "userId": "user_456",
+      "name": "Bob Smith",
+      "role": "MEMBER",
+      "joinedAt": "2026-04-05T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/discovery/squads/[id]/members`
+
+Join a squad, add a member, kick a member, or change a member's role.
+
+**Join a public squad:**
+```json
+{ "action": "join" }
+```
+
+**Add a member (owner):**
+```json
+{ "action": "add", "userId": "user_456", "role": "MEMBER" }
+```
+
+**Kick a member (owner):**
+```json
+{ "action": "kick", "userId": "user_456" }
+```
+
+**Change role (owner):**
+```json
+{ "action": "setRole", "userId": "user_456", "role": "OBSERVER" }
+```
+
+**Available roles:** `OWNER`, `MEMBER`, `OBSERVER`
+
+---
+
+## Squad Invites
+
+### `GET /api/discovery/squads/[id]/invites`
+
+List pending invites for a squad (owner only).
+
+### `POST /api/discovery/squads/[id]/invites`
+
+Send an invite to a user (owner only).
+
+**Request Body:**
+```json
+{ "userId": "user_789" }
+```
+
+### `DELETE /api/discovery/squads/[id]/invites/[inviteId]`
+
+Revoke a pending invite (owner only).
+
+---
+
+### `GET /api/discovery/invites`
+
+List your pending incoming squad invites.
+
+---
+
+### `GET /api/discovery/invites/[token]/accept`
+
+Accept a squad invite via the email link token. Redirects with result.
+
+### `GET /api/discovery/invites/[token]/decline`
+
+Decline a squad invite. Notifies the squad owner.
+
+---
+
+## Squad Tokens
+
+Squad upload tokens let members upload files attributed to the squad (not their personal account).
+
+### `GET /api/discovery/squads/[id]/token`
+
+Get the squad upload token (owner only). Token is displayed with a masked prefix.
+
+### `POST /api/discovery/squads/[id]/token`
+
+Rotate the squad upload token (owner only). Previous token is immediately invalidated.
+
+---
+
+## Squad API Keys
+
+API keys provide programmatic access to squad operations (separate from the upload token).
+
+### `GET /api/discovery/squads/[id]/keys`
+
+List API keys for the squad (members can see prefix only, not full key).
+
+### `POST /api/discovery/squads/[id]/keys`
+
+Create a new API key (owner only). The full key is shown only once.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "key_123",
+    "key": "esk_live_...",
+    "prefix": "esk_live_xxxx",
+    "createdAt": "2026-04-12T00:00:00Z"
+  }
+}
+```
+
+<Callout type="warn">
+  Copy the API key immediately — it is shown only once and cannot be retrieved afterward.
+</Callout>
+
+### `DELETE /api/discovery/squads/[id]/keys/[keyId]`
+
+Revoke an API key (owner only).
+
+---
+
+## Squad Storage
+
+### `GET /api/discovery/squads/[id]/quota`
+
+Get the squad's storage quota and current usage (members only).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "storageUsed": 1073741824,
+    "storageQuota": 21474836480,
+    "plan": "Discovery Pro"
+  }
+}
+```
+
+---
+
+## Squad Custom Domains
+
+### `GET /api/discovery/squads/[id]/domains`
+
+List custom domains configured for the squad (members only).
+
+### `POST /api/discovery/squads/[id]/domains`
+
+Add a custom domain to the squad (owner only).
+
+**Request Body:**
+```json
+{ "domain": "files.myteam.com" }
+```
+
+### `DELETE /api/discovery/squads/[id]/domains/[domainId]`
+
+Remove a squad domain (owner only).
+
+---
+
+## Squad ShareX Config
+
+### `GET /api/discovery/squads/[id]/sharex`
+
+Download a ShareX `.sxcu` config pre-configured with the squad upload token and domain (members only). See [ShareX Integration](/docs/integrations/sharex).
+
+---
+
+## Related
+
+- [Teams & Squads User Guide](/docs/user-guide/teams-and-squads)
+- [Files API](/docs/api/files) — personal file uploads
+- [Domains API](/docs/api/domains) — custom domain management

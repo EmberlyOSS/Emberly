@@ -1,0 +1,45 @@
+---
+title: Security
+description: Emberly's layered security features that protect files and user accounts.
+---
+
+Emberly applies multiple layers of security at both the file and account level.
+
+<Cards>
+  <Card title="VirusTotal Scanning" description="Every uploaded file is checked against 71+ antivirus engines." href="/docs/security/virustotal" />
+  <Card title="HaveIBeenPwned Check" description="Login alerts when your password appears in known data breaches." href="/docs/security/hibp" />
+  <Card title="Password Reuse Prevention" description="Prevents reusing old passwords when you update your credentials." href="/docs/security/password-reuse" />
+</Cards>
+
+## Security Layers
+
+### File Upload Security
+
+```
+User uploads file
+       ↓
+Extension + MIME type check
+       ↓
+Zip bomb detection (max 100:1 ratio)
+       ↓
+VirusTotal hash scan (71+ AV engines)
+       ↓
+OCR processing (images, background)
+       ↓
+File stored & URL returned
+```
+
+### Account Security
+
+| Feature | How It Works |
+|---------|-------------|
+| **HIBP** | Checks your password against breached credential databases on login |
+| **Password reuse prevention** | Blocks reuse of the last 5 passwords |
+| **Two-factor authentication** | TOTP-based 2FA available for all accounts |
+| **Email verification** | Required before uploading with custom domains |
+
+## Reporting a Vulnerability
+
+See our [Security Policy](https://github.com/EmberlyOSS/Emberly/security/policy) on GitHub or email **security@embrly.ca**.
+
+Responsible disclosure is appreciated.

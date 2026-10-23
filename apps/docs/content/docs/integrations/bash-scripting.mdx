@@ -1,0 +1,148 @@
+---
+title: Bash & cURL
+description: Upload files to Emberly from shell scripts and automation pipelines.
+---
+
+Use cURL and standard POSIX shell tools to integrate Emberly into any Linux, macOS, or Unix-based automation pipeline.
+
+## Basic Upload
+
+```bash
+#!/bin/bash
+# emberly-upload.sh — usage: ./emberly-upload.sh <file>
+
+FILE="${1:?Usage: $0 <file>}"
+TOKEN="${EMBERLY_TOKEN:?Set EMBERLY_TOKEN environment variable}"
+API="https://embrly.ca/api/files"
+
+[[ -f "$FILE" ]] || { echo "File not found: $FILE" >&2; exit 1; }
+
+RESPONSE=$(curl -s -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@$FILE" \
+  "$API")
+
+URL=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['url'])" 2>/dev/null)
+
+if [[ -n "$URL" ]]; then
+  echo "$URL"
+  # Copy to clipboard (Linux/macOS)
+  echo "$URL" | xclip -selection clipboard 2>/dev/null || echo "$URL" | pbcopy 2>/dev/null || true
+else
+  echo "Upload failed: $RESPONSE" >&2
+  exit 1
+fi
+```
+
+**Setup:**
+```bash
+chmod +x emberly-upload.sh
+export EMBERLY_TOKEN="your_token_here"
+./emberly-upload.sh screenshot.png
+```
+
+---
+
+## Using jq (Recommended)
+
+If `jq` is installed, parsing is simpler and more reliable:
+
+```bash
+RESPONSE=$(curl -s -X POST \
+  -H "Authorization: Bearer $EMBERLY_TOKEN" \
+  -F "file=@$1" \
+  https://embrly.ca/api/files)
+
+URL=$(echo "$RESPONSE" | jq -r '.data.url')
+SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+
+if [[ "$SUCCESS" == "true" ]]; then
+  echo "Uploaded: $URL"
+else
+  echo "Error: $(echo "$RESPONSE" | jq -r '.error')" >&2
+  exit 1
+fi
+```
+
+Install `jq`: `sudo apt install jq` / `brew install jq`
+
+---
+
+## Upload with Options
+
+```bash
+# Private file with password and expiration
+curl -s -X POST \
+  -H "Authorization: Bearer $EMBERLY_TOKEN" \
+  -F "file=@document.pdf" \
+  -F "visibility=PRIVATE" \
+  -F "password=secretpass" \
+  -F "expiresAt=2026-12-31T23:59:59Z" \
+  https://embrly.ca/api/files | jq '.data.url'
+```
+
+---
+
+## Pipe from Screenshot Tool
+
+```bash
+# Pipe directly from any tool that writes to stdout
+import-window-screenshot | emberly-upload.sh -
+
+# With scrot (Linux)
+scrot -s /tmp/screen.png && ./emberly-upload.sh /tmp/screen.png
+
+# With gnome-screenshot
+gnome-screenshot -a -f /tmp/screen.png && ./emberly-upload.sh /tmp/screen.png
+```
+
+---
+
+## Bulk Upload
+
+```bash
+#!/bin/bash
+# bulk-upload.sh — upload all files in a directory
+
+DIR="${1:?Usage: $0 <directory>}"
+TOKEN="${EMBERLY_TOKEN:?}"
+
+find "$DIR" -type f | while read -r file; do
+  URL=$(curl -s -X POST \
+    -H "Authorization: Bearer $TOKEN" \
+    -F "file=@$file" \
+    https://embrly.ca/api/files | jq -r '.data.url')
+  echo "$file -> $URL"
+  sleep 0.2  # avoid rate limits
+done
+```
+
+---
+
+## CI/CD Integration
+
+```bash
+# .github/workflows/upload-artifact.yml equivalent in shell
+#!/bin/bash
+# Upload a build artifact and post URL to PR comment
+
+ARTIFACT="dist/build.tar.gz"
+URL=$(curl -s -X POST \
+  -H "Authorization: Bearer $EMBERLY_TOKEN" \
+  -F "file=@$ARTIFACT" \
+  -F "visibility=PUBLIC" \
+  https://embrly.ca/api/files | jq -r '.data.url')
+
+echo "Build artifact: $URL"
+```
+
+---
+
+## Delete a File
+
+```bash
+FILE_ID="cm7xabc123"
+curl -s -X DELETE \
+  -H "Authorization: Bearer $EMBERLY_TOKEN" \
+  "https://embrly.ca/api/files/$FILE_ID"
+```

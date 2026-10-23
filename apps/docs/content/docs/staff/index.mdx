@@ -1,0 +1,55 @@
+---
+title: Staff & Operations Guide
+description: Internal operations manual for Emberly staff — moderation, support, incident response, and admin tooling.
+---
+
+This section covers internal processes, moderation guidelines, and incident response for Emberly staff. **Internal use only.**
+
+<Cards>
+  <Card title="Moderation Guidelines" description="How to handle reports, moderate content, and enforce policies." href="/docs/staff/moderation" />
+  <Card title="User Support Playbook" description="Handling support tickets, billing questions, and technical issues." href="/docs/staff/support" />
+  <Card title="Incident Response" description="Responding to security incidents, outages, and emergencies." href="/docs/staff/incidents" />
+  <Card title="Admin API Reference" description="Complete admin and staff API documentation." href="/docs/api/staff-admin-reference" />
+</Cards>
+
+---
+
+## Key Policies
+
+### Data Access
+
+Never access user data without a legitimate operational reason. All data access through the admin panel is logged and audited. If you need to inspect user data for a support case, note the ticket number.
+
+### Confidentiality
+
+Treat all customer and company information as confidential. Do not share externally without explicit authorization from leadership.
+
+### Response Time Targets
+
+These are **internal incident response** targets (infra/service issues, escalated to engineering) — distinct from the **customer support ticket** SLA in the [Support Guide](/docs/staff/support), which uses its own Critical/High/Normal/Low scale for user-facing tickets.
+
+| Priority | Target |
+|----------|--------|
+| **P1 — Critical** | 15 minutes |
+| **P2 — High** | 1 hour |
+| **P3 — Medium** | 4 hours |
+| **P4 — Low** | 24 hours |
+
+---
+
+## Escalation
+
+| Severity | Description | Escalate to |
+|----------|-------------|------------|
+| **P1** | Service down, data loss, confirmed security breach | CTO immediately |
+| **P2** | Feature broken, multiple users affected | Engineering lead |
+| **P3** | Single user issue with a workaround | Support lead |
+| **P4** | Minor issue, no user impact | Backlog |
+
+---
+
+## Contact
+
+- **Support:** support@embrly.ca
+- **Security:** security@embrly.ca
+- **General:** hey@embrly.ca

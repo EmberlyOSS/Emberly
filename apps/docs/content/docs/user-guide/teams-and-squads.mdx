@@ -1,0 +1,224 @@
+---
+title: Teams and Squads (Nexium)
+description: Collaborate with teams using Emberly's built-in squad and workspace features.
+---
+
+<Callout type="warn">
+  **Cloud only.** Nexium (teams, squads, and Discovery) runs on embrly.ca and isn't available on self-hosted instances — see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted).
+</Callout>
+
+Emberly includes a team collaboration platform called **Nexium** that lets you create shared workspaces, manage team members, and organize files collaboratively.
+
+<Cards>
+  <Card title="Discovery API" description="Squads, opportunities, signals, and invites via API." href="/docs/api/discovery" />
+  <Card title="Nexium Overview" description="What Nexium is and how Discovery profiles, squads, and opportunities fit together." href="/docs/user-guide/nexium" />
+</Cards>
+
+## What is Nexium?
+
+Nexium is Emberly's team collaboration layer that lets you:
+
+- Create named teams (called "squads")
+- Invite team members with specific roles
+- Organize files in shared workspaces
+- Manage permissions at the team level
+- Track team activity and usage
+- Scale from small teams to large organizations
+
+---
+
+## Available on Blaze+ Plans
+
+Team features require one of these plans:
+
+| Plan | Max Members | Price |
+|------|-------------|-------|
+| Blaze | 5 | $14.99/mo |
+| Inferno | 10 | $24.99/mo |
+| Ember | Unlimited | $49.99/mo |
+| Enterprise | Unlimited | Custom |
+
+---
+
+## Discovery Plans (Team Subscriptions)
+
+For teams without individual Blaze+ subscriptions, Emberly offers **Discovery plans** — shared team subscriptions:
+
+| Plan | Max Members | Storage | Price |
+|------|-------------|---------|-------|
+| Discovery Free | 3 | 5 GB | Free |
+| Discovery Pro | 10 | 20 GB | $8/mo |
+| Discovery Team | 25 | 50 GB | $20/mo |
+| Discovery Studio | Unlimited | Unlimited | $50/mo |
+
+Discovery plans are shared team subscriptions. All team members share the same storage pool.
+
+---
+
+## Key Concepts
+
+### Squad
+A named team in Nexium. Examples: "Design Team", "Product", "Finance", etc.
+
+### Members
+People invited to your squad with role-based permissions.
+
+### Workspace
+Shared folder where squad members organize and collaborate on files.
+
+### Roles
+- **Owner** — Full control, manage members, delete squad
+- **Member** — Full participation: upload, edit, invite (permissions set by the owner)
+- **Observer** — Download and view only
+
+---
+
+## Quick Start
+
+### Create a Squad
+
+1. Go to **Dashboard → Squads → Create Squad**
+2. Enter a name and description
+3. Choose your team size
+4. Click **Create**
+
+### Invite Members
+
+1. Go to **Squad Settings → Members**
+2. Click **"Invite Member"**
+3. Enter their email and choose a role
+4. They'll receive an email invite
+
+### Create a Workspace
+
+1. Go to your squad dashboard
+2. Click **"New Workspace"**
+3. Enter a name (e.g., "Q2 Campaign Assets")
+4. Set member access level
+5. Click **Create**
+
+---
+
+## Common Workflows
+
+### Sales Team File Sharing
+
+Use a squad to share sales collateral (presentations, case studies, pricing sheets) with everyone on the sales team.
+
+1. Create a squad called "Sales"
+2. Add all sales reps
+3. Create workspaces for "Pitch Decks", "Case Studies", "Product Sheets"
+4. Upload assets to respective workspaces
+5. Everyone stays in sync with latest versions
+
+### Design Agency Project Delivery
+
+Structure projects per-client with dedicated workspaces.
+
+1. Create a squad per client (or one squad with multiple workspaces per client)
+2. Assign designers and PMs to the squad
+3. Create workspaces for each project phase or deliverable
+4. Clients can join as "Observers" for review access
+
+### Open Source Project Coordination
+
+Organize community contributions and releases.
+
+1. Create a squad for your project
+2. Add core contributors
+3. Create workspaces for "Releases", "Assets", "Documentation"
+4. Grant community viewer access to approved materials
+
+---
+
+## Advanced Features
+
+### Nested Workspaces
+Create sub-workspaces to organize complex projects:
+```
+Project Alpha
+├── Design
+│   ├── Wireframes
+│   ├── Mockups
+│   └── Final Assets
+├── Development
+│   └── Source Code
+└── Marketing
+    ├── Copy
+    └── Promotional Assets
+```
+
+### Role-Based Access
+Set different permissions per workspace:
+- Designers get edit access to Design workspace
+- Developers get edit access to Development workspace
+- Everyone gets viewer access to Marketing workspace
+
+### Team Activity Log
+View all squad activity:
+- Who uploaded what
+- When files were accessed
+- Member additions/removals
+- Permission changes
+
+### Team Analytics
+Monitor your squad's usage:
+- Storage by workspace
+- Upload frequency
+- Team member activity
+- Most active workspaces
+
+---
+
+## Billing
+
+### Individual Team Plans (Blaze+)
+
+If you have a Blaze+ plan, team features are already included. Add more team members anytime (if within your plan limit).
+
+### Discovery Shared Team Plans
+
+Discovery plans are separate subscriptions shared by the entire team:
+- Any team member can manage the subscription
+- Billing is per squad, not per person
+- Upgrade or downgrade team-wide
+
+### Calculating Costs
+
+**Option 1: Individual Plans**
+- 5 people on Blaze ($14.99/mo each) = $74.95/mo
+- Total: $74.95/mo for 5 with 100 GB total storage
+
+**Option 2: Discovery Team**
+- 5-25 people on Discovery Team ($20/mo) = $20/mo
+- Total: $20/mo for up to 25 with 50 GB shared storage
+
+---
+
+## Troubleshooting
+
+### Member Not Seeing Files
+- Check they were invited to the correct workspace
+- Verify their role has access to that workspace
+- Ask them to refresh their dashboard
+
+### Can't Invite More Members
+- Check your plan limit (Blaze: 5, Inferno: 10, Ember/Enterprise: unlimited)
+- Consider upgrading or using a Discovery plan
+- Contact support if limits seem incorrect
+
+### Workspace Not Syncing
+- Refresh your browser
+- Check network connection
+- Wait a few seconds — syncing may be in progress
+- Contact support if issue persists
+
+---
+
+## Next Steps
+
+- Create your first squad from [Dashboard → Squads](https://embrly.ca/dashboard/teams)
+- Invite a teammate and assign a role
+- Create a shared workspace and start uploading
+
+Need help? Email support@embrly.ca or join the [Emberly Discord](https://discord.gg/36spBmzZVB).

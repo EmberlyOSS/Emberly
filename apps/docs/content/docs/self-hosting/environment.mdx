@@ -1,0 +1,155 @@
+---
+title: Environment Variables
+description: Complete reference for all Emberly environment variables.
+---
+
+Emberly is configured through a combination of environment variables (required at startup) and the Admin Panel UI (applied at runtime, stored in the database). This page covers the environment variables.
+
+Copy `.env.template` to `.env` to get started:
+
+```bash
+cp .env.template .env
+```
+
+---
+
+## Required Variables
+
+These must be set before the app will start.
+
+### Database
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/emberly?schema=public` |
+
+### Cache
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `REDIS_URL` | Redis connection string | `redis://default:password@localhost:6379` |
+
+### Authentication
+
+| Variable | Description | Notes |
+|----------|-------------|-------|
+| `NEXTAUTH_URL` | The canonical URL of your instance | `https://yourdomain.com` |
+| `NEXT_PUBLIC_BASE_URL` | Same as `NEXTAUTH_URL` — used client-side | `https://yourdomain.com` |
+| `NEXTAUTH_SECRET` | Random secret for JWT signing | Minimum 32 characters. Generate with `openssl rand -base64 32` |
+| `NEXTAUTH_TRUSTED_ORIGINS` | Comma-separated list of trusted origins | `https://yourdomain.com` |
+
+---
+
+## OAuth Providers
+
+Optional. These let users **link** their GitHub and Discord accounts (for contributor and booster perks); everyone still signs in with email.
+
+### GitHub OAuth
+
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_OAUTH_CLIENT_ID` | Client ID from your GitHub OAuth app |
+| `GITHUB_OAUTH_CLIENT_SECRET` | Client secret from your GitHub OAuth app |
+
+Create a GitHub OAuth app at [github.com/settings/applications/new](https://github.com/settings/applications/new). Set the **Authorization callback URL** to `https://yourdomain.com/api/auth/link/github/callback` (GitHub is only used to link accounts, not to sign in).
+
+### Discord OAuth
+
+| Variable | Description |
+|----------|-------------|
+| `DISCORD_OAUTH_CLIENT_ID` | Client ID from your Discord application |
+| `DISCORD_OAUTH_CLIENT_SECRET` | Client secret from your Discord application |
+
+Create a Discord application at [discord.com/developers/applications](https://discord.com/developers/applications). Under **OAuth2 → Redirects**, add `https://yourdomain.com/api/auth/link/discord/callback`.
+
+### Discord linked roles
+
+| Variable | Description |
+|----------|-------------|
+| `DISCORD_LINKED_ROLES_CLIENT_ID` | Client ID of the Discord application that runs the Emberly bot |
+| `DISCORD_LINKED_ROLES_CLIENT_SECRET` | That application's client secret |
+
+Lets servers give roles based on someone's Emberly account (see [Discord Bots](/docs/user-guide/discord-bot#linked-roles)). These must belong to the same Discord application as your bot; if they're unset, the Discord OAuth values above are used. In that application, set **General Information → Linked Roles Verification URL** to `https://yourdomain.com/api/discord/linked-roles` and add the redirect `https://yourdomain.com/api/discord/linked-roles/callback`.
+
+---
+
+## Feature Flags
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMBERLY_RUN_EVENT_WORKER` | `false` | Runs the background event worker in-process. Set to `true` to enable async jobs (OCR, email). |
+
+<Callout type="info">
+  In production, set `EMBERLY_RUN_EVENT_WORKER=true` so that background jobs (OCR, expiration emails, storage bucket provisioning) actually run. Without it, uploads still work but async processing is skipped.
+</Callout>
+
+---
+
+## Optional Variables
+
+### Error Tracking (Sentry)
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN for frontend and API error reporting |
+| `SENTRY_ORG` | Sentry organization slug (build-time only, for source map upload) |
+| `SENTRY_PROJECT` | Sentry project name (build-time only) |
+| `SENTRY_AUTH_TOKEN` | Sentry auth token (build-time only, for CI source map upload) |
+
+Leave all Sentry variables empty to disable error tracking entirely.
+
+### File Scanning
+
+| Variable | Description |
+|----------|-------------|
+| `VIRUSTOTAL_API_KEY` | VirusTotal API key for malware scanning |
+
+Without this key, VirusTotal scanning is skipped and only local extension/MIME checks run. Uploads are still processed normally. For production instances, a VirusTotal API key is strongly recommended.
+
+---
+
+## Admin Panel Configuration
+
+The following are **not** environment variables. They are configured after the app is running via **Admin → Settings** (the Storage and Integrations tabs), and stored in the database:
+
+| Integration | Configured in Admin Panel |
+|-------------|--------------------------|
+| S3 / Object storage | Provider, bucket name, endpoint, access keys, public URL |
+| Resend / SMTP email | API key, from address, SMTP credentials |
+
+This means you do not need to restart the application to change integrations — they update live from the database.
+
+---
+
+## Development vs Production
+
+| Variable | Development | Production |
+|----------|------------|-----------|
+| `NEXTAUTH_URL` | `http://localhost:3000` | `https://yourdomain.com` |
+| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | `https://yourdomain.com` |
+| `EMBERLY_RUN_EVENT_WORKER` | optional | `true` |
+| `VIRUSTOTAL_API_KEY` | optional | recommended |
+
+---
+
+## Example Production `.env`
+
+```env
+DATABASE_URL="postgresql://emberly:strongpassword@localhost:5432/emberly?schema=public"
+REDIS_URL="redis://default:strongpassword@localhost:6379"
+
+NEXTAUTH_URL="https://files.yourdomain.com"
+NEXT_PUBLIC_BASE_URL="https://files.yourdomain.com"
+NEXTAUTH_SECRET="your-generated-secret-here"
+NEXTAUTH_TRUSTED_ORIGINS="https://files.yourdomain.com"
+
+GITHUB_OAUTH_CLIENT_ID="ghp_..."
+GITHUB_OAUTH_CLIENT_SECRET="..."
+DISCORD_OAUTH_CLIENT_ID="..."
+DISCORD_OAUTH_CLIENT_SECRET="..."
+
+EMBERLY_RUN_EVENT_WORKER=true
+
+VIRUSTOTAL_API_KEY="..."
+NEXT_PUBLIC_SENTRY_DSN="https://...@sentry.io/..."
+```

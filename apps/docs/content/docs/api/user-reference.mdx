@@ -1,0 +1,937 @@
+---
+title: User API Reference
+description: Complete REST API reference for Emberly users. Upload files, manage domains, authenticate, and integrate with your applications.
+---
+
+The Emberly REST API lets you programmatically upload files, manage sharing settings, configure domains, and build custom integrations.
+
+## Authentication
+
+### Bearer Token
+
+All user endpoints require authentication via Bearer token:
+
+```bash
+curl -H "Authorization: Bearer YOUR_UPLOAD_TOKEN" \
+  https://embrly.ca/api/files
+```
+
+**Get your token:**
+1. Log in to [embrly.ca](https://embrly.ca)
+2. Go to **Profile → Uploads → Upload Token**
+3. Copy the token
+4. Use it for all API requests
+
+### Session Cookies
+
+Some endpoints (domains, profile) also accept browser session cookies for OAuth flows and dashboard access.
+
+---
+
+## Base URL
+
+```
+https://embrly.ca/api
+```
+
+For self-hosted instances, replace `embrly.ca` with your domain.
+
+---
+
+## Response Format
+
+All responses are JSON with this structure:
+
+**Success (2xx):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+**Error (4xx/5xx):**
+```json
+{
+  "success": false,
+  "error": "Human-readable error message",
+  "code": "ERROR_CODE",
+  "details": { ... }
+}
+```
+
+---
+
+## Rate Limits
+
+Rate limits are not tiered by plan — they're flat, IP-scoped limits applied to a handful of specific security-sensitive endpoints, not a general per-plan API quota:
+
+| Endpoint | Limit |
+|----------|-------|
+| `POST /api/auth/register` | 5 per 60s per IP |
+| `POST /api/auth/password/forgot` | 1 per 600s per IP |
+| `POST /api/auth/password/reset` | 5 per 600s per IP |
+| `POST /api/auth/resend-verification` | 3 per 600s per IP |
+| `POST /api/contact` | 3 per 60s per IP |
+| `POST /api/auth/desktop` (failed attempts) | 2 per 600s |
+| `POST /api/domains/[id]/cf-check` | 10 per 10 minutes |
+
+Endpoints not listed here (file uploads, listing files, URL shortening, etc.) have no request-rate limit today — only the storage/upload-size caps for your plan apply. On the limited endpoints above, a `429 Too Many Requests` is returned with a `Retry-After` header (seconds until the limit resets).
+
+---
+
+## HTTP Status Codes
+
+| Code | Meaning | When |
+|------|---------|------|
+| 200 | Success | Request completed |
+| 201 | Created | Resource created (file upload) |
+| 400 | Bad Request | Invalid parameters |
+| 401 | Unauthorized | Missing or invalid token |
+| 403 | Forbidden | Plan limit exceeded or permission denied |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Resource already exists |
+| 413 | Payload Too Large | File exceeds size limit |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Server Error | Internal server error |
+
+---
+
+## File Management
+
+### Upload a File
+
+**POST `/api/files`**
+
+Upload a single file.
+
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | File | Yes | The file to upload |
+| `visibility` | string | No | `PUBLIC` or `PRIVATE` (default: PUBLIC) |
+| `password` | string | No | Password to download the file |
+| `domain` | string | No | Custom domain for the URL |
+| `expiresAt` | ISO 8601 | No | Auto-delete date (must be future) |
+| `allowSuggestions` | boolean | No | Allow edit suggestions |
+
+**cURL:**
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@document.pdf" \
+  -F "visibility=PUBLIC" \
+  -F "expiresAt=2026-12-31T23:59:59Z" \
+  https://embrly.ca/api/files
+```
+
+**JavaScript:**
+```javascript
+const form = new FormData();
+form.append("file", fileInput.files[0]);
+form.append("visibility", "PUBLIC");
+
+const response = await fetch("https://embrly.ca/api/files", {
+  method: "POST",
+  headers: { "Authorization": "Bearer YOUR_TOKEN" },
+  body: form
+});
+
+const { data } = await response.json();
+console.log(data.url); // Shareable URL
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cm7xabc123",
+    "name": "document.pdf",
+    "size": 2621440,
+    "mimeType": "application/pdf",
+    "url": "https://embrly.ca/yourusername/document.pdf",
+    "urlPath": "/yourusername/document.pdf",
+    "visibility": "PUBLIC",
+    "password": false,
+    "createdAt": "2026-03-29T15:30:00Z",
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "downloads": 0
+  }
+}
+```
+
+**Errors:**
+- `400` — Invalid parameters or file too large
+- `401` — Invalid token
+- `403` — Storage quota exceeded or plan limit
+- `409` — File name already exists
+
+---
+
+### Update File
+
+**PATCH `/api/files/[id]`**
+
+Update a file's visibility, password, or expiration.
+
+**Request Body:**
+```json
+{
+  "visibility": "PRIVATE",
+  "password": "newpassword",
+  "expiresAt": "2026-12-31T23:59:59Z"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+### Delete a File
+
+**DELETE `/api/files/[id]`**
+
+Permanently delete a file (cannot be recovered).
+
+**Response (200):**
+```json
+{ "success": true }
+```
+
+---
+
+### Download a File
+
+**GET `/api/files/[id]/download`**
+
+Download a file. If password-protected, include password in query string.
+
+**Query Parameters:**
+- `password` (optional) — Password if file is protected
+
+**Response:** File binary data (200) or error
+
+---
+
+### List Your Files
+
+**GET `/api/files`**
+
+List all your uploaded files with pagination and filtering.
+
+**Auth:** Session cookie or Bearer token
+
+**Query Parameters:**
+- `page` (default: 1) — Page number
+- `limit` (default: 24) — Results per page
+- `search` — Search by filename or OCR text
+- `sortBy` — `newest` (default), `oldest`, `largest`
+- `visibility` — Comma-separated: `PUBLIC`, `PRIVATE`, `hasPassword`
+- `types` — Comma-separated MIME types (e.g. `image/png,image/jpeg`)
+- `dateFrom` — ISO date filter (uploaded on or after)
+- `dateTo` — ISO date filter (uploaded on or before)
+- `squadId` — Filter files belonging to a specific squad
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    { ... file object ... },
+    { ... file object ... }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 24,
+    "total": 240,
+    "totalPages": 10
+  }
+}
+```
+
+---
+
+### Chunked Upload (Large Files)
+
+For files larger than your single upload limit, use chunked upload.
+
+**Step 1: Initialize**
+
+**POST `/api/files/chunks`**
+
+```json
+{
+  "filename": "large-video.mp4",
+  "mimeType": "video/mp4",
+  "size": 5368709120
+}
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "data": {
+    "uploadId": "upload_123abc",
+    "partSize": 5242880,
+    "totalParts": 1024
+  }
+}
+```
+
+**Step 2: Get Presigned URLs**
+
+**GET `/api/files/chunks/[uploadId]/part/[n]`**
+
+Returns a temporary S3 URL for uploading chunk N.
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://s3.amazonaws.com/bucket/..."
+  }
+}
+```
+
+**Step 3: Upload Each Chunk**
+
+```bash
+# Upload chunk 1 to the presigned URL
+curl -X PUT https://s3.amazonaws.com/bucket/... \
+  --data-binary @chunk1.bin \
+  -H "Content-Type: application/octet-stream"
+```
+
+**Step 4: Complete Upload**
+
+**POST `/api/files/chunks/[uploadId]/complete`**
+
+```json
+{
+  "parts": [
+    { "PartNumber": 1, "ETag": "..." },
+    { "PartNumber": 2, "ETag": "..." }
+  ]
+}
+```
+
+Returns the completed file object (same as single upload).
+
+---
+
+### File Collaborators
+
+**GET `/api/files/[id]/collaborators`**
+
+List users with access to the file.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "collab_123",
+      "user": { "id": "user_456", "name": "Alice", "email": "alice@example.com" },
+      "role": "EDITOR",
+      "addedAt": "2026-03-29T15:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+**POST `/api/files/[id]/collaborators`**
+
+Add a collaborator to a file. Provide either `userEmail` or `userUrlId` to identify the person.
+
+**Request Body:**
+```json
+{
+  "userEmail": "alice@example.com",
+  "role": "EDITOR" // or "SUGGESTER" (default: EDITOR)
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": { ... collaborator object ... }
+}
+```
+
+---
+
+**DELETE `/api/files/[id]/collaborators/[collaboratorId]`**
+
+Remove a collaborator.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Collaborator removed"
+}
+```
+
+---
+
+### OCR / Text Extraction
+
+**GET `/api/files/[id]/ocr`**
+
+Get extracted text from an image file.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "text": "Extracted text from image...",
+    "confidence": 0.95,
+    "processedAt": "2026-03-29T15:31:00Z"
+  }
+}
+```
+
+---
+
+## Custom Domains
+
+### List Domains
+
+**GET `/api/domains`**
+
+List all your custom domains and domain slot usage.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "domains": [
+      {
+        "id": "dom_abc123",
+        "domain": "files.example.com",
+        "verified": true,
+        "isPrimary": true,
+        "cfStatus": "active",
+        "createdAt": "2026-01-15T10:00:00Z"
+      }
+    ],
+    "domainLimit": {
+      "allowed": 5,
+      "base": 3,
+      "purchased": 1,
+      "perkBonus": 1,
+      "used": 1,
+      "remaining": 4
+    }
+  }
+}
+```
+
+---
+
+### Add a Domain
+
+**POST `/api/domains`**
+
+Add a new custom domain.
+
+**Request Body:**
+```json
+{
+  "domain": "files.yourdomain.com"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "dom_xyz789",
+    "domain": "files.yourdomain.com",
+    "verified": false,
+    "cfStatus": "awaiting_cname"
+  }
+}
+```
+
+**Errors:**
+- `400` — Invalid domain format
+- `403` — Domain slot limit reached
+- `409` — Domain already registered
+
+---
+
+### Verify Domain
+
+**POST `/api/domains/[id]/cf-check`**
+
+Trigger DNS verification and Cloudflare provisioning.
+
+**Response (202):**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "pending",
+    "message": "Checking DNS and provisioning certificate..."
+  }
+}
+```
+
+**Response (200)** once complete:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "dom_xyz789",
+    "domain": "files.yourdomain.com",
+    "verified": true,
+    "cfStatus": "active"
+  }
+}
+```
+
+**Errors:**
+- `409` — CNAME not found or incorrect
+
+---
+
+### Set Primary Domain
+
+**PATCH `/api/domains/[id]`**
+
+Set as the primary domain for new uploads.
+
+**Request Body:**
+```json
+{
+  "isPrimary": true
+}
+```
+
+**Response (200):** Updated domain object
+
+---
+
+### Delete Domain
+
+**DELETE `/api/domains/[id]`**
+
+Remove a custom domain.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Domain deleted"
+}
+```
+
+---
+
+## User Profile
+
+### Get Profile
+
+**GET `/api/profile`**
+
+Get authenticated user's profile information.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_123",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "avatar": "https://avatar-url.com/...",
+    "banner": "https://banner-url.com/...",
+    "urlId": "johndoe",
+    "uploadToken": "uuid-token",
+    "theme": "dark",
+    "customColors": { ... },
+    "storageUsed": 1024000000,
+    "storageQuota": 10737418240,
+    "twoFactorEnabled": true,
+    "emailNotificationsEnabled": true,
+    "createdAt": "2023-01-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+### Update Profile
+
+**PATCH `/api/profile`**
+
+Update your profile information.
+
+**Request Body:**
+```json
+{
+  "name": "New Name",
+  "customColors": {
+    "primary": "#ff0000"
+  },
+  "theme": "light"
+}
+```
+
+**Response (200):** Updated profile object
+
+---
+
+### Upload Avatar
+
+**POST `/api/profile/avatar`**
+
+Upload a new profile avatar.
+
+**Content-Type:** `multipart/form-data`
+
+**Fields:**
+- `file` (File) — Image file (max 5 MB, JPEG/PNG/GIF)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "avatar": "https://cdn.embrly.ca/avatars/user_123.jpg"
+  }
+}
+```
+
+---
+
+### Change Password
+
+Password changes are made via `PATCH /api/profile` with the password fields.
+
+**PATCH `/api/profile`**
+
+**Request Body:**
+```json
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newPassword456"
+}
+```
+
+**Response (200):** Updated profile object
+
+**Errors:**
+- `400` — Current password incorrect, new password too weak, or reuse of a recent password
+
+---
+
+### Two-Factor Authentication
+
+<Callout type="info">
+  2FA endpoints require a session cookie (browser session), not a bearer token.
+</Callout>
+
+**GET `/api/profile/2fa`**
+
+Generate a TOTP secret and QR code URI to set up an authenticator app.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "secret": "JBSWY3DPEBLW64TMMQ======",
+    "otpauthUri": "otpauth://totp/Emberly:user@example.com?secret=..."
+  }
+}
+```
+
+---
+
+**POST `/api/profile/2fa`** with `{ "step": "send-code" }`
+
+Validate a TOTP token and send an email confirmation code.
+
+**Request Body:**
+```json
+{ "step": "send-code", "totpCode": "123456" }
+```
+
+---
+
+**POST `/api/profile/2fa`** with `{ "step": "verify-code" }`
+
+Confirm the email code to complete 2FA enrollment.
+
+**Request Body:**
+```json
+{ "step": "verify-code", "emailCode": "789012" }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "twoFactorEnabled": true }
+}
+```
+
+---
+
+**DELETE `/api/profile/2fa`**
+
+Disable two-factor authentication (requires email verification).
+
+**Request Body:**
+```json
+{ "emailCode": "789012" }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "twoFactorEnabled": false }
+}
+```
+
+---
+
+## Teams & Squads (Nexium)
+
+### List Your Squads
+
+**GET `/api/discovery/squads?mine=true`**
+
+List all squads you're a member of.
+
+**Query Parameters:**
+- `page` (default: 1)
+- `limit` (default: 20)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "squad_123",
+      "name": "Design Team",
+      "description": "Our design crew",
+      "image": "https://squad-avatar.com/...",
+      "memberCount": 5,
+      "role": "MEMBER",
+      "createdAt": "2026-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Create a Squad
+
+**POST `/api/discovery/squads`**
+
+Create a new squad/team.
+
+**Request Body:**
+```json
+{
+  "name": "Product Team",
+  "description": "Our product team",
+  "skills": ["product", "strategy"],
+  "maxSize": 10, // 2 up to your plan's squad-size limit
+  "isPublic": true
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": { ... squad object ... }
+}
+```
+
+---
+
+### Invite Member to Squad
+
+**POST `/api/discovery/squads/[id]/invites`**
+
+Invite someone to join the squad.
+
+**Request Body:**
+```json
+{
+  "email": "newmember@example.com",
+  "role": "MEMBER" // or "OBSERVER"
+}
+```
+
+<Callout type="info">
+  Squad roles are `OWNER`, `MEMBER`, and `OBSERVER` — there is no separate `ADMIN` or `EDITOR` squad role.
+</Callout>
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "inviteToken": "invite_token_123",
+    "expiresAt": "2026-04-03T10:00:00Z"
+  }
+}
+```
+
+---
+
+### Get Squad Members
+
+**GET `/api/discovery/squads/[id]/members`**
+
+List all members of a squad.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "member_123",
+      "user": { "id": "user_456", "name": "Alice", "email": "alice@example.com" },
+      "role": "MEMBER",
+      "joinedAt": "2026-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Shortened URLs
+
+URL shortening is documented on its own page: see [URL Shortener API](/docs/api/urls). It lives at `/api/urls` (not `/api/shorturl`), the request body is just `{ "url": "..." }`, short codes are auto-generated (6-character, no custom/vanity slug support), and there's no password option on shortened URLs.
+
+---
+
+## Error Handling
+
+All error responses follow this format:
+
+```json
+{
+  "success": false,
+  "error": "Human-readable error message",
+  "code": "ERROR_CODE",
+  "details": {
+    "field": "field-name",
+    "reason": "specific-reason"
+  }
+}
+```
+
+**Common Error Codes:**
+
+| Code | HTTP | Meaning |
+|------|------|---------|
+| `INVALID_TOKEN` | 401 | Token missing, invalid, or expired |
+| `UNAUTHORIZED` | 403 | You don't have permission |
+| `QUOTA_EXCEEDED` | 403 | Storage quota exceeded |
+| `PLAN_LIMIT` | 403 | Feature not available on your plan |
+| `NOT_FOUND` | 404 | Resource doesn't exist |
+| `DUPLICATE` | 409 | Resource already exists |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `SERVER_ERROR` | 500 | Internal server error |
+
+---
+
+## Integration Examples
+
+### Upload from Node.js
+
+```javascript
+import fetch from 'node-fetch';
+import fs from 'fs';
+
+const token = process.env.EMBERLY_TOKEN;
+const filePath = './my-file.pdf';
+
+const form = new FormData();
+form.append('file', fs.createReadStream(filePath));
+form.append('visibility', 'PUBLIC');
+
+const response = await fetch('https://embrly.ca/api/files', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: form
+});
+
+const { data } = await response.json();
+console.log('Uploaded:', data.url);
+```
+
+### Upload from Python
+
+```python
+import requests
+
+token = os.getenv('EMBERLY_TOKEN')
+
+with open('document.pdf', 'rb') as f:
+    response = requests.post(
+        'https://embrly.ca/api/files',
+        headers={'Authorization': f'Bearer {token}'},
+        files={'file': f},
+        data={'visibility': 'PUBLIC'}
+    )
+
+data = response.json()['data']
+print(f'Uploaded: {data["url"]}')
+```
+
+### Retrieve File Analytics
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  https://embrly.ca/api/files/cm7xabc123 | jq '.data | {downloads, createdAt, accessLog}'
+```
+
+---
+
+## Rate Limit Best Practices
+
+1. **Check rate limit headers** before and after requests
+2. **Implement exponential backoff** — wait before retrying on 429
+3. **Batch operations** — upload multiple files in parallel (within limits)
+4. **Cache results** — don't repeatedly query the same files
+5. **Monitor usage** — track API requests to avoid hitting limits
+
+---
+
+## Support
+
+- **API Issues?** Contact support@embrly.ca
+- **Found a bug?** Create an issue on [GitHub](https://github.com/EmberlyOSS/Emberly)
+- **Need help?** Join our [Discord](https://discord.gg/36spBmzZVB)

@@ -1,0 +1,56 @@
+---
+title: First-Time Setup
+description: Walk through the Setup Wizard that runs the first time you start a self-hosted Emberly instance.
+---
+
+The first time your instance starts with zero users in the database, visiting it redirects you to the **Setup Wizard** at `/setup` instead of the login page. This is a one-time, three-step flow that creates your admin account and gets storage working — no manual database editing or `.env` fiddling required beyond what's already covered in [Environment Variables](/docs/self-hosting/environment).
+
+<Callout type="info">
+  The wizard only runs while the `User` table is empty. Once you complete it, `/setup` redirects to the dashboard (or login) like any other page — it can't be re-run or reset from the UI. If you need to start over, that means clearing the database and re-deploying.
+</Callout>
+
+---
+
+## Step 1: Admin Account
+
+The first account you create becomes the instance's **superadmin** automatically — full access to everything, including settings only a superadmin can reach.
+
+| Field | Notes |
+|-------|-------|
+| Username | 2–50 characters, no spaces or `@` |
+| Email | Standard email format |
+| Password | 8 characters minimum |
+
+Your email is marked verified immediately — there's no verification email to click through for this first account.
+
+---
+
+## Step 2: Storage
+
+Choose how uploaded files are stored:
+
+- **Local filesystem** — files are written to disk on the server running Emberly. Simplest option, no external service to configure, but you're responsible for disk space and backups. Good for testing or small personal instances.
+- **S3-compatible** — point at any S3 API-compatible bucket (AWS S3, MinIO, Cloudflare R2, Vultr/Linode/OVH object storage, etc.). You'll need the bucket name, region, access key ID, and secret access key on hand; a custom endpoint field covers non-AWS providers. See [Storage Configuration](/docs/self-hosting/storage) for provider-specific setup if you haven't created the bucket yet.
+
+Whichever you pick here becomes your instance's default — you can change it later in **Admin → Settings → Storage** without needing to re-run setup.
+
+---
+
+## Step 3: Registrations
+
+Decide whether new users can sign up on your instance:
+
+- **Enabled** (default) — anyone can create an account.
+- **Disabled** — registration is closed; you can optionally set a custom message shown to visitors who try to sign up (e.g. "This is a private instance — contact the admin for an invite").
+
+This is also changeable later from Admin Panel → Settings, so it's fine to leave the default and revisit it once your instance is live.
+
+---
+
+## After Setup
+
+Submitting the final step creates your admin account, saves your storage and registration choices, and signs you in — you land directly on the dashboard. From there:
+
+- Upload a test file to confirm storage is actually working (see [Verifying Storage Works](/docs/self-hosting/storage#verifying-storage-works))
+- Configure email (Resend or SMTP) in Admin Panel → Settings → Integrations if you want verification/expiration emails to send
+- Check [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted) if you're wondering why a feature mentioned elsewhere in these docs isn't showing up

@@ -1,0 +1,82 @@
+---
+title: Verification Codes
+description: Store and manage trusted device verification codes for your account.
+---
+
+**Verification Codes** are pre-saved codes associated with your account that can be used to verify trusted devices or third-party integrations. They live at [embrly.ca/dashboard/verification-codes](https://embrly.ca/dashboard/verification-codes).
+
+---
+
+## What Are Verification Codes For?
+
+Verification codes let you store a list of known device identifiers or integration tokens that are associated with your account. Use cases include:
+
+- Allowing specific devices to bypass re-verification prompts
+- Storing codes shared with integrations that need to identify your account
+- Managing trusted keys for automations
+
+---
+
+## Managing Codes
+
+### View Codes
+
+Go to [embrly.ca/dashboard/verification-codes](https://embrly.ca/dashboard/verification-codes) to see all codes saved to your account.
+
+### Add a Code
+
+1. Enter the code in the **Add Code** field
+2. Click **Add**
+
+The code is saved immediately and visible in your list.
+
+### Remove a Code
+
+Click the delete button next to any code to permanently remove it.
+
+<Callout type="warn" title="Keep codes private">
+  Anyone with a verification code can use it to verify as your account. Remove codes you no longer recognise or use.
+</Callout>
+
+---
+
+## API
+
+Verification codes are managed through the auth endpoints.
+
+### Get Codes
+
+```http
+GET /api/auth/verification-codes
+Cookie: next-auth.session-token=...
+```
+
+**Response:**
+
+```json
+{
+  "codes": ["code-abc", "code-def"]
+}
+```
+
+### Add a Code
+
+```http
+POST /api/auth/verification-codes
+Cookie: next-auth.session-token=...
+Content-Type: application/json
+
+{ "code": "my-trusted-device-id" }
+```
+
+### Remove a Code
+
+```http
+DELETE /api/auth/verification-codes
+Cookie: next-auth.session-token=...
+Content-Type: application/json
+
+{ "code": "my-trusted-device-id" }
+```
+
+All three endpoints require an active session (cookie auth).

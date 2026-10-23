@@ -1,0 +1,1136 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                       String    @id @default(cuid())
+  name                     String?
+  email                    String?   @unique
+  emailVerified            DateTime?
+  image                    String?
+  banner                   String? // User's banner image (uploaded or from Discord)
+  avatarDecoration         String? // Discord avatar decoration asset URL
+  isVerified               Boolean   @default(false)
+  theme                    String?
+  customColors             Json? // Theme color customizations
+  twoFactorEnabled         Boolean   @default(false)
+  twoFactorSecret          String?
+  preferredUploadDomain    String?
+  password                 String?
+  passwordResetToken       String?
+  passwordResetExpires     DateTime?
+  passwordBreachDetectedAt DateTime?
+  magicLinkToken           String?
+  magicLinkExpires         DateTime?
+  lastLoginAt              DateTime?
+  lastLoginIp              String?
+  lastLoginUserAgent       String?
+  verificationCodes        String[]  @default([])
+  role                     UserRole  @default(USER)
+  bannedAt                 DateTime?
+  banReason                String?
+  banExpiresAt             DateTime? // null = permanent ban
+  banType                  String? // 'temporary' | 'permanent'
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  storageUsed              Float     @default(0)
+  sessionVersion           Int       @default(1)
+  vanityId                 String?   @unique
+  urlId                    String    @unique
+  uploadToken              String    @unique
+  randomizeFileUrls        Boolean   @default(false)
+  enableRichEmbeds         Boolean   @default(true)
+  storageQuotaMB           Int?
+
+  alphaUser Boolean @default(false)
+
+  // Custom storage bucket assignment (overrides global default)
+  storageBucketId String?
+  storageBucket   StorageBucket? @relation("UserStorageBucket", fields: [storageBucketId], references: [id], onDelete: SetNull)
+
+  // Perk system - role-based perks (CONTRIBUTOR, DISCORD_BOOSTER, AFFILIATE, etc)
+  perkRoles       String[]  @default([])
+  lastPerkCheckAt DateTime?
+
+  // Grants system - visible role badges awarded via applications (STAFF, SUPPORT, DEVELOPER, MODERATOR, PARTNER, DESIGNER)
+  grants          String[]  @default([])
+
+  // Referral/Affiliate system
+  referralCode    String? @unique
+  referrerUserId  String?
+  referrer        User?   @relation("ReferralChildren", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  referrals       User[]  @relation("ReferralChildren")
+  referralCredits Float   @default(0) // Billing credits earned from referrals (in dollars)
+  referralStats   Json    @default("{\"count\": 0, \"credited\": 0, \"lastCreditedAt\": null}") // Track referral metrics
+
+  // Email notification preferences
+  emailNotificationsEnabled Boolean @default(true)
+  emailPreferences          Json    @default("{\"security\": true, \"account\": true, \"billing\": true, \"marketing\": false, \"productUpdates\": true}")
+
+  // Discord webhook notification preferences
+  discordWebhookUrl           String?
+  discordNotificationsEnabled Boolean @default(false)
+  discordPreferences          Json    @default("{\"security\": true, \"account\": false, \"billing\": true, \"marketing\": false, \"productUpdates\": false}")
+
+  // Public profile fields
+  fullName           String?
+  bio                String?
+  website            String?
+  twitter            String?
+  github             String?
+  discord            String?
+  isProfilePublic    Boolean @default(true)
+  showLinkedAccounts Boolean @default(false)
+  profileBio         String?
+  profileVisibility  String  @default("PUBLIC") // PUBLIC or PRIVATE
+
+  files                       File[]
+  shortenedUrls               ShortenedUrl[]
+  stripeCustomerId            String?          @unique
+  defaultFileExpiration       FileExpiration   @default(DISABLED)
+  defaultFileExpirationAction ExpiryAction     @default(DELETE)
+  blogPosts                   BlogPost[]
+  customDomains               CustomDomain[]
+  subscriptions               Subscription[]
+  oneOffPurchases             OneOffPurchase[]
+
+  testimonials                Testimonial[]
+  fileCollaborations          FileCollaborator[]
+  editSuggestions             FileEditSuggestion[]    @relation("SuggestionAuthor")
+  reviewedSuggestions         FileEditSuggestion[]    @relation("SuggestionReviewer")
+  loginHistory                LoginHistory[]
+  linkedAccounts              LinkedAccount[]
+  twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
+  passwordHistory             PasswordHistory[]
+  creditTransactions          CreditTransaction[]
+  creditTransactionsAsRelated CreditTransaction[]     @relation("CreditTransactions")
+
+  // Nexium
+  nexiumProfile          NexiumProfile?
+  nexiumOpportunities    NexiumOpportunity[] @relation("NexiumOpportunityPoster")
+  ownedSquads            NexiumSquad[]       @relation("NexiumSquadOwner")
+  nexiumSquadMemberships NexiumSquadMember[]
+  nexiumSquadInvites     NexiumSquadInvite[] @relation("InvitedUser")
+  nexiumSquadInvitesSent NexiumSquadInvite[] @relation("InviteSender")
+  bansReceived           UserBan[]           @relation("BannedUser")
+  bansIssued             UserBan[]           @relation("BanIssuer")
+  reportsReceived        UserReport[]        @relation("ReportedUser")
+  reportsMade            UserReport[]        @relation("Reporter")
+  squadReportsMade       SquadReport[]       @relation("SquadReporter")
+  contentReportsMade     ContentReport[]     @relation("ContentReporter")
+  contentReportsResolved ContentReport[]     @relation("ContentReportResolver")
+  filesFlagged           File[]              @relation("FileFlaggedBy")
+  urlsFlagged            ShortenedUrl[]      @relation("UrlFlaggedBy")
+  applications           Application[]
+  applicationReplies     ApplicationReply[]
+  apiKeys                UserApiKey[]
+  deviceAuthorizations   DeviceAuthorization[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([referralCode])
+  @@index([referrerUserId])
+}
+
+model File {
+  id               String               @id @default(cuid())
+  name             String
+  urlPath          String               @unique
+  mimeType         String
+  size             Float
+  visibility       FileVisibility       @default(PUBLIC)
+  uploadedAt       DateTime             @default(now())
+  updatedAt        DateTime             @default(now()) @updatedAt
+  userId           String
+  path             String
+  isOcrProcessed   Boolean              @default(false)
+  ocrText          String?
+  password         String?
+  isPaste          Boolean              @default(false)
+  ocrConfidence    Float?
+  views            Int                  @default(0)
+  downloads        Int                  @default(0)
+  // Collaboration settings
+  allowSuggestions Boolean              @default(false)
+  // Admin flagging
+  flagged          Boolean              @default(false)
+  flaggedAt        DateTime?
+  flaggedById      String?
+  flagReason       String?
+  flaggedBy        User?                @relation("FileFlaggedBy", fields: [flaggedById], references: [id], onDelete: SetNull)
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Squad association — null for personal files
+  squadId          String?
+  squad            NexiumSquad?         @relation(fields: [squadId], references: [id], onDelete: SetNull)
+  // Which storage bucket this file lives in. Null = global config provider (legacy / fallback).
+  storageBucketId  String?
+  storageBucket    StorageBucket?       @relation("FileBucket", fields: [storageBucketId], references: [id], onDelete: SetNull)
+  editSuggestions  FileEditSuggestion[]
+  collaborators    FileCollaborator[]
+  contentReports   ContentReport[]
+
+  @@index([visibility, uploadedAt]) // Recent public files
+  @@index([isOcrProcessed]) // Worker queue filtering
+  @@index([flagged])
+  @@index([squadId])
+  @@index([storageBucketId])
+}
+
+// Collaborators who can edit a file
+model FileCollaborator {
+  id        String               @id @default(cuid())
+  fileId    String
+  userId    String
+  role      FileCollaboratorRole @default(EDITOR)
+  createdAt DateTime             @default(now())
+  file      File                 @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, userId])
+  @@index([fileId])
+  @@index([userId])
+}
+
+enum FileCollaboratorRole {
+  EDITOR // Can edit directly
+  SUGGESTER // Can only submit suggestions
+}
+
+// Edit suggestions from collaborators or public (if allowSuggestions is true)
+model FileEditSuggestion {
+  id         String                   @id @default(cuid())
+  fileId     String
+  userId     String
+  content    String
+  message    String?
+  status     FileEditSuggestionStatus @default(PENDING)
+  createdAt  DateTime                 @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+  file       File                     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user       User                     @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User?                    @relation("SuggestionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum FileEditSuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ShortenedUrl {
+  id        String   @id @default(cuid())
+  shortCode String   @unique
+  targetUrl String
+  clicks    Int      @default(0)
+  createdAt DateTime @default(now())
+  userId    String
+  // Admin flagging
+  flagged     Boolean  @default(false)
+  flaggedAt   DateTime?
+  flaggedById String?
+  flagReason  String?
+  flaggedBy   User?    @relation("UrlFlaggedBy", fields: [flaggedById], references: [id], onDelete: SetNull)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentReports ContentReport[]
+}
+
+model Config {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  type        String
+  payload     Json
+  status      EventStatus @default(PENDING)
+  priority    Int         @default(0)
+  scheduledAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  processedAt DateTime?
+  failedAt    DateTime?
+  retryCount  Int         @default(0)
+  maxRetries  Int         @default(3)
+  error       String?
+  metadata    Json?
+
+  // Audit fields (populated only for auditable events)
+  isAuditable Boolean  @default(false)
+  actorId     String? // User who performed the action
+  actorEmail  String? // Email at time of action (may change later)
+  targetId    String? // User/resource being acted upon (if different from actor)
+  targetEmail String? // Target email at time of action
+  action      String? // e.g., "login", "deleted", "changed"
+  resource    String? // e.g., "auth", "account", "file"
+  success     Boolean? // Whether the action succeeded
+  ip          String?
+  userAgent   String?
+  geo         Json? // { country, region, city }
+
+  @@index([type])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@index([priority, scheduledAt])
+  @@index([isAuditable])
+  @@index([actorId])
+  @@index([actorId, createdAt])
+  @@index([isAuditable, createdAt])
+  @@index([status, priority, scheduledAt]) // Optimized valid job queue polling
+}
+
+model BlogPost {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  content     String
+  excerpt     String?
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?
+  authorId    String?
+  author      User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model CustomDomain {
+  id             String    @id @default(cuid())
+  domain         String    @unique
+  userId         String? // null when owned by a squad
+  squadId        String? // null when owned by a user
+  verified       Boolean   @default(false)
+  cfHostnameId   String?
+  cfStatus       String?
+  cfMeta         Json?
+  cfBackoffCount Int       @default(0)
+  cfPauseUntil   DateTime?
+  isPrimary      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user  User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  squad NexiumSquad? @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([squadId])
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  tagline   String?
+  url       String?  @unique
+  imagePath String? // path under /public/partners or uploaded file path
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  content   String
+  rating    Int? // optional 1-5 rating
+  approved  Boolean  @default(false)
+  archived  Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([approved])
+  @@index([createdAt])
+}
+
+// Billing / Stripe models
+model Product {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String?
+  type                 String   @default("plan") // plan, addon, one-time
+  stripeProductId      String?  @unique
+  stripePriceMonthlyId String?  @unique
+  stripePriceYearlyId  String?  @unique
+  stripePriceOneTimeId String?  @unique
+  defaultPriceCents    Int?
+  billingInterval      String? // e.g. "month", "year"
+  features             String[] @default([])
+  active               Boolean  @default(true)
+  popular              Boolean  @default(false)
+
+  // Plan-specific limits (only used when type="plan")
+  storageQuotaGB     Int? // Total storage allocation in GB (e.g., 10, 25, 75, 200)
+  customDomainsLimit Int? // Number of custom domains allowed
+  uploadSizeCapMB    Int? // Maximum single file upload size in MB
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plans      Subscription[]
+  squadPlans NexiumSquadSubscription[]
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  productId            String
+  stripeSubscriptionId String?   @unique
+  status               String    @default("active")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  metadata             Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status, currentPeriodEnd]) // Expiration check speedup
+}
+
+// One-off purchases for extra-storage, custom-domain purchases, etc.
+model OneOffPurchase {
+  id                    String   @id @default(cuid())
+  userId                String
+  type                  String // e.g. "extra_storage", "custom_domain"
+  quantity              Int      @default(1)
+  amountCents           Int
+  stripePaymentIntentId String?  @unique
+  metadata              Json?
+  createdAt             DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Credit transaction log for tracking referral credits earned and applied to purchases
+model CreditTransaction {
+  id             String   @id @default(cuid())
+  userId         String
+  type           String // "earned_referral", "applied_checkout", "applied_purchase", "manual_adjustment"
+  amountCents    Int // Positive for credits earned, negative for credits applied
+  description    String? // e.g. "Referral from user@example.com", "Applied to checkout", "Applied to storage purchase"
+  relatedUserId  String? // User ID if this is a referral transaction
+  relatedOrderId String? // Stripe session ID, payment intent ID, etc
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedUser User? @relation("CreditTransactions", fields: [relatedUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([relatedUserId])
+}
+
+// Login history for detecting suspicious/new device logins
+model LoginHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  ip          String?
+  userAgent   String?
+  // Normalized fingerprint for device identification
+  fingerprint String?
+  country     String?
+  city        String?
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, fingerprint])
+  @@index([userId, ip])
+  @@index([createdAt])
+}
+
+model LinkedAccount {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider         String // "github" or "discord"
+  providerUserId   String // GitHub login or Discord user ID
+  providerUsername String? // GitHub login or Discord username
+  providerData     Json? // Additional provider-specific data (avatar, etc)
+  accessToken      String? // OAuth access token (encrypted in practice)
+  refreshToken     String? // OAuth refresh token (encrypted in practice)
+  linkedAt         DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([provider, providerUserId])
+}
+
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  code      String // Format: "XXXX-XXXX" (8 chars + dash)
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  batchId   String // To track which batch of codes this belongs to (for regeneration)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+  @@index([userId, batchId])
+  @@index([userId, used])
+}
+
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String // Encrypted password hash (same as User.password)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model NexiumProfile {
+  id           String             @id @default(cuid())
+  userId       String             @unique
+  title        String? // "Full-Stack Developer", "Creative Director"
+  headline     String? // Short pitch (≤200 chars)
+  availability NexiumAvailability @default(OPEN)
+  lookingFor   String[]           @default([]) // FULL_TIME | PART_TIME | CONTRACT | COLLAB | BOUNTY
+  timezone     String?
+  location     String?
+  activeHours  String? // e.g. "9am–5pm UTC+8" or "Evenings & weekends"
+  isVisible    Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills       NexiumSkill[]
+  signals      NexiumSignal[]
+  applications NexiumApplication[]
+
+  @@index([availability, isVisible])
+  @@index([userId])
+}
+
+model NexiumSkill {
+  id              String           @id @default(cuid())
+  profileId       String
+  name            String
+  level           NexiumSkillLevel @default(INTERMEDIATE)
+  yearsExperience Int?
+  category        String? // "Frontend", "Backend", "DevOps", "Design", "Community"
+  sortOrder       Int              @default(0)
+
+  profile NexiumProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([name])
+}
+
+model NexiumSignal {
+  id          String           @id @default(cuid())
+  profileId   String
+  type        NexiumSignalType
+  title       String
+  description String?
+  url         String?
+  imageUrl    String?
+  skills      String[]         @default([]) // skill tag references
+  verified    Boolean          @default(false)
+  verifiedAt  DateTime?
+  metadata    Json? // type-specific data (stars, forks, contributionCount, deploy URL, etc.)
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  profile NexiumProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([type])
+  @@index([verified])
+}
+
+model NexiumOpportunity {
+  id             String                  @id @default(cuid())
+  postedByUserId String
+  title          String
+  description    String
+  type           NexiumOpportunityType
+  status         NexiumOpportunityStatus @default(OPEN)
+  budgetMin      Int? // cents
+  budgetMax      Int? // cents
+  currency       String                  @default("USD")
+  remote         Boolean                 @default(true)
+  location       String?
+  requiredSkills String[]                @default([])
+  tags           String[]                @default([])
+  teamSize       Int?
+  timeCommitment String? // "10-20 hrs/week"
+  deadline       DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  postedBy     User                @relation("NexiumOpportunityPoster", fields: [postedByUserId], references: [id], onDelete: Cascade)
+  applications NexiumApplication[]
+
+  @@index([status, createdAt])
+  @@index([type, status])
+  @@index([postedByUserId])
+}
+
+model NexiumApplication {
+  id            String                  @id @default(cuid())
+  opportunityId String
+  profileId     String
+  message       String
+  status        NexiumApplicationStatus @default(PENDING)
+  appliedAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  opportunity NexiumOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  profile     NexiumProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, profileId])
+  @@index([opportunityId])
+  @@index([profileId])
+  @@index([status])
+}
+
+model NexiumSquad {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  tagline     String? // Short one-liner shown on cards (≤120 chars)
+  logo        String? // Logo/avatar URL
+  banner      String? // Banner/cover image URL
+  ownerUserId String
+  status      NexiumSquadStatus @default(FORMING)
+  skills      String[]          @default([])
+  maxSize     Int               @default(5)
+  isPublic    Boolean           @default(true)
+  isVerified  Boolean           @default(false)
+
+  // Social & web presence
+  website String?
+  twitter String?
+  github  String?
+  discord String?
+
+  // Custom storage bucket assignment (overrides global default)
+  storageBucketId String?
+  storageBucket   StorageBucket? @relation("SquadStorageBucket", fields: [storageBucketId], references: [id], onDelete: SetNull)
+
+  // Resource & billing (mirrors User-level infrastructure)
+  storageUsed      Float   @default(0)
+  storageQuotaMB   Int? // null = use plan default
+  uploadToken      String? @unique // programmatic upload access
+  stripeCustomerId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner         User                      @relation("NexiumSquadOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members       NexiumSquadMember[]
+  invites       NexiumSquadInvite[]
+  subscriptions NexiumSquadSubscription[]
+  apiKeys       NexiumSquadApiKey[]
+  customDomains CustomDomain[]
+  files         File[]
+  reports       SquadReport[]
+
+  @@index([status, isPublic])
+  @@index([ownerUserId])
+}
+
+model NexiumSquadMember {
+  id       String          @id @default(cuid())
+  squadId  String
+  userId   String
+  role     NexiumSquadRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  squad NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, userId])
+  @@index([squadId])
+  @@index([userId])
+}
+
+model NexiumSquadInvite {
+  id          String                  @id @default(cuid())
+  squadId     String
+  userId      String
+  invitedById String
+  token       String                  @unique @default(cuid())
+  status      NexiumSquadInviteStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  squad     NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user      User        @relation("InvitedUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User        @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, userId])
+  @@index([userId])
+  @@index([squadId])
+  @@index([token])
+}
+
+enum NexiumSquadInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+// Squad billing — same plan products as users, scoped per squad
+model NexiumSquadSubscription {
+  id                   String    @id @default(cuid())
+  squadId              String
+  productId            String
+  stripeSubscriptionId String?   @unique
+  status               String    @default("active")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  metadata             Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  squad   NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([squadId])
+  @@index([productId])
+  @@index([status, currentPeriodEnd])
+}
+
+// Named API keys for user programmatic access (e.g. ShareX, CI/CD, integrations)
+model UserApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String // Human label, e.g. "ShareX Upload Key"
+  keyHash    String    @unique // SHA-256 hash — full key shown once on creation
+  prefix     String // First 12 chars for display, e.g. "ebk_abc12345"
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+}
+
+// Sign-in requests from desktop apps (device code flow). The API key is only
+// created when the app collects it, so no secret is ever stored here.
+model DeviceAuthorization {
+  id             String    @id @default(cuid())
+  deviceCodeHash String    @unique
+  userCode       String    @unique
+  clientId       String
+  deviceName     String
+  status         String    @default("pending")
+  userId         String?
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  approvedAt     DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+// Named API keys for squad programmatic access (e.g. CI/CD, integrations)
+model NexiumSquadApiKey {
+  id         String    @id @default(cuid())
+  squadId    String
+  name       String // Human label, e.g. "CI/CD Key"
+  keyHash    String    @unique // SHA-256 hash — full key shown once on creation
+  prefix     String // First 12 chars for display, e.g. "nsk_abc12345"
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  squad NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([squadId])
+  @@index([keyHash])
+}
+
+model UserBan {
+  id         String    @id @default(cuid())
+  userId     String
+  issuedById String
+  reason     String
+  type       String    @default("permanent") // 'temporary' | 'permanent'
+  expiresAt  DateTime?
+  liftedAt   DateTime?
+  liftedById String?
+  liftReason String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user     User @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  issuedBy User @relation("BanIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model UserReport {
+  id             String         @id @default(cuid())
+  reportedUserId String
+  reporterUserId String
+  category       ReportCategory
+  reason         String
+  details        String?
+  status         ReportStatus   @default(PENDING)
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  reportedUser User @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reporterUser User @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([reportedUserId, reporterUserId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SquadReport {
+  id             String         @id @default(cuid())
+  squadId        String
+  reporterUserId String
+  category       ReportCategory
+  reason         String
+  details        String?
+  status         ReportStatus   @default(PENDING)
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  squad        NexiumSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  reporterUser User        @relation("SquadReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, reporterUserId])
+  @@index([squadId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ContentReport {
+  id             String            @id @default(cuid())
+  contentType    ContentReportType
+  fileId         String?
+  urlId          String?
+  reporterUserId String
+  category       ReportCategory
+  reason         String
+  details        String?
+  status         ReportStatus      @default(PENDING)
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  file         File?         @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  url          ShortenedUrl? @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  reporterUser User          @relation("ContentReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  resolvedBy   User?         @relation("ContentReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([fileId])
+  @@index([urlId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Application {
+  id     String            @id @default(cuid())
+  userId String
+  type   ApplicationType
+  status ApplicationStatus @default(PENDING)
+
+  // Common fields
+  answers Json // Flexible answers object (form responses)
+  notes   String? // Internal admin notes
+
+  // Review fields
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies ApplicationReply[]
+
+  @@index([userId])
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+model ApplicationReply {
+  id            String   @id @default(cuid())
+  applicationId String
+  userId        String
+  content       String
+  isStaffReply  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([userId])
+}
+
+// A Vultr Object Storage *instance* (regional pool).
+// Admins provision one per region via Admin → Storage → Vultr.
+// Each paying user gets their own bucket created inside the appropriate instance.
+// This amortises the fixed Vultr instance cost across all users in that region.
+// Unified provisioned Object Storage pool — one record per admin-configured
+// regional pool regardless of provider (Vultr, Linode, OVHcloud, …).
+// Each paying user gets a bucket provisioned inside the pool that best matches
+// their region/tier preference.
+model ObjectStoragePool {
+  id          String   @id @default(cuid())
+  // 'vultr' | 'linode' | 'ovhcloud'
+  provider    String
+  // Provider-assigned resource identifier:
+  //   Vultr   → Object Storage instance UUID
+  //   Linode  → Access key label (unique per account)
+  //   OVHcloud → "<projectId>/<regionName>"
+  externalId  String
+  label       String
+  region      String
+  s3Hostname  String
+  s3AccessKey String
+  s3SecretKey String
+  tier        String   @default("standard")
+  status      String   @default("active") // 'pending' | 'active'
+  // Provider-specific extra data:
+  //   Vultr   → { clusterId: number }
+  //   Linode  → { keyId: number, linodeClusterId: string }
+  //   OVHcloud → { projectId: string, regionName: string, credentialAccess: string }
+  metadata    Json?
+  cfHostname    String?
+  cfDnsRecordId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  storageBuckets StorageBucket[]
+
+  @@unique([provider, externalId])
+  @@index([provider])
+  @@index([region])
+  @@index([status])
+}
+
+// Named, reusable S3 (or local) storage configuration blocks.
+// Admins create these in Settings → Storage and can assign them to users or squads
+// so that their uploads are routed to a specific bucket.
+model StorageBucket {
+  id                   String   @id @default(cuid())
+  name                 String
+  provider             String   @default("s3") // 's3' | 'local'
+  s3Bucket             String   @default("")
+  s3Region             String   @default("")
+  s3AccessKeyId        String   @default("")
+  s3SecretKey          String   @default("")
+  s3Endpoint           String?
+  s3ForcePathStyle     Boolean  @default(false)
+  // Internal shared pool buckets (isCore = true) vs user-dedicated buckets (isCore = false).
+  // Core buckets are selected by least-filled load balancing for users without a dedicated bucket.
+  isCore               Boolean  @default(false)
+  // Running count of files stored in this bucket — used for core bucket load balancing.
+  fileCount            Int      @default(0)
+  // Higher priority core buckets are preferred when file counts are equal.
+  // Useful for routing uploads to higher-performance or lower-latency buckets.
+  priority             Int      @default(0)
+  // Provider-backed buckets: links to the ObjectStoragePool this bucket lives in
+  // and the actual bucket name within that pool.
+  objectStoragePoolId  String?
+  poolBucketName       String?  // The actual bucket/container name within the pool
+  stripeSubscriptionId String?  // Subscription that triggered provisioning
+  provisionStatus      String   @default("active") // 'provisioning' | 'active' | 'deprovisioning'
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  objectStoragePool ObjectStoragePool? @relation(fields: [objectStoragePoolId], references: [id], onDelete: SetNull)
+  assignedUsers     User[]             @relation("UserStorageBucket")
+  assignedSquads    NexiumSquad[]      @relation("SquadStorageBucket")
+  files             File[]             @relation("FileBucket")
+
+  @@index([provider])
+  @@index([isCore])
+  @@index([objectStoragePoolId])
+  @@unique([poolBucketName])
+  @@unique([stripeSubscriptionId])
+}
+
+enum ContentReportType {
+  FILE
+  URL
+}
+
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  USER
+}
+
+enum FileVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum EventStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SCHEDULED
+}
+
+enum FileExpiration {
+  DISABLED
+  HOUR
+  DAY
+  WEEK
+  MONTH
+}
+
+enum ExpiryAction {
+  DELETE
+  SET_PRIVATE
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NexiumAvailability {
+  OPEN
+  LIMITED
+  CLOSED
+}
+
+enum NexiumSkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum NexiumSignalType {
+  GITHUB_REPO
+  DEPLOYED_APP
+  OPEN_SOURCE_CONTRIBUTION
+  SHIPPED_PRODUCT
+  COMMUNITY_IMPACT
+  ASSET_PACK
+  CERTIFICATION
+  OTHER
+}
+
+enum NexiumOpportunityType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  COLLAB
+  BOUNTY
+}
+
+enum NexiumOpportunityStatus {
+  DRAFT
+  OPEN
+  FILLED
+  CLOSED
+}
+
+enum NexiumApplicationStatus {
+  PENDING
+  VIEWED
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum NexiumSquadStatus {
+  FORMING
+  ACTIVE
+  COMPLETED
+  DISBANDED
+}
+
+enum NexiumSquadRole {
+  OWNER
+  MEMBER
+  OBSERVER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportCategory {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  IMPERSONATION
+  ABUSE
+  OTHER
+}
+
+enum ApplicationType {
+  STAFF
+  PARTNER
+  VERIFICATION
+  BAN_APPEAL
+  LIMIT_INCREASE
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}

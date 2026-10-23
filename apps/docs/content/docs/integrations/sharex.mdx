@@ -1,0 +1,88 @@
+---
+title: ShareX
+description: Configure ShareX for one-click screenshot uploads to Emberly on Windows.
+---
+
+Emberly integrates with [ShareX](https://getsharex.com/), the popular open-source screenshot and file uploader for Windows. Setup takes under a minute.
+
+## How It Works
+
+When you configure ShareX with Emberly:
+
+1. Press your screenshot hotkey in ShareX
+2. ShareX captures the screenshot
+3. It automatically uploads to Emberly via the API
+4. The shareable URL is copied to your clipboard instantly
+
+---
+
+## Setup
+
+### Step 1: Get Your Config File
+
+1. Go to your Emberly dashboard
+2. Navigate to **Profile → Uploads**
+3. Under **"ShareX"**, click **"Download Config"**
+4. A personalized `.sxcu` file is downloaded — it already contains your upload token and domain settings
+
+### Step 2: Import into ShareX
+
+1. Open ShareX
+2. Go to **Destinations → Custom uploader settings**
+3. Click **"Import"** → select the downloaded `.sxcu` file
+4. Click **"Set as active uploader"** for Image, Text, and File uploaders
+
+### Step 3: Test
+
+Press your screenshot hotkey. The screenshot is uploaded automatically and the URL appears in your notification tray and clipboard.
+
+---
+
+## Config File Format
+
+The downloaded `.sxcu` file looks like this:
+
+```json
+{
+  "Version": "15.0.0",
+  "Name": "Emberly",
+  "DestinationType": "ImageUploader, TextUploader, FileUploader",
+  "RequestMethod": "POST",
+  "RequestURL": "https://embrly.ca/api/files",
+  "Headers": {
+    "Authorization": "Bearer YOUR_TOKEN"
+  },
+  "Body": "MultipartFormData",
+  "FileFormName": "file",
+  "URL": "{json:data.url}",
+  "ThumbnailURL": "{json:data.url}",
+  "ErrorMessage": "{json:error}"
+}
+```
+
+If you have a custom domain set as primary, the `RequestURL` will use that domain automatically.
+
+---
+
+## Manual Configuration
+
+If you prefer to configure ShareX manually:
+
+1. Open ShareX → **Destinations → Custom uploader settings**
+2. Click **"New"** and name it "Emberly"
+3. Set **Request type** to `POST`
+4. Set **URL** to `https://embrly.ca/api/files` (or your custom domain)
+5. Add header: `Authorization: Bearer YOUR_TOKEN`
+6. Set **Body** to `Multipart form data`, field name `file`
+7. Set **URL** response path to `data.url`
+8. Set **Error message** response path to `error`
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Upload fails with 401 | Your token has changed — re-download the config |
+| URL not copied to clipboard | Check ShareX notifications settings |
+| Wrong domain in URL | Set your custom domain as primary in the dashboard |

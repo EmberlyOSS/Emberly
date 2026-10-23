@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "DocCategory" ADD VALUE 'INTEGRATIONS';

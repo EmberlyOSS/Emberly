@@ -1,0 +1,16 @@
+{
+  "title": "Integrations",
+  "root": true,
+  "pages": [
+    "index",
+    "flicker",
+    "flicker-development",
+    "examples",
+    "webhooks",
+    "sharex",
+    "flameshot",
+    "powershell",
+    "python-sdk",
+    "bash-scripting"
+  ]
+}

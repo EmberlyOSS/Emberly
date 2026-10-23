@@ -1,0 +1,103 @@
+---
+title: Account Settings
+description: Manage your Emberly account, security settings, and preferences.
+---
+
+## Profile
+
+### Edit Your Profile
+
+1. Go to **Profile → Profile**
+2. Click **"Edit Profile"**
+3. Update your **Profile Picture**, **Display Name**, **Bio**, or **Website**
+4. Click **"Save"**
+
+### Privacy Settings
+
+| Setting | Effect |
+|---------|--------|
+| **Public Profile** | Enables a public profile page visible to anyone |
+| **Share Stats** | Shows download counts on your public profile |
+| **Social Links** | Twitter, GitHub, LinkedIn, etc. |
+
+---
+
+## Account
+
+### Change Email
+
+1. **Profile → Profile → Email**
+2. Enter your new email address
+3. Click the verification link sent to the new address
+
+Keep access to your old email until the change is confirmed.
+
+### Change Password
+
+1. **Profile → Security → Change Password**
+2. Enter your current password
+3. Enter and confirm your new password
+
+**Password requirements:**
+- Minimum 8 characters
+- Mix of uppercase and lowercase letters
+- At least one number
+- At least one special character
+
+### Delete Account
+
+**Profile → Security → Delete Account**, then confirm with your password.
+
+<Callout type="error" title="This is permanent">
+  All files, URLs, domains, and data are immediately and irreversibly deleted.
+</Callout>
+
+---
+
+## Security
+
+### Two-Factor Authentication (2FA)
+
+1. **Profile → Security → Enable 2FA**
+2. Install any TOTP app (Google Authenticator, Authy, Microsoft Authenticator, etc.)
+3. Scan the QR code
+4. Enter the code from the app to confirm
+5. **Save your backup codes** in a safe place
+
+To disable, go to **Profile → Security → Disable 2FA** and confirm with a current code.
+
+### Upload Token
+
+Your upload token is used by integrations (ShareX, Flameshot, API clients) to authenticate uploads.
+
+- Find it at **Profile → Uploads → Upload Token**
+- Click **"Regenerate"** to invalidate the old token and issue a new one
+
+<Callout type="warn">
+  Regenerating your token will break all existing integrations until they are updated.
+</Callout>
+
+### Active Sessions
+
+View and revoke active login sessions under **Profile → Security → Sessions**.
+
+---
+
+## Notifications
+
+Configure email notifications under **Profile → Notifications**:
+
+| Notification | Default |
+|-------------|---------|
+| File expiration warning (2 days before) | On |
+| New collaborator added to your file | On |
+| Collaborator edit suggestions | On |
+| Security alerts (new login from new device) | On |
+
+---
+
+## Billing
+
+- **Profile → Billing → Upgrade Plan** — instant, pro-rated
+- **Profile → Billing → Manage Subscription** — cancel, downgrade, or view invoices
+- **Profile → Billing → Payment Method** — update card details

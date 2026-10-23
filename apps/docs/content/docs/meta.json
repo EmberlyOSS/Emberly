@@ -1,0 +1,12 @@
+{
+  "title": "Emberly Docs",
+  "pages": [
+    "getting-started",
+    "user-guide",
+    "integrations",
+    "api",
+    "security",
+    "self-hosting",
+    "staff"
+  ]
+}

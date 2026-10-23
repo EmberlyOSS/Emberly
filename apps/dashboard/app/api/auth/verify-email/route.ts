@@ -1,0 +1,172 @@
+import { appUrl } from '@/lib/config/env'
+import { NextResponse } from 'next/server'
+
+import { prisma } from '@emberly/db'
+import { sendTemplateEmail, WelcomeEmail } from '@/lib/emails'
+import { emitAuditEvent } from '@/lib/events/audit-helper'
+import { parseVerificationCodes } from '@/lib/auth/service'
+
+interface VerificationCode {
+    code: string
+    shortCode?: string
+    context: string
+    expiresAt: number
+}
+
+async function verifyToken(token: string) {
+    // Find users with verification codes and check for matching token or short code
+    const users = await prisma.user.findMany({
+        where: {
+            emailVerified: null,
+            verificationCodes: { isEmpty: false },
+        },
+        select: {
+            id: true,
+            email: true,
+            name: true,
+            verificationCodes: true,
+        },
+    })
+
+    let matchedUser: { id: string; email: string | null; name: string | null; verificationCodes: string[] } | null = null
+    let matchedCode: VerificationCode | null = null
+
+    for (const user of users) {
+        const codes = parseVerificationCodes<VerificationCode>(user.verificationCodes)
+        // Check both the full token (for URL clicks) and short code (for manual entry)
+        const validCode = codes.find(
+            (c) =>
+                c.context === 'email-verification' &&
+                (c.code === token || c.shortCode === token) &&
+                c.expiresAt > Date.now()
+        )
+        if (validCode) {
+            matchedUser = user
+            matchedCode = validCode
+            break
+        }
+    }
+
+    if (!matchedUser || !matchedCode) {
+        return null
+    }
+
+    // Remove the used verification code and mark email as verified
+    const remainingCodes = parseVerificationCodes<VerificationCode>(matchedUser.verificationCodes)
+        .filter((c) => !(c.context === 'email-verification' && c.code === matchedCode!.code))
+        .map((c) => JSON.stringify(c))
+
+    const verifiedUser = await prisma.user.update({
+        where: { id: matchedUser.id },
+        data: {
+            emailVerified: new Date(),
+            verificationCodes: remainingCodes,
+        },
+        select: {
+            id: true,
+            email: true,
+            name: true,
+        },
+    })
+
+    if (verifiedUser.email) {
+        // Emit audit event (fire-and-forget)
+        void emitAuditEvent('account.email-verified', {
+            userId: verifiedUser.id,
+            email: verifiedUser.email,
+        })
+    }
+
+    // Send welcome email after successful verification
+    void (async () => {
+        try {
+            if (!verifiedUser.email) return
+            const dashboardUrl = `${appUrl()}/dashboard`
+            
+            await sendTemplateEmail({
+                to: verifiedUser.email,
+                subject: 'Welcome to Emberly!',
+                template: WelcomeEmail,
+                props: {
+                    name: verifiedUser.name || undefined,
+                    verificationUrl: dashboardUrl,
+                },
+            })
+            
+            console.log(`[Auth] Welcome email sent to ${verifiedUser.email} after email verification`)
+        } catch (err) {
+            console.error('Failed to send welcome email after verification', err)
+        }
+    })()
+
+    return matchedUser
+}
+
+export async function GET(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url)
+        const token = searchParams.get('token')
+
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Missing verification token' },
+                { status: 400 }
+            )
+        }
+
+        const result = await verifyToken(token)
+
+        if (!result) {
+            return NextResponse.json(
+                { error: 'Invalid or expired verification token' },
+                { status: 400 }
+            )
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Email verified successfully! You can now access your account.',
+        })
+    } catch (error) {
+        console.error('Email verification error:', error)
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        )
+    }
+}
+
+export async function POST(req: Request) {
+    try {
+        const json = await req.json()
+        const token = json.token || json.code
+
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Missing verification token' },
+                { status: 400 }
+            )
+        }
+
+        const result = await verifyToken(token)
+
+        if (!result) {
+            return NextResponse.json(
+                { error: 'Invalid or expired verification token' },
+                { status: 400 }
+            )
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Email verified successfully! You can now access your account.',
+        })
+    } catch (error) {
+        console.error('Email verification error:', error)
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        )
+    }
+}
+

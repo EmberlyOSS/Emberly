@@ -1,0 +1,20 @@
+{
+  "name": "@emberly/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./tsconfig/node.json": "./tsconfig/node.json",
+    "./tailwind": "./tailwind/preset.ts",
+    "./theme.css": "./tailwind/theme.css"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "tailwindcss-animate": "^1.0.7"
+  }
+}

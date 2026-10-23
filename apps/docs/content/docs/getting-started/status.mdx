@@ -1,0 +1,59 @@
+---
+title: Service Status
+description: Check the current operational status of Emberly services.
+---
+
+Emberly's live status page is at **[emberlystat.us](https://emberlystat.us)**.
+
+It shows real-time health for all Emberly services including uploads, the API, dashboard, and storage.
+
+---
+
+## Status API
+
+You can also check status programmatically:
+
+```http
+GET /api/status
+```
+
+No authentication required. Returns the current status summary from [emberlystat.us](https://emberlystat.us).
+
+**Response:**
+
+```json
+{
+  "page": {
+    "name": "Emberly Status",
+    "url": "https://emberlystat.us",
+    "status": "UP"
+  },
+  "activeIncidents": [],
+  "activeMaintenances": []
+}
+```
+
+**`page.status` values:**
+
+| Value | Meaning |
+|-------|---------|
+| `UP` | All systems operational |
+| `DOWN` | One or more services degraded |
+| `UNKNOWN` | Status page unreachable |
+
+`activeIncidents` and `activeMaintenances` are arrays of open incident or maintenance objects from the Kener status page.
+
+---
+
+## Subscribing to Status Updates
+
+Visit [emberlystat.us](https://emberlystat.us) to subscribe to incident notifications via email or RSS.
+
+---
+
+## Reporting an Issue
+
+If you notice a problem not reflected on the status page:
+
+- Email **support@embrly.ca**
+- Ask in the [Emberly Discord](https://discord.gg/36spBmzZVB)

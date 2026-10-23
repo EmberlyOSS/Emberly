@@ -1,0 +1,160 @@
+---
+title: Domains API
+description: Manage custom domains for file uploads via the Emberly API.
+---
+
+<Callout type="warn">
+  **Cloud only.** Custom domains run on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted). 
+  
+  * Requires a **session cookie** (authenticated browser session), not an upload token these are used by the dashboard, not typically needed for external integrations.
+</Callout>
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/domains` | List your domains |
+| `POST` | `/api/domains` | Add a new domain |
+| `POST` | `/api/domains/[id]/cf-check` | Trigger DNS verification |
+| `PATCH` | `/api/domains/[id]` | Update a domain (set primary etc.) |
+| `DELETE` | `/api/domains/[id]` | Remove a domain |
+
+---
+
+## List Domains
+
+### `GET /api/domains`
+
+Returns all your custom domains and your usage limits.
+
+**Response (200):**
+
+```json
+{
+  "domains": [
+    {
+      "id": "dom_abc123",
+      "domain": "files.example.com",
+      "verified": true,
+      "isPrimary": true,
+      "cfStatus": "active",
+      "createdAt": "2026-01-15T10:00:00Z"
+    }
+  ],
+  "domainLimit": {
+    "allowed": 3,
+    "base": 1,
+    "purchased": 1,
+    "perkBonus": 1,
+    "used": 1,
+    "remaining": 2
+  }
+}
+```
+
+`domainLimit.allowed = base + purchased + perkBonus`  
+`perkBonus` comes from GitHub contributor and Discord booster perks.
+
+---
+
+## Add a Domain
+
+### `POST /api/domains`
+
+```json
+{ "domain": "files.example.com" }
+```
+
+**Responses:**
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Domain created — add CNAME to verify |
+| `400` | Invalid domain format |
+| `403` | Domain slot limit reached |
+| `409` | Domain already registered |
+
+A new domain is created with `cfStatus: "awaiting_cname"`. You must add a CNAME before verifying.
+
+---
+
+## Verify a Domain
+
+### `POST /api/domains/[id]/cf-check`
+
+Triggers a DNS check and Cloudflare provisioning attempt.
+
+**Responses:**
+
+| Status | Meaning |
+|--------|---------|
+| `202` | Verification started — check again in a moment |
+| `200` | Verification complete — `status` field shows new state |
+| `409` | CNAME missing or incorrect — `expected` field shows required target |
+| `429` | Too many attempts (10 per 10 minutes) |
+
+```bash
+curl -X POST \
+  -b cookies.txt -c cookies.txt \
+  https://embrly.ca/api/domains/dom_abc123/cf-check
+```
+
+---
+
+## Update a Domain
+
+### `PATCH /api/domains/[id]`
+
+**Set as primary domain:**
+
+```json
+{ "action": "setPrimary" }
+```
+
+The domain must be verified before it can be set as primary.
+
+**Rename the domain:**
+
+```json
+{ "action": "update", "domain": "new.example.com" }
+```
+
+Returns `204 No Content`.
+
+---
+
+## Delete a Domain
+
+### `DELETE /api/domains/[id]`
+
+Returns `204 No Content`. If the domain was primary, no domain becomes primary — you must set a new one.
+
+---
+
+## Example: Full Setup Flow
+
+```bash
+# 1. Add domain
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -b cookies.txt -c cookies.txt \
+  -d '{"domain":"files.example.com"}' \
+  https://embrly.ca/api/domains
+
+# 2. Add CNAME in your DNS panel:
+#    files.example.com → CNAME → cname.emberly.site
+
+# 3. Trigger verification
+curl -s -X POST \
+  -b cookies.txt -c cookies.txt \
+  https://embrly.ca/api/domains/dom_abc123/cf-check
+
+# 4. Set as primary
+curl -s -X PATCH \
+  -H "Content-Type: application/json" \
+  -b cookies.txt -c cookies.txt \
+  -d '{"action":"setPrimary"}' \
+  https://embrly.ca/api/domains/dom_abc123
+```
+
+See the [Custom Domains user guide](/docs/user-guide/custom-domains) for full setup instructions including Cloudflare and DNS configuration.

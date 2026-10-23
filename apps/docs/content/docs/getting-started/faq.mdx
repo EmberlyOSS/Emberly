@@ -1,0 +1,140 @@
+---
+title: FAQ
+description: Quick answers to common questions about Emberly.
+---
+
+## Account & Sign Up
+
+### How do I create an account?
+
+1. Visit [embrly.ca](https://embrly.ca) and click **"Sign Up"**
+2. Enter your email and create a password
+3. Verify your email (click the link we send you)
+
+You start on the **Spark plan** (10 GB free) with no credit card required.
+
+### Can I upgrade or downgrade my plan?
+
+Yes. Go to **Profile → Billing**:
+
+- **Upgrade** — instant, pro-rated for the remainder of your billing cycle
+- **Downgrade** — takes effect at the next renewal date
+- **Cancel** — anytime, no lock-in
+
+### How do I reset my password?
+
+1. Go to the login page and click **"Forgot Password?"**
+2. Enter your email address
+3. Click the link in the email we send
+4. Set a new password
+
+### How do I delete my account?
+
+**Profile → Security → Delete Account**, then enter your password to confirm.
+
+<Callout type="warn">
+  Account deletion is permanent. All files and data are deleted immediately and cannot be recovered.
+</Callout>
+
+---
+
+## Files & Uploads
+
+### What file types are supported?
+
+Most file types are accepted. The following are blocked for security reasons:
+
+- Executable files (`.exe`, `.bat`, `.sh`, `.ps1`, etc. when uploaded directly)
+- Files that trigger malware detection by VirusTotal
+
+### What are the upload size limits?
+
+| Plan | Max single upload |
+|------|-------------------|
+| Spark | 500 MB |
+| Glow | 1 GB |
+| Flare | 2 GB |
+| Blaze | 5 GB |
+| Inferno | 10 GB |
+| Ember | Unlimited |
+
+Files larger than your plan limit must be split or upgraded.
+
+### Can I password-protect a file?
+
+Yes. When uploading or by editing an existing file, set a password. Anyone accessing the file will need to enter it. Passwords are hashed server-side — we never see them in plain text.
+
+### Can I set a file to auto-delete?
+
+Yes. Set an **expiration date** on upload or afterward via the edit dialog. The file is automatically deleted at the set time. You'll receive an email reminder 2 days before expiration.
+
+### How do I share a private file with someone?
+
+Add them as a **collaborator**:
+
+1. Open the file details
+2. Click **"Add Collaborator"**
+3. Enter their email address
+4. Choose **View** or **Edit** permission
+
+They'll receive an email invite. You can revoke access at any time.
+
+---
+
+## Security & Privacy
+
+### Do you scan uploaded files?
+
+Yes. Every upload is scanned using a **VirusTotal hash lookup** against 71+ antivirus engines. The file content itself is never sent to VirusTotal — only its SHA-256 hash. See [VirusTotal Integration](/docs/security/virustotal) for details.
+
+### What is the HIBP check at login?
+
+When you sign in, Emberly checks whether your password appears in known data breach databases via [HaveIBeenPwned](https://haveibeenpwned.com/). Your password is never sent — only the first 5 characters of its SHA-1 hash. If found, you're warned and given the option to change your password. See [HIBP Integration](/docs/security/hibp) for details.
+
+### Is my data encrypted?
+
+Yes:
+
+- Files are encrypted at rest in storage
+- All connections use HTTPS (TLS)
+- Passwords are hashed with bcrypt
+- File passwords use server-side hashing
+
+---
+
+## Custom Domains
+
+### How many custom domains can I have?
+
+Your limit is based on your plan, plus any bonuses from perks:
+
+| Plan | Base Domains |
+|------|-------------|
+| Spark | 3 |
+| Glow | 5 |
+| Flare | 10 |
+| Blaze | Unlimited |
+| Inferno | Unlimited |
+| Ember | Unlimited |
+
+Contributors and Discord boosters can earn additional slots. See [Domain Perks](/docs/user-guide/contributor-perks).
+
+### How do I verify a custom domain?
+
+Add a CNAME record pointing your domain to `cname.emberly.site`, then click **"Verify"** in your dashboard. TLS is provisioned automatically via Cloudflare. See the [Custom Domains guide](/docs/user-guide/custom-domains) for full instructions.
+
+---
+
+## Billing
+
+### What payment methods are accepted?
+
+Credit and debit cards via Stripe. More methods may be added in future.
+
+### Do you offer refunds?
+
+Contact [support@embrly.ca](mailto:support@embrly.ca) within 7 days of a charge for billing issues.
+
+### Do you offer student or non-profit discounts?
+
+Not currently. Check the [pricing page](https://embrly.ca/pricing) for any active promotions.

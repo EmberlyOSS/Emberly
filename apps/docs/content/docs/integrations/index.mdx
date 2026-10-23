@@ -1,0 +1,42 @@
+---
+title: Integrations
+description: Connect Emberly to your favorite screenshot tools, scripting environments, and development workflows.
+---
+
+Emberly works with a wide range of tools. Pick one-click integrations for everyday use, or use the API directly for custom workflows.
+
+<Cards>
+  <Card title="Flicker" description="Native cross-platform desktop uploader for screenshots and files." href="/docs/integrations/flicker" />
+  <Card title="Flicker Development" description="Complete guide to building and developing Flicker." href="/docs/integrations/flicker-development" />
+  <Card title="API Examples" description="Code examples in Node.js, Python, Go, Bash, and JavaScript." href="/docs/integrations/examples" />
+  <Card title="Webhooks" description="Receive real-time notifications for uploads, deletions, and account changes." href="/docs/integrations/webhooks" />
+  <Card title="ShareX" description="One-click Windows screenshot uploader — the fastest setup." href="/docs/integrations/sharex" />
+  <Card title="Flameshot" description="Linux and Windows screenshot tool with automatic URL copying." href="/docs/integrations/flameshot" />
+  <Card title="PowerShell" description="Automate uploads from the Windows terminal." href="/docs/integrations/powershell" />
+  <Card title="Python SDK" description="Embed Emberly into Python applications." href="/docs/integrations/python-sdk" />
+  <Card title="Bash / cURL" description="Shell script automation for Linux/macOS servers." href="/docs/integrations/bash-scripting" />
+</Cards>
+
+## Getting Your Upload Token
+
+All integrations authenticate using your **Upload Token**:
+
+1. Go to **Profile → Uploads**
+2. Copy your **Upload Token**
+3. Paste it into the integration configuration
+
+<Callout type="warn" title="Keep your token private">
+  Your token grants full upload access to your account. Never commit it to source control or share it publicly. You can regenerate it at any time from your profile settings.
+</Callout>
+
+## API Endpoint
+
+All integrations upload to:
+
+```
+POST https://embrly.ca/api/files
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+Content-Type: multipart/form-data
+```
+
+See the [Files API reference](/docs/api/files) for the full request/response format.

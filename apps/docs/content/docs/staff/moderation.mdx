@@ -1,0 +1,475 @@
+---
+title: Moderation Guidelines
+description: Policies and procedures for moderating content and user behavior on Emberly.
+---
+
+This document outlines moderation policies, decision frameworks, and enforcement procedures.
+
+## Moderation Philosophy
+
+**Fair, consistent, and proportionate.**
+
+- Protect the community from harmful content
+- Respect user privacy and freedom
+- Apply rules consistently across all users
+- Provide clear communication when taking action
+- Allow appeals and corrections
+- Document all decisions
+
+---
+
+## Prohibited Content
+
+### Absolute Prohibitions (Immediate Removal)
+
+Content that is **automatically prohibited and removed on sight:**
+
+1. **Malware & Exploits**
+   - Executable files flagged by antivirus
+   - Exploit kits, weaponized PDFs
+   - Phishing kits, credential stealers
+   - Action: Remove immediately, no warning
+   - User notification: Standard (file was malware)
+
+2. **Child Exploitation**
+   - Any CSAM (child sexual abuse material)
+   - Any sexualization of minors
+   - Action: Remove, ban user permanently, report to NCMEC
+   - User notification: None (direct law enforcement involvement)
+
+3. **Terroristic Content**
+   - Bomb-making instructions
+   - Manifesto related to imminent violence
+   - Recruitment for terrorist organizations
+   - Action: Remove, ban, report to law enforcement
+   - User notification: None
+
+4. **Stolen Financial Information**
+   - Credit card dumps
+   - Bank login databases
+   - PayPal/Venmo credentials
+   - Action: Remove, ban, investigate user
+   - User notification: We removed stolen financial data
+
+---
+
+### Policy Violations (Conditional Enforcement)
+
+Content that violates policies but may have legitimate context:
+
+1. **Copyright Infringement**
+   - Published copyrighted works (books, movies, etc.)
+   - Software license cracks/keygens
+   - Assessment: Check for fair use (review, commentary, education)
+   - Action: If legitimate use → keep; Infringing → DMCA takedown
+   - User notification: Copyright claim explanation
+
+2. **Spam**
+   - Identical files uploaded repeatedly
+   - Links to scams or malware
+   - Commercial promotion in public spaces
+   - Investigation: User behavior pattern analysis
+   - Action: Warning first → temporary suspension → permanent ban
+   - Escalation: If coordinated spam ring, involve law enforcement
+
+3. **Hate Speech**
+   - Slurs or dehumanizing language targeting protected groups
+   - Assessment: Context (quote for discussion vs. endorsement)
+   - Action: First offense → warning; Repeat → temporary ban
+   - Appeals: Available via support email
+
+4. **Harassment & Threats**
+   - Threats of violence against specific individuals
+   - Sustained harassment campaigns
+   - Doxxing (publishing private info)
+   - Assessment: Severity, targeting, pattern
+   - Action: Warn → ban from service if severe
+   - User protection: Offer to restrict profile visibility
+
+---
+
+## Ban Severity Levels
+
+The ban API takes an arbitrary `durationDays` value — these are suggested defaults per severity, not hard-coded tiers.
+
+| Level | Suggested Duration | When to Use | Appeal |
+|-------|----------|-----------|--------|
+| Warning | None | First minor violation | N/A |
+| Temporary | ~7 days | Pattern of behavior | After suspension |
+| Extended | ~30 days | Serious violation | After suspension |
+| Permanent | Indefinite | Extreme/repeated violations | Email after 6 months |
+
+---
+
+## Moderation Process
+
+### Step 1: Report Received
+
+When a report comes in:
+
+1. Log into admin dashboard
+2. Go to **Reports** section
+3. Filter by status: `open`
+4. Choose oldest report first (FIFO)
+5. Click to open full report
+
+Save the report ID for tracking.
+
+---
+
+### Step 2: Initial Assessment
+
+For each report, determine:
+
+1. **What is reported?**
+   - File content
+   - User behavior
+   - Account activity
+
+2. **What is the violation?**
+   - Which policy is broken?
+   - How severe?
+
+3. **Is there ambiguity?**
+   - If yes, reach out to moderator supervisor
+   - If no, proceed
+
+4. **What action is appropriate?**
+   - Warning
+   - Temporary ban
+   - Permanent ban
+   - Content removal
+   - Investigation
+
+---
+
+### Step 3: Take Action
+
+**For content removal:**
+```
+POST /api/admin/content/[fileId]
+{
+  "reason": "Copyright infringement",
+  "notifyUser": true
+}
+```
+
+**For user warning:**
+```
+Send email via /api/admin/emails/send
+Subject: "Warning: Your account violated our terms"
+Body: Explain violation and consequences
+```
+
+**For user ban:**
+```
+POST /api/admin/users/[userId]/ban
+{
+  "type": "temporary",
+  "durationDays": 7,
+  "reason": "Repeated copyright violations",
+  "notifyUser": true
+}
+```
+
+---
+
+### Step 4: Document Decision
+
+Always document:
+
+1. **What was the report?**
+2. **What did we find?**
+3. **What action did we take?**
+4. **Why did we take that action?**
+
+Update report status:
+
+```
+PATCH /api/admin/reports/[reportId]
+{
+  "status": "resolved",
+  "action": "user_warned",
+  "notes": "User warned about copyright violations. Explanation of policy sent via email."
+}
+```
+
+---
+
+### Step 5: Communicate with User
+
+When taking action, always notify the user **unless it's a P1 offense** (CSAM, malware, etc.)
+
+**Email Template - Warning:**
+```
+Subject: Account Warning
+
+Hi [Name],
+
+We received reports about your activity on Emberly and found violations of our Terms of Service.
+
+Violation: [Specific violation]
+Details: [Explain what happened]
+
+Actions you should take:
+- [Stop doing X]
+- [Don't do Y again]
+
+If you believe this is a mistake, reply to this email within 7 days.
+
+Next step: Another violation in 30 days will result in a temporary ban.
+
+Thanks,
+Emberly Moderation Team
+```
+
+**Email Template - Ban:**
+```
+Subject: Account Suspended
+
+Hi [Name],
+
+Your account has been temporarily suspended due to repeated violations of our Terms of Service.
+
+Reason: [Explain clearly]
+Duration: [X days]
+Suspended at: [Date/time]
+Will restore: [Date/time]
+
+You can appeal this decision by replying to this email. Include:
+1. Why you believe this was a mistake
+2. How you'll avoid this in the future
+
+Thanks,
+Emberly Moderation Team
+```
+
+---
+
+## Appeal Process
+
+Users can appeal any moderation decision **except CSAM/malware/terrorism.**
+
+### Appeal Workflow
+
+1. User sends appeal email to support
+2. Tag as `[APPEAL]` in subject
+3. Assign to **appeals specialist** (usually a manager)
+4. Appeals specialist:
+   - Reviews original evidence
+   - Considers appeal merit
+   - Checks for policy misapplication
+   - Makes decision (uphold, modify, reverse)
+5. Send response to user
+
+Timeline: Respond within 7 days
+
+---
+
+## Escalation
+
+When in doubt, escalate to your supervisor:
+
+- **Ambiguous case?** → Escalate
+- **Multiple violations?** → Escalate
+- **Permanent ban?** → Requires approval from manager
+- **Security/legal issue?** → Escalate to compliance team
+
+**Escalation email:**
+```
+Subject: Moderation decision needed: [Report ID]
+
+Context:
+- What is reported
+- Initial assessment
+- Why you're unsure
+
+Recommendation:
+- What action do you think is appropriate
+- Why
+
+cc: supervisor
+```
+
+---
+
+## Common Scenarios
+
+### Scenario 1: Copyright Film
+
+**Report Content:** Copyrighted movie file uploaded publicly
+
+**Investigation:**
+- Is this for sale/commercial use? (Infringing)
+- Is it an excerpt for educational discussion? (Possibly fair use)
+- Is there copyright notice? (Supports infringement)
+
+**Decision:** Check file size/details
+- Full movie (3GB) → Infringing, remove
+- Clip (100MB) with discussion → Examine context, likely keep
+- Promotional trailer → Likely fair use, keep
+
+**Action:** If removing, DMCA notice to user. If keeping, document reason.
+
+---
+
+### Scenario 2: Political Content
+
+**Report Content:** File with "offensive political viewpoint"
+
+**Investigation:**
+- Does it violate policy? (Policy bans illegal content, not opinions)
+- Is it hate speech? (Depends on language used)
+- Is reporter disagreeing with politics? (Not a violation)
+
+**Decision:** Political speech is protected unless it meets hate speech threshold.
+
+**Action:** Likely no action. Respond to reporter: "This doesn't violate our policy."
+
+---
+
+### Scenario 3: Suspicious Account
+
+**Report Content:** "User is violating TOS"
+
+**Investigation:**
+- What is the actual violation?
+- Is there evidence?
+- Pattern of behavior?
+
+**Decision:** Must see specific violation, not just suspicious behavior.
+
+**Action:** If no clear violation, close report. If pattern detected, monitor account and investigate.
+
+---
+
+## Tools You'll Use
+
+### Admin Dashboard
+
+- **Reports page** — See all reports, status, evidence
+- **Users page** — Search users, view history, take action
+- **Audit logs** — See all moderation actions taken
+- **Flagged files** — Review files marked suspicious
+
+### API Endpoints
+
+Primary API calls you'll make:
+
+```bash
+# Get a report
+curl -H "Authorization: Bearer ADMIN_KEY" \
+  https://embrly.ca/api/admin/reports/report_123
+
+# Update report status
+curl -X PATCH -H "Authorization: Bearer ADMIN_KEY" \
+  https://embrly.ca/api/admin/reports/report_123 \
+  -d '{
+    "status": "resolved",
+    "action": "user_banned",
+    "notes": "Pattern of spam"
+  }'
+
+# Ban a user
+curl -X POST -H "Authorization: Bearer ADMIN_KEY" \
+  https://embrly.ca/api/admin/users/user_456/ban \
+  -d '{
+    "type": "temporary",
+    "durationDays": 7,
+    "reason": "Copyright violations",
+    "notifyUser": true
+  }'
+
+# Remove content
+curl -X DELETE -H "Authorization: Bearer ADMIN_KEY" \
+  https://embrly.ca/api/admin/content/file_789 \
+  -d '{
+    "reason": "Malware",
+    "notifyUser": true
+  }'
+```
+
+See [Staff Admin API Reference](/docs/api/staff-admin-reference) for full documentation.
+
+---
+
+## Metrics & Reporting
+
+### Weekly Metrics
+
+Track and report:
+- Reports received: `[N]`
+- Reports resolved: `[N]`  
+- Average resolution time: `[X hours]`
+- User bans: `[N]`
+- Appeals: `[N]` (and outcomes)
+
+### Monthly Report
+
+Submit to ops lead:
+- Summary of moderation activity
+- Policy changes or clarifications needed
+- Escalations or edge cases
+- Team capacity/improvements
+
+---
+
+## Special Cases
+
+### Selfie with ID Doxxing
+
+User uploads photo with ID visible (can view home address, full name, etc.)
+
+**Action:** Remove immediately, warn user "Don't share personal documents publicly"
+
+### TikTok/Instagram Download
+
+User is sharing content from other platforms
+
+**Assessment:** 
+- Is it modified? (Stolen content)
+- Is it only a link? (Not infringing)
+- Is it their own content being re-shared? (OK)
+
+**Action:** If stolen → Remove; If link/own content → OK
+
+### Bot Account Farming
+
+Multiple accounts created by same person, spamming links
+
+**Investigation:**
+- IP address check
+- Account creation pattern
+- Behavior similarity
+- File upload pattern
+
+**Action:** Ban all linked accounts, potentially IP-ban if recurrent
+
+---
+
+## FAQs About Moderation
+
+**Q: Can I ban someone for disagreeing with me?**
+A: No. We don't ban people for opinions, only policy violations.
+
+**Q: What if someone appeals and they're right?**
+A: Reverse the action, apologize sincerely, and document the error.
+
+**Q: Can I warn someone twice and then ban?**
+A: Use progressive discipline, but severity of violation matters. One serious violation might lead to permanent ban.
+
+**Q: What if the report is fake?**
+A: Close it and document. If same person submits false reports repeatedly, note the pattern.
+
+**Q: Am I allowed to ban myself to test the system?**
+A: No. Use test accounts instead.
+
+---
+
+## Support
+
+Questions about moderation?
+- Ask in Slack: `#emberly-moderation`
+- Email supervisor
+- Review past decisions for precedent
+- Check internal wiki for new policy updates

@@ -1,0 +1,203 @@
+---
+title: File Collaboration
+description: Share files with specific users and collaborate with role-based edit permissions.
+---
+
+Emberly lets you share individual files with other users as **collaborators**. Collaborators can view, edit, or suggest changes depending on their role.
+
+---
+
+## Adding a Collaborator
+
+From the file detail page:
+
+1. Open the file in your dashboard
+2. Click **Share** → **Invite Collaborator**
+3. Enter the collaborator's **email address** or **profile URL ID**
+4. Choose a role: **Editor** or **Suggester**
+5. Click **Invite**
+
+The collaborator receives an email notification and the file appears in their **Shared with Me** view.
+
+<Callout title="Owner only">
+  Only the file owner can add or remove collaborators.
+</Callout>
+
+---
+
+## Collaborator Roles
+
+| Role | View | Download | Suggest Edits | Edit Directly |
+|------|------|----------|---------------|---------------|
+| **Suggester** | ✓ | ✓ | ✓ | — |
+| **Editor** | ✓ | ✓ | ✓ | ✓ |
+
+---
+
+## Edit Suggestions
+
+When **Allow Suggestions** is enabled on a file, Suggester-role collaborators can submit proposed edits that the owner can review and accept or reject. Editors can already edit the file directly and don't need to go through the suggestion queue.
+
+### Submitting a Suggestion
+
+Suggesters can propose changes to a file's content. A suggestion is queued as `PENDING` until the owner acts on it.
+
+### Reviewing Suggestions
+
+As the file owner:
+1. Open the file
+2. Go to the **Suggestions** tab
+3. Preview each suggestion
+4. Click **Approve** or **Reject**
+
+Approved suggestions replace the file content. Rejected suggestions are dismissed.
+
+---
+
+## Shared With Me
+
+All files shared with you appear at [embrly.ca/dashboard/files](https://embrly.ca/dashboard/files) under the **Shared** filter. Each entry shows:
+
+- File name and type
+- Owner name and avatar
+- Your role (`EDITOR` / `SUGGESTER`)
+- Number of pending suggestions, if suggestions are enabled on the file
+
+---
+
+## API Reference
+
+### List Shared Files
+
+```http
+GET /api/files/shared
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+```
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | `1` | Page number |
+| `limit` | number | `20` | Items per page |
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "id": "clxyz...",
+      "name": "design-brief.pdf",
+      "urlPath": "/johndoe/design-brief.pdf",
+      "mimeType": "application/pdf",
+      "size": 204800,
+      "visibility": "PRIVATE",
+      "uploadedAt": "2026-01-10T14:00:00Z",
+      "isPaste": false,
+      "role": "EDITOR",
+      "owner": {
+        "id": "cluser...",
+        "name": "Jane Smith",
+        "urlId": "janesmith",
+        "image": "https://..."
+      },
+      "pendingSuggestions": 2
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pageCount": 1
+  }
+}
+```
+
+---
+
+### Get File Collaborators
+
+```http
+GET /api/files/{id}/collaborators
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+```
+
+Returns the list of collaborators and whether suggestions are enabled. Only the file owner can call this endpoint.
+
+**Response:**
+
+```json
+{
+  "collaborators": [
+    {
+      "role": "EDITOR",
+      "user": {
+        "id": "cluser...",
+        "name": "Alex Johnson",
+        "email": "alex@example.com",
+        "image": "https://...",
+        "urlId": "alexj"
+      }
+    }
+  ],
+  "allowSuggestions": true
+}
+```
+
+---
+
+### Add a Collaborator
+
+```http
+POST /api/files/{id}/collaborators
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "userEmail": "alex@example.com",
+  "role": "EDITOR"
+}
+```
+
+You can use either `userEmail` or `userUrlId`. At least one is required.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `userEmail` | string | one of | Collaborator's email address |
+| `userUrlId` | string | one of | Collaborator's profile URL ID |
+| `role` | string | no | `EDITOR` (default) or `SUGGESTER` |
+
+The collaborator receives an email notification upon being added.
+
+---
+
+### Remove a Collaborator
+
+```http
+DELETE /api/files/{id}/collaborators/{userId}
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+```
+
+Removes the specified user as a collaborator. Only the file owner can do this.
+
+---
+
+### Get Suggestions
+
+```http
+GET /api/files/{id}/suggestions?status=PENDING
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+```
+
+| `status` value | Description |
+|----------------|-------------|
+| `PENDING` | Awaiting owner review (default) |
+| `APPROVED` | Already accepted |
+| `REJECTED` | Already dismissed |
+
+Only the file owner can view suggestions.

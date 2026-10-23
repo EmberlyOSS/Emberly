@@ -1,0 +1,29 @@
+{
+  "name": "@emberly/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "deploy": "prisma migrate deploy",
+    "studio": "prisma studio",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.3.0",
+    "@prisma/client": "^7.3.0"
+  },
+  "devDependencies": {
+    "@emberly/config": "workspace:*",
+    "@types/node": "^25.2.2",
+    "dotenv": "^17.2.3",
+    "prisma": "^7.3.0",
+    "typescript": "^5.9.3"
+  }
+}

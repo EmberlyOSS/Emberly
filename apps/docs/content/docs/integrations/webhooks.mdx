@@ -1,0 +1,53 @@
+---
+title: Webhooks
+description: How Emberly uses inbound Stripe webhooks, and the status of outbound webhooks.
+---
+
+<Callout type="warn" title="Outbound webhooks not yet available">
+  Emberly does not currently support outbound webhooks — you cannot subscribe to events like file uploads or deletions from your own application. This page documents the **inbound** webhook Emberly uses to receive events from Stripe. Watch the [changelog](https://embrly.ca/changelog) for outbound webhook announcements.
+</Callout>
+
+---
+
+## Stripe Payment Webhook
+
+Emberly receives Stripe events at:
+
+```
+POST /api/payments/webhook
+```
+
+This endpoint is for Stripe's use only — do not call it directly. Stripe signs every request with your webhook secret; Emberly verifies the signature before processing.
+
+### Handled Events
+
+| Event | What Emberly does |
+|-------|------------------|
+| `checkout.session.completed` | Activates a new subscription or one-off purchase (domain slots, storage buckets, etc.) and provisions any associated resources |
+| `invoice.payment_succeeded` | Records the payment, renews the subscription period, and sends a receipt email |
+| `invoice.payment_failed` | Marks the subscription as past-due and sends a payment failure email with the next retry date |
+| `customer.subscription.updated` | Syncs plan changes (upgrades and downgrades) and adjusts storage/feature limits accordingly |
+| `customer.subscription.deleted` | Cancels the subscription, revokes plan-specific features, and deprovisions dedicated storage buckets |
+| `charge.failed` | Logs the failed charge for support visibility |
+| `charge.refunded` | Records the refund against the relevant transaction |
+
+All other event types are acknowledged with `200 OK` and ignored.
+
+### Self-Hosted Setup
+
+If you are running a self-hosted instance with Stripe billing enabled:
+
+1. In the [Stripe Dashboard](https://dashboard.stripe.com/webhooks), create a webhook endpoint pointing to `https://yourdomain.com/api/payments/webhook`
+2. Subscribe to all events listed in the table above
+3. Copy the **Signing secret** (starts with `whsec_`)
+4. Add it in **Admin Panel → Settings → Integrations → Stripe** along with your API key
+
+Without the signing secret, Emberly will reject all webhook deliveries with `400`.
+
+---
+
+## Outbound Webhooks (Roadmap)
+
+Outbound webhooks — letting your application subscribe to Emberly events like `file.uploaded`, `file.deleted`, or `url.created` — are planned for a future release. When available they will be configured per-account from the dashboard and support HMAC signature verification.
+
+To be notified when this ships, watch the [GitHub repository](https://github.com/EmberlyOSS/Emberly) or join the [Emberly Discord](https://discord.gg/36spBmzZVB).

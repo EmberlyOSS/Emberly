@@ -1,0 +1,97 @@
+---
+title: Custom Domains
+description: Serve your uploads from your own branded domain with automatic TLS certificates.
+---
+
+<Callout type="warn">
+  **Cloud only.** Custom domains run on embrly.ca's managed Cloudflare integration and aren't available on self-hosted instances — see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted).
+</Callout>
+
+Custom domains let you host your Emberly files under your own domain — e.g., `files.yourbrand.com` — with automatic TLS via Cloudflare.
+
+## Domain Slot Limits
+
+Your total domain slots come from three sources:
+
+| Plan | Base Slots |
+|------|-----------|
+| Spark | 3 |
+| Glow | 5 |
+| Flare | 10 |
+| Blaze | Unlimited |
+| Inferno | Unlimited |
+| Ember | Unlimited |
+
+**Bonus slots** stack on top:
+- GitHub contributors earn +1 to +5 slots — see [Contributor Perks](/docs/user-guide/contributor-perks)
+- Discord boosters earn +1 to +3 slots — see [Discord Perks](/docs/user-guide/discord-perks)
+- Additional slots can be purchased individually in your dashboard
+
+**Total = Base Plan + Perk Bonuses + Purchased**
+
+---
+
+## Setting Up a Custom Domain
+
+### Step 1: Add Your Domain
+
+1. Go to [Dashboard → Domains](https://embrly.ca/dashboard/domains)
+2. Click **"Add Custom Domain"**
+3. Enter your domain (e.g., `files.yourdomain.com`)
+4. Click **"Add Domain"**
+
+The domain is created with status `awaiting_cname`.
+
+### Step 2: Configure DNS
+
+Add a CNAME record at your DNS provider:
+
+| Type | Target / Value | TTL |
+|-----------|----------------------|-----|
+| **CNAME** | `cname.emberly.site` | 300 |
+
+For a root domain (`@`), use a CNAME-flattening provider (Cloudflare supports this natively).
+
+<Callout title="Cloudflare users">
+  Set the record to **DNS only** (grey cloud) during verification. You can enable proxying (orange cloud) after the domain is active.
+</Callout>
+
+### Step 3: Verify
+
+1. Return to [Dashboard → Domains](https://embrly.ca/dashboard/domains)
+2. Click **"Verify"** next to your domain
+3. TLS is automatically provisioned — verification usually completes within a few minutes
+
+---
+
+## Setting a Primary Domain
+
+Your **primary domain** is used for all new uploads automatically:
+
+1. Open your domain list
+2. Click the ⋯ menu next to a verified domain
+3. Select **"Set as Primary"**
+
+You can still select a different domain per-file during upload.
+
+---
+
+## Troubleshooting
+
+| Status | Meaning |
+|--------|---------|
+| `awaiting_cname` | DNS record not yet detected |
+| `pending` | Cloudflare is provisioning TLS |
+| `active` | Domain is live and serving files |
+| `error` | Verification failed — check DNS |
+
+**CNAME not detected?**
+- DNS changes can take up to 24 hours to propagate
+- Verify the target is exactly `cname.emberly.site`
+- Use `dig CNAME yourdomain.com` to check the current value
+
+**Certificate errors?**
+- Ensure the domain is verified (`active`) before enabling Cloudflare proxying
+- If using Cloudflare, temporarily set to DNS-only and re-verify
+
+For more detail see the [Domain API reference](/docs/api/domains).

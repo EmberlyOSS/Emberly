@@ -1,0 +1,152 @@
+---
+title: Storage Configuration
+description: Configure S3-compatible object storage for your self-hosted Emberly instance — MinIO, AWS S3, Cloudflare R2, and more.
+---
+
+Emberly stores all uploaded files in S3-compatible object storage. You can use any provider that speaks the S3 API — including self-hosted options like MinIO. Storage is configured after first run via **Admin → Settings → Storage**.
+
+---
+
+## Choosing a Provider
+
+Emberly's storage layer speaks the S3 API directly — any of these work as long as you can supply an endpoint, bucket name, region, and access keys. There's no built-in auto-provisioning for self-hosted instances; you create the bucket yourself with your provider, then enter its credentials in the Admin Panel.
+
+| Provider | Best for | Notes |
+|----------|---------|-------|
+| **MinIO** (self-hosted) | Air-gapped or fully self-contained installs | Run it as its own service (systemd, or however you deploy it) — no cloud account needed |
+| **AWS S3** | Production with existing AWS infrastructure | Reliable, well-documented, generous free tier |
+| **Cloudflare R2** | Zero egress costs, global CDN | No egress fees; requires Cloudflare account |
+| **Vultr Object Storage** | Cost-effective, S3-compatible | Create the bucket in the Vultr dashboard, then enter its keys manually — the automatic multi-bucket provisioning UI is a cloud-only feature |
+| **Linode / Akamai** | Linode-hosted apps | Same as Vultr — manual bucket + keys, no auto-provisioning for self-hosted |
+| **Tigris** | Globally distributed S3 | Good Fly.io companion |
+
+---
+
+## MinIO (Self-Hosted)
+
+MinIO is the easiest way to run a fully self-contained Emberly instance without any external cloud dependencies. Install and run it as its own service — see [MinIO's installation docs](https://min.io/docs/minio/linux/index.html) for the current install steps on your OS; there's no bundled Docker Compose setup in the Emberly repo, so if you containerize MinIO yourself you'll manage that separately from the app.
+
+### Create a Bucket
+
+Once MinIO is running, open its console (default `http://localhost:9001`) and log in with your root user/password. Then:
+
+1. Click **Buckets → Create Bucket**
+2. Name it `emberly`
+3. Leave other settings as default and click **Create**
+
+Or use the `mc` CLI:
+
+```bash
+mc alias set local http://localhost:9000 <root-user> <root-password>
+mc mb local/emberly
+mc anonymous set download local/emberly
+```
+
+The last command makes the bucket publicly readable, which is required for Emberly's public file URLs to work.
+
+### Configure in Admin Panel
+
+In **Admin → Settings → Storage**, set:
+
+| Field | Value |
+|-------|-------|
+| Endpoint | Your MinIO server's address, e.g. `http://localhost:9000` |
+| Bucket name | `emberly` |
+| Region | `us-east-1` (MinIO accepts any value) |
+| Access key ID | Your MinIO access key |
+| Secret access key | Your MinIO secret key |
+| Public files URL | A publicly reachable URL for the bucket |
+
+<Callout type="info" title="Public files URL in production">
+  `Public files URL` must be a publicly accessible URL — not `localhost`. Put MinIO behind a reverse proxy (Nginx or Caddy) on a real domain, e.g. `https://files.yourdomain.com`, and use that as the public URL.
+</Callout>
+
+### MinIO Behind a Reverse Proxy
+
+To serve MinIO files from a real domain, add a Caddy or Nginx block alongside your main app:
+
+**Caddy:**
+
+```
+files.yourdomain.com {
+    reverse_proxy localhost:9000
+}
+```
+
+**Nginx:**
+
+```nginx
+server {
+    listen 80;
+    server_name files.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:9000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        client_max_body_size 0;
+    }
+}
+```
+
+Then set **Public files URL** to `https://files.yourdomain.com/emberly`.
+
+---
+
+## AWS S3
+
+1. Create a bucket in the [S3 console](https://s3.console.aws.amazon.com)
+2. Create an IAM user with `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` permissions on the bucket
+3. Generate an access key for that user
+4. In **Admin → Settings → Storage**:
+
+| Field | Value |
+|-------|-------|
+| Endpoint | *(leave blank — uses AWS default)* |
+| Bucket name | Your bucket name |
+| Region | e.g. `us-east-1` |
+| Access key ID | IAM user access key |
+| Secret access key | IAM user secret |
+| Public files URL | `https://your-bucket.s3.amazonaws.com` or your CloudFront URL |
+
+To allow public downloads, configure the bucket policy to allow `s3:GetObject` for all principals, or use a CloudFront distribution with the bucket as origin.
+
+---
+
+## Cloudflare R2
+
+R2 has no egress fees, making it cost-effective for high-traffic instances.
+
+1. Create a bucket in the [Cloudflare dashboard](https://dash.cloudflare.com) under **R2**
+2. Create an **R2 API token** with Object Read and Write permissions
+3. Enable **Public access** on the bucket (or use a custom domain)
+4. In **Admin → Settings → Storage**:
+
+| Field | Value |
+|-------|-------|
+| Endpoint | `https://<account-id>.r2.cloudflarestorage.com` |
+| Bucket name | Your bucket name |
+| Region | `auto` |
+| Access key ID | R2 API token Access Key ID |
+| Secret access key | R2 API token Secret |
+| Public files URL | Your R2 public bucket URL or custom domain |
+
+---
+
+## Verifying Storage Works
+
+After configuring, upload a test file through the Emberly dashboard. If the file appears and its URL loads in a browser, storage is working correctly.
+
+If uploads fail, check:
+
+- The endpoint URL is correct and reachable from the app container
+- The bucket exists and the access key has write permissions
+- The `Public files URL` is publicly accessible (not blocked by firewall or auth)
+- For MinIO: the bucket anonymous policy is set to `download`
+
+---
+
+## Related
+
+- [Production Deployment](/docs/self-hosting/production) — full Docker Compose setup
+- [Environment Variables](/docs/self-hosting/environment) — what goes in `.env` vs Admin Panel

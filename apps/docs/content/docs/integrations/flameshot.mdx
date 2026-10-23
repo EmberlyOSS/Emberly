@@ -1,0 +1,134 @@
+---
+title: Flameshot
+description: Configure Flameshot to automatically upload screenshots to Emberly on Linux, macOS, and Windows.
+---
+
+[Flameshot](https://flameshot.org/) is a powerful open-source screenshot tool for Linux, macOS, and Windows. Emberly integrates via a custom upload script.
+
+## How It Works
+
+1. Capture a screenshot with Flameshot
+2. Flameshot passes the image to the Emberly upload script
+3. The script uploads to the Emberly API
+4. The shareable URL is copied to clipboard automatically
+
+---
+
+## Installation
+
+### Install Flameshot
+
+**Ubuntu / Debian:**
+```bash
+sudo apt-get update && sudo apt-get install flameshot
+```
+
+**Fedora / RHEL:**
+```bash
+sudo dnf install flameshot
+```
+
+**Arch:**
+```bash
+sudo pacman -S flameshot
+```
+
+**macOS:**
+```bash
+brew install flameshot
+```
+
+**Windows:**
+```
+winget install flameshot
+```
+
+### Get the Upload Script
+
+1. Go to **Profile → Uploads**
+2. Under **"Flameshot"**, click **"Download Script"**
+3. Save it as `emberly-upload.sh`
+4. Make it executable:
+
+```bash
+chmod +x emberly-upload.sh
+```
+
+---
+
+## Configure Flameshot
+
+### Linux (GUI)
+
+1. Open Flameshot → **Configuration → General**
+2. Enable **"Upload after capture"** or configure a custom script
+3. Set the script path to your `emberly-upload.sh`
+
+### Linux (Command Line)
+
+Add to your shell configuration or bind to a hotkey:
+
+```bash
+flameshot gui --raw | emberly-upload.sh -
+```
+
+Or use a keyboard shortcut in your WM/compositor pointing to:
+```bash
+/path/to/emberly-upload.sh
+```
+
+### Windows
+
+Configure Flameshot to run a PowerShell script after capture. See the [PowerShell guide](/docs/integrations/powershell) for the upload script.
+
+---
+
+## Upload Script Reference
+
+The generated script uses your token and works with any POSIX shell:
+
+```bash
+#!/bin/bash
+# Emberly Flameshot Upload Script
+
+EMBERLY_TOKEN="YOUR_TOKEN_HERE"
+API_URL="https://embrly.ca/api/files"
+
+# Read from file or stdin
+if [ -n "$1" ] && [ -f "$1" ]; then
+  FILE_ARG="@$1"
+elif [ "$1" = "-" ]; then
+  # Piped from Flameshot
+  TMP=$(mktemp /tmp/emberly-XXXXXX.png)
+  cat > "$TMP"
+  FILE_ARG="@$TMP"
+  CLEANUP="$TMP"
+fi
+
+RESPONSE=$(curl -s -X POST \
+  -H "Authorization: Bearer $EMBERLY_TOKEN" \
+  -F "file=$FILE_ARG" \
+  "$API_URL")
+
+URL=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['url'])" 2>/dev/null)
+
+if [ -n "$URL" ]; then
+  echo "$URL" | xclip -selection clipboard 2>/dev/null || \
+  echo "$URL" | xsel --clipboard --input 2>/dev/null || \
+  echo "$URL" | pbcopy 2>/dev/null || true
+  echo "Uploaded: $URL"
+fi
+
+[ -n "$CLEANUP" ] && rm -f "$CLEANUP"
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Script not found | Check the path in Flameshot config; use an absolute path |
+| Upload fails | Verify `EMBERLY_TOKEN` is correct in the script |
+| URL not copied | Install `xclip` or `xsel` on Linux: `sudo apt install xclip` |
+| Blank screenshot on Wayland | Use `flameshot gui` instead of `flameshot screen` |

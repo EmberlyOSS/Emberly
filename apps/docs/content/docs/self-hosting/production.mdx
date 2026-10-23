@@ -1,0 +1,280 @@
+---
+title: Production Deployment
+description: Deploy a self-hosted Emberly instance to a Linux server with Bun and systemd.
+---
+
+This guide covers deploying Emberly to a Linux server directly with Bun, managed by systemd — the approach the project's own README documents. There is no official Docker image, Docker Compose file, or Nixpacks config shipped with the project today; if you containerize it yourself, you'll need to write that Dockerfile from scratch using the steps below as a guide.
+
+## Prerequisites
+
+- A Linux server (Ubuntu 22.04 LTS recommended) with at least 2 GB RAM
+- A domain name pointing to your server's IP (`A` record)
+- [Bun](https://bun.sh) and Node.js 18+
+- PostgreSQL 14+ and Redis 6+ (either on the same server or reachable over the network)
+- An S3-compatible object storage bucket (AWS S3, Cloudflare R2, Vultr Object Storage, or self-hosted MinIO)
+
+---
+
+## Step 1: Server Preparation
+
+```bash
+# Update system
+sudo apt-get update && sudo apt-get upgrade -y
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install PostgreSQL and Redis (skip if using managed/remote instances)
+sudo apt-get install -y postgresql redis-server
+```
+
+---
+
+## Step 2: Clone and Configure
+
+```bash
+git clone https://github.com/EmberlyOSS/Emberly.git /opt/emberly
+cd /opt/emberly
+bun install
+cp .env.template .env
+```
+
+Edit `.env` with your database/Redis connection strings, `NEXTAUTH_URL`/`NEXT_PUBLIC_BASE_URL` (your domain), a generated `NEXTAUTH_SECRET`, and OAuth credentials. See [Environment Variables](/docs/self-hosting/environment) for the full reference — storage and email are configured later via the Admin Panel, not `.env`.
+
+```bash
+openssl rand -base64 32   # generate NEXTAUTH_SECRET
+chmod 600 .env
+```
+
+---
+
+## Step 3: Database Setup
+
+```bash
+bun run db:generate
+bun run db:deploy   # applies existing migrations — never use db:push in production
+bun run db:seed     # seeds the canonical plan catalog
+```
+
+---
+
+## Step 4: Build
+
+```bash
+bun run build
+```
+
+---
+
+## Step 5: Run as a systemd Service
+
+Create `/etc/systemd/system/emberly.service`:
+
+```ini
+[Unit]
+Description=Emberly web app
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/emberly
+ExecStart=/usr/bin/env bun run start
+Restart=on-failure
+User=emberly
+EnvironmentFile=/opt/emberly/.env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+The background event worker (BullMQ, used for async jobs like VirusTotal scanning and OCR) must run as a **separate process** in production — it only auto-starts in-process during local development. Create `/etc/systemd/system/emberly-worker.service`:
+
+```ini
+[Unit]
+Description=Emberly event worker
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/emberly
+ExecStart=/usr/bin/env bun run worker
+Restart=on-failure
+User=emberly
+EnvironmentFile=/opt/emberly/.env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now emberly emberly-worker
+sudo systemctl status emberly emberly-worker
+```
+
+The app listens on port 3000 by default. Open `http://YOUR_SERVER_IP:3000` and complete the **Setup Wizard** to create your admin account — see [First-Time Setup](/docs/self-hosting/first-time-setup) for a step-by-step walkthrough.
+
+---
+
+## Step 6: Reverse Proxy with HTTPS
+
+Use Nginx or Caddy to terminate TLS and proxy to port 3000. Caddy is simpler because it provisions Let's Encrypt certificates automatically.
+
+### Caddy (Recommended)
+
+Install Caddy, then create `/etc/caddy/Caddyfile`:
+
+```
+yourdomain.com {
+    reverse_proxy localhost:3000
+}
+```
+
+```bash
+sudo systemctl enable --now caddy
+sudo systemctl reload caddy
+```
+
+### Nginx + Certbot
+
+```bash
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+```
+
+Create `/etc/nginx/sites-available/emberly`:
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 0;   # Emberly enforces its own limits
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/emberly /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d yourdomain.com
+```
+
+---
+
+## Step 7: Configure Storage
+
+You already chose local or S3-compatible storage during the Setup Wizard's Storage step (see [First-Time Setup](/docs/self-hosting/first-time-setup)). To switch providers later, or fill in the public URL and other advanced fields, go to **Admin → Settings → Storage**:
+
+| Field | Description |
+|-------|-------------|
+| Provider | AWS S3, Cloudflare R2, Vultr, Linode, MinIO, etc. |
+| Bucket name | The bucket to store files in |
+| Region | Your bucket's region |
+| Endpoint | Custom endpoint (leave blank for AWS) |
+| Access key ID | Storage access key |
+| Secret access key | Storage secret key |
+| Public files URL | The CDN/public URL prefix for served files |
+
+<Callout type="info">
+  The public files URL is what gets prepended to file paths in share links. For Cloudflare R2, this is your R2 public bucket URL or a custom domain. For AWS, it is the bucket's public URL or a CloudFront distribution.
+</Callout>
+
+---
+
+## Step 8: Configure Email
+
+In **Admin Panel → Settings → Integrations → Email**, configure Resend or SMTP:
+
+**Resend:**
+- Get an API key from [resend.com](https://resend.com)
+- Set the from address (must be on a verified domain)
+
+**SMTP:**
+- Use any SMTP provider (Postmark, Mailgun, Gmail, etc.)
+- Set host, port, username, and password
+
+Email is used for verification emails, expiration reminders, and collaborator invites.
+
+---
+
+## Step 9: Optional Integrations
+
+Configure these in the Admin Panel as needed:
+
+| Integration | Purpose |
+|-------------|---------|
+| VirusTotal | File malware scanning (skipped for images/video/audio) |
+| Sentry | Error tracking |
+
+---
+
+## Updating
+
+```bash
+cd /opt/emberly
+git pull
+bun install
+bun run db:deploy
+bun run build
+sudo systemctl restart emberly emberly-worker
+```
+
+Always run migrations before restarting the app on an update.
+
+---
+
+## Health Checks
+
+`GET /api/health` reports the status of your instance — database, Redis, storage (a real write/delete round-trip, cached for 30 seconds), and the event queue. No authentication required. Point an uptime monitor or your reverse proxy's health check at it.
+
+**Response (200 or 503):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "version": "2.5.1",
+    "uptimeSeconds": 3600,
+    "checks": {
+      "database": { "status": "up", "latencyMs": 4 },
+      "redis": { "status": "up", "latencyMs": 1 },
+      "storage": { "status": "up", "provider": "s3", "latencyMs": 120, "checkedAt": "..." },
+      "virusScanning": { "status": "not_configured" },
+      "eventQueue": { "status": "up", "workerRunning": true, "waiting": 0, "active": 0 }
+    }
+  }
+}
+```
+
+`status` is `ok`, `degraded` (a non-critical check is failing), or `down` (the database is unreachable — responds with HTTP `503` in that case).
+
+---
+
+## Backups
+
+Back up the PostgreSQL database regularly:
+
+```bash
+pg_dump -U emberly emberly > backup-$(date +%F).sql
+```
+
+Also back up your S3 bucket. Use your provider's snapshot or bucket replication features.
+
+---
+
+## Troubleshooting
+
+| Problem | Check |
+|---------|-------|
+| App won't start | `sudo journalctl -u emberly -f` — look for missing env vars or DB connection errors |
+| Database connection error | Verify `DATABASE_URL` and that PostgreSQL is running and reachable |
+| Background jobs not processing (OCR, VirusTotal scans) | Confirm `emberly-worker.service` is running — it's a separate process, not automatic in production |
+| Uploads fail | Check storage configuration in Admin Panel; verify bucket permissions and public URL |
+| Email not sending | Verify Resend API key or SMTP credentials in Admin Panel |

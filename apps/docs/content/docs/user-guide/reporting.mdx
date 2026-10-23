@@ -1,0 +1,93 @@
+---
+title: Reporting Users
+description: Report inappropriate content or behaviour to the Emberly moderation team.
+---
+
+If you encounter content or behaviour that violates [Emberly's Terms of Service](https://embrly.ca/legal/terms) or [Community Guidelines](https://embrly.ca/legal/guidelines), you can submit a report directly from the platform or via API.
+
+---
+
+## How to Report a User
+
+From any user's public profile:
+
+1. Open the profile menu (`···` or **Report** button)
+2. Select a **category**
+3. Write a **reason** (10–500 characters, required)
+4. Optionally add **details** (up to 2000 characters)
+5. Submit the report
+
+<Callout type="info">
+  You can only submit one report per user. If you have new information, add it in the details field.
+</Callout>
+
+---
+
+## Report Categories
+
+| Category | Description |
+|----------|-------------|
+| `SPAM` | Spam or unsolicited content |
+| `HARASSMENT` | Harassment or bullying |
+| `ABUSE` | Abusive or threatening behaviour |
+| `ILLEGAL_CONTENT` | Content that may be illegal |
+| `COPYRIGHT` | Copyright or intellectual property violation |
+| `IMPERSONATION` | Impersonating another person or brand |
+| `OTHER` | Other violations not listed above |
+
+---
+
+## What Happens After You Report
+
+Reports are reviewed by Emberly's moderation team. We do not share outcomes of individual reports, but common actions include:
+
+- Warning the reported user
+- Removing offending content
+- Suspending or banning the account
+
+See [Staff: Moderation](/docs/staff/moderation) for how reports are processed internally.
+
+---
+
+## API
+
+### Submit a Report
+
+```http
+POST /api/reports
+Authorization: Bearer YOUR_UPLOAD_TOKEN
+Content-Type: application/json
+```
+
+```json
+{
+  "reportedUserId": "cluser...",
+  "category": "SPAM",
+  "reason": "This user is posting spam links in their public files.",
+  "details": "Optional additional context up to 2000 characters."
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `reportedUserId` | string | Yes | The ID of the user being reported |
+| `category` | string | Yes | One of the categories above |
+| `reason` | string | Yes | 10–500 characters |
+| `details` | string | No | Up to 2000 characters |
+
+**Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "Report submitted successfully"
+}
+```
+
+**Error cases:**
+
+| Status | Error |
+|--------|-------|
+| `400` | Invalid category, reason too short/long, or reporting yourself |
+| `404` | Reported user not found |
+| `409` | You have already submitted a report against this user |

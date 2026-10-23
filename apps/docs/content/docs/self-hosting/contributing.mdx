@@ -1,0 +1,176 @@
+---
+title: Contributing
+description: How to contribute to Emberly — development setup, code standards, and the pull request process.
+---
+
+Thanks for your interest in contributing to Emberly. This guide covers the development workflow, code standards, and how to submit a pull request.
+
+For initial setup, see the [Development Setup guide](/docs/self-hosting/development).
+
+---
+
+## Workflow
+
+### 1. Fork and Clone
+
+Fork the repo on GitHub, then clone your fork:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/Emberly.git
+cd Emberly
+bun install
+```
+
+### 2. Create a Branch
+
+Branch from `main` using the appropriate prefix:
+
+```bash
+git checkout main && git pull origin main
+git checkout -b feat/your-feature-name
+```
+
+| Prefix | Use for |
+|--------|---------|
+| `feat/` | New features |
+| `fix/` | Bug fixes |
+| `docs/` | Documentation only |
+| `refactor/` | Code cleanup with no behavior change |
+| `perf/` | Performance improvements |
+
+### 3. Make Changes and Commit
+
+Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat(upload): add file compression on upload
+
+Implements client-side GZIP compression before upload to reduce storage.
+
+Closes #123
+```
+
+Common types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `ci`.
+
+### 4. Verify Before Pushing
+
+```bash
+bun run typecheck   # TypeScript — must pass
+bun run lint        # ESLint — must pass
+bun run build       # Production build — must succeed
+```
+
+### 5. Open a Pull Request
+
+Push to your fork and open a PR against `main`. Fill out the PR template:
+
+- What does this change?
+- Why is it needed?
+- How was it tested?
+- Are there breaking changes?
+
+---
+
+## Code Standards
+
+### TypeScript
+
+All code uses `strict: true`. Avoid `any` — use `unknown` and narrow it:
+
+```typescript
+// Good
+function processResult(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  throw new Error("unexpected type");
+}
+
+// Bad
+function processResult(value: any) {
+  return value.trim();
+}
+```
+
+### API Routes
+
+API handlers live in `app/api/`. Use the shared response helpers — do not construct raw `NextResponse` objects:
+
+```typescript
+import { apiResponse, apiError, HTTP_STATUS } from "@/packages/lib/api/response";
+import { requireAdmin } from "@/packages/lib/auth/api-auth";
+```
+
+### Logging
+
+Never use `console.*`. Use named loggers from `@/packages/lib/logger`:
+
+```typescript
+import { loggers } from "@/packages/lib/logger";
+const log = loggers.files;
+log.info("upload complete", { fileId, size });
+log.error("upload failed", error as Error, { fileId });
+```
+
+### Path Aliases
+
+Always use path aliases — never relative paths that cross package boundaries:
+
+| Alias | Resolves to |
+|-------|------------|
+| `@/lib/*` | `packages/lib/*` |
+| `@/components/*` | `packages/components/*` |
+| `@/hooks/*` | `packages/hooks/*` |
+| `@/types/*` | `packages/types/*` |
+
+---
+
+## Common Tasks
+
+### Adding a Database Field
+
+1. Edit `prisma/schema.prisma`
+2. Run `bun run db:migrate` to create and apply the migration
+3. Run `bun run db:generate` to regenerate the Prisma client
+4. Update any affected TypeScript types in `packages/types/`
+
+### Adding a New API Endpoint
+
+1. Create the route file in `app/api/`
+2. Use `apiResponse` / `apiError` helpers
+3. Gate admin routes with `requireAdmin()`
+4. Document the endpoint in the relevant API reference page in `docs.embrly.ca`
+
+---
+
+## Pull Request Checklist
+
+Before requesting review, ensure:
+
+- `bun run typecheck` passes
+- `bun run lint` passes (run `bun run lint:fix` to auto-fix)
+- `bun run build` succeeds
+- New features have corresponding documentation updates
+- Commit messages follow Conventional Commits
+
+---
+
+## Reporting Issues
+
+Create a GitHub issue with:
+
+1. A clear title describing the problem (not "it's broken")
+2. Steps to reproduce, including exact actions
+3. What you expected vs what happened
+4. Your environment: OS, Node version, browser if relevant
+5. The full error message or stack trace
+
+---
+
+## Getting Help
+
+- Questions: [GitHub Discussions](https://github.com/EmberlyOSS/Emberly/discussions)
+- Bugs: [GitHub Issues](https://github.com/EmberlyOSS/Emberly/issues)
+- Chat: Join the Emberly Discord
+
+---
+
+All contributions are licensed under AGPL-3.0, the same as the project. By submitting a PR you agree to these terms.

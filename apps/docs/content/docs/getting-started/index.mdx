@@ -1,0 +1,85 @@
+---
+title: Getting Started
+description: Get up and running with Emberly in minutes.
+---
+
+Get up and running with Emberly in minutes. This guide walks you through account creation, your first upload, and basic file management.
+
+## Step 1: Create Your Account
+
+Go to [embrly.ca/auth/signup](https://embrly.ca/auth/signup) and sign up with:
+
+- **Email**: Enter email and create a password
+- **Google**: One-click with your Google account
+- **GitHub**: One-click with your GitHub account
+
+After signing up, check your inbox for a verification email and click the link to confirm your account.
+
+<Callout title="Tip">
+  If you don't see the email, check your spam folder or request a new one from the login page.
+</Callout>
+
+## Step 2: Access Your Dashboard
+
+After verification you're logged in automatically. Your dashboard at [embrly.ca/dashboard](https://embrly.ca/dashboard) contains:
+
+| Section | Description |
+|---------|-------------|
+| **Files** | All your uploads search, filter, organize |
+| **Settings** | Profile, token, integrations, preferences |
+| **Analytics** | Download stats, storage usage |
+| **Billing** | Plan, payment history, invoices |
+
+## Step 3: Upload Your First File
+
+### Via Web Dashboard
+
+1. Go to **Dashboard → Files**
+2. Click **"Upload"** or drag files onto the page
+3. Select a file from your computer
+4. The file uploads automatically and you get a shareable URL instantly
+
+### Via Screenshot Tool
+
+**Windows (ShareX):**
+
+1. Go to **Profile → Uploads**
+2. Under "ShareX", click **"Download Config"**
+3. Open ShareX → **Settings → Custom Uploaders → Import**
+4. Select the downloaded config file
+5. Done press your screenshot hotkey and it auto-uploads
+
+**Linux/macOS (Flameshot):**
+
+1. Install Flameshot: `sudo apt-get install flameshot` or `brew install flameshot`
+2. Go to **Profile → Uploads → Flameshot → "Download Script"**
+3. Save and make executable: `chmod +x emberly-upload.sh`
+4. Configure Flameshot to use the script as its post-capture action
+
+## Step 4: Manage Your Files
+
+### Share a File
+
+- Click any file → **Copy URL**
+- Paste it anywhere email, Slack, Discord, etc.
+
+### Customize Sharing
+
+Click a file → **Edit** to:
+
+- Set a **Password** for protection
+- Set **Visibility** to PRIVATE (only you and collaborators)
+- Set an **Expiration** date to auto-delete
+
+### View Analytics
+
+Click a file to see its download count, upload date, and access history.
+
+## Next Steps
+
+<Cards>
+  <Card title="Quickstart" description="A 5-minute quickstart for developers and power users." href="/docs/getting-started/quickstart" />
+  <Card title="All Features" description="Explore every capability Emberly offers." href="/docs/getting-started/features" />
+  <Card title="Integrations" description="Connect ShareX, Flameshot, PowerShell, and more." href="/docs/integrations" />
+  <Card title="API Reference" description="Build on top of Emberly with the REST API." href="/docs/api" />
+</Cards>

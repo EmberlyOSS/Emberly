@@ -1,0 +1,251 @@
+---
+title: Analytics API
+description: Retrieve usage analytics, storage stats, and top-content data via the Emberly API.
+---
+
+The Analytics API provides insights into your file uploads, URL clicks, storage usage, and download activity. Most analytics endpoints work with both a **bearer token** and a **session cookie**.
+
+## Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/analytics/overview` | Optional | Dashboard summary (user or global) |
+| `GET` | `/api/analytics/summary` | Session | Condensed stats for current user |
+| `GET` | `/api/analytics/storage` | Session | Storage breakdown and daily upload trend |
+| `GET` | `/api/analytics/top-items` | Optional | Top 10 files and URLs by activity |
+| `GET` | `/api/analytics/metrics/activity` | None | 30-day public activity metrics |
+| `GET` | `/api/analytics/export` | Session | Export analytics as CSV (advanced plans) |
+
+---
+
+## Dashboard Overview
+
+### `GET /api/analytics/overview`
+
+Returns a comprehensive summary of activity. When authenticated, returns **your** stats; when unauthenticated, returns **global platform** stats.
+
+**Auth:** Optional (bearer token or session cookie)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "totals": {
+      "files": 1240,
+      "urls": 380,
+      "storageUsed": 5120.75,
+      "views": 98432,
+      "downloads": 12054
+    },
+    "topFiles": [
+      {
+        "id": "cm7xabc123",
+        "name": "demo-video.mp4",
+        "url": "https://embrly.ca/user/demo-video.mp4",
+        "downloads": 412,
+        "mimeType": "video/mp4"
+      }
+    ],
+    "topUrls": [
+      {
+        "id": "cm8xdef456",
+        "shortCode": "abc123",
+        "shortUrl": "https://embrly.ca/abc123",
+        "originalUrl": "https://example.com",
+        "clicks": 980
+      }
+    ],
+    "recentUploads": [ { ... } ],
+    "storageByType": {
+      "image/png": 1073741824,
+      "video/mp4": 2147483648,
+      "application/pdf": 536870912
+    },
+    "dailyUploads": [
+      { "date": "2026-04-01", "count": 14 },
+      { "date": "2026-04-02", "count": 22 }
+    ],
+    "domainCounts": {
+      "total": 3,
+      "active": 2,
+      "pending": 1
+    }
+  }
+}
+```
+
+---
+
+## User Summary
+
+### `GET /api/analytics/summary`
+
+Account totals for the authenticated user, plus extra lists depending on plan. Used by the dashboard, Flicker and the Discord bot.
+
+**Auth:** Session, upload token or API key (`Authorization: Bearer …`)
+
+<Callout>
+  Sizes are in **megabytes** (decimals), not bytes: `storageUsed` and each file's `size`.
+</Callout>
+
+**Response (200):**
+```json
+{
+  "plan": "Free",
+  "basic": {
+    "totalFiles": 1240,
+    "storageUsed": 5120.75,
+    "totalUrls": 380,
+    "totalUrlClicks": 9210,
+    "totalViews": 98432,
+    "totalDownloads": 12054,
+    "domainsCount": 3,
+    "verifiedDomains": 2
+  },
+  "allowed": {
+    "topFiles": true,
+    "topUrls": true,
+    "recentUploads": true,
+    "detailedList": false
+  },
+  "recentUploads": [
+    { "id": "clx…", "name": "screenshot.png", "size": 0.18, "uploadedAt": "2026-10-23T14:05:51.000Z", "views": 12, "downloads": 1 }
+  ],
+  "uploadsPerDay": [
+    { "date": "2026-10-23", "count": 4 }
+  ]
+}
+```
+
+`topFiles`, `topStorageFiles`, `topUrls` and `files` are included only when the matching `allowed` flag is `true`.
+
+---
+
+## Storage Analytics
+
+### `GET /api/analytics/storage`
+
+Storage used, uploads per day for the last 14 days, and the 10 file types using the most space.
+
+**Auth:** Session, upload token or API key
+
+**Response (200):**
+```json
+{
+  "totalMB": 5120.75,
+  "daily": [
+    { "date": "2026-10-22", "mb": 500.2 },
+    { "date": "2026-10-23", "mb": 700.4 }
+  ],
+  "breakdown": [
+    { "mimeType": "video/mp4", "mb": 2048.0 },
+    { "mimeType": "image/png", "mb": 1024.5 }
+  ]
+}
+```
+
+---
+
+## Top Items
+
+### `GET /api/analytics/top-items`
+
+Returns the top 10 most downloaded files and top 10 most-clicked URLs. When authenticated, returns your items; when unauthenticated, returns global top items.
+
+**Auth:** Optional
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "topFiles": [
+      {
+        "id": "cm7xabc123",
+        "name": "presentation.pdf",
+        "url": "https://embrly.ca/user/presentation.pdf",
+        "downloads": 1230,
+        "mimeType": "application/pdf"
+      }
+    ],
+    "topUrls": [
+      {
+        "id": "cm8xdef456",
+        "shortCode": "xyz789",
+        "shortUrl": "https://embrly.ca/xyz789",
+        "originalUrl": "https://github.com/EmberlyOSS/Emberly",
+        "clicks": 4820
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Public Activity Feed
+
+### `GET /api/analytics/metrics/activity`
+
+Returns daily upload and URL creation counts for the past 30 days. This endpoint is **public** and requires no authentication.
+
+**Auth:** None
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "date": "2026-03-13",
+      "fileUploads": 48,
+      "urlsCreated": 17
+    },
+    {
+      "date": "2026-03-14",
+      "fileUploads": 62,
+      "urlsCreated": 24
+    }
+  ]
+}
+```
+
+---
+
+## Export Analytics as CSV
+
+### `GET /api/analytics/export`
+
+Export your analytics data as a CSV file. Requires an **advanced analytics** plan (Flare or higher).
+
+**Auth:** Session cookie required
+
+**Query Parameters:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `type` | `files` or `urls` |
+| `from` | ISO date — start of range |
+| `to` | ISO date — end of range |
+
+**Response:** `Content-Type: text/csv` with `Content-Disposition: attachment` header.
+
+<Callout type="warn">
+  Analytics export is available on **Flare** and above plans. A `403` is returned for lower-tier accounts.
+</Callout>
+
+**Example:**
+```bash
+curl -H "Cookie: YOUR_SESSION_COOKIE" \
+  "https://embrly.ca/api/analytics/export?type=files&from=2026-01-01&to=2026-04-01" \
+  -o analytics.csv
+```
+
+---
+
+## Related
+
+- [Files API](/docs/api/files) — upload and manage files
+- [URL Shortener API](/docs/api/urls) — create short links
+- [Plans Overview](/docs/getting-started/plans-overview) — which plan includes advanced analytics

@@ -1,0 +1,90 @@
+---
+title: Features
+description: A complete overview of everything Emberly offers.
+---
+
+## File Upload & Storage
+
+**Upload any file type** — images, videos, documents, archives, and more.
+
+- **Plan-based limits** — 500 MB (Spark) to Unlimited (Ember/Enterprise)
+- **Multiple upload methods** — web dashboard, API, CLI, or integrations
+- **Chunked uploads** — resume on connection loss
+- **Progress tracking** — live upload percentage
+- **Drag & drop** — supported in the web dashboard
+- **Bulk upload** — multiple files at once
+
+## File Sharing
+
+| Option | Description |
+|--------|-------------|
+| **Public links** | Anyone with the URL can download |
+| **Private files** | Only you and named collaborators |
+| **Password protection** | Optional password required to download |
+| **Expiration dates** | Files auto-delete on a set date |
+| **Direct download** | Single-click download, no popup |
+| **Inline preview** | View images and videos in-browser |
+
+## Collaboration
+
+- **Add collaborators by email** — view or edit permissions
+- **Revoke access** anytime
+- **Edit suggestions** — collaborators can propose changes without direct edit rights
+- **Shared files section** — see everything shared with you in one place
+
+## Security
+
+- **VirusTotal** — every upload scanned against 71+ antivirus engines (hash-based, privacy-first)
+- **Zip bomb detection** — prevents decompression attacks
+- **Dangerous file blocking** — executables, scripts, and high-risk types blocked by default
+- **HIBP integration** — warns you if your login password appears in known data breaches
+- **Password reuse prevention** — cannot reuse your last passwords
+- **2FA** — TOTP two-factor authentication support
+- **Bcrypt password hashing** — passwords are never stored in plain text
+
+## Custom Domains
+
+Host your files under your own domain (e.g., `files.yourdomain.com`):
+
+- Automatic TLS via Cloudflare
+- Simple CNAME-based verification
+- Set a primary domain for all new uploads
+- Domain slot limits based on plan + perks
+
+## Analytics
+
+- **Download counts** per file
+- **Storage usage** dashboard
+- **Activity log** — who accessed what and when
+- **Team-level usage** (Flare/Blaze)
+
+## Integrations
+
+<Cards>
+  <Card title="ShareX" description="One-click config for Windows screenshot uploads." href="/docs/integrations/sharex" />
+  <Card title="Flameshot" description="Script-based upload for Linux/macOS." href="/docs/integrations/flameshot" />
+  <Card title="PowerShell" description="Automate uploads from the Windows terminal." href="/docs/integrations/powershell" />
+  <Card title="Python SDK" description="Embed Emberly into your Python applications." href="/docs/integrations/python-sdk" />
+  <Card title="Bash / cURL" description="Shell scripts for server-side automation." href="/docs/integrations/bash-scripting" />
+  <Card title="Flicker" description="Native desktop app for screenshots and files." href="/docs/integrations/flicker" />
+</Cards>
+
+## OCR (Optical Character Recognition)
+
+Available on **all plans**:
+
+- Extracts text from image uploads automatically
+- Full-text searchable via the dashboard
+- Retrieve extracted text via the API
+
+## Plans
+
+| Feature | Spark | Glow | Flare | Blaze | Inferno | Ember |
+|---------|-------|------|-------|-------|---------|-------|
+| Storage | 10 GB | 25 GB | 50 GB | 100 GB | 250 GB | Unlimited |
+| Max Upload | 500 MB | 1 GB | 2 GB | 5 GB | 10 GB | Unlimited |
+| Custom Domains | 3 | 5 | 10 | Unlimited | Unlimited | Unlimited |
+| Price | Free | $4.99/mo | $8.99/mo | $14.99/mo | $24.99/mo | $49.99/mo |
+| Analytics | Basic | Yes | Advanced | Advanced | Advanced | Advanced |
+| Team Features | — | — | — | Yes | Yes | Yes |
+| OCR | Yes | Yes | Yes | Yes | Yes | Yes |

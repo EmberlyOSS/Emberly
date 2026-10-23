@@ -1,0 +1,1253 @@
+---
+title: Staff & Admin API Reference
+description: Complete admin API reference for Emberly staff. Manage users, moderate content, handle reports, configure products, and monitor system health.
+---
+
+The Admin API provides staff and administrators with access to user management, moderation, billing, product configuration, and system monitoring tools.
+
+## Authentication
+
+### Admin Token
+
+All admin endpoints require either:
+1. **Admin session** (via browser login with admin role)
+2. **Admin API key** (for backend services)
+
+Admin users have `role: "ADMIN"` or `role: "SUPERADMIN"` in the database.
+
+```bash
+curl -H "Authorization: Bearer ADMIN_API_KEY" \
+  https://embrly.ca/api/admin/users
+```
+
+---
+
+## Authorization Levels
+
+| Level | Description | Can Access |
+|-------|-------------|-----------|
+| USER | Regular user | Only own data via user API |
+| ADMIN | Staff/moderator | Moderation, reports, basic user data |
+| SUPERADMIN | Owner/lead admin | Everything, including system config |
+
+---
+
+## User Management
+
+### List All Users
+
+**GET `/api/admin/users`**
+
+List all users with filtering and search.
+
+**Authentication:** ADMIN+
+
+**Query Parameters:**
+- `page` (default: 1) — Page number
+- `limit` (default: 50) — Users per page
+- `search` — Search by name, email, or urlId
+- `role` — Filter by `USER`, `ADMIN`, `SUPERADMIN`
+- `status` — Filter by `active`, `banned`, `suspended`
+- `createdAfter` — ISO date (created after this date)
+- `sort` — `recent`, `active`, `storage-usage`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "user_123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "USER",
+      "status": "active",
+      "emailVerified": "2023-01-01T00:00:00Z",
+      "createdAt": "2023-01-01T00:00:00Z",
+      "lastLoginAt": "2026-03-29T15:30:00Z",
+      "lastLoginIp": "192.168.1.1",
+      "storageUsed": 1024000000,
+      "storageQuota": 10737418240,
+      "totalFiles": 42,
+      "twoFactorEnabled": true,
+      "bannedAt": null,
+      "banReason": null
+    }
+  ],
+  "pagination": {
+    "total": 15420,
+    "page": 1,
+    "limit": 50,
+    "pages": 309
+  }
+}
+```
+
+---
+
+### Get User Details
+
+**GET `/api/admin/users/[userId]`**
+
+Get detailed information about a specific user.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_123",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "avatar": "https://cdn.embrly.ca/avatars/user_123.jpg",
+    "profile": {
+      "bio": "User bio here",
+      "website": "https://example.com",
+      "twitter": "@username",
+      "github": "username"
+    },
+    "usage": {
+      "storageUsed": 1024000000,
+      "storageQuota": 10737418240,
+      "fileCount": 42,
+      "downloadCount": 1250,
+      "lastActivityAt": "2026-03-29T15:30:00Z"
+    },
+    "account": {
+      "role": "USER",
+      "status": "active",
+      "emailVerified": "2023-01-01T00:00:00Z",
+      "twoFactorEnabled": true,
+      "createdAt": "2023-01-01T00:00:00Z",
+      "lastLoginAt": "2026-03-29T15:30:00Z",
+      "lastLoginIp": "192.168.1.1"
+    },
+    "subscription": {
+      "planId": "plan_glow",
+      "planName": "Glow",
+      "status": "active",
+      "startDate": "2023-01-01T00:00:00Z",
+      "renewDate": "2026-04-01T00:00:00Z"
+    },
+    "security": {
+      "linkedAccounts": ["github", "discord"],
+      "sessionCount": 3,
+      "loginHistoryCount": 248
+    }
+  }
+}
+```
+
+---
+
+### Ban/Suspend User
+
+**POST `/api/admin/users/[userId]/ban`**
+
+Ban or suspend a user account.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "type": "temporary", // or "permanent"
+  "durationDays": 30,  // Only for temporary
+  "reason": "Violation of terms of service",
+  "notifyUser": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user_123",
+    "bannedAt": "2026-03-29T15:30:00Z",
+    "banType": "temporary",
+    "banExpiresAt": "2026-04-28T15:30:00Z",
+    "banReason": "Violation of terms of service",
+    "reversible": true
+  }
+}
+```
+
+---
+
+### Unban User
+
+**DELETE `/api/admin/users/[userId]/ban`**
+
+Remove a ban or suspension.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "reason": "Appeal approved"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "User unbanned"
+}
+```
+
+---
+
+### Modify User Role
+
+**PATCH `/api/admin/users/[userId]/role`**
+
+Change a user's role (USER, ADMIN, SUPERADMIN).
+
+**Authentication:** SUPERADMIN only
+
+**Request Body:**
+```json
+{
+  "role": "ADMIN"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user_123",
+    "newRole": "ADMIN"
+  }
+}
+```
+
+---
+
+### Reset User Password (Force)
+
+**POST `/api/admin/users/[userId]/reset-password`**
+
+Force a password reset for a user.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "sendEmail": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "resetToken": "token_123",
+    "resetLink": "https://embrly.ca/auth/reset?token=token_123",
+    "expiresAt": "2026-03-29T23:30:00Z"
+  }
+}
+```
+
+---
+
+### Delete User (GDPR)
+
+**DELETE `/api/admin/users/[userId]`**
+
+Permanently delete a user and all their data.
+
+**Authentication:** SUPERADMIN only
+
+**Request Body:**
+```json
+{
+  "reason": "GDPR data deletion request",
+  "confirmDelete": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "User permanently deleted"
+}
+```
+
+---
+
+## User Sessions & Login History
+
+### Get User Sessions
+
+**GET `/api/admin/users/[userId]/sessions`**
+
+List active sessions for a user.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "session_123",
+      "ip": "192.168.1.1",
+      "userAgent": "Mozilla/5.0...",
+      "lastActivity": "2026-03-29T15:30:00Z",
+      "createdAt": "2026-03-20T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Revoke User Session
+
+**POST `/api/admin/users/[userId]/sessions/[sessionId]/revoke`**
+
+Log out a specific session.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Session revoked"
+}
+```
+
+---
+
+### Get Login History
+
+**GET `/api/admin/users/[userId]/login-history`**
+
+View user's login history.
+
+**Authentication:** ADMIN+
+
+**Query Parameters:**
+- `page` (default: 1)
+- `limit` (default: 50)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "timestamp": "2026-03-29T15:30:00Z",
+      "ip": "192.168.1.1",
+      "userAgent": "Mozilla/5.0...",
+      "status": "success", // or "failed"
+      "reason": null // If failed
+    }
+  ]
+}
+```
+
+---
+
+## Moderation & Reports
+
+### List Content Reports
+
+**GET `/api/admin/reports`**
+
+List all user reports of content or users.
+
+**Authentication:** ADMIN+
+
+**Query Parameters:**
+- `type` — `content` or `user`
+- `status` — `open`, `investigating`, `resolved`, `dismissed`
+- `severity` — `low`, `medium`, `high`
+- `page` (default: 1)
+- `limit` (default: 50)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "report_123",
+      "type": "content",
+      "reportedItem": {
+        "id": "file_456",
+        "type": "file",
+        "name": "inappropriate.jpg",
+        "owner": { "id": "user_789", "name": "Reported User" }
+      },
+      "reportedBy": {
+        "id": "user_111",
+        "name": "Report Author"
+      },
+      "reason": "Explicit content",
+      "description": "This file contains...",
+      "severity": "high",
+      "status": "open",
+      "createdAt": "2026-03-29T15:30:00Z",
+      "evidence": ["screenshot_url"]
+    }
+  ]
+}
+```
+
+---
+
+### Get Report Details
+
+**GET `/api/admin/reports/[reportId]`**
+
+Get full details of a report.
+
+**Authentication:** ADMIN+
+
+**Response (200):** Report object with full context
+
+---
+
+### Update Report Status
+
+**PATCH `/api/admin/reports/[reportId]`**
+
+Update report status and add resolution notes.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "status": "resolved", // or "dismissed", "investigating"
+  "action": "content-removed", // Action taken
+  "notes": "Confirmed violation, content removed",
+  "assignedTo": "admin_user_id" // Optional
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... updated report ... }
+}
+```
+
+---
+
+### Delete Content (Reported)
+
+**DELETE `/api/admin/content/[fileId]`**
+
+Remove reported content from the platform.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "reason": "Violates community guidelines",
+  "notifyUser": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Content removed"
+}
+```
+
+---
+
+## File Auditing
+
+### Flag File for Review
+
+**POST `/api/admin/files/[fileId]/flag`**
+
+Mark a file for internal review.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "reason": "Potential malware detection",
+  "notes": "Flagged by VirusTotal scan"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "fileId": "file_123",
+    "flagged": true,
+    "flaggedAt": "2026-03-29T15:30:00Z",
+    "reason": "Potential malware detection"
+  }
+}
+```
+
+---
+
+### Get Flagged Files
+
+**GET `/api/admin/files/flagged`**
+
+List all flagged files.
+
+**Authentication:** ADMIN+
+
+**Query Parameters:**
+- `page` (default: 1)
+- `limit` (default: 50)
+- `reason` — Filter by flag reason
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "file_123",
+      "name": "flagged_file.bin",
+      "owner": { "id": "user_456", "name": "Owner" },
+      "flaggedAt": "2026-03-29T15:30:00Z",
+      "reason": "Potential malware",
+      "flaggedBy": { "id": "admin_789" }
+    }
+  ]
+}
+```
+
+---
+
+### Unflag File
+
+**POST `/api/admin/files/[fileId]/unflag`**
+
+Remove a flag from a file.
+
+**Authentication:** ADMIN+
+
+**Request Body:**
+```json
+{
+  "reason": "False positive confirmed"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "File unflagged"
+}
+```
+
+---
+
+## Products & Billing
+
+### List Products
+
+**GET `/api/admin/products`**
+
+List all available plans and products.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "plan_spark",
+      "name": "Spark",
+      "description": "Free plan",
+      "type": "plan",
+      "price": 0,
+      "billingInterval": "month",
+      "features": [
+        {
+          "name": "storage",
+          "value": "10GB"
+        },
+        {
+          "name": "maxUpload",
+          "value": "500MB"
+        }
+      ],
+      "active": true,
+      "createdAt": "2023-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Create Product
+
+**POST `/api/admin/products`**
+
+Create a new plan or add-on product.
+
+**Authentication:** SUPERADMIN only
+
+**Request Body:**
+```json
+{
+  "name": "Premium Add-on",
+  "slug": "premium-addon",
+  "description": "Extra features",
+  "type": "addon",
+  "price": 999, // In cents
+  "billingInterval": "month",
+  "features": [
+    { "name": "extra_domains", "value": "5" }
+  ],
+  "stripeProductId": "prod_xxx",
+  "stripePriceMonthlyId": "price_xxx"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": { ... product object ... }
+}
+```
+
+---
+
+### Edit Product
+
+**PATCH `/api/admin/products/[productId]`**
+
+Update product details, price, or features.
+
+**Authentication:** SUPERADMIN only
+
+**Request Body:**
+```json
+{
+  "price": 1999,
+  "features": [ ... ]
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... updated product ... }
+}
+```
+
+---
+
+## Financial & Subscriptions
+
+### Get User Subscription
+
+**GET `/api/admin/users/[userId]/subscription`**
+
+View a user's active subscription.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "sub_123",
+    "userId": "user_456",
+    "productId": "plan_glow",
+    "status": "active",
+    "billingInterval": "month",
+    "currentPeriodStart": "2026-03-01T00:00:00Z",
+    "currentPeriodEnd": "2026-04-01T00:00:00Z",
+    "price": 499,
+    "nextBillingDate": "2026-04-01T00:00:00Z",
+    "autoRenew": true,
+    "cancelledAt": null
+  }
+}
+```
+
+---
+
+### View Revenue
+
+**GET `/api/admin/revenue`**
+
+Get revenue metrics and statistics.
+
+**Authentication:** ADMIN+
+
+**Query Parameters:**
+- `period` — `day`, `month`, `year`
+- `startDate` — ISO date
+- `endDate` — ISO date
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": "month",
+    "startDate": "2026-03-01T00:00:00Z",
+    "endDate": "2026-03-31T23:59:59Z",
+    "totalRevenue": 52340, // In cents
+    "activeSubscriptions": 1240,
+    "newSubscriptions": 45,
+    "churnedSubscriptions": 8,
+    "refunds": 0,
+    "topPlans": [
+      { "name": "Glow", "count": 500 },
+      { "name": "Blaze", "count": 200 }
+    ]
+  }
+}
+```
+
+---
+
+## Email & Notifications
+
+### Send Bulk Email
+
+**POST `/api/admin/emails/broadcast`**
+
+Send an email to multiple users. Full request body and response are documented once under [Email Operations](#email-operations) further down this page — see that section for the current fields (`subject`, `body`, `priority`, `ctaLabel`, `ctaHref`, `recipientFilter`, `dryRun`).
+
+---
+
+### Get Email Template
+
+**GET `/api/admin/emails/templates`**
+
+List available email templates.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "welcome",
+      "name": "Welcome Email",
+      "subject": "Welcome to Emberly",
+      "preview": "..."
+    }
+  ]
+}
+```
+
+---
+
+## Audit Logs
+
+### Get Audit Log
+
+**GET `/api/admin/audit/logs`**
+
+Paginated audit log of all admin and system events. Full details, including the response shape, are documented once under [Audit Logs](#audit-logs-1) further down this page.
+
+---
+
+## System Health & Monitoring
+
+### System Status
+
+**GET `/api/admin/status`**
+
+Get system health and performance metrics.
+
+**Authentication:** ADMIN+
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "uptime": 99.98,
+    "database": {
+      "status": "connected",
+      "latency": 2.3,
+      "poolSize": 10
+    },
+    "storage": {
+      "status": "healthy",
+      "used": 2400000000000,
+      "available": 4800000000000,
+      "percentUsed": 33
+    },
+    "cdn": {
+      "status": "healthy",
+      "latency": 45.2
+    },
+    "queue": {
+      "pending": 42,
+      "processed": 125420
+    },
+    "email": {
+      "status": "healthy",
+      "lastError": null
+    }
+  }
+}
+```
+
+---
+
+### Analytics
+
+**GET `/api/admin/analytics`**
+
+Get platform-wide analytics.
+
+**Authentication:** ADMIN+
+
+**Query Parameters:**
+- `period` — `day`, `week`, `month`, `year`
+- `startDate` — ISO date
+- `endDate` — ISO date
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": "month",
+    "totalUsers": 125420,
+    "activeUsers": 45230,
+    "newUsers": 3250,
+    "totalFiles": 8420000,
+    "totalStorageUsed": 24000000000000, // In bytes
+    "totalDownloads": 125000000,
+    "totalUploads": 3240000,
+    "averageFileSize": 2854000,
+    "mostUsedPlans": {
+      "Spark": 80000,
+      "Glow": 25000,
+      "Blaze": 15000
+    }
+  }
+}
+```
+
+---
+
+## Error Handling
+
+Admin endpoints follow the same error format as user endpoints:
+
+```json
+{
+  "success": false,
+  "error": "Permission denied",
+  "code": "ADMIN_REQUIRED"
+}
+```
+
+**Admin-Specific Error Codes:**
+
+| Code | Meaning |
+|------|---------|
+| `ADMIN_REQUIRED` | User must be ADMIN+ |
+| `SUPERADMIN_REQUIRED` | User must be SUPERADMIN |
+| `INVALID_USER_ID` | User not found |
+| `CANNOT_MODIFY_SELF` | Can't modify own account |
+| `INVALID_ACTION` | Action not allowed |
+
+---
+
+## Best Practices
+
+1. **Always log actions** — Document why you took action
+2. **Use dry-run first** — Preview bulk operations before executing
+3. **Require 2FA** — All admin accounts should have 2FA enabled
+4. **Monitor audit logs** — Regularly review admin activity
+5. **Least privilege** — Don't promote users to SUPERADMIN unless necessary
+6. **Document policies** — Keep clear rules for moderation decisions
+
+---
+
+## Support
+
+For admin support:
+- **Email:** admin-support@embrly.ca
+- **Discord:** #staff channel
+
+---
+
+## Additional Admin Endpoints
+
+The following endpoints are documented from the live API and supplement the sections above.
+
+### User Verification
+
+**POST `/api/admin/users/[id]/verify`** — Mark user as verified (`isVerified = true`)
+
+**DELETE `/api/admin/users/[id]/verify`** — Unverify a user
+
+---
+
+### User Grants
+
+Awards that grant extra storage, domains, or other benefits.
+
+**GET `/api/admin/users/[id]/grants`** — List grants for a user
+
+**POST `/api/admin/users/[id]/grants`** — Award a grant
+
+```json
+{
+  "type": "storage",
+  "amount": 1073741824,
+  "reason": "Contest winner"
+}
+```
+
+**DELETE `/api/admin/users/[id]/grants`** — Revoke a grant (`?grantId=`)
+
+---
+
+### User Storage Assignment
+
+**PUT `/api/admin/users/[id]/storage`**
+
+Assign a specific storage bucket to a user. Sends bucket credentials email to the user.
+
+```json
+{ "bucketId": "bucket_abc123" }
+```
+
+Pass `{ "bucketId": null }` to clear the assignment and return user to the default bucket.
+
+---
+
+### Revoke User Sessions
+
+**DELETE `/api/users/[id]/sessions`**
+
+Immediately invalidates all active sessions for a user (increments their session version). The user is forced to log in again on all devices.
+
+---
+
+### Remove User Avatar
+
+**DELETE `/api/users/[id]/avatar`**
+
+Remove a user's avatar from storage and clear it from their profile. Admin only.
+
+---
+
+### Content Flagging
+
+**POST `/api/admin/content/flag`**
+
+Flag or unflag a file or URL for content review.
+
+```json
+{
+  "contentType": "FILE",
+  "contentId": "cm7xabc123",
+  "reason": "Reported CSAM — under review",
+  "flagged": true
+}
+```
+
+`contentType` must be `"FILE"` or `"URL"`. Set `flagged: false` to unflag.
+
+---
+
+### Applications Management
+
+**GET `/api/admin/applications`**
+
+Paginated list of all submitted applications (staff, partner, verification, ban appeals).
+
+**Query Parameters:**
+- `type` — `staff`, `partner`, `verification`, `ban_appeal`
+- `status` — `pending`, `reviewing`, `approved`, `rejected`
+- `page`, `limit`
+
+---
+
+**PATCH `/api/admin/applications/[id]`**
+
+Review an application.
+
+```json
+{
+  "status": "APPROVED",
+  "notes": "Looks good, approved.",
+  "awardGrant": true
+}
+```
+
+`status` values: `APPROVED`, `REJECTED`, `REVIEWING`
+
+---
+
+### Audit Logs
+
+**GET `/api/admin/audit/logs`**
+
+Paginated audit log of all admin and system events.
+
+**Query Parameters:**
+- `search` — Free-text search across actor/target email, type, action, resource, IP
+- `resource` — Filter by resource, exact match
+- `action` — Filter by action, partial match
+- `status` — `PENDING` \| `PROCESSING` \| `COMPLETED` \| `FAILED` \| `SCHEDULED`
+- `success` — `true` or `false`
+- `auditableOnly` — `true` to restrict to events flagged as auditable
+- `startDate` / `endDate` — ISO date range filter
+- `page` (default: 1), `limit` (default: 20, max: 100)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "evt_123",
+      "type": "user.banned",
+      "status": "COMPLETED",
+      "action": "ban",
+      "resource": "user",
+      "success": true,
+      "error": null,
+      "payload": { "reason": "ToS violation" },
+      "metadata": { "durationDays": 30 },
+      "actorId": "admin_789",
+      "actorEmail": "admin@embrly.ca",
+      "targetId": "user_456",
+      "targetEmail": "user@example.com",
+      "ip": "192.168.1.1",
+      "userAgent": "Mozilla/5.0...",
+      "createdAt": "2026-04-12T10:00:00Z"
+    }
+  ],
+  "pagination": { "total": 1, "page": 1, "limit": 20, "pageCount": 1 }
+}
+```
+
+---
+
+### Email Operations
+
+**POST `/api/admin/emails/broadcast`**
+
+Broadcast an email to a filtered set of users.
+
+```json
+{
+  "subject": "Service Update",
+  "body": "<p>HTML content</p>",
+  "priority": "normal",
+  "ctaLabel": "Read More",
+  "ctaHref": "https://embrly.ca/blog/update",
+  "recipientFilter": "all",
+  "dryRun": true
+}
+```
+
+`recipientFilter` values: `"all"`, `"verified"`, `"unverified"`, `"admin"`
+
+Set `dryRun: true` to see recipient count without sending:
+```json
+{ "success": true, "isDryRun": true, "recipientCount": 15420, "message": "Would send to 15420 recipients" }
+```
+
+Otherwise, sends in batches of 50 and returns:
+```json
+{
+  "success": true,
+  "sentTo": 15418,
+  "total": 15420,
+  "errorCount": 2,
+  "errors": ["Failed to send to bounced@example.com: ..."],
+  "message": "Sent to 15418 of 15420 recipients"
+}
+```
+
+---
+
+**POST `/api/admin/email/send`**
+
+Send a transactional email to specific recipients.
+
+```json
+{
+  "to": ["user@example.com"],
+  "subject": "Admin Notice",
+  "body": "<p>Content</p>",
+  "priority": "high"
+}
+```
+
+---
+
+**GET `/api/admin/email/stats`**
+
+Email delivery statistics for the past 30 days.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 12400,
+    "pending": 42,
+    "failed": 8,
+    "sent": 12350
+  }
+}
+```
+
+---
+
+**GET `/api/admin/email/logs`** — SuperAdmin only
+
+Paginated email event logs with filtering by status and date.
+
+---
+
+### Promo Codes
+
+**GET `/api/admin/promo-codes`** — List Stripe promo codes and coupons
+
+**POST `/api/admin/promo-codes`** — Create a new promo code
+
+```json
+{
+  "code": "LAUNCH50",
+  "discountPercent": 50,
+  "maxRedemptions": 100,
+  "expiresAt": "2026-12-31T23:59:59Z",
+  "private": false
+}
+```
+
+**DELETE `/api/admin/promo-codes/[id]`** — Deactivate (archive) a promo code
+
+---
+
+### Products
+
+**DELETE `/api/admin/products/[id]`**
+
+Soft-delete a product (`deletedAt` set, `isActive = false`). Does not affect existing subscribers.
+
+**POST `/api/admin/products/[id]/sync`**
+
+Sync product to Stripe — creates or updates the Stripe product and its prices, then writes back Stripe IDs to the database.
+
+---
+
+### Storage Buckets
+
+**GET `/api/admin/storage/buckets`** — List all S3 storage bucket configurations (secrets masked)
+
+**POST `/api/admin/storage/buckets`** — Add a new S3 bucket
+
+```json
+{
+  "name": "EU Bucket",
+  "endpoint": "https://s3.eu-central-1.amazonaws.com",
+  "region": "eu-central-1",
+  "bucket": "emberly-eu",
+  "accessKeyId": "AKIA...",
+  "secretAccessKey": "...",
+  "isDefault": false
+}
+```
+
+**GET `/api/admin/storage/buckets/[id]`** — Get bucket details (secrets masked)
+
+**PUT `/api/admin/storage/buckets/[id]`** — Update bucket configuration
+
+**DELETE `/api/admin/storage/buckets/[id]`** — Remove bucket configuration
+
+**POST `/api/admin/storage/buckets/[id]/test`** — Test S3 connectivity using `HeadBucketCommand`
+
+**POST `/api/admin/storage/test`** — Test S3 connectivity with provided credentials (not persisted)
+
+**PUT `/api/admin/storage/squads/[id]`** — Assign/clear a storage bucket for a squad
+
+```json
+{ "bucketId": "bucket_abc123" }
+```
+
+---
+
+### System API Key
+
+**GET `/api/admin/system-key`** — SuperAdmin only. Get system API key metadata (prefix and creation date). The full key is never returned after initial creation.
+
+**POST `/api/admin/system-key`** — SuperAdmin only. Generate or rotate the system API key. Returns the full key once as `esk_...`. Store it immediately.
+
+---
+
+### Integration Tests
+
+**POST `/api/admin/integrations/test`**
+
+Test third-party service connectivity.
+
+```json
+{ "integration": "stripe" }
+```
+
+Valid values: `"stripe"`, `"resend"`, `"cloudflare"`, `"discord"`, `"github"`, `"kener"`, `"smtp"`
+
+Returns `{ success, latencyMs, message }`.
+
+---
+
+### System Update Check
+
+**GET `/api/updates/check`**
+
+Compare the running version against the latest GitHub release.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "hasUpdate": true,
+    "latestVersion": "1.5.0",
+    "currentVersion": "1.4.2"
+  }
+}
+```

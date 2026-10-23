@@ -1,0 +1,22 @@
+{
+  "title": "User Guide",
+  "root": true,
+  "pages": [
+    "index",
+    "account-settings",
+    "file-management",
+    "file-collaboration",
+    "paste",
+    "url-shortener",
+    "custom-domains",
+    "teams-and-squads",
+    "nexium",
+    "storage-bucket",
+    "verification-codes",
+    "leaderboard",
+    "reporting",
+    "contributor-perks",
+    "discord-perks",
+    "discord-bot"
+  ]
+}

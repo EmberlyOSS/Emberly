@@ -1,0 +1,69 @@
+---
+title: HaveIBeenPwned
+description: How Emberly warns you when your password appears in known data breaches.
+---
+
+When you log in, Emberly automatically checks whether your password appears in the **HaveIBeenPwned (HIBP)** database of over 10 billion compromised credentials.
+
+## How It Works
+
+Your password is **never sent** to HIBP. The check uses **k-anonymity**:
+
+1. Your password is hashed with SHA-1 — locally in the browser
+2. Only the **first 5 characters** of the hash are sent to HIBP
+3. HIBP returns all hashes that start with those 5 characters
+4. Your browser checks whether your full hash is in the list
+5. The password itself never leaves your device
+
+## Login Flow
+
+```
+You enter password and click "Sign in"
+           ↓
+HIBP check starts (non-blocking)
+           ↓
+Sign-in request proceeds simultaneously
+           ↓
+     ┌─────┴──────┐
+  Breach?     No breach?
+     │              └─ Login succeeds, no warning
+     ↓
+ You are logged in successfully
+ + warning banner shown
+ + Options: "Change Password" or "Continue Anyway"
+```
+
+<Callout type="warn" title="Not an Emberly breach">
+  A HIBP warning means your password was found in *another service's* data breach — Emberly was not compromised. We strongly recommend changing it regardless.
+</Callout>
+
+## The Warning
+
+When your password is found in HIBP:
+
+- You are **still logged in** — it's informational, not a blocker
+- You see a banner explaining the breach
+- The number of times the password appears in breach databases is shown
+- You can click **"Change Password"** to update immediately, or **"Continue Anyway"**
+
+## Why This Matters
+
+Credential stuffing attacks — where attackers use leaked username/password pairs from other sites — are one of the most common account takeover methods. Even if your Emberly account is secure, a reused compromised password puts you at risk.
+
+## Privacy Guarantees
+
+| What is sent to HIBP | What stays private |
+|---------------------|-------------------|
+| First 5 chars of SHA-1 hash | Your full password |
+| | Your username |
+| | Your email address |
+| | The fact that you're checking |
+
+HIBP is a free, privacy-focused service operated by Troy Hunt. See [haveibeenpwned.com](https://haveibeenpwned.com/) for details on their privacy policy.
+
+## If You See a Warning
+
+1. **Don't panic** — your Emberly account itself is not breached
+2. Click **"Change Password"** and set a unique, strong password
+3. Check your other accounts — if you used the same password elsewhere, update those too
+4. Consider using a password manager for unique credentials per site

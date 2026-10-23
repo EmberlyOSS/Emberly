@@ -1,0 +1,7 @@
+Contact: mailto:security@embrly.ca
+Contact: https://embrly.ca/contact
+Expires: 2027-04-10T00:00:00Z
+Preferred-Languages: en
+Canonical: https://embrly.ca/.well-known/security.txt
+Policy: https://embrly.ca/legal/security
+Acknowledgments: https://embrly.ca/about

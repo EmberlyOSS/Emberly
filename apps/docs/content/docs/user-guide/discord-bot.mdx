@@ -1,0 +1,79 @@
+---
+title: Discord Bots
+description: Use Emberly from any Discord server, claim linked roles, and see how the Emberly server is moderated.
+---
+
+There are two Emberly bots:
+
+- **Emberly** is the public app. Add it to any server to use your account from Discord, run activity levels, and offer linked roles.
+- **Warden** runs only in the [Emberly Discord server](https://discord.gg/36spBmzZVB). It answers support questions, shows live platform status and keeps the server safe.
+
+## The Emberly app
+
+### Linking your account
+
+1. Open the **[Uploads tab](https://embrly.ca/me?tab=uploads)** on your profile and copy your **upload token**.
+2. In Discord, run `/link token:<your token>`. The reply is only visible to you.
+
+Run `/unlink` at any time to remove the connection.
+
+<Callout type="warn">
+  Your upload token lets anyone upload as you. Only paste it into `/link`, never into a normal message. If you regenerate it, run `/link` again with the new one.
+</Callout>
+
+### Account commands
+
+These need a linked account and work in any server with the bot, or in DMs.
+
+| Command | What it does |
+| --- | --- |
+| `/profile` | Your profile, plan and usage |
+| `/analytics` | Views, downloads, clicks and recent uploads |
+| `/files [count]` | Your most recent uploads |
+| `/shorten url` | Shortens a link with your account |
+| `/domains` | Your custom domains and whether they're verified |
+| `/squads` | The squads you own or belong to |
+| `/sharex` | Sends your ShareX config privately |
+
+### Levels
+
+Server admins can turn on activity levels with `/levels setup`. Members earn points by chatting, get a role for each level, and check their progress with `/rank`. Points slowly decay after a week without activity. `/levels status` shows the settings and `/levels disable` turns levels off and removes the level roles.
+
+### Linked roles
+
+Linked roles let a server give roles based on someone's Emberly account. Server admins add a requirement under **Server Settings → Roles → (role) → Links → Emberly**:
+
+| Requirement | Example |
+| --- | --- |
+| Has an Emberly account | Anyone with an account |
+| Files uploaded at least N | 100 files for an "Uploader" role |
+| Member for at least N days | 365 days for a "Veteran" role |
+
+Members connect from the server menu → **Linked Roles**, sign in to Emberly, and authorize Discord. Roles reflect the account at the moment of connecting, so connect again later to refresh them.
+
+## Warden (the Emberly server)
+
+### Help and status
+
+| Command | What it does |
+| --- | --- |
+| `/status` | Status of every component, plus incidents and maintenance |
+| `/faq question [for]` | Posts the answer to a common question, optionally mentioning someone |
+| `/docs [topic] [for]` | Links a docs page, optionally mentioning someone |
+| `/roles` | How to connect Emberly and claim linked roles |
+| `/links` | Website, docs, status page, GitHub and support contacts |
+
+The bot's status follows the [status page](https://emberlystat.us): online when everything is working, idle during minor issues or maintenance, and Do Not Disturb during an outage.
+
+In the support channels, it replies to questions that clearly match a common answer, such as custom domains that won't verify, ShareX setup, or a missing verification email. If the automatic answer doesn't help, a team member will follow up.
+
+### AutoMod
+
+To keep the server tidy, the bot removes:
+
+- Links to known scam and malware sites (the sender is timed out for 10 minutes)
+- Invite links to other Discord servers
+- Messages that mention `@everyone`, `@here` or five or more people (the sender is timed out for 10 minutes)
+- The same message posted four times within 10 seconds (the sender is timed out for 10 minutes)
+
+Staff are not affected. Every action is recorded in the server's moderation log.

@@ -1,0 +1,625 @@
+---
+title: Profile API
+description: Manage your Emberly profile, security settings, upload tokens, integrations, and account data via the REST API.
+---
+
+The Profile API gives authenticated users access to their full account — security settings, upload tokens, linked accounts, perks, referrals, and data export.
+
+<Callout type="info">
+  All Profile endpoints require a **session cookie** (authenticated browser session) unless otherwise noted. They are not typically called from external integrations. Use the [Files API](/docs/api/files) with your upload token for programmatic file operations.
+</Callout>
+
+## Endpoints Overview
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/profile` | Get your full profile |
+| `PATCH` | `/api/profile` | Update profile fields |
+| `POST` | `/api/profile/avatar` | Upload avatar image |
+| `POST` | `/api/profile/avatar/linked` | Set avatar from linked account |
+| `POST` | `/api/profile/banner` | Upload profile banner |
+| `GET` | `/api/profile/sessions` | List login history |
+| `DELETE` | `/api/profile/sessions` | Revoke all active sessions |
+| `GET` | `/api/profile/2fa` | Generate TOTP setup |
+| `POST` | `/api/profile/2fa` | Enable 2FA (two-step) |
+| `DELETE` | `/api/profile/2fa` | Disable 2FA |
+| `GET` | `/api/profile/2fa/recovery-codes` | View recovery code status |
+| `POST` | `/api/profile/2fa/recovery-codes` | Regenerate recovery codes |
+| `GET` | `/api/profile/linked-accounts` | List linked GitHub/Discord |
+| `DELETE` | `/api/profile/linked-accounts` | Unlink an account |
+| `GET` | `/api/profile/perks` | List perks and progress |
+| `POST` | `/api/profile/perks/refresh` | Re-check perk eligibility |
+| `GET` | `/api/profile/referrals` | Get referral info |
+| `POST` | `/api/profile/referrals` | Set custom referral code |
+| `GET` | `/api/profile/upload-token` | Get upload token |
+| `POST` | `/api/profile/upload-token` | Regenerate upload token |
+| `GET` | `/api/profile/upload-domain` | List available upload domains |
+| `POST` | `/api/profile/upload-domain` | Set preferred upload domain |
+| `GET` | `/api/profile/sharex` | Download ShareX config |
+| `POST` | `/api/profile/flameshot` | Generate Flameshot script |
+| `POST` | `/api/profile/spectacle` | Generate KDE Spectacle script |
+| `GET` | `/api/profile/bash` | Download bash upload script |
+| `GET` | `/api/profile/export` | Export all data as ZIP |
+| `GET` | `/api/profile/billing-history` | Paginated credit history |
+| `POST` | `/api/profile/discord-webhook/test` | Test Discord webhook |
+
+---
+
+## Get Your Profile
+
+### `GET /api/profile`
+
+Returns your complete profile including files, settings, 2FA status, theme, and storage info.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_123",
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "urlId": "janedoe",
+    "vanityId": "jane",
+    "bio": "Building cool things.",
+    "website": "https://janedoe.dev",
+    "image": "https://cdn.embrly.ca/avatars/user_123.png",
+    "banner": "https://cdn.embrly.ca/banners/user_123.jpg",
+    "theme": "dark",
+    "customColors": { "primary": "#ff6b35" },
+    "storageUsed": 5368709120,
+    "storageQuota": 53687091200,
+    "uploadToken": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "twoFactorEnabled": true,
+    "emailVerified": "2025-01-01T00:00:00Z",
+    "perkRoles": ["contributor:gold", "booster:silver"],
+    "discordWebhook": "https://discord.com/api/webhooks/...",
+    "createdAt": "2025-01-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+## Update Profile
+
+### `PATCH /api/profile`
+
+Update one or more profile fields in a single request.
+
+**Request Body (all fields optional):**
+```json
+{
+  "name": "Jane Doe",
+  "bio": "Updated bio",
+  "website": "https://janedoe.dev",
+  "theme": "light",
+  "customColors": { "primary": "#4a90e2" },
+  "emailNotificationsEnabled": true,
+  "discordWebhook": "https://discord.com/api/webhooks/...",
+  "currentPassword": "oldPass123",
+  "newPassword": "newPass456!"
+}
+```
+
+**Response (200):** Updated profile object (same shape as `GET /api/profile`)
+
+**Notes:**
+- To change your password, include both `currentPassword` and `newPassword`
+- Password must meet complexity requirements (8+ chars, upper + lower + number + special)
+- Password reuse against your last 5 passwords is rejected
+
+---
+
+## Avatar & Banner
+
+### `POST /api/profile/avatar`
+
+Upload a new avatar image. Accepted formats: JPEG, PNG, WebP, GIF (max 5 MB).
+
+**Content-Type:** `multipart/form-data`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | Avatar image |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "image": "https://cdn.embrly.ca/avatars/user_123.png" }
+}
+```
+
+---
+
+### `POST /api/profile/avatar/linked`
+
+Set your avatar from a linked GitHub or Discord account.
+
+**Request Body:**
+```json
+{ "provider": "github" }
+```
+
+`provider` must be `"github"` or `"discord"`. The provider must already be linked.
+
+---
+
+### `POST /api/profile/banner`
+
+Upload a profile banner. Accepted: JPEG, PNG, WebP, GIF (max 5 MB).
+
+**Content-Type:** `multipart/form-data`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | Banner image |
+
+---
+
+## Sessions
+
+### `GET /api/profile/sessions`
+
+Returns your login history and active session metadata (IP, user-agent, timestamp).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "sessions": [
+      {
+        "id": "sess_abc",
+        "ip": "123.45.67.89",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...",
+        "createdAt": "2026-04-01T08:00:00Z",
+        "lastActiveAt": "2026-04-12T09:30:00Z",
+        "isCurrent": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `DELETE /api/profile/sessions`
+
+Revoke **all** active sessions immediately (forces re-login on all devices). Your current session is also invalidated.
+
+**Response (200):**
+```json
+{ "success": true }
+```
+
+---
+
+## Two-Factor Authentication
+
+### `GET /api/profile/2fa`
+
+Generate a TOTP secret and `otpauth://` URI. Scan the URI with an authenticator app (Google Authenticator, Authy, 1Password, etc.).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "secret": "JBSWY3DPEBLW64TMMQ======",
+    "otpauthUri": "otpauth://totp/Emberly:jane@example.com?secret=JBSWY3DPEBLW64TMMQ&issuer=Emberly"
+  }
+}
+```
+
+---
+
+### `POST /api/profile/2fa` — Step 1: Send code
+
+Validate the TOTP token from your app. If correct, an email verification code is sent.
+
+**Request Body:**
+```json
+{ "step": "send-code", "totpCode": "123456" }
+```
+
+**Response (200):**
+```json
+{ "success": true, "data": { "message": "Verification email sent" } }
+```
+
+---
+
+### `POST /api/profile/2fa` — Step 2: Verify code
+
+Confirm the email code to complete 2FA enrollment.
+
+**Request Body:**
+```json
+{ "step": "verify-code", "emailCode": "789012" }
+```
+
+**Response (200):**
+```json
+{ "success": true, "data": { "twoFactorEnabled": true } }
+```
+
+---
+
+### `DELETE /api/profile/2fa`
+
+Disable 2FA. Requires an email verification code (sent automatically when you request this action).
+
+**Request Body:**
+```json
+{ "emailCode": "789012" }
+```
+
+---
+
+### Recovery Codes
+
+**GET `/api/profile/2fa/recovery-codes`**
+
+Check recovery code status.
+
+**Query Parameters:**
+- `includeCodes=true` — Include the actual code values (shown only once after generation)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 10,
+    "used": 2,
+    "remaining": 8
+  }
+}
+```
+
+---
+
+**POST `/api/profile/2fa/recovery-codes`**
+
+Regenerate all recovery codes. Previous codes are invalidated immediately.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "codes": [
+      "ABCD-1234",
+      "EFGH-5678",
+      "..."
+    ]
+  }
+}
+```
+
+<Callout type="warn">
+  Recovery codes are shown only once. Store them in a safe place immediately after generation.
+</Callout>
+
+---
+
+## Linked Accounts
+
+### `GET /api/profile/linked-accounts`
+
+List your linked GitHub and Discord accounts.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "provider": "github",
+      "providerAccountId": "12345678",
+      "username": "janedoe",
+      "linkedAt": "2025-06-01T00:00:00Z"
+    },
+    {
+      "provider": "discord",
+      "providerAccountId": "987654321012345678",
+      "username": "janedoe#0001",
+      "linkedAt": "2025-07-15T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### `DELETE /api/profile/linked-accounts?provider=github`
+
+Unlink a GitHub or Discord account.
+
+**Query Parameters:**
+- `provider` — `"github"` or `"discord"`
+
+**Response (200):**
+```json
+{ "success": true }
+```
+
+---
+
+## Perks
+
+### `GET /api/profile/perks`
+
+List all eligible perks with progress — contributor milestones and Discord booster tiers.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "contributor:gold",
+      "name": "Gold Contributor",
+      "type": "contributor",
+      "earned": true,
+      "storageBonus": 1073741824,
+      "domainBonus": 3,
+      "progress": {
+        "current": 14200,
+        "required": 10000,
+        "unit": "lines_of_code"
+      }
+    },
+    {
+      "id": "booster:silver",
+      "name": "Silver Booster",
+      "type": "discord",
+      "earned": true,
+      "storageBonus": 2147483648,
+      "domainBonus": 1,
+      "progress": {
+        "current": 4,
+        "required": 3,
+        "unit": "months_boosting"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/profile/perks/refresh`
+
+Re-check your Discord boost status and GitHub contributor lines of code in real-time. Updates `perkRoles` on your account.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "perkRoles": ["contributor:gold", "booster:silver"],
+    "updated": true
+  }
+}
+```
+
+---
+
+## Referrals
+
+### `GET /api/profile/referrals`
+
+**Query Parameters:**
+- `action=stats` — Returns total referrals and rewards earned
+- `action=history` — Returns a list of successful referrals
+- _(no action)_ — Returns your current referral code
+
+**Response (no action, 200):**
+```json
+{
+  "success": true,
+  "data": { "referralCode": "janedoe-xyz" }
+}
+```
+
+---
+
+### `POST /api/profile/referrals`
+
+Set or update your custom referral code.
+
+**Request Body:**
+```json
+{ "code": "my-custom-code" }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "referralCode": "my-custom-code" }
+}
+```
+
+---
+
+## Upload Token
+
+Your upload token authenticates file uploads and URL creation from external tools.
+
+### `GET /api/profile/upload-token`
+
+Fetch your current upload token.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "token": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }
+}
+```
+
+---
+
+### `POST /api/profile/upload-token`
+
+Regenerate your upload token. **This immediately invalidates the old token.**
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "token": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" }
+}
+```
+
+<Callout type="warn">
+  After regenerating, update the token in all integrations (ShareX, Flameshot, scripts, etc.) or they will start returning `401`.
+</Callout>
+
+---
+
+## Upload Domain
+
+### `GET /api/profile/upload-domain`
+
+List domains available for file URLs — your default domain plus any verified custom domains.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "current": "files.janedoe.dev",
+    "available": [
+      { "domain": "embrly.ca", "isDefault": true },
+      { "domain": "files.janedoe.dev", "isDefault": false, "verified": true }
+    ]
+  }
+}
+```
+
+---
+
+### `POST /api/profile/upload-domain`
+
+Set the domain used for new upload URLs.
+
+**Request Body:**
+```json
+{ "domain": "files.janedoe.dev" }
+```
+
+The domain must be verified before it can be set as the upload domain.
+
+---
+
+## Integration Downloads
+
+These endpoints generate pre-configured upload scripts and configs using your current token and upload domain.
+
+### `GET /api/profile/sharex`
+
+Download a ShareX `.sxcu` config file. See [ShareX Integration](/docs/integrations/sharex).
+
+### `POST /api/profile/flameshot`
+
+Generate a Flameshot upload script. See [Flameshot Integration](/docs/integrations/flameshot).
+
+**Request Body:**
+```json
+{
+  "useWayland": false,
+  "useCompositor": false
+}
+```
+
+### `POST /api/profile/spectacle`
+
+Generate a KDE Spectacle upload script.
+
+**Request Body:**
+```json
+{
+  "type": "screenshot"
+}
+```
+
+### `GET /api/profile/bash`
+
+Download a generic bash upload script (`.sh`) with your token pre-configured.
+
+---
+
+## Data Export
+
+### `GET /api/profile/export`
+
+Triggers a full data export — all your files and URLs are packaged into a ZIP archive. The response is a Server-Sent Events (SSE) stream showing export progress.
+
+Use `GET /api/profile/export/progress` to poll progress (0–100) as a separate SSE stream.
+
+**Response:** ZIP file download when complete.
+
+<Callout type="info">
+  Exports can take several minutes for large accounts. Your browser will hold the connection open until the ZIP is ready.
+</Callout>
+
+---
+
+## Billing History
+
+### `GET /api/profile/billing-history`
+
+Returns paginated credit transaction history.
+
+**Query Parameters:**
+- `limit` (default: 20) — Results per page
+- `offset` (default: 0) — Pagination offset
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "txn_123",
+      "type": "purchase",
+      "amount": 499,
+      "currency": "USD",
+      "description": "Glow plan — monthly",
+      "createdAt": "2026-04-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Discord Webhook Test
+
+### `POST /api/profile/discord-webhook/test`
+
+Send a test embed to the Discord webhook URL configured in your profile. Useful to verify the webhook is working before relying on it for upload notifications.
+
+**Response (200):**
+```json
+{ "success": true, "data": { "message": "Test notification sent" } }
+```
+
+**Errors:**
+- `400` — No Discord webhook configured in your profile
+- `502` — Webhook URL rejected the request (check the URL is correct)
+
+---
+
+## Related
+
+- [Account Settings Guide](/docs/user-guide/account-settings) — dashboard walkthrough
+- [Contributor Perks](/docs/user-guide/contributor-perks)
+- [Discord Perks](/docs/user-guide/discord-perks)
+- [ShareX Integration](/docs/integrations/sharex)
+- [Flameshot Integration](/docs/integrations/flameshot)

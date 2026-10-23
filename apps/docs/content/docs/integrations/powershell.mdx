@@ -1,0 +1,138 @@
+---
+title: PowerShell
+description: Upload files to Emberly from PowerShell scripts on Windows.
+---
+
+Automate file uploads and clipboard management from PowerShell using Emberly's REST API.
+
+## Basic Upload
+
+```powershell
+# Emberly-Upload.ps1
+param(
+    [Parameter(Mandatory=$true)][string]$FilePath,
+    [string]$Token = $env:EMBERLY_TOKEN,
+    [string]$Visibility = "PUBLIC"
+)
+
+if (-not (Test-Path $FilePath)) { Write-Error "File not found: $FilePath"; exit 1 }
+if (-not $Token)                { Write-Error "Set `$env:EMBERLY_TOKEN or use -Token"; exit 1 }
+
+$fileName = Split-Path $FilePath -Leaf
+$bytes    = [System.IO.File]::ReadAllBytes($FilePath)
+$boundary = [guid]::NewGuid().ToString()
+$enc      = [System.Text.Encoding]::UTF8
+
+$body  = "--$boundary`r`n"
+$body += "Content-Disposition: form-data; name=`"visibility`"`r`n`r`n$Visibility`r`n"
+$body += "--$boundary`r`n"
+$body += "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`"`r`n"
+$body += "Content-Type: application/octet-stream`r`n`r`n"
+
+$stream = [System.IO.MemoryStream]::new()
+$stream.Write($enc.GetBytes($body), 0, $enc.GetBytes($body).Length)
+$stream.Write($bytes, 0, $bytes.Length)
+$footer = "`r`n--$boundary--`r`n"
+$stream.Write($enc.GetBytes($footer), 0, $enc.GetBytes($footer).Length)
+$stream.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null
+
+$response = Invoke-RestMethod `
+    -Uri "https://embrly.ca/api/files" `
+    -Method POST `
+    -Headers @{ Authorization = "Bearer $Token" } `
+    -ContentType "multipart/form-data; boundary=$boundary" `
+    -Body $stream.ToArray()
+
+if ($response.success) {
+    $response.data.url | Set-Clipboard
+    Write-Host "Uploaded: $($response.data.url)"
+} else {
+    Write-Error "Upload failed: $($response.error)"
+}
+```
+
+**Usage:**
+```powershell
+# Set token once as an environment variable
+$env:EMBERLY_TOKEN = "your_token_here"
+
+# Upload a file
+.\Emberly-Upload.ps1 -FilePath "C:\path\to\file.png"
+
+# Upload as private
+.\Emberly-Upload.ps1 -FilePath "document.pdf" -Visibility PRIVATE
+```
+
+---
+
+## Environment Variable Setup
+
+Set your token permanently:
+
+```powershell
+# For the current session
+$env:EMBERLY_TOKEN = "your_token_here"
+
+# Permanently (user scope)
+[System.Environment]::SetEnvironmentVariable("EMBERLY_TOKEN", "your_token_here", "User")
+```
+
+---
+
+## Screenshot + Upload
+
+Capture the screen and upload in one step:
+
+```powershell
+function Invoke-EmberlyScreenshot {
+    param([string]$Token = $env:EMBERLY_TOKEN)
+
+    Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+
+    $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $bmp    = [System.Drawing.Bitmap]::new($screen.Width, $screen.Height)
+    $g      = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+
+    $tmp = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.png'
+    $bmp.Save($tmp, [System.Drawing.Imaging.ImageFormat]::Png)
+    $g.Dispose(); $bmp.Dispose()
+
+    .\Emberly-Upload.ps1 -FilePath $tmp -Token $Token
+    Remove-Item $tmp -Force
+}
+```
+
+---
+
+## Bulk Upload
+
+```powershell
+function Send-EmberlyBulk {
+    param(
+        [string[]]$Files,
+        [string]$Token = $env:EMBERLY_TOKEN
+    )
+    $results = @()
+    foreach ($f in $Files) {
+        $r = .\Emberly-Upload.ps1 -FilePath $f -Token $Token
+        $results += [PSCustomObject]@{ File = $f; Url = $r }
+        Start-Sleep -Milliseconds 200  # avoid rate limits
+    }
+    return $results
+}
+
+# Example
+$urls = Send-EmberlyBulk -Files (Get-ChildItem "C:\screenshots\*.png").FullName
+$urls | Format-Table
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `401 Unauthorized` | Token is incorrect or expired — regenerate in dashboard |
+| `TLS/SSL error` | Run `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` |
+| File > plan limit | Upgrade your plan or use chunked upload via the API |
