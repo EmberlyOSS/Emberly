@@ -6,6 +6,23 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Upgrading
+
+- Run `bun run db:deploy`. Migration `20261023200000_add_device_authorization` adds the `DeviceAuthorization` table.
+
+### Added
+
+- **Sign in to apps from the browser** — desktop apps such as Flicker can ask for a short code, open `/activate`, and receive their own API key once you approve, so they never handle your password. Approving again from the same app and device replaces its old key, and every key can be revoked in Profile → API. Endpoints: `POST /api/device/code`, `POST /api/device/approve` (signed in) and `POST /api/device/token`.
+- **`GET /api/instance`** — public details about the server for apps: name, version, whether it's the hosted cloud, whether billing is on, and which features are available.
+
+### Security
+
+- **File password hashes in file lists** — `GET /api/files` returned each file's password hash alongside `hasPassword`. In a squad's file list that meant any member could read the password hashes of other members' files and try to crack them offline. Lists now return only `hasPassword`.
+
+### Documentation
+
+- **Analytics API docs** showed the wrong response shapes for `/api/analytics/summary` and `/api/analytics/storage`, and sizes in bytes. They now match the API, note that sizes are in megabytes, and list upload tokens and API keys as accepted auth.
+
 ## [2.8.1] - 2026-10-23
 
 ### Fixed

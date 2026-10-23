@@ -31,6 +31,7 @@
     "branding": "node scripts/generate-branding.mjs",
     "branding:discord": "node scripts/generate-discord-emotes.mjs",
     "branding:warden": "node scripts/generate-warden-branding.mjs",
+    "branding:flicker": "node scripts/generate-flicker-branding.mjs",
     "worker": "npx tsx scripts/worker.ts",
     "prepare": "husky install"
   },

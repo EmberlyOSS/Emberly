@@ -129,6 +129,7 @@ model User {
   applications           Application[]
   applicationReplies     ApplicationReply[]
   apiKeys                UserApiKey[]
+  deviceAuthorizations   DeviceAuthorization[]
 
   @@index([role])
   @@index([createdAt])
@@ -741,6 +742,25 @@ model UserApiKey {
 
   @@index([userId])
   @@index([keyHash])
+}
+
+// Sign-in requests from desktop apps (device code flow). The API key is only
+// created when the app collects it, so no secret is ever stored here.
+model DeviceAuthorization {
+  id             String    @id @default(cuid())
+  deviceCodeHash String    @unique
+  userCode       String    @unique
+  clientId       String
+  deviceName     String
+  status         String    @default("pending")
+  userId         String?
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  approvedAt     DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
 
 // Named API keys for squad programmatic access (e.g. CI/CD, integrations)
