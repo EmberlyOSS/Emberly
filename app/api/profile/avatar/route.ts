@@ -5,9 +5,13 @@ import { join } from 'path'
 
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
+import { getStorageProvider } from '@/packages/lib/storage'
 import { bytesToMB } from '@/packages/lib/utils'
 import { getConfig } from '@/packages/lib/config'
+import {
+  mediaPublicUrl,
+  storagePathFromMediaUrl,
+} from '@/packages/lib/storage/public-media'
 
 const logger = loggers.users
 
@@ -33,7 +37,7 @@ export async function POST(req: Request) {
     const quotasEnabled = config.settings.general.storage.quotas.enabled
     const defaultQuota = config.settings.general.storage.quotas.default
 
-    if ((user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
+    if (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') {
       const { canUploadSize } = await import('@/packages/lib/storage/quota')
       const fileSizeMB = bytesToMB(file.size)
       const uploadCheck = await canUploadSize(user.id, fileSizeMB)
@@ -42,7 +46,9 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             error: 'Storage quota exceeded',
-            message: uploadCheck.reason || 'You have reached your storage quota. Purchase additional storage to continue.',
+            message:
+              uploadCheck.reason ||
+              'You have reached your storage quota. Purchase additional storage to continue.',
           },
           { status: 413 }
         )
@@ -67,19 +73,16 @@ export async function POST(req: Request) {
     const emberly = incomingHeaders.get('x-emberly-host')
     if (cordx) meta['x-cordx-host'] = cordx
     if (emberly) meta['x-emberly-host'] = emberly
-    let publicPath = `/api/avatars/${avatarFilename}`
+    const publicPath = mediaPublicUrl('avatars', avatarFilename)
 
-    if (dbUser?.image?.startsWith('/api/avatars/')) {
+    const oldAvatarPath = storagePathFromMediaUrl(dbUser?.image, 'avatars')
+    if (oldAvatarPath) {
       try {
-        const oldFilename = dbUser.image.split('/').pop()
-        if (oldFilename) {
-          const oldPath = join('uploads', 'avatars', oldFilename)
-          await storageProvider.deleteFile(oldPath)
-        }
+        await storageProvider.deleteFile(oldAvatarPath)
       } catch (error) {
         logger.error('Failed to delete old avatar', error as Error, {
           userId: user.id,
-          oldPath: dbUser.image,
+          oldPath: dbUser?.image,
         })
       }
     }
@@ -90,10 +93,6 @@ export async function POST(req: Request) {
       'image/jpeg',
       meta
     )
-
-    if (storageProvider instanceof S3StorageProvider) {
-      publicPath = await storageProvider.getFileUrl(avatarPath)
-    }
 
     const updated = await prisma.user.update({
       where: { id: user.id },
@@ -123,4 +122,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

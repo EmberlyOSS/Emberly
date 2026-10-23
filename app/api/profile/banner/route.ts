@@ -5,7 +5,11 @@ import { requireAuth } from '@/packages/lib/auth/api-auth'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
 import { handleApiError } from '@/packages/lib/api/error-handler'
-import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
+import { getStorageProvider } from '@/packages/lib/storage'
+import {
+  mediaPublicUrl,
+  storagePathFromMediaUrl,
+} from '@/packages/lib/storage/public-media'
 
 const logger = loggers.users
 
@@ -71,31 +75,22 @@ export async function POST(req: Request) {
     if (cordx) meta['x-cordx-host'] = cordx
     if (emberly) meta['x-emberly-host'] = emberly
 
-    // Delete the old banner from storage if it was a locally-stored path
-    if (existing?.banner?.startsWith('/api/') || existing?.banner?.startsWith('uploads/')) {
+    // Delete the old banner (its extension may differ, so it isn't always overwritten)
+    const oldBannerPath = storagePathFromMediaUrl(existing?.banner, 'banners')
+    if (oldBannerPath) {
       try {
-        const oldBanner = existing.banner
-        // Derive the storage key from a local API path like /api/... or a raw storage path
-        const oldStoragePath = oldBanner.startsWith('uploads/')
-          ? oldBanner
-          : null
-        if (oldStoragePath) {
-          await storageProvider.deleteFile(oldStoragePath)
-        }
+        await storageProvider.deleteFile(oldBannerPath)
       } catch (error) {
         logger.error('Failed to delete old banner', error as Error, {
           userId: user.id,
-          oldBanner: existing.banner,
+          oldBanner: existing?.banner,
         })
       }
     }
 
     await storageProvider.uploadFile(buffer, bannerPath, file.type, meta)
 
-    let publicPath = `/api/profile/banner/${bannerFilename}`
-    if (storageProvider instanceof S3StorageProvider) {
-      publicPath = await storageProvider.getFileUrl(bannerPath)
-    }
+    const publicPath = mediaPublicUrl('banners', bannerFilename)
 
     await prisma.user.update({
       where: { id: user.id },
@@ -126,16 +121,19 @@ export async function DELETE(req: Request) {
       const storageProvider = await getStorageProvider()
 
       // Attempt to delete from storage for locally-stored paths
-      const oldBanner = existing.banner
-      const oldStoragePath = oldBanner.startsWith('uploads/') ? oldBanner : null
+      const oldStoragePath = storagePathFromMediaUrl(existing.banner, 'banners')
       if (oldStoragePath) {
         try {
           await storageProvider.deleteFile(oldStoragePath)
         } catch (error) {
-          logger.error('Failed to delete banner file from storage', error as Error, {
-            userId: user.id,
-            path: oldStoragePath,
-          })
+          logger.error(
+            'Failed to delete banner file from storage',
+            error as Error,
+            {
+              userId: user.id,
+              path: oldStoragePath,
+            }
+          )
         }
       }
     }
@@ -154,4 +152,3 @@ export async function DELETE(req: Request) {
     })
   }
 }
-

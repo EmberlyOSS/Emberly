@@ -8,7 +8,7 @@ import { authOptions } from '@/packages/lib/auth'
 import { getConfig } from '@/packages/lib/config'
 import { prisma } from '@/packages/lib/database/prisma'
 import { loggers } from '@/packages/lib/logger'
-import { S3StorageProvider, getStorageProvider } from '@/packages/lib/storage'
+import { getStorageProvider } from '@/packages/lib/storage'
 
 const logger = loggers.files
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     const storageProvider = await getStorageProvider()
     const faviconPath = join('uploads', 'favicon.png')
-    let publicPath = '/api/favicon'
+    const publicPath = '/api/favicon'
 
     const config = await getConfig()
     if (config.settings.appearance.favicon) {
@@ -65,10 +65,6 @@ export async function POST(req: Request) {
       meta
     )
 
-    if (storageProvider instanceof S3StorageProvider) {
-      publicPath = await storageProvider.getFileUrl(faviconPath)
-    }
-
     config.settings.appearance.favicon = publicPath
 
     // Persist updated config under the new Emberly key and write config file
@@ -90,4 +86,3 @@ export async function POST(req: Request) {
     return new NextResponse('Internal server error', { status: 500 })
   }
 }
-

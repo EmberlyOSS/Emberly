@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 
 import { Icons } from '@/packages/components/shared/icons'
 import { Button } from '@/packages/components/ui/button'
@@ -17,7 +16,7 @@ interface VerifyEmailFormProps {
 }
 
 export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
-  const router = useRouter()
+  const { update: refreshSession } = useSession()
   const [status, setStatus] = useState<VerificationStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [manualToken, setManualToken] = useState('')
@@ -36,21 +35,27 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
     setError(null)
 
     try {
-      const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`)
+      const response = await fetch(
+        `/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`
+      )
       const data = await response.json()
 
       if (response.ok) {
         setStatus('success')
-        // Redirect to dashboard after 2 seconds
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
+        // Refresh the session so its emailVerified flag updates, then do a full
+        // navigation: the proxy reads the session cookie, and a client-side
+        // push would be bounced straight back to this page.
+        await refreshSession().catch(() => {})
+        setTimeout(continueToDashboard, 1500)
       } else if (data.error && data.error.toLowerCase().includes('expired')) {
         setStatus('expired')
         setError('Verification code expired. Please request a new one.')
       } else {
         setStatus('error')
-        setError(data.error || 'Verification failed. Please check your token and try again.')
+        setError(
+          data.error ||
+            'Verification failed. Please check your token and try again.'
+        )
       }
     } catch (err) {
       setStatus('error')
@@ -59,6 +64,10 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
     } finally {
       setIsVerifying(false)
     }
+  }
+
+  function continueToDashboard() {
+    window.location.assign('/dashboard')
   }
 
   async function handleManualSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -85,7 +94,8 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
           Verify your email
         </h1>
         <p className="text-base text-muted-foreground">
-          We sent a verification link to your email. Click it to verify, or enter the 6-digit code below.
+          We sent a verification link to your email. Click it to verify, or
+          enter the 6-digit code below.
         </p>
       </div>
 
@@ -118,6 +128,9 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
               Redirecting in a moment...
             </p>
           </div>
+          <Button className="w-full" onClick={continueToDashboard}>
+            Continue to dashboard
+          </Button>
         </div>
       )}
 
@@ -147,7 +160,12 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
           </div>
 
           {error && (
-            <div role="alert" aria-live="assertive" aria-atomic="true" className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
+            <div
+              role="alert"
+              aria-live="assertive"
+              aria-atomic="true"
+              className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2"
+            >
               <Icons.alertCircle className="h-4 w-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -189,7 +207,8 @@ export function VerifyEmailForm({ token }: VerifyEmailFormProps) {
         </p>
         {status !== 'success' && (
           <div className="text-xs text-amber-600/70 dark:text-amber-500/70 bg-amber-500/10 p-2 rounded">
-            You must verify your email to continue. If you need to log out, use the button below.
+            You must verify your email to continue. If you need to log out, use
+            the button below.
           </div>
         )}
         {status !== 'success' && (

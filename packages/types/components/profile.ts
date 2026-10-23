@@ -7,6 +7,8 @@ export interface ProfileClientProps {
   formattedUsed: string
   usagePercentage: number
   isAdmin: boolean
+  /** Page title row, shown at the top of the content column */
+  header?: React.ReactNode
 }
 
 export interface ProfileStorageProps {

@@ -6,6 +6,32 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-10-23
+
+### Changed
+
+- **Profile pages match the dashboard** — `/me` now uses the same layout as the dashboard and admin:
+  - The big header card is replaced by a compact title row in the content column, with the quick links and Sign Out as small buttons beside it.
+  - The sidebar is a glass card where the active tab gets a filled background and an orange icon.
+  - The mobile tab strip shows labels on every tab, not just the active one.
+
+### Upgrading
+
+- If Cloudflare sits in front of your instance, purge its cache for `/api/avatars/*`, `/api/banners/*` and `/api/favicon`, which may still hold the old redirect responses.
+
+### Fixed
+
+- **Stuck on "You will be redirected shortly" after verifying email:**
+  - The session token stored `emailVerified` at sign-in (before verification), and only refreshed it from the database when the field was missing rather than false.
+  - `proxy.ts` therefore kept treating the user as unverified and bounced `/dashboard` back to the verify page, where the success screen just stayed put.
+  - Unverified sessions now re-check the database whenever they're read. After verifying, the page refreshes the session and does a full navigation, and there's a "Continue to dashboard" button as a fallback.
+- **Avatars, banners and the custom favicon broken on S3 storage:**
+  - Avatars redirected browsers to an unsigned URL in the private bucket (403, or 502 when storage was down), which also exposed the storage hostname.
+  - Banners were saved as presigned URLs, so they expired after 6 hours.
+  - On local storage, banner URLs pointed at routes that didn't exist.
+
+  All three now stream through Emberly (`/api/avatars/:file`, the new `/api/banners/:file`, `/api/favicon`) via `packages/lib/storage/public-media.ts`. Uploads store a versioned Emberly path (`?v=`), so re-uploads aren't masked by caches, and replacing a banner with a different file type now removes the old file.
+
 ## [2.7.0] - 2026-10-23
 
 A big one: Emberly can now run completely free, custom domains can be set up automatically through Cloudflare, the whole site has a new ember-orange look, and there's a new status page at [emberlystat.us](https://emberlystat.us). This release also fixes several security issues, so self-hosters should upgrade.
