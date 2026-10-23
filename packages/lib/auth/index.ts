@@ -41,8 +41,8 @@ const NEXTAUTH_COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN || undefined
 // Format: comma-separated list of origins (e.g. "https://emberly.site,https://embrly.ca")
 const NEXTAUTH_TRUSTED_ORIGINS = (process.env.NEXTAUTH_TRUSTED_ORIGINS || '')
   .split(',')
-  .map(origin => origin.trim())
-  .filter(origin => origin.length > 0)
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0)
 
 // Keep JWT/JWE decryption stable in local dev even when env vars are missing.
 // In production, this must come from AUTH_SECRET or NEXTAUTH_SECRET.
@@ -113,7 +113,7 @@ export const authOptions: NextAuthOptions = {
             OR: [
               { email: { equals: identifier, mode: 'insensitive' } },
               { name: { equals: identifier, mode: 'insensitive' } },
-            ]
+            ],
           },
           select: userSelect,
         })
@@ -138,92 +138,104 @@ export const authOptions: NextAuthOptions = {
               },
             })
           } else {
-            throw Object.assign(
-              new Error('AccountSuspended'),
-              { name: 'AccountSuspended' }
-            )
+            throw Object.assign(new Error('AccountSuspended'), {
+              name: 'AccountSuspended',
+            })
           }
         }
 
         // Safety check: warn if username looks like an email
         if (user.name && user.name.includes('@')) {
-          console.warn(`[Auth] WARNING: User ${user.id} has email-like username: "${user.name}". This should not happen in production.`)
+          console.warn(
+            `[Auth] WARNING: User ${user.id} has email-like username: "${user.name}". This should not happen in production.`
+          )
         }
 
         // Magic link auth: requires valid token
         if (credentials.token) {
-           const hashedToken = (await import('crypto')).createHash('sha256').update(credentials.token).digest('hex')
+          const hashedToken = (await import('crypto'))
+            .createHash('sha256')
+            .update(credentials.token)
+            .digest('hex')
 
-           console.log('[Auth] Magic link validation:', {
-             userId: user.id,
-             email: user.email,
-             hashedToken: hashedToken.substring(0, 10) + '...',
-             now: new Date().toISOString()
-           })
+          console.log('[Auth] Magic link validation:', {
+            userId: user.id,
+            email: user.email,
+            hashedToken: hashedToken.substring(0, 10) + '...',
+            now: new Date().toISOString(),
+          })
 
-           // Verify token and expiry, and ensure it matches the user
-           const validUser = await prisma.user.findFirst({
-             where: {
-               id: user.id,
-               magicLinkToken: hashedToken,
-               magicLinkExpires: { gt: new Date() }
-             },
-             select: userSelect
-           })
+          // Verify token and expiry, and ensure it matches the user
+          const validUser = await prisma.user.findFirst({
+            where: {
+              id: user.id,
+              magicLinkToken: hashedToken,
+              magicLinkExpires: { gt: new Date() },
+            },
+            select: userSelect,
+          })
 
-           if (!validUser) {
-             // Debug info
-             const dbUser = await prisma.user.findUnique({
-               where: { id: user.id },
-               select: {
-                 email: true,
-                 magicLinkToken: true,
-                 magicLinkExpires: true
-               }
-             })
-             console.log('[Auth] Magic link validation failed:', {
-               userId: user.id,
-               storedToken: dbUser?.magicLinkToken ? dbUser.magicLinkToken.substring(0, 10) + '...' : 'null',
-               storedExpires: dbUser?.magicLinkExpires,
-               isExpired: dbUser?.magicLinkExpires ? new Date() > dbUser.magicLinkExpires : 'unknown'
-             })
-             return null
-           }
+          if (!validUser) {
+            // Debug info
+            const dbUser = await prisma.user.findUnique({
+              where: { id: user.id },
+              select: {
+                email: true,
+                magicLinkToken: true,
+                magicLinkExpires: true,
+              },
+            })
+            console.log('[Auth] Magic link validation failed:', {
+              userId: user.id,
+              storedToken: dbUser?.magicLinkToken
+                ? dbUser.magicLinkToken.substring(0, 10) + '...'
+                : 'null',
+              storedExpires: dbUser?.magicLinkExpires,
+              isExpired: dbUser?.magicLinkExpires
+                ? new Date() > dbUser.magicLinkExpires
+                : 'unknown',
+            })
+            return null
+          }
 
-           console.log('[Auth] Magic link token validated successfully')
+          console.log('[Auth] Magic link token validated successfully')
 
-           // Check if user has 2FA enabled and code not provided
-           if (validUser.twoFactorEnabled && !credentials.twoFactorCode) {
-             // Throw error to fail auth and prompt for 2FA
-             const error = new Error('TwoFactorRequired')
-             error.name = 'TwoFactorRequired'
-             throw error
-           }
+          // Check if user has 2FA enabled and code not provided
+          if (validUser.twoFactorEnabled && !credentials.twoFactorCode) {
+            // Throw error to fail auth and prompt for 2FA
+            const error = new Error('TwoFactorRequired')
+            error.name = 'TwoFactorRequired'
+            throw error
+          }
 
-           // Verify 2FA code if provided
-           if (validUser.twoFactorEnabled && credentials.twoFactorCode) {
-             if (!validUser.twoFactorSecret) {
-               return null
-             }
-             const isValid = await verify2FACode(validUser.id, validUser.twoFactorSecret, credentials.twoFactorCode)
-             if (!isValid) {
-               return null
-             }
-           }
+          // Verify 2FA code if provided
+          if (validUser.twoFactorEnabled && credentials.twoFactorCode) {
+            if (!validUser.twoFactorSecret) {
+              return null
+            }
+            const isValid = await verify2FACode(
+              validUser.id,
+              validUser.twoFactorSecret,
+              credentials.twoFactorCode
+            )
+            if (!isValid) {
+              return null
+            }
+          }
 
-           // Consume the token atomically and get the updated user with new sessionVersion
-           const updatedUser = await prisma.user.update({
-             where: { id: user.id },
-             data: {
-               magicLinkToken: null,
-               magicLinkExpires: null,
-               sessionVersion: { increment: 1 } // Invalidate old sessions
-             },
-             select: userSelect
-           })
+          // Consume the token atomically and get the updated user with new sessionVersion
+          const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              magicLinkToken: null,
+              magicLinkExpires: null,
+              sessionVersion: { increment: 1 }, // Invalidate old sessions
+            },
+            select: userSelect,
+          })
 
-           // Return user session data with the NEW sessionVersion
-           return {
+          // Return user session data with the NEW sessionVersion
+          return {
             id: updatedUser.id,
             email: updatedUser.email,
             name: updatedUser.name,
@@ -266,7 +278,9 @@ export const authOptions: NextAuthOptions = {
                 where: { id: user.id },
                 data: { passwordBreachDetectedAt: new Date() },
               })
-              console.log(`[Auth] Password breach detected for user ${user.email}`)
+              console.log(
+                `[Auth] Password breach detected for user ${user.email}`
+              )
             }
           } catch (err) {
             console.error('Failed to check password breach', err)
@@ -286,7 +300,11 @@ export const authOptions: NextAuthOptions = {
           if (!user.twoFactorSecret) {
             return null
           }
-          const isValid = await verify2FACode(user.id, user.twoFactorSecret, credentials.twoFactorCode)
+          const isValid = await verify2FACode(
+            user.id,
+            user.twoFactorSecret,
+            credentials.twoFactorCode
+          )
           if (!isValid) {
             return null
           }
@@ -301,7 +319,8 @@ export const authOptions: NextAuthOptions = {
           sessionVersion: user.sessionVersion,
           alphaUser: user.alphaUser,
           twoFactorEnabled: user.twoFactorEnabled,
-          passwordBreachDetectedAt: user.passwordBreachDetectedAt?.toISOString() || null,
+          passwordBreachDetectedAt:
+            user.passwordBreachDetectedAt?.toISOString() || null,
         }
       },
     }),
@@ -320,12 +339,15 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email
         token.image = user.image
         token.passwordBreachDetectedAt = (user as any).passwordBreachDetectedAt
-        console.log(`[JWT] User signed in: ${token.email}, emailVerified: ${token.emailVerified}`)
+        console.log(
+          `[JWT] User signed in: ${token.email}, emailVerified: ${token.emailVerified}`
+        )
       }
-      
-      // On subsequent requests, if emailVerified isn't set, fetch from database
-      // This ensures verified users don't get redirected on token refresh
-      if (token.id && !('emailVerified' in token)) {
+
+      // While the token says unverified, re-check the database whenever the
+      // session is read, so verifying takes effect without signing out again.
+      // (The flag is stored at sign-in, before the user has verified.)
+      if (token.id && !token.emailVerified) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id },
@@ -333,13 +355,18 @@ export const authOptions: NextAuthOptions = {
           })
           if (dbUser) {
             token.emailVerified = dbUser.emailVerified ? true : false
-            console.log(`[JWT] Refreshed emailVerified from DB for ${token.email}: ${token.emailVerified}`)
+            console.log(
+              `[JWT] Refreshed emailVerified from DB for ${token.email}: ${token.emailVerified}`
+            )
           }
         } catch (error) {
-          console.warn('[JWT] Failed to fetch emailVerified from DB:', error instanceof Error ? error.message : error)
+          console.warn(
+            '[JWT] Failed to fetch emailVerified from DB:',
+            error instanceof Error ? error.message : error
+          )
         }
       }
-      
+
       return token
     },
     async signIn({ user, account, profile, email, credentials }) {
@@ -349,7 +376,7 @@ export const authOptions: NextAuthOptions = {
       if (userEmail) {
         // Get context from middleware-stored headers
         const storedContext = globalThis.__nextAuthLoginContext || {}
-        
+
         const ip = storedContext.ip
         const userAgent = storedContext.userAgent
         const country = storedContext.geo?.country
@@ -361,7 +388,10 @@ export const authOptions: NextAuthOptions = {
         const loginContext = {
           ip: ip ?? undefined,
           userAgent: userAgent ?? undefined,
-          geo: (country || city) ? { country: country ?? undefined, city: city ?? undefined } : undefined,
+          geo:
+            country || city
+              ? { country: country ?? undefined, city: city ?? undefined }
+              : undefined,
         }
 
         void prisma.user
@@ -373,7 +403,9 @@ export const authOptions: NextAuthOptions = {
               lastLoginUserAgent: userAgent || null,
             },
           })
-          .catch((err) => console.error('Failed to update last login metadata', err))
+          .catch((err) =>
+            console.error('Failed to update last login metadata', err)
+          )
 
         // For password auth, ensure current password is in history (backward compatibility)
         if (credentials?.password) {
@@ -389,7 +421,9 @@ export const authOptions: NextAuthOptions = {
                   dbUser.password
                 )
                 if (wasAdded) {
-                  console.log(`[Auth] Password history initialized for user ${user.id} on login`)
+                  console.log(
+                    `[Auth] Password history initialized for user ${user.id} on login`
+                  )
                 }
               }
             } catch (err) {
@@ -401,7 +435,10 @@ export const authOptions: NextAuthOptions = {
         // Record login and check if this is a new device/suspicious login
         void (async () => {
           try {
-            const detection = await detectNewLogin(user.id as string, loginContext)
+            const detection = await detectNewLogin(
+              user.id as string,
+              loginContext
+            )
 
             // Record this login in history
             await recordLogin(user.id as string, loginContext, true)
@@ -447,8 +484,9 @@ export const authOptions: NextAuthOptions = {
         session.user.alphaUser = token.alphaUser
         session.user.twoFactorEnabled = token.twoFactorEnabled
         session.user.emailVerified = token.emailVerified ? true : false // Convert DateTime/null to boolean for session
-        session.user.passwordBreachDetectedAt = token.passwordBreachDetectedAt as string | null | undefined
-        
+        session.user.passwordBreachDetectedAt =
+          token.passwordBreachDetectedAt as string | null | undefined
+
         // Periodically refresh user data from database (on each request for now)
         try {
           const freshUser = await prisma.user.findUnique({
@@ -465,8 +503,9 @@ export const authOptions: NextAuthOptions = {
             session.user.alphaUser = freshUser.alphaUser
             session.user.twoFactorEnabled = freshUser.twoFactorEnabled
             session.user.emailVerified = freshUser.emailVerified ? true : false // Convert DateTime/null to boolean
-            session.user.passwordBreachDetectedAt = freshUser.passwordBreachDetectedAt?.toISOString() || null
-            
+            session.user.passwordBreachDetectedAt =
+              freshUser.passwordBreachDetectedAt?.toISOString() || null
+
             // Update token for next request if sessionVersion changed
             if (freshUser.sessionVersion !== token.sessionVersion) {
               token.sessionVersion = freshUser.sessionVersion
@@ -474,7 +513,10 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           // If DB is unavailable, continue with JWT data
-          console.warn('[Session] Database unavailable, using JWT data:', error instanceof Error ? error.message : error)
+          console.warn(
+            '[Session] Database unavailable, using JWT data:',
+            error instanceof Error ? error.message : error
+          )
         }
       }
       return session
@@ -491,25 +533,28 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   // Trust multiple origins for cross-domain auth (supported at runtime in next-auth v4)
-  ...((NEXTAUTH_TRUSTED_ORIGINS.length > 0 || (process.env.NEXTAUTH_URL ?? '').includes('localhost')) ? { trustHost: true as any } : {}),
+  ...(NEXTAUTH_TRUSTED_ORIGINS.length > 0 ||
+  (process.env.NEXTAUTH_URL ?? '').includes('localhost')
+    ? { trustHost: true as any }
+    : {}),
   // Configure cookie domain only when NEXTAUTH_COOKIE_DOMAIN is provided.
   // This makes the session cookie valid across subdomains (e.g. uploads.example.com)
   // but cannot be used to share cookies across unrelated registrable domains.
   ...(NEXTAUTH_COOKIE_DOMAIN
     ? {
-      cookies: {
-        sessionToken: {
-          name: process.env.NEXTAUTH_COOKIE_NAME || 'next-auth.session-token',
-          options: {
-            domain: NEXTAUTH_COOKIE_DOMAIN,
-            path: '/',
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+        cookies: {
+          sessionToken: {
+            name: process.env.NEXTAUTH_COOKIE_NAME || 'next-auth.session-token',
+            options: {
+              domain: NEXTAUTH_COOKIE_DOMAIN,
+              path: '/',
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+            },
           },
         },
-      },
-    }
+      }
     : {}),
   pages: {
     signIn: '/auth/login',
