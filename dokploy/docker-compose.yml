@@ -9,6 +9,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       DATABASE_URL: postgresql://emberly:${POSTGRES_PASSWORD}@postgres:5432/emberly
       REDIS_URL: redis://redis:6379
+      EMBERLY_RUN_EVENT_WORKER: ${EMBERLY_RUN_EVENT_WORKER:-true}
     volumes:
       - emberly-data:/data
     depends_on:

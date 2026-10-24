@@ -1,274 +1,121 @@
 ---
-title: Development Setup
-description: Get the Emberly development stack running locally from clone to first request.
+title: Development
+description: Run the Emberly monorepo locally.
 ---
 
-This guide walks through setting up Emberly for local development. By the end you will have the full stack running: database, cache, file storage, and the Next.js dev server.
+Emberly is a [Turborepo](https://turbo.build) monorepo using Bun workspaces.
 
 ## Prerequisites
 
-**System requirements:**
-- OS: Linux, macOS, or Windows (WSL2 recommended on Windows)
-- RAM: 8 GB minimum (16 GB recommended)
-- Disk: 20 GB free
+| Tool | Version |
+|------|---------|
+| [Bun](https://bun.sh) | 1.3+ |
+| [Node.js](https://nodejs.org) | 22+ |
+| PostgreSQL | 14+ |
+| Redis | 7+ |
 
-**Required software:**
+If you have Docker, this is the quickest way to get PostgreSQL and Redis:
 
-| Tool | Version | Check |
-|------|---------|-------|
-| [Bun](https://bun.sh) | Latest | `bun --version` |
-| [Node.js](https://nodejs.org) | 18+ | `node --version` |
-| [PostgreSQL](https://www.postgresql.org/download/) | 14+ | `psql --version` |
-| [Redis](https://redis.io/download) | 7+ | `redis-cli --version` |
-| Git | Any | `git --version` |
-| Docker | Optional | `docker --version` |
+```bash
+docker run -d --name emberly-postgres -p 5432:5432 \
+  -e POSTGRES_USER=emberly -e POSTGRES_PASSWORD=emberly -e POSTGRES_DB=emberly \
+  postgres:17-alpine
+docker run -d --name emberly-redis -p 6379:6379 redis:7-alpine
+```
 
 ---
 
-## Step 1: Clone and Install
+## Setup
 
 ```bash
 git clone https://github.com/EmberlyOSS/Emberly.git
 cd Emberly
 bun install
+cp .env.example .env
 ```
 
-Installation takes a few minutes on first run while Bun resolves the lockfile.
-
----
-
-## Step 2: Set Up Services
-
-You need PostgreSQL and Redis running before the app starts. Docker Compose is the fastest path.
-
-### Option A: Docker Compose (Recommended)
-
-Create a `docker-compose.yml` in the project root:
-
-```yaml
-services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: emberly_dev
-      POSTGRES_USER: emberly
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U emberly -d emberly_dev"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-volumes:
-  postgres_data:
-```
+The defaults in `.env.example` match the containers above. Set `AUTH_SECRET` to any value; in development a built-in one is used if it's empty.
 
 ```bash
-docker-compose up -d
+bun run db:deploy   # apply migrations
+bun run dev
 ```
 
-### Option B: Local Services
+Open [http://localhost:3000](http://localhost:3000). An empty database sends you to the [Setup Wizard](/docs/self-hosting/first-time-setup).
 
-**PostgreSQL:**
+In development the background worker runs inside the app unless `EMBERLY_RUN_EVENT_WORKER=false`.
+
+---
+
+## Layout
+
+```
+apps/
+  dashboard/      Emberly web app, API and worker (Next.js)
+    app/          Routes and API handlers
+    components/
+    lib/          Business logic and service clients
+    scripts/      Worker and maintenance scripts
+  docs/           docs.embrly.ca (Fumadocs)
+  bot/            Discord bot
+packages/
+  db/             Prisma schema, migrations and generated client
+  config/         Shared TypeScript and lint config
+```
+
+The root `.env` is shared. Dashboard scripts load it automatically.
+
+---
+
+## Commands
+
+Run these from the repository root.
+
+| Command | What it does |
+|---------|--------------|
+| `bun run dev` | Starts the dashboard |
+| `bun run dev:all` | Starts every app through Turbo |
+| `bun run build` | Builds the dashboard |
+| `bun run start` | Runs the built dashboard |
+| `bun run worker` | Runs the background worker on its own |
+| `bun run typecheck` | Type-checks every package |
+| `bun run lint` | Lints every package |
+| `bun run test` | Runs tests |
+| `bun run format` | Formats with Prettier |
+
+To work on a single app, run its scripts with `--cwd`, e.g. `bun run --cwd apps/docs dev`.
+
+---
+
+## Database
+
+The schema lives in `packages/db/prisma/schema.prisma`.
+
+| Command | What it does |
+|---------|--------------|
+| `bun run db:migrate` | Creates a migration from schema changes and applies it |
+| `bun run db:deploy` | Applies existing migrations |
+| `bun run db:generate` | Regenerates the Prisma client |
+| `bun run db:studio` | Opens Prisma Studio |
+| `bun run db:seed` | Creates the Cloud plan catalog (Cloud mode only) |
+
+Use `db:deploy` against staging and production databases, never `db:migrate`.
+
+---
+
+## Docker Images
+
+The root `Dockerfile` builds the dashboard and is built from the repository root:
 
 ```bash
-# macOS (Homebrew)
-brew services start postgresql
-createdb emberly_dev
-
-# Ubuntu / Debian
-sudo systemctl start postgresql
-sudo -u postgres createdb emberly_dev
-
-# Windows (WSL2)
-sudo service postgresql start
-sudo -u postgres createdb emberly_dev
+docker build -t emberly .
+docker build -t emberly-worker --target worker .
 ```
 
-**Redis:**
-
-```bash
-# macOS
-brew services start redis
-
-# Ubuntu / Debian
-sudo systemctl start redis
-```
+The other apps each have a `Dockerfile` in their own folder and are built with that folder as the context, e.g. `docker build apps/docs`.
 
 ---
 
-## Step 3: Configure Environment
+## Flicker
 
-Copy the template to `.env`:
-
-```bash
-cp .env.template .env
-```
-
-Edit `.env` with your values:
-
-```env
-# Required — set these before first run
-
-# PostgreSQL connection string
-DATABASE_URL="postgresql://emberly:password@localhost:5432/emberly_dev?schema=public"
-
-# Redis connection string
-REDIS_URL="redis://default:@localhost:6379"
-
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXT_PUBLIC_BASE_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-here"   # generate with: openssl rand -base64 32
-
-# GitHub OAuth (get from github.com/settings/applications/new)
-GITHUB_OAUTH_CLIENT_ID="your_github_client_id"
-GITHUB_OAUTH_CLIENT_SECRET="your_github_client_secret"
-
-# Discord OAuth (get from discord.com/developers/applications)
-DISCORD_OAUTH_CLIENT_ID="your_discord_client_id"
-DISCORD_OAUTH_CLIENT_SECRET="your_discord_client_secret"
-
-# Optional — leave blank for local dev
-VIRUSTOTAL_API_KEY=""
-NEXT_PUBLIC_SENTRY_DSN=""
-```
-
-Generate a `NEXTAUTH_SECRET`:
-
-```bash
-openssl rand -base64 32
-```
-
-<Callout type="info" title="OAuth apps">
-  For local development, create GitHub and Discord OAuth apps with the callback URLs `http://localhost:3000/api/auth/link/github/callback` and `http://localhost:3000/api/auth/link/discord/callback`. Both are optional — you can log in with email/password if you skip them.
-</Callout>
-
-<Callout type="info" title="Storage and integrations">
-  S3 storage, Stripe, Resend email, and Cloudflare are configured after first run via **Admin → Settings** (the Storage and Integrations tabs). They are stored in the database, not in `.env`.
-</Callout>
-
----
-
-## Step 4: Database Setup
-
-```bash
-# Run migrations (creates tables)
-bun run db:migrate
-
-# Regenerate the Prisma client
-bun run db:generate
-
-# Seed subscription plans (required once)
-bun run db:seed
-```
-
----
-
-## Step 5: Start the Dev Server
-
-```bash
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000). On first load with an empty database, you are redirected to **/setup** — a one-time wizard that creates the admin account and configures initial settings. Complete this before anything else.
-
----
-
-## Project Structure
-
-```
-Emberly/
-├── app/                        # Next.js App Router
-│   ├── api/                    # API route handlers
-│   │   ├── files/              # File upload and management
-│   │   ├── domains/            # Custom domain management
-│   │   ├── urls/               # URL shortener
-│   │   ├── discovery/          # Nexium team/squad API
-│   │   ├── payments/           # Stripe billing
-│   │   └── auth/               # NextAuth
-│   ├── (main)/                 # Dashboard and public pages
-│   └── (shorturl)/             # Short URL redirect handler
-├── packages/
-│   ├── components/             # Shared React components
-│   ├── hooks/                  # Shared React hooks
-│   ├── lib/                    # Business logic and service clients
-│   └── types/                  # Shared TypeScript types
-├── prisma/
-│   ├── schema.prisma           # Database schema (source of truth)
-│   └── migrations/             # Migration history
-└── scripts/                    # Utility scripts (seed-plans, etc.)
-```
-
----
-
-## Database Management
-
-```bash
-bun run db:migrate    # Create + apply a new migration
-bun run db:deploy     # Apply existing migrations (production only)
-bun run db:push       # Push schema without migration file (prototype only)
-bun run db:generate   # Regenerate Prisma client after schema changes
-bun run db:studio     # Open Prisma Studio browser UI
-bun run db:seed       # Seed subscription plans
-```
-
-After every edit to `prisma/schema.prisma`, run `bun run db:generate`.
-
-Never use `db:push` in staging or production. Always use `db:deploy`.
-
----
-
-## Common Commands
-
-```bash
-bun dev             # Start dev server (Turbopack)
-bun run build       # Production build
-bun run typecheck   # Type-check without building
-bun run lint        # ESLint
-bun run lint:fix    # ESLint with auto-fix
-bun run format      # Prettier
-```
-
----
-
-## Architecture Reference
-
-```
-Browser
-  └─ Next.js App Router
-       ├─ Server Components / API Routes
-       │    └─ Prisma ORM → PostgreSQL
-       ├─ File uploads → S3-compatible storage
-       │    └─ VirusTotal hash check (background)
-       │    └─ OCR extraction (background via event worker)
-       └─ Redis  ← chunked upload sessions + caching
-```
-
-Chunked upload flow:
-
-```
-POST /api/files/chunks        → Redis (session init)    → S3 multipart upload
-POST /api/files/chunks/[id]/complete  → finalize S3     → Prisma (metadata)
-```
-
----
-
-## Event Worker
-
-The event worker processes background jobs (OCR, email, bucket provisioning). In development it runs in-process when `EMBERLY_RUN_EVENT_WORKER=true` is set in `.env`. It is off by default so you can start the app without a Redis connection.
-
----
-
-## Flicker Desktop App
-
-Flicker is a separate repository — [EmberlyOSS/Flicker](https://github.com/EmberlyOSS/Flicker). Clone and set it up independently. See the [Flicker integration guide](/docs/integrations/flicker) for details.
+Flicker, the desktop uploader, is a separate repository: [EmberlyOSS/Flicker](https://github.com/EmberlyOSS/Flicker). See the [Flicker development guide](/docs/integrations/flicker-development).

@@ -58,8 +58,6 @@ apps/
   dashboard/    The Emberly app: dashboard, file pages, API and admin panel
   docs/         docs.embrly.ca
   bot/          The Emberly Discord app
-  warden/       Warden, the Discord moderation bot (Go)
-  status/       The status page at emberlystat.us
 packages/
   config/       Shared TypeScript and Tailwind config, and the Ember theme
   db/           Prisma schema, migrations and client

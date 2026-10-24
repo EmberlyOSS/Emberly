@@ -1,29 +1,40 @@
 ---
 title: Cloud vs. Self-Hosted
-description: What a self-hosted deployment includes compared to the managed embrly.ca instance.
+description: What a self-hosted Emberly instance includes compared to embrly.ca.
 ---
 
-A self-hosted deployment runs the core file-sharing platform nothing to configure or opt into here. This page just sets expectations for what that includes, so you're not left wondering why something you saw mentioned elsewhere in these docs doesn't show up in your own instance.
+embrly.ca and your own instance run the same code. A self-hosted instance runs the core file-sharing platform. The features that only make sense for a hosted, paid service stay switched off.
 
 ---
 
 ## What Self-Hosting Includes
 
-- File upload, storage, and management (public/private, passwords, expiration)
+- File upload, storage and management (public/private, passwords, expiration)
 - File collaborators and edit suggestions
-- URL shortener
-- OCR on uploads
-- Account settings, 2FA, sessions
-- Admin Panel: user management, storage/email integration config, audit logs
-- The full REST API for the above (files, urls, profile, analytics)
-- Flicker and other third-party client integrations (ShareX, Flameshot, etc.)
+- Pastes and the URL shortener
+- OCR and malware scanning on uploads
+- Account settings, 2FA and sessions
+- Admin Panel: users, storage, email, integrations, audit logs and quotas
+- The full REST API for all of the above
+- Flicker, ShareX, Flameshot and other upload clients
+- Your own site name and favicon (see [License & Branding](/docs/self-hosting/licensing))
 
-## What's Not Included
+## What Stays Off
 
-A handful of pages and API routes exist only on embrly.ca's own managed instance things tied to running Emberly as a hosted (SaaS) product rather than the core platform (billing/plan upgrades, custom domains, team squads and Discovery profiles, the public leaderboard, and the marketing site itself). If a doc page you're reading mentions one of these, it applies to embrly.ca, not your self-hosted instance those pages carry their own callout saying so.
+These run only in Emberly Cloud mode:
 
-Since there's no billing path on a self-hosted instance, every account effectively runs under the default free-tier storage and upload limits. If you want different limits for your users, adjust them directly at the database level, or in your own fork.
+- Billing, plans and the pricing page
+- Custom domains for users
+- Squads and Discovery profiles
+- Managed storage buckets
+- Discord and GitHub contributor perks
 
-## Why This Split Exists
+If a page elsewhere in these docs covers one of these, it applies to embrly.ca, and the page says so.
 
-Emberly the self-hostable project and Emberly the hosted product share one codebase. Cloud-specific pages and routes are gated centrally at the infrastructure level, so self-hosted instances automatically get a smaller, focused surface area without anyone having to maintain a separate stripped-down fork.
+Every account on a self-hosted instance uses the default quotas you set in **Admin → Settings → User Quotas**.
+
+## Cloud Mode
+
+Cloud mode turns on all of the above, for running Emberly as a hosted service for other people. It needs both `EMBERLY_RUN_CLOUD=true` and a license key that includes hosted service. Without the license, the variable has no effect.
+
+The Elastic License 2.0 does not let you offer Emberly to others as a hosted or managed service without that license. Running it for yourself, your team or your company is always free. See [License & Branding](/docs/self-hosting/licensing).

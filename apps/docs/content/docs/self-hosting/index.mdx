@@ -1,52 +1,60 @@
 ---
 title: Self-Hosting
-description: Host your own instance of Emberly, the self-hostable file sharing and management platform.
+description: Run your own Emberly instance with Docker, Dokploy, a PaaS, or directly on a server.
 ---
 
-Emberly's source code is public under the Elastic License 2.0. You can self-host a complete instance with full control over your data, storage, authentication, and domain configuration.
+Emberly's source is public under the Elastic License 2.0. You can run a complete instance on your own server, with your own storage, domain and users, for free.
 
 <Cards>
-  <Card title="Cloud vs. Self-Hosted" description="What's different when you run your own instance." href="/docs/self-hosting/cloud-vs-self-hosted" />
-  <Card title="First-Time Setup" description="Walk through the Setup Wizard on first launch." href="/docs/self-hosting/first-time-setup" />
-  <Card title="Development Setup" description="Get the full stack running locally for development." href="/docs/self-hosting/development" />
-  <Card title="Production Deployment" description="Deploy Emberly to a Linux server with Bun and systemd." href="/docs/self-hosting/production" />
-  <Card title="Environment Variables" description="Complete reference for all configuration options." href="/docs/self-hosting/environment" />
-  <Card title="Storage Configuration" description="MinIO, AWS S3, and other S3-compatible storage options." href="/docs/self-hosting/storage" />
-  <Card title="Contributing" description="How to contribute code, fixes, and improvements." href="/docs/self-hosting/contributing" />
+  <Card title="Deploying" description="Docker Compose, Dokploy, Railpack/Nixpacks, or a plain Linux server." href="/docs/self-hosting/production" />
+  <Card title="First-Time Setup" description="The Setup Wizard that creates your admin account." href="/docs/self-hosting/first-time-setup" />
+  <Card title="Environment Variables" description="Every variable Emberly reads, and which ones you need." href="/docs/self-hosting/environment" />
+  <Card title="Storage" description="Local disk, or any S3-compatible bucket." href="/docs/self-hosting/storage" />
+  <Card title="License & Branding" description="Your own name and logo, and what a license adds." href="/docs/self-hosting/licensing" />
+  <Card title="Cloud vs. Self-Hosted" description="What a self-hosted instance includes." href="/docs/self-hosting/cloud-vs-self-hosted" />
+  <Card title="Development" description="Run the monorepo locally." href="/docs/self-hosting/development" />
+  <Card title="Contributing" description="Code standards and the pull request process." href="/docs/self-hosting/contributing" />
 </Cards>
 
-## Stack Overview
+## Quick Start
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Web application | Next.js 16, React 19 | App, API routes, dashboard |
-| Database | PostgreSQL 14+ via Prisma | Users, files, and account data |
-| Cache | Redis 7+ | Chunked upload sessions, caching |
-| File storage | S3-compatible (AWS, MinIO, or any S3-compatible endpoint) | Object storage |
-| Authentication | NextAuth.js v4 | OAuth (GitHub, Discord) and email/password |
-| Email | Resend or SMTP | Transactional email |
-
-<Callout type="info">
-  A self-hosted instance runs the core file-sharing platform. See [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted) if you're coming from another page in these docs and wondering why something isn't showing up in your own deployment.
-</Callout>
-
-## Minimum Requirements
-
-- Node.js 18+ and Bun
-- PostgreSQL 14+
-- Redis 7+
-- S3-compatible object storage bucket
-
-## Source Code
+With Docker installed:
 
 ```bash
 git clone https://github.com/EmberlyOSS/Emberly.git
+cd Emberly
+cp .env.example .env
+# set AUTH_SECRET (openssl rand -base64 32) and APP_URL in .env
+docker compose up -d
 ```
 
-The [GitHub repository](https://github.com/EmberlyOSS/Emberly) contains the full application including database migrations, scripts, and CI workflows.
+Open `http://localhost:3000` and the [Setup Wizard](/docs/self-hosting/first-time-setup) walks you through creating the admin account. Database migrations run automatically when the container starts.
+
+For other ways to deploy, see [Deploying](/docs/self-hosting/production).
+
+## What You Need
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| PostgreSQL | 14+ | Bundled in the Compose file |
+| Redis | 7+ | Bundled in the Compose file |
+| Storage | — | A local volume by default, or any S3-compatible bucket |
+| Server | 2 GB RAM | More if you enable OCR on large uploads |
 
 ## Configuration Model
 
-Most integration credentials (S3 keys, Resend, VirusTotal) are configured post-install through the **Admin Panel → Settings → Integrations** UI and stored in the database — not in environment variables. The only things that must be in `.env` before first run are the database URL, Redis URL, NextAuth secret, and optional OAuth credentials.
+Only a few things must be set before the first start: `APP_URL`, `AUTH_SECRET`, `DATABASE_URL` and `REDIS_URL`. Everything else, including email, storage and integrations, can be set either as environment variables or later in **Admin → Settings**. When both are set, environment variables win for storage, and the Admin Panel value wins for email.
 
 See [Environment Variables](/docs/self-hosting/environment) for the full list.
+
+## Repository Layout
+
+Emberly is a monorepo. The app you deploy lives in `apps/dashboard`; the other apps are optional.
+
+| Path | What it is |
+|------|-----------|
+| `apps/dashboard` | The Emberly web app, API and background worker |
+| `apps/docs` | This documentation site |
+| `apps/bot` | The Emberly Discord bot |
+| `packages/db` | Prisma schema and migrations |
+| `packages/config` | Shared TypeScript and lint config |

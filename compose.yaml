@@ -18,6 +18,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env (openssl rand -base64 32)}
       DATABASE_URL: postgresql://emberly:${POSTGRES_PASSWORD:-emberly}@postgres:5432/emberly
       REDIS_URL: redis://redis:6379
+      EMBERLY_RUN_EVENT_WORKER: ${EMBERLY_RUN_EVENT_WORKER:-true}
     volumes:
       - emberly-data:/data
     depends_on:

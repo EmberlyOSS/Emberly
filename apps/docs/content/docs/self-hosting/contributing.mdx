@@ -5,7 +5,7 @@ description: How to contribute to Emberly — development setup, code standards,
 
 Thanks for your interest in contributing to Emberly. This guide covers the development workflow, code standards, and how to submit a pull request.
 
-For initial setup, see the [Development Setup guide](/docs/self-hosting/development).
+For initial setup, see the [Development guide](/docs/self-hosting/development).
 
 ---
 
@@ -40,7 +40,7 @@ git checkout -b feat/your-feature-name
 
 ### 3. Make Changes and Commit
 
-Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
+Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) and include a scope. A commit hook checks this.
 
 ```
 feat(upload): add file compression on upload
@@ -50,7 +50,7 @@ Implements client-side GZIP compression before upload to reduce storage.
 Closes #123
 ```
 
-Common types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `ci`.
+Common types: `feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `test`, `ci`.
 
 ### 4. Verify Before Pushing
 
@@ -92,19 +92,19 @@ function processResult(value: any) {
 
 ### API Routes
 
-API handlers live in `app/api/`. Use the shared response helpers — do not construct raw `NextResponse` objects:
+API handlers live in `apps/dashboard/app/api/`. Use the shared response helpers rather than building `NextResponse` objects:
 
 ```typescript
-import { apiResponse, apiError, HTTP_STATUS } from "@/packages/lib/api/response";
-import { requireAdmin } from "@/packages/lib/auth/api-auth";
+import { apiResponse, apiError, HTTP_STATUS } from "@/lib/api/response";
+import { requireAdmin } from "@/lib/auth/api-auth";
 ```
 
 ### Logging
 
-Never use `console.*`. Use named loggers from `@/packages/lib/logger`:
+Never use `console.*`. Use named loggers from `@/lib/logger`:
 
 ```typescript
-import { loggers } from "@/packages/lib/logger";
+import { loggers } from "@/lib/logger";
 const log = loggers.files;
 log.info("upload complete", { fileId, size });
 log.error("upload failed", error as Error, { fileId });
@@ -112,14 +112,11 @@ log.error("upload failed", error as Error, { fileId });
 
 ### Path Aliases
 
-Always use path aliases — never relative paths that cross package boundaries:
+Inside the dashboard, `@/` resolves to `apps/dashboard/`, e.g. `@/lib/config` or `@/components/ui/button`. The database client is imported from `@emberly/db`:
 
-| Alias | Resolves to |
-|-------|------------|
-| `@/lib/*` | `packages/lib/*` |
-| `@/components/*` | `packages/components/*` |
-| `@/hooks/*` | `packages/hooks/*` |
-| `@/types/*` | `packages/types/*` |
+```typescript
+import { prisma } from "@emberly/db";
+```
 
 ---
 
@@ -127,14 +124,14 @@ Always use path aliases — never relative paths that cross package boundaries:
 
 ### Adding a Database Field
 
-1. Edit `prisma/schema.prisma`
+1. Edit `packages/db/prisma/schema.prisma`
 2. Run `bun run db:migrate` to create and apply the migration
 3. Run `bun run db:generate` to regenerate the Prisma client
-4. Update any affected TypeScript types in `packages/types/`
+4. Update any affected types in `apps/dashboard/types/`
 
 ### Adding a New API Endpoint
 
-1. Create the route file in `app/api/`
+1. Create the route file in `apps/dashboard/app/api/`
 2. Use `apiResponse` / `apiError` helpers
 3. Gate admin routes with `requireAdmin()`
 4. Document the endpoint in the relevant API reference page in `docs.embrly.ca`
@@ -146,7 +143,7 @@ Always use path aliases — never relative paths that cross package boundaries:
 Before requesting review, ensure:
 
 - `bun run typecheck` passes
-- `bun run lint` passes (run `bun run lint:fix` to auto-fix)
+- `bun run lint` passes
 - `bun run build` succeeds
 - New features have corresponding documentation updates
 - Commit messages follow Conventional Commits

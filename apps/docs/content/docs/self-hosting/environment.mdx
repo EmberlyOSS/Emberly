@@ -1,155 +1,126 @@
 ---
 title: Environment Variables
-description: Complete reference for all Emberly environment variables.
+description: Every environment variable a self-hosted Emberly instance reads.
 ---
 
-Emberly is configured through a combination of environment variables (required at startup) and the Admin Panel UI (applied at runtime, stored in the database). This page covers the environment variables.
-
-Copy `.env.template` to `.env` to get started:
+Copy `.env.example` in the repository root to `.env`. The Docker image, Compose files and `bun run` scripts all read it from there.
 
 ```bash
-cp .env.template .env
+cp .env.example .env
 ```
 
----
-
-## Required Variables
-
-These must be set before the app will start.
-
-### Database
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/emberly?schema=public` |
-
-### Cache
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `REDIS_URL` | Redis connection string | `redis://default:password@localhost:6379` |
-
-### Authentication
-
-| Variable | Description | Notes |
-|----------|-------------|-------|
-| `NEXTAUTH_URL` | The canonical URL of your instance | `https://yourdomain.com` |
-| `NEXT_PUBLIC_BASE_URL` | Same as `NEXTAUTH_URL` — used client-side | `https://yourdomain.com` |
-| `NEXTAUTH_SECRET` | Random secret for JWT signing | Minimum 32 characters. Generate with `openssl rand -base64 32` |
-| `NEXTAUTH_TRUSTED_ORIGINS` | Comma-separated list of trusted origins | `https://yourdomain.com` |
+Only the four required variables must be set. Email, storage and integrations can also be set later in **Admin → Settings**.
 
 ---
 
-## OAuth Providers
-
-Optional. These let users **link** their GitHub and Discord accounts (for contributor and booster perks); everyone still signs in with email.
-
-### GitHub OAuth
+## Required
 
 | Variable | Description |
 |----------|-------------|
-| `GITHUB_OAUTH_CLIENT_ID` | Client ID from your GitHub OAuth app |
-| `GITHUB_OAUTH_CLIENT_SECRET` | Client secret from your GitHub OAuth app |
+| `APP_URL` | Public address of your instance, without a trailing slash, e.g. `https://files.example.com` |
+| `AUTH_SECRET` | Signs sessions. Generate with `openssl rand -base64 32`. Changing it signs everyone out. |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL` | Redis connection string |
 
-Create a GitHub OAuth app at [github.com/settings/applications/new](https://github.com/settings/applications/new). Set the **Authorization callback URL** to `https://yourdomain.com/api/auth/link/github/callback` (GitHub is only used to link accounts, not to sign in).
+With Docker Compose, `DATABASE_URL` and `REDIS_URL` are set for you. Set `POSTGRES_PASSWORD` instead.
 
-### Discord OAuth
-
-| Variable | Description |
-|----------|-------------|
-| `DISCORD_OAUTH_CLIENT_ID` | Client ID from your Discord application |
-| `DISCORD_OAUTH_CLIENT_SECRET` | Client secret from your Discord application |
-
-Create a Discord application at [discord.com/developers/applications](https://discord.com/developers/applications). Under **OAuth2 → Redirects**, add `https://yourdomain.com/api/auth/link/discord/callback`.
-
-### Discord linked roles
-
-| Variable | Description |
-|----------|-------------|
-| `DISCORD_LINKED_ROLES_CLIENT_ID` | Client ID of the Discord application that runs the Emberly bot |
-| `DISCORD_LINKED_ROLES_CLIENT_SECRET` | That application's client secret |
-
-Lets servers give roles based on someone's Emberly account (see [Discord Bots](/docs/user-guide/discord-bot#linked-roles)). These must belong to the same Discord application as your bot; if they're unset, the Discord OAuth values above are used. In that application, set **General Information → Linked Roles Verification URL** to `https://yourdomain.com/api/discord/linked-roles` and add the redirect `https://yourdomain.com/api/discord/linked-roles/callback`.
-
----
-
-## Feature Flags
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `EMBERLY_RUN_EVENT_WORKER` | `false` | Runs the background event worker in-process. Set to `true` to enable async jobs (OCR, email). |
-
-<Callout type="info">
-  In production, set `EMBERLY_RUN_EVENT_WORKER=true` so that background jobs (OCR, expiration emails, storage bucket provisioning) actually run. Without it, uploads still work but async processing is skipped.
+<Callout type="info" title="Older variable names">
+  `NEXTAUTH_URL`, `NEXT_PUBLIC_BASE_URL` and `NEXTAUTH_SECRET` still work, but `APP_URL` and `AUTH_SECRET` replace them. Remove the old ones when you update, so they can't disagree.
 </Callout>
 
 ---
 
-## Optional Variables
+## Instance
 
-### Error Tracking (Sentry)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMBERLY_LICENSE_KEY` | — | Your license key. See [License & Branding](/docs/self-hosting/licensing). |
+| `EMBERLY_LICENSE_CHECKIN` | `true` | Set to `false` on servers that can't reach licenses.embrly.ca |
+| `EMBERLY_RUN_EVENT_WORKER` | `true` in Compose | Runs background jobs (OCR, malware scans, emails) in the app process. Set to `false` if you run `bun run worker` separately. |
+| `NEXTAUTH_TRUSTED_ORIGINS` | — | Extra origins allowed to sign in, comma separated |
+| `NEXTAUTH_COOKIE_DOMAIN` | — | Share the session across subdomains, e.g. `.example.com` |
+| `EMBERLY_SKIP_MIGRATIONS` | `false` | Docker only: skip running migrations when the container starts |
+| `EMBERLY_PORT` | `3000` | Docker Compose only: the host port |
+
+<Callout type="warn">
+  Outside Docker Compose, the worker is off in production unless `EMBERLY_RUN_EVENT_WORKER=true`. Without it uploads work, but OCR, scans and emails never run.
+</Callout>
+
+---
+
+## Storage
+
+Leave these empty to store uploads on local disk. Setting `STORAGE_PROVIDER=s3` overrides the storage settings in the Admin Panel. See [Storage](/docs/self-hosting/storage).
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN for frontend and API error reporting |
-| `SENTRY_ORG` | Sentry organization slug (build-time only, for source map upload) |
-| `SENTRY_PROJECT` | Sentry project name (build-time only) |
-| `SENTRY_AUTH_TOKEN` | Sentry auth token (build-time only, for CI source map upload) |
+| `DATA_DIR` | Where local uploads are kept. Defaults to `/data` in Docker and `apps/dashboard` otherwise. |
+| `STORAGE_PROVIDER` | Set to `s3` to use the S3 settings below |
+| `S3_ENDPOINT` | S3 API address. Leave empty for AWS. |
+| `S3_PUBLIC_ENDPOINT` | Address users' browsers and apps use to reach the bucket, if different from `S3_ENDPOINT` |
+| `S3_BUCKET` | Bucket name. Emberly creates it if it doesn't exist. |
+| `S3_REGION` | Defaults to `us-east-1` |
+| `S3_ACCESS_KEY_ID` | Access key |
+| `S3_SECRET_ACCESS_KEY` | Secret key |
+| `S3_FORCE_PATH_STYLE` | Use path-style URLs. Defaults to `true` when `S3_ENDPOINT` is set. |
 
-Leave all Sentry variables empty to disable error tracking entirely.
+---
 
-### File Scanning
+## Email
+
+Used for verification, password resets and notifications. Settings in **Admin → Settings → Integrations** take priority over these.
 
 | Variable | Description |
 |----------|-------------|
-| `VIRUSTOTAL_API_KEY` | VirusTotal API key for malware scanning |
-
-Without this key, VirusTotal scanning is skipped and only local extension/MIME checks run. Uploads are still processed normally. For production instances, a VirusTotal API key is strongly recommended.
-
----
-
-## Admin Panel Configuration
-
-The following are **not** environment variables. They are configured after the app is running via **Admin → Settings** (the Storage and Integrations tabs), and stored in the database:
-
-| Integration | Configured in Admin Panel |
-|-------------|--------------------------|
-| S3 / Object storage | Provider, bucket name, endpoint, access keys, public URL |
-| Resend / SMTP email | API key, from address, SMTP credentials |
-
-This means you do not need to restart the application to change integrations — they update live from the database.
+| `EMAIL_FROM` | Sender address, e.g. `Emberly <noreply@example.com>` |
+| `RESEND_API_KEY` | Send through [Resend](https://resend.com) |
+| `SMTP_HOST` | Send through any SMTP server instead |
+| `SMTP_PORT` | Defaults to `587` |
+| `SMTP_SECURE` | `true` for port 465 |
+| `SMTP_USER` | SMTP username |
+| `SMTP_PASSWORD` | SMTP password |
 
 ---
 
-## Development vs Production
+## Integrations
 
-| Variable | Development | Production |
-|----------|------------|-----------|
-| `NEXTAUTH_URL` | `http://localhost:3000` | `https://yourdomain.com` |
-| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | `https://yourdomain.com` |
-| `EMBERLY_RUN_EVENT_WORKER` | optional | `true` |
-| `VIRUSTOTAL_API_KEY` | optional | recommended |
+All optional.
+
+| Variable | Description |
+|----------|-------------|
+| `VIRUSTOTAL_API_KEY` | Checks uploads against VirusTotal. Recommended for public instances. |
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | Lets users link GitHub. Callback: `https://your-domain/api/auth/link/github/callback` |
+| `DISCORD_OAUTH_CLIENT_ID` / `DISCORD_OAUTH_CLIENT_SECRET` | Lets users link Discord. Callback: `https://your-domain/api/auth/link/discord/callback` |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sends errors to Sentry |
+
+Everyone signs in with email. GitHub and Discord are only for linking accounts.
 
 ---
 
-## Example Production `.env`
+## Cloud Mode
+
+These are for running Emberly as a hosted service and need a hosted-service license. Self-hosted instances leave them unset. `.env.cloud.example` lists them all.
+
+| Variable | Description |
+|----------|-------------|
+| `EMBERLY_RUN_CLOUD` | Turns on billing, custom domains, squads and Discovery |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe billing. Can also be set up from **Admin → Settings → Integrations → Stripe**. |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` / `CNAME_TARGET` | Custom domains |
+
+---
+
+## Example
 
 ```env
-DATABASE_URL="postgresql://emberly:strongpassword@localhost:5432/emberly?schema=public"
-REDIS_URL="redis://default:strongpassword@localhost:6379"
+APP_URL="https://files.example.com"
+AUTH_SECRET="generated-secret"
+DATABASE_URL="postgresql://emberly:password@localhost:5432/emberly"
+REDIS_URL="redis://localhost:6379"
 
-NEXTAUTH_URL="https://files.yourdomain.com"
-NEXT_PUBLIC_BASE_URL="https://files.yourdomain.com"
-NEXTAUTH_SECRET="your-generated-secret-here"
-NEXTAUTH_TRUSTED_ORIGINS="https://files.yourdomain.com"
+EMBERLY_RUN_EVENT_WORKER="true"
 
-GITHUB_OAUTH_CLIENT_ID="ghp_..."
-GITHUB_OAUTH_CLIENT_SECRET="..."
-DISCORD_OAUTH_CLIENT_ID="..."
-DISCORD_OAUTH_CLIENT_SECRET="..."
-
-EMBERLY_RUN_EVENT_WORKER=true
+EMAIL_FROM="Emberly <noreply@example.com>"
+RESEND_API_KEY="re_..."
 
 VIRUSTOTAL_API_KEY="..."
-NEXT_PUBLIC_SENTRY_DSN="https://...@sentry.io/..."
 ```

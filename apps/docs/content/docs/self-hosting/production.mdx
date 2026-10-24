@@ -1,78 +1,145 @@
 ---
-title: Production Deployment
-description: Deploy a self-hosted Emberly instance to a Linux server with Bun and systemd.
+title: Deploying
+description: Deploy Emberly with Docker Compose, Dokploy, Railpack/Nixpacks, or directly on a Linux server.
 ---
 
-This guide covers deploying Emberly to a Linux server directly with Bun, managed by systemd — the approach the project's own README documents. There is no official Docker image, Docker Compose file, or Nixpacks config shipped with the project today; if you containerize it yourself, you'll need to write that Dockerfile from scratch using the steps below as a guide.
+Pick whichever fits how you run servers. Docker Compose is the simplest and bundles PostgreSQL and Redis for you.
 
-## Prerequisites
+| Method | Good for |
+|--------|----------|
+| [Docker Compose](#docker-compose) | A single server, with everything in one file |
+| [Dokploy](#dokploy) | Dokploy users; deploys from a template or your fork |
+| [Railpack / Nixpacks](#railpack-and-nixpacks) | Railway, Coolify and other PaaS hosts |
+| [Linux server](#linux-server) | Running with Bun and systemd, without containers |
 
-- A Linux server (Ubuntu 22.04 LTS recommended) with at least 2 GB RAM
-- A domain name pointing to your server's IP (`A` record)
-- [Bun](https://bun.sh) and Node.js 18+
-- PostgreSQL 14+ and Redis 6+ (either on the same server or reachable over the network)
-- An S3-compatible object storage bucket (AWS S3, Cloudflare R2, Vultr Object Storage, or self-hosted MinIO)
+Whatever you choose, put Emberly behind HTTPS (see [Reverse Proxy](#reverse-proxy)) and set `APP_URL` to the public address.
 
 ---
 
-## Step 1: Server Preparation
+## Docker Compose
+
+The repository's `compose.yaml` runs Emberly, PostgreSQL and Redis. Uploads are stored in a Docker volume.
 
 ```bash
-# Update system
-sudo apt-get update && sudo apt-get upgrade -y
+git clone https://github.com/EmberlyOSS/Emberly.git
+cd Emberly
+cp .env.example .env
+```
 
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
+Edit `.env`:
 
-# Install PostgreSQL and Redis (skip if using managed/remote instances)
-sudo apt-get install -y postgresql redis-server
+```env
+APP_URL="https://files.example.com"
+AUTH_SECRET="..."          # openssl rand -base64 32
+POSTGRES_PASSWORD="..."    # any strong password
+```
+
+Then start it:
+
+```bash
+docker compose up -d
+```
+
+Emberly listens on port `3000`. Set `EMBERLY_PORT` to use a different host port. Migrations run each time the container starts.
+
+### With S3 Storage
+
+To store uploads in S3 instead of the local volume, `compose.s3.yaml` adds a [RustFS](https://rustfs.com) server:
+
+```bash
+docker compose -f compose.yaml -f compose.s3.yaml up -d
+```
+
+Set `S3_SECRET_ACCESS_KEY` and `S3_PUBLIC_ENDPOINT` in `.env` first. See [Storage](/docs/self-hosting/storage#rustfs-with-docker-compose).
+
+### Updating
+
+```bash
+git pull
+docker compose pull
+docker compose up -d
 ```
 
 ---
 
-## Step 2: Clone and Configure
+## Dokploy
+
+### From the Template
+
+The `dokploy/` folder has a Dokploy template (`docker-compose.yml` and `template.toml`). It runs the published image with PostgreSQL and Redis, and generates `AUTH_SECRET` and the database password for you.
+
+1. In your Dokploy project, create a **Compose** service.
+2. Paste `dokploy/docker-compose.yml` as the compose file, or import the template.
+3. Under **Environment**, set `APP_URL`, `AUTH_SECRET` and `POSTGRES_PASSWORD` if the template didn't.
+4. Under **Domains**, add your domain for the `emberly` service on port `3000`, with HTTPS on.
+5. Deploy.
+
+### From Your Fork
+
+To build from source instead, for example to run your own changes:
+
+1. Create PostgreSQL and Redis databases in Dokploy and copy their internal connection URLs.
+2. Create an **Application** pointing at your repository.
+3. Set **Build Type** to **Dockerfile**, with **Docker File** `Dockerfile` and **Docker Context Path** `.`.
+4. Add the environment variables:
+
+```env
+APP_URL=https://files.example.com
+AUTH_SECRET=...
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+EMBERLY_RUN_EVENT_WORKER=true
+```
+
+5. Under **Advanced → Volumes**, mount a volume at `/data` so local uploads survive redeploys. You can skip this if you use S3.
+6. Add your domain on port `3000` and deploy.
+
+---
+
+## Railpack and Nixpacks
+
+The repository includes `railpack.json` and `nixpacks.toml`, so hosts that build with either detect Emberly automatically. Both run migrations and then start the app.
+
+Set at least `APP_URL`, `AUTH_SECRET`, `DATABASE_URL`, `REDIS_URL` and `EMBERLY_RUN_EVENT_WORKER=true`.
+
+These hosts usually don't keep files between deploys, so use [S3 storage](/docs/self-hosting/storage).
+
+---
+
+## Linux Server
+
+### 1. Install
+
+You need [Bun](https://bun.sh), Node.js 22, PostgreSQL 14+ and Redis 7+.
 
 ```bash
+curl -fsSL https://bun.sh/install | bash
+sudo apt-get install -y postgresql redis-server
+
 git clone https://github.com/EmberlyOSS/Emberly.git /opt/emberly
 cd /opt/emberly
 bun install
-cp .env.template .env
-```
-
-Edit `.env` with your database/Redis connection strings, `NEXTAUTH_URL`/`NEXT_PUBLIC_BASE_URL` (your domain), a generated `NEXTAUTH_SECRET`, and OAuth credentials. See [Environment Variables](/docs/self-hosting/environment) for the full reference — storage and email are configured later via the Admin Panel, not `.env`.
-
-```bash
-openssl rand -base64 32   # generate NEXTAUTH_SECRET
+cp .env.example .env
 chmod 600 .env
 ```
 
----
+Fill in `.env`. See [Environment Variables](/docs/self-hosting/environment).
 
-## Step 3: Database Setup
+### 2. Build
 
 ```bash
 bun run db:generate
-bun run db:deploy   # applies existing migrations — never use db:push in production
-bun run db:seed     # seeds the canonical plan catalog
-```
-
----
-
-## Step 4: Build
-
-```bash
+bun run db:deploy
 bun run build
 ```
 
----
-
-## Step 5: Run as a systemd Service
+### 3. Run with systemd
 
 Create `/etc/systemd/system/emberly.service`:
 
 ```ini
 [Unit]
-Description=Emberly web app
+Description=Emberly
 After=network.target postgresql.service redis-server.service
 
 [Service]
@@ -81,26 +148,6 @@ WorkingDirectory=/opt/emberly
 ExecStart=/usr/bin/env bun run start
 Restart=on-failure
 User=emberly
-EnvironmentFile=/opt/emberly/.env
-
-[Install]
-WantedBy=multi-user.target
-```
-
-The background event worker (BullMQ, used for async jobs like VirusTotal scanning and OCR) must run as a **separate process** in production — it only auto-starts in-process during local development. Create `/etc/systemd/system/emberly-worker.service`:
-
-```ini
-[Unit]
-Description=Emberly event worker
-After=network.target postgresql.service redis-server.service
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/emberly
-ExecStart=/usr/bin/env bun run worker
-Restart=on-failure
-User=emberly
-EnvironmentFile=/opt/emberly/.env
 
 [Install]
 WantedBy=multi-user.target
@@ -108,113 +155,16 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now emberly emberly-worker
-sudo systemctl status emberly emberly-worker
+sudo systemctl enable --now emberly
 ```
 
-The app listens on port 3000 by default. Open `http://YOUR_SERVER_IP:3000` and complete the **Setup Wizard** to create your admin account — see [First-Time Setup](/docs/self-hosting/first-time-setup) for a step-by-step walkthrough.
+`bun run start` reads `.env` from the repository root.
 
----
+### Running the Worker Separately
 
-## Step 6: Reverse Proxy with HTTPS
+By default the background worker (OCR, malware scans, emails) runs inside the app when `EMBERLY_RUN_EVENT_WORKER=true`. On busy instances you can move it to its own process: set `EMBERLY_RUN_EVENT_WORKER=false` and add a second service with `ExecStart=/usr/bin/env bun run worker`.
 
-Use Nginx or Caddy to terminate TLS and proxy to port 3000. Caddy is simpler because it provisions Let's Encrypt certificates automatically.
-
-### Caddy (Recommended)
-
-Install Caddy, then create `/etc/caddy/Caddyfile`:
-
-```
-yourdomain.com {
-    reverse_proxy localhost:3000
-}
-```
-
-```bash
-sudo systemctl enable --now caddy
-sudo systemctl reload caddy
-```
-
-### Nginx + Certbot
-
-```bash
-sudo apt-get install -y nginx certbot python3-certbot-nginx
-```
-
-Create `/etc/nginx/sites-available/emberly`:
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        client_max_body_size 0;   # Emberly enforces its own limits
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/emberly /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d yourdomain.com
-```
-
----
-
-## Step 7: Configure Storage
-
-You already chose local or S3-compatible storage during the Setup Wizard's Storage step (see [First-Time Setup](/docs/self-hosting/first-time-setup)). To switch providers later, or fill in the public URL and other advanced fields, go to **Admin → Settings → Storage**:
-
-| Field | Description |
-|-------|-------------|
-| Provider | AWS S3, Cloudflare R2, Vultr, Linode, MinIO, etc. |
-| Bucket name | The bucket to store files in |
-| Region | Your bucket's region |
-| Endpoint | Custom endpoint (leave blank for AWS) |
-| Access key ID | Storage access key |
-| Secret access key | Storage secret key |
-| Public files URL | The CDN/public URL prefix for served files |
-
-<Callout type="info">
-  The public files URL is what gets prepended to file paths in share links. For Cloudflare R2, this is your R2 public bucket URL or a custom domain. For AWS, it is the bucket's public URL or a CloudFront distribution.
-</Callout>
-
----
-
-## Step 8: Configure Email
-
-In **Admin Panel → Settings → Integrations → Email**, configure Resend or SMTP:
-
-**Resend:**
-- Get an API key from [resend.com](https://resend.com)
-- Set the from address (must be on a verified domain)
-
-**SMTP:**
-- Use any SMTP provider (Postmark, Mailgun, Gmail, etc.)
-- Set host, port, username, and password
-
-Email is used for verification emails, expiration reminders, and collaborator invites.
-
----
-
-## Step 9: Optional Integrations
-
-Configure these in the Admin Panel as needed:
-
-| Integration | Purpose |
-|-------------|---------|
-| VirusTotal | File malware scanning (skipped for images/video/audio) |
-| Sentry | Error tracking |
-
----
-
-## Updating
+### Updating
 
 ```bash
 cd /opt/emberly
@@ -222,50 +172,89 @@ git pull
 bun install
 bun run db:deploy
 bun run build
-sudo systemctl restart emberly emberly-worker
+sudo systemctl restart emberly
 ```
 
-Always run migrations before restarting the app on an update.
+---
+
+## Reverse Proxy
+
+Dokploy and most PaaS hosts handle HTTPS for you. On your own server, use Caddy or Nginx.
+
+### Caddy
+
+```
+files.example.com {
+    reverse_proxy localhost:3000
+}
+```
+
+### Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name files.example.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 0;
+    }
+}
+```
+
+Then run `sudo certbot --nginx -d files.example.com`. `client_max_body_size 0` leaves upload limits to Emberly.
+
+---
+
+## After Deploying
+
+1. Open your domain and complete the [Setup Wizard](/docs/self-hosting/first-time-setup).
+2. Set up email in **Admin → Settings → Integrations**, so verification and password reset emails send.
+3. Upload a test file.
 
 ---
 
 ## Health Checks
 
-`GET /api/health` reports the status of your instance — database, Redis, storage (a real write/delete round-trip, cached for 30 seconds), and the event queue. No authentication required. Point an uptime monitor or your reverse proxy's health check at it.
-
-**Response (200 or 503):**
+`GET /api/health` reports the database, Redis, storage and event queue. It needs no authentication; the Docker image uses it as its health check.
 
 ```json
 {
   "success": true,
   "data": {
     "status": "ok",
-    "version": "2.5.1",
-    "uptimeSeconds": 3600,
     "checks": {
       "database": { "status": "up", "latencyMs": 4 },
       "redis": { "status": "up", "latencyMs": 1 },
-      "storage": { "status": "up", "provider": "s3", "latencyMs": 120, "checkedAt": "..." },
-      "virusScanning": { "status": "not_configured" },
-      "eventQueue": { "status": "up", "workerRunning": true, "waiting": 0, "active": 0 }
+      "storage": { "status": "up", "provider": "local" },
+      "eventQueue": { "status": "up", "workerRunning": true }
     }
   }
 }
 ```
 
-`status` is `ok`, `degraded` (a non-critical check is failing), or `down` (the database is unreachable — responds with HTTP `503` in that case).
+`status` is `ok`, `degraded` (something other than the database is failing) or `down` (the database is unreachable, returned with HTTP `503`).
 
 ---
 
 ## Backups
 
-Back up the PostgreSQL database regularly:
+Back up the database and your uploads.
 
 ```bash
+# Docker Compose
+docker compose exec postgres pg_dump -U emberly emberly > backup-$(date +%F).sql
+
+# Linux server
 pg_dump -U emberly emberly > backup-$(date +%F).sql
 ```
 
-Also back up your S3 bucket. Use your provider's snapshot or bucket replication features.
+Uploads live in the `emberly-data` volume (Docker), in `DATA_DIR` (Linux server), or in your S3 bucket.
 
 ---
 
@@ -273,8 +262,9 @@ Also back up your S3 bucket. Use your provider's snapshot or bucket replication 
 
 | Problem | Check |
 |---------|-------|
-| App won't start | `sudo journalctl -u emberly -f` — look for missing env vars or DB connection errors |
-| Database connection error | Verify `DATABASE_URL` and that PostgreSQL is running and reachable |
-| Background jobs not processing (OCR, VirusTotal scans) | Confirm `emberly-worker.service` is running — it's a separate process, not automatic in production |
-| Uploads fail | Check storage configuration in Admin Panel; verify bucket permissions and public URL |
-| Email not sending | Verify Resend API key or SMTP credentials in Admin Panel |
+| `AUTH_SECRET is not set` on start | Set `AUTH_SECRET` (`openssl rand -base64 32`) |
+| Signed in but sent back to the login page | `APP_URL` must be the exact public address, including `https://` |
+| Background jobs never run | Set `EMBERLY_RUN_EVENT_WORKER=true`, or run `bun run worker` |
+| Uploads disappear after a redeploy | Mount a volume at `/data`, or use S3 |
+| Uploads from Flicker or ShareX fail with S3 | `S3_PUBLIC_ENDPOINT` must be reachable from users' machines |
+| Emails don't send | Check the email settings in **Admin → Settings → Integrations** |

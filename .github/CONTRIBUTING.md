@@ -26,7 +26,6 @@ This project and everyone participating in it is governed by our [Code of Conduc
 - [Node.js](https://nodejs.org/) 22 or later
 - [PostgreSQL](https://www.postgresql.org/) 14 or later
 - [Redis](https://redis.io/) 6 or later (caching, rate limiting and the job queue)
-- [Go](https://go.dev/) 1.23 or later, only if you work on Warden
 - [Git](https://git-scm.com/)
 
 ### Development Setup
@@ -60,7 +59,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
    cp .env.example .env
    ```
 
-   Edit `.env` with your local configuration. The comments in `.env.example` explain each setting. The Discord app and the status page read their own `.env` inside `apps/bot` and `apps/status`.
+   Edit `.env` with your local configuration. The comments in `.env.example` explain each setting. The Discord app reads its own `.env` inside `apps/bot`.
 
 6. **Set up the database**
 
@@ -218,8 +217,6 @@ apps/
   dashboard/            # The Emberly app (Next.js): app/, components/, lib/, hooks/, types/
   docs/                 # docs.embrly.ca (Fumadocs)
   bot/                  # Emberly Discord app (discord.js)
-  warden/               # Warden moderation bot (Go)
-  status/               # Status page (Next.js)
 packages/
   config/               # Shared TypeScript/Tailwind config and theme
   db/                   # Prisma schema, migrations and client
@@ -238,7 +235,7 @@ Changes to the database go in `packages/db/prisma/schema.prisma`, followed by `b
 
 ## Commit Message Guidelines
 
-We use [Conventional Commits](https://www.conventionalcommits.org/), checked by commitlint when you commit. A scope is required: use the app name when a change is specific to one app, for example `fix(dashboard): ...` or `feat(warden): ...`, or an area such as `repo` or `docker` otherwise. Staged files are formatted with Prettier before each commit.
+We use [Conventional Commits](https://www.conventionalcommits.org/), checked by commitlint when you commit. A scope is required: use the app name when a change is specific to one app, for example `fix(dashboard): ...` or `feat(bot): ...`, or an area such as `repo` or `docker` otherwise. Staged files are formatted with Prettier before each commit.
 
 ### Format
 

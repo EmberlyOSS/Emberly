@@ -1,0 +1,93 @@
+---
+title: License & Branding
+description: What you can customise for free, what a license adds, and how license keys work.
+---
+
+Emberly is free to self-host. A license is only needed to remove Emberly's branding, or to run Emberly as a hosted service for other people. Licenses are sold at [licenses.embrly.ca](https://licenses.embrly.ca).
+
+---
+
+## Free Branding
+
+Every instance can set:
+
+- **Site name**, in **Admin → Settings → Branding**. It is used in the page title, navigation and emails.
+- **Favicon**, in **Admin → Settings → Favicon**.
+
+Unlicensed instances show a small "Powered by Emberly" credit and keep the Emberly logo.
+
+## What a License Adds
+
+| Feature | What it does |
+|---------|--------------|
+| **White-label** | Upload your own logo, remove the "Powered by Emberly" credit, and use your name in emails and link previews. |
+| **Hosted service** | Allows Cloud mode (`EMBERLY_RUN_CLOUD=true`): billing, custom domains, squads, Discovery and managed storage. Required to offer Emberly to others as a service. |
+
+## Installing a Key
+
+1. Buy a license at [licenses.embrly.ca](https://licenses.embrly.ca). You enter the domains your instance runs on, such as `files.example.com` or `*.example.com`.
+2. Copy the key from the email or from your portal.
+3. Set it as an environment variable and restart Emberly:
+
+```env
+EMBERLY_LICENSE_KEY="emb_lic_..."
+```
+
+4. Open **Admin → Settings → License & branding**. It should show your license as **Active**. Upload your logo there.
+
+The key must match the host in `APP_URL`. `localhost` always works, so you can test a key locally.
+
+## How Keys Are Checked
+
+Keys are signed. Emberly checks the signature on your own server, so your instance keeps working if licenses.embrly.ca is unreachable.
+
+Once a day, a licensed instance checks in with licenses.embrly.ca. It sends the key, a random instance ID, the domain and the Emberly version. The check-in:
+
+- Picks up the renewed key when your subscription renews, so you never have to paste a new one.
+- Counts how many servers use the key, which is limited by your plan.
+- Learns whether the key was cancelled or revoked.
+
+Unlicensed instances never check in.
+
+### Offline Servers
+
+If your server can't reach the internet, turn check-ins off:
+
+```env
+EMBERLY_LICENSE_CHECKIN="false"
+```
+
+You then need to copy a new key from your portal after each renewal.
+
+## When a Key Stops Working
+
+| Status | What happens |
+|--------|--------------|
+| Expired | Licensed features switch off until a renewed key arrives. Everything else keeps working. |
+| Wrong domain | The `APP_URL` host isn't one of the key's domains. Change the domains in your portal and the next check-in fixes it. |
+| Revoked | Licensed features switch off. |
+
+Your files, users and settings are never affected.
+
+## Managing Your License
+
+Sign in at [licenses.embrly.ca/portal](https://licenses.embrly.ca/portal) with your email to:
+
+- Copy your key
+- Change its domains
+- See which servers use it
+- Open Stripe billing to update your card, download invoices or cancel
+
+## The Elastic License 2.0
+
+In short, you can:
+
+- Run, modify and self-host Emberly for yourself, your team or your company
+- Fork it and contribute changes
+
+You can't:
+
+- Offer Emberly to third parties as a hosted or managed service without a hosted-service license
+- Remove or work around license key checks
+
+The [LICENSE](https://github.com/EmberlyOSS/Emberly/blob/main/LICENSE) file has the full terms.

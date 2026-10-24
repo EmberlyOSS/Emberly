@@ -1,5 +1,0 @@
-Contact: https://github.com/EmberlyOSS/Emberly/security/advisories/new
-Contact: mailto:security@embrly.ca
-Expires: 2027-12-31T23:59:59.000Z
-Preferred-Languages: en
-Canonical: https://emberlystat.us/.well-known/security.txt

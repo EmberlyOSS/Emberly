@@ -18,8 +18,6 @@ COPY packages/db/package.json packages/db/
 COPY apps/dashboard/package.json apps/dashboard/
 COPY apps/docs/package.json apps/docs/
 COPY apps/bot/package.json apps/bot/
-COPY apps/status/package.json apps/status/
-COPY apps/warden/package.json apps/warden/
 RUN bun install --frozen-lockfile --ignore-scripts
 
 FROM deps AS build

@@ -12,8 +12,6 @@ This is a Turborepo monorepo using Bun workspaces. License: Elastic License 2.0.
 | `apps/dashboard`  | The Emberly app: dashboard, file pages, API, admin panel. The only app self-hosters run. | Next.js 16 App Router, React 19, Prisma, Redis/BullMQ, Tailwind 3 |
 | `apps/docs`       | docs.embrly.ca                                                                           | Next.js 15, Fumadocs                                              |
 | `apps/bot`        | Emberly Discord app (linked roles, levels, commands)                                     | discord.js 14, Prisma 5, own database                             |
-| `apps/warden`     | Warden, the Discord moderation bot                                                       | Go, discordgo                                                     |
-| `apps/status`     | Status page at emberlystat.us                                                            | Next.js, Prisma, own database                                     |
 | `packages/db`     | Prisma schema, migrations and client for the dashboard                                   | Prisma 7 with the `pg` adapter                                    |
 | `packages/config` | Shared tsconfig, Tailwind preset and Ember theme tokens                                  |                                                                   |
 | `dokploy/`        | Dokploy one-click template                                                               |
@@ -26,7 +24,7 @@ Run from the repository root.
 bun install
 bun run dev            # dashboard on http://localhost:3000
 bun run dev:all        # every app
-bun run typecheck      # all apps (Warden uses go vet)
+bun run typecheck      # all apps
 bun run test
 bun run build:all
 bun run lint

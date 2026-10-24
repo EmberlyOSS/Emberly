@@ -19,10 +19,6 @@ jobs:
         with:
           node-version: 22
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: apps/warden/go.mod
-
       - run: bun install --frozen-lockfile
 
       - run: bun run typecheck
