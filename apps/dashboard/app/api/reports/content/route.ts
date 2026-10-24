@@ -11,9 +11,7 @@ const logger = loggers.api.getChildLogger('content-reports')
 const SubmitContentReportSchema = z.object({
   contentType: z.enum(['FILE', 'URL']),
   contentId: z.string().min(1, 'Content ID is required'),
-  category: z.nativeEnum(ReportCategory, {
-    errorMap: () => ({ message: 'Invalid report category' }),
-  }),
+  category: z.nativeEnum(ReportCategory, { error: 'Invalid report category' }),
   reason: z
     .string()
     .min(10, 'Reason must be at least 10 characters')

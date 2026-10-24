@@ -6,7 +6,10 @@ import { rateLimiter } from '@/lib/cache/rate-limit'
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { verify2FACode } from '@/lib/auth/service'
-import { auditSuspiciousActivity, emitAuditEvent } from '@/lib/events/audit-helper'
+import {
+  auditSuspiciousActivity,
+  emitAuditEvent,
+} from '@/lib/events/audit-helper'
 
 const logger = loggers.auth
 
@@ -35,13 +38,13 @@ export async function OPTIONS() {
 
 /**
  * Desktop App Authentication Endpoint
- * 
+ *
  * This endpoint allows the Emberly Desktop Uploader to authenticate users
  * and receive their upload token for API access.
- * 
+ *
  * POST /api/auth/desktop
  * Body: { emailOrUsername: string, password: string, twoFactorCode?: string }
- * 
+ *
  * Returns: { success: true, user: { id, name, email, uploadToken, image, urlId } }
  * Or: { success: false, error: string, requires2FA?: boolean }
  */
@@ -52,7 +55,10 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || 'Invalid request' },
+        {
+          success: false,
+          error: parsed.error.issues[0]?.message || 'Invalid request',
+        },
         { status: 400, headers: CORS_HEADERS }
       )
     }
@@ -103,7 +109,9 @@ export async function POST(req: Request) {
 
     if (!user) {
       await trackFailedAttempt()
-      logger.warn('Desktop login attempt for non-existent user', { emailOrUsername })
+      logger.warn('Desktop login attempt for non-existent user', {
+        emailOrUsername,
+      })
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401, headers: CORS_HEADERS }
@@ -112,9 +120,14 @@ export async function POST(req: Request) {
 
     // Check if user has password set
     if (!user.password) {
-      logger.warn('Desktop login attempt for user without password', { userId: user.id })
+      logger.warn('Desktop login attempt for user without password', {
+        userId: user.id,
+      })
       return NextResponse.json(
-        { success: false, error: 'Please set a password in your account settings first' },
+        {
+          success: false,
+          error: 'Please set a password in your account settings first',
+        },
         { status: 401, headers: CORS_HEADERS }
       )
     }
@@ -123,7 +136,9 @@ export async function POST(req: Request) {
     const isPasswordValid = await compare(password, user.password)
     if (!isPasswordValid) {
       await trackFailedAttempt()
-      logger.warn('Desktop login failed - invalid password', { userId: user.id })
+      logger.warn('Desktop login failed - invalid password', {
+        userId: user.id,
+      })
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401, headers: CORS_HEADERS }
@@ -134,7 +149,11 @@ export async function POST(req: Request) {
     if (user.twoFactorEnabled) {
       if (!twoFactorCode) {
         return NextResponse.json(
-          { success: false, error: 'Two-factor authentication required', requires2FA: true },
+          {
+            success: false,
+            error: 'Two-factor authentication required',
+            requires2FA: true,
+          },
           { status: 401, headers: CORS_HEADERS }
         )
       }
@@ -142,15 +161,24 @@ export async function POST(req: Request) {
       if (!user.twoFactorSecret) {
         logger.error('2FA enabled but no secret found', { userId: user.id })
         return NextResponse.json(
-          { success: false, error: 'Account configuration error. Please contact support.' },
+          {
+            success: false,
+            error: 'Account configuration error. Please contact support.',
+          },
           { status: 500, headers: CORS_HEADERS }
         )
       }
 
-      const isValid = await verify2FACode(user.id, user.twoFactorSecret, twoFactorCode)
+      const isValid = await verify2FACode(
+        user.id,
+        user.twoFactorSecret,
+        twoFactorCode
+      )
       if (!isValid) {
         await trackFailedAttempt()
-        logger.warn('Desktop login failed - invalid 2FA code', { userId: user.id })
+        logger.warn('Desktop login failed - invalid 2FA code', {
+          userId: user.id,
+        })
         return NextResponse.json(
           { success: false, error: 'Invalid two-factor code' },
           { status: 401, headers: CORS_HEADERS }
@@ -188,17 +216,20 @@ export async function POST(req: Request) {
       context: { ip },
     })
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        uploadToken,
-        image: user.image,
-        urlId: user.urlId,
+    return NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          uploadToken,
+          image: user.image,
+          urlId: user.urlId,
+        },
       },
-    }, { headers: CORS_HEADERS })
+      { headers: CORS_HEADERS }
+    )
   } catch (error) {
     logger.error('Desktop auth error', error as Error)
     return NextResponse.json(
@@ -207,4 +238,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

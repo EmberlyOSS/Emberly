@@ -34,14 +34,12 @@ import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
 
 const spectacleFormSchema = z.object({
-  scriptType: z.enum(['screenshot', 'recording']).default('screenshot'),
-  useWayland: z.boolean().default(false),
-  includePointer: z.boolean().default(false),
-  captureMode: z
-    .enum(['fullscreen', 'current', 'activewindow', 'region'])
-    .default('region'),
-  recordingMode: z.enum(['fullscreen', 'current', 'region']).default('region'),
-  delay: z.number().min(0).max(10000).default(0),
+  scriptType: z.enum(['screenshot', 'recording']),
+  useWayland: z.boolean(),
+  includePointer: z.boolean(),
+  captureMode: z.enum(['fullscreen', 'current', 'activewindow', 'region']),
+  recordingMode: z.enum(['fullscreen', 'current', 'region']),
+  delay: z.number().min(0).max(10000),
 })
 
 export function SpectacleTool() {
@@ -134,7 +132,7 @@ export function SpectacleTool() {
               onSubmit={form.handleSubmit(handleSpectacleDownload)}
               className="space-y-6"
             >
-              { }
+              {}
               <div className="flex items-start space-x-3 rounded-md bg-blue-50 dark:bg-blue-950/50 p-3 text-blue-600 dark:text-blue-400">
                 <Terminal className="mt-0.5 h-5 w-5 flex-shrink-0" />
                 <div className="space-y-1">
@@ -158,7 +156,7 @@ export function SpectacleTool() {
                 </div>
               </div>
 
-              { }
+              {}
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium mb-2">Script Type</h4>
@@ -210,7 +208,7 @@ export function SpectacleTool() {
                   />
                 </div>
 
-                { }
+                {}
                 {scriptType === 'screenshot' && (
                   <div>
                     <h4 className="text-sm font-medium mb-2">Capture Mode</h4>
@@ -275,7 +273,7 @@ export function SpectacleTool() {
                   </div>
                 )}
 
-                { }
+                {}
                 {scriptType === 'recording' && (
                   <div>
                     <h4 className="text-sm font-medium mb-2">Recording Mode</h4>
@@ -334,7 +332,7 @@ export function SpectacleTool() {
                   </div>
                 )}
 
-                { }
+                {}
                 <div>
                   <h4 className="text-sm font-medium mb-2">
                     Environment Settings

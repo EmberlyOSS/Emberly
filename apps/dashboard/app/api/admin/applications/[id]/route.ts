@@ -4,28 +4,17 @@ import { z } from 'zod'
 import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
 import { requireAdmin } from '@/lib/auth/api-auth'
 import { prisma } from '@emberly/db'
-import {
-  sendTemplateEmail,
-  ApplicationStatusEmail,
-} from '@/lib/emails'
+import { sendTemplateEmail, ApplicationStatusEmail } from '@/lib/emails'
 import { events } from '@/lib/events'
-import {
-  addGrant,
-  getDefaultGrantForApplicationType,
-} from '@/lib/grants'
+import { addGrant, getDefaultGrantForApplicationType } from '@/lib/grants'
 import { loggers } from '@/lib/logger'
-import {
-  ApplicationStatus,
-  ApplicationType,
-} from '@emberly/db'
+import { ApplicationStatus, ApplicationType } from '@emberly/db'
 
 const logger = loggers.api.getChildLogger('admin-applications-review')
 
 const ReviewSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED', 'REVIEWING'], {
-    errorMap: () => ({
-      message: 'Status must be APPROVED, REJECTED, or REVIEWING',
-    }),
+    error: 'Status must be APPROVED, REJECTED, or REVIEWING',
   }),
   reviewNotes: z
     .string()

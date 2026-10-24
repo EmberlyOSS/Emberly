@@ -54,7 +54,7 @@ export function URLForm({ onUrlAdded }: URLFormProps) {
       if (error instanceof z.ZodError) {
         toast({
           title: 'Invalid URL',
-          description: error.errors[0].message,
+          description: error.issues[0].message,
           variant: 'destructive',
         })
       } else {
@@ -72,7 +72,9 @@ export function URLForm({ onUrlAdded }: URLFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="url" className="text-sm font-medium">URL to shorten</Label>
+        <Label htmlFor="url" className="text-sm font-medium">
+          URL to shorten
+        </Label>
         <div className="flex gap-3">
           <Input
             id="url"

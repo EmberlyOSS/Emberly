@@ -33,7 +33,7 @@ The full guide, including every setting, is at [docs.embrly.ca](https://docs.emb
 
 ## Development
 
-You'll need [Bun](https://bun.sh/) 1.3, Node.js 22, PostgreSQL and Redis.
+You'll need [Bun](https://bun.sh/) 1.3, Node.js 24, PostgreSQL and Redis.
 
 ```bash
 bun install

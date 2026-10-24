@@ -1,6 +1,6 @@
 /**
  * Centralized Error Handling
- * 
+ *
  * Provides consistent error handling patterns across all API routes
  * Logs errors consistently and returns standardized error responses
  */
@@ -40,20 +40,20 @@ export function handleApiError(
 
   // Zod validation error
   if (error instanceof ZodError) {
-    const validationError = error.errors[0]
+    const validationError = error.issues[0]
     const errorMessage = validationError?.message || 'Validation failed'
 
     log.warn(`Validation error: ${message}`, {
       ...context,
       validationError: validationError,
-      issues: details ? error.errors : undefined,
+      issues: details ? error.issues : undefined,
     })
 
     return NextResponse.json(
       {
         error: 'Validation failed',
         message: errorMessage,
-        ...(details && { issues: error.errors }),
+        ...(details && { issues: error.issues }),
       },
       { status: HTTP_STATUS.BAD_REQUEST }
     )
@@ -76,10 +76,7 @@ export function handleApiError(
   // Unknown error
   log.error(`Unknown error: ${message}`, error, context)
   Sentry.captureException(error, { extra: { message, ...context } })
-  return NextResponse.json(
-    { error: message },
-    { status: statusCode }
-  )
+  return NextResponse.json({ error: message }, { status: statusCode })
 }
 
 /**
@@ -94,7 +91,9 @@ export async function withErrorHandling<T>(
   try {
     return await fn()
   } catch (error) {
-    const log = options.loggerName ? logger.getChildLogger(options.loggerName) : logger
+    const log = options.loggerName
+      ? logger.getChildLogger(options.loggerName)
+      : logger
 
     if (error instanceof Error) {
       log.error(message, error, options.context || {})

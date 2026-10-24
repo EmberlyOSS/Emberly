@@ -54,6 +54,7 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **Builds no longer hang** when Redis isn't reachable, which also makes building in CI and Docker possible without a Redis server.
 - **Type errors now fail the build** instead of being ignored.
 - **Smaller production builds.** The standalone output no longer copies the whole source tree.
+- **Node.js 24.** The Docker images, CI, Railpack and Nixpacks configs now use Node.js 24, as Node.js 22 reaches end of life in April 2027. Running Emberly yourself needs Node.js 24 or later.
 - **The pricing page only shows tabs with something in them**, and opens on the first one.
 
 ### Fixed
@@ -68,6 +69,7 @@ bun run start   # and `bun run worker` if you run the worker separately
 
 ### Security
 
+- **Dependency updates for published advisories.** Nodemailer is updated to 10.2.1 (several denial-of-service and address-parsing issues, the worst letting a crafted address stall the server) and Zod to 4.6.7 (oversized input could exhaust memory during validation).
 - **File password hashes in file lists** — `GET /api/files` returned each file's password hash alongside `hasPassword`. In a squad's file list that meant any member could read the password hashes of other members' files and try to crack them offline. Lists now return only `hasPassword`.
 
 ### Documentation

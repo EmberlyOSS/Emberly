@@ -49,23 +49,23 @@ export const configSchema = z
                   }),
               })
               .passthrough()
-              .optional()
-              .default({ completed: false, completedAt: null }),
+
+              .prefault({ completed: false, completedAt: null }),
             registrations: z
               .object({
                 enabled: z.boolean().optional().default(true),
                 disabledMessage: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({ enabled: true, disabledMessage: '' }),
+
+              .prefault({ enabled: true, disabledMessage: '' }),
             billing: z
               .object({
                 enabled: z.boolean().optional().default(true),
               })
               .passthrough()
-              .optional()
-              .default({ enabled: true }),
+
+              .prefault({ enabled: true }),
             storage: z
               .object({
                 provider: z.enum(['local', 's3']).optional().default('local'),
@@ -79,8 +79,8 @@ export const configSchema = z
                     forcePathStyle: z.boolean().optional().default(false),
                   })
                   .passthrough()
-                  .optional()
-                  .default({}),
+
+                  .prefault({}),
                 quotas: z
                   .object({
                     enabled: z.boolean().optional().default(false),
@@ -90,12 +90,12 @@ export const configSchema = z
                         unit: z.string().optional().default('GB'),
                       })
                       .passthrough()
-                      .optional()
-                      .default({ value: 10, unit: 'GB' }),
+
+                      .prefault({ value: 10, unit: 'GB' }),
                   })
                   .passthrough()
-                  .optional()
-                  .default({
+
+                  .prefault({
                     enabled: false,
                     default: { value: 10, unit: 'GB' },
                   }),
@@ -105,30 +105,30 @@ export const configSchema = z
                     unit: z.string().optional().default('MB'),
                   })
                   .passthrough()
-                  .optional()
-                  .default({ value: 100, unit: 'MB' }),
+
+                  .prefault({ value: 100, unit: 'MB' }),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             credits: z
               .object({
                 showFooter: z.boolean().optional().default(true),
               })
               .passthrough()
-              .optional()
-              .default({ showFooter: true }),
+
+              .prefault({ showFooter: true }),
             ocr: z
               .object({
                 enabled: z.boolean().optional().default(true),
               })
               .passthrough()
-              .optional()
-              .default({ enabled: true }),
+
+              .prefault({ enabled: true }),
           })
           .passthrough()
-          .optional()
-          .default({}),
+
+          .prefault({}),
         appearance: z
           .object({
             theme: z.string().optional().default('default-dark'),
@@ -159,20 +159,20 @@ export const configSchema = z
             enableBackgroundEffect: z.boolean().optional().default(false),
             favicon: z.string().nullable().optional().default(null),
             logo: z.string().nullable().optional().default(null),
-            customColors: z.record(z.string()).optional().default({}),
-            systemThemes: z.record(z.any()).optional().default({}),
+            customColors: z.record(z.string(), z.string()).prefault({}),
+            systemThemes: z.record(z.string(), z.any()).prefault({}),
           })
           .passthrough()
-          .optional()
-          .default({}),
+
+          .prefault({}),
         advanced: z
           .object({
             customCSS: z.string().optional().default(''),
             customHead: z.string().optional().default(''),
           })
           .passthrough()
-          .optional()
-          .default({ customCSS: '', customHead: '' }),
+
+          .prefault({ customCSS: '', customHead: '' }),
         integrations: z
           .object({
             cloudflare: z
@@ -182,8 +182,8 @@ export const configSchema = z
                 zoneId: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             discord: z
               .object({
                 webhookUrl: z.string().optional().default(''),
@@ -192,38 +192,38 @@ export const configSchema = z
                 supporterRole: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             github: z
               .object({
                 org: z.string().optional().default('EmberlyOSS'),
                 pat: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             stripe: z
               .object({
                 secretKey: z.string().optional().default(''),
                 webhookSecret: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             vultr: z
               .object({
                 apiKey: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             linode: z
               .object({
                 apiKey: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             ovhcloud: z
               .object({
                 appKey: z.string().optional().default(''),
@@ -232,16 +232,16 @@ export const configSchema = z
                 endpoint: z.string().optional().default('ovh-eu'),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             resend: z
               .object({
                 apiKey: z.string().optional().default(''),
                 emailFrom: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
             emailProvider: z
               .enum(['resend', 'smtp'])
               .optional()
@@ -256,16 +256,16 @@ export const configSchema = z
                 from: z.string().optional().default(''),
               })
               .passthrough()
-              .optional()
-              .default({}),
+
+              .prefault({}),
           })
           .passthrough()
-          .optional()
-          .default({}),
+
+          .prefault({}),
       })
       .passthrough()
-      .optional()
-      .default({}),
+
+      .prefault({}),
   })
   .passthrough()
 

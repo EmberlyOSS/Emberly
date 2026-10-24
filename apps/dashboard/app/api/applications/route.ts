@@ -6,10 +6,7 @@ import { isBillingEnabled } from '@/lib/features'
 import { prisma } from '@emberly/db'
 import { events } from '@/lib/events'
 import { loggers } from '@/lib/logger'
-import {
-  ApplicationStatus,
-  ApplicationType,
-} from '@emberly/db'
+import { ApplicationStatus, ApplicationType } from '@emberly/db'
 
 const logger = loggers.api.getChildLogger('applications')
 
@@ -35,10 +32,8 @@ const StaffAnswersSchema = z.object({
     z.number(),
   ]),
   role: z.enum(VALID_STAFF_ROLES, {
-    errorMap: () => ({
-      message:
-        'Role must be one of: moderator, developer, designer, support, other',
-    }),
+    error:
+      'Role must be one of: moderator, developer, designer, support, other',
   }),
 })
 
@@ -85,9 +80,7 @@ const LimitIncreaseAnswersSchema = z
   })
 
 const SubmitSchema = z.object({
-  type: z.nativeEnum(ApplicationType, {
-    errorMap: () => ({ message: 'Invalid application type' }),
-  }),
+  type: z.nativeEnum(ApplicationType, { error: 'Invalid application type' }),
   answers: z.record(z.string(), z.unknown()),
 })
 
