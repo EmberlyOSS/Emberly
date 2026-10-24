@@ -6,6 +6,10 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+---
+
+## [3.2.0] - 2026-10-24
+
 ### Upgrading
 
 - **Background jobs now run inside the app by default, in production too.** Previously a production server needed `EMBERLY_RUN_EVENT_WORKER=true` or a separate `bun run worker` process, and without either one emails, notifications and Discord alerts were queued but never sent. If you already run a separate worker, you can keep it: set `EMBERLY_RUN_EVENT_WORKER=false` on the app so it doesn't also process jobs. Leaving both on is safe too, since each job still runs only once.
