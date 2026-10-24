@@ -105,7 +105,9 @@ export function isMusic(mimeType: string): boolean {
   return MUSIC_MIME_TYPES.has(mimeType)
 }
 
-export function classifyMimeType(mimeType: string | undefined | null): FileClassification {
+export function classifyMimeType(
+  mimeType: string | undefined | null
+): FileClassification {
   const safeMimeType = (mimeType || 'application/octet-stream')
     .toLowerCase()
     .split(';')[0]

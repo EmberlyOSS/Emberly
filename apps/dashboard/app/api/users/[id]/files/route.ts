@@ -43,11 +43,11 @@ export async function GET(
       userId: id,
       ...(search
         ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { ocrText: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
+            OR: [
+              { name: { contains: search, mode: 'insensitive' as const } },
+              { ocrText: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }
         : {}),
       ...(visibility ? { visibility } : {}),
       ...(type ? { mimeType: { startsWith: type } } : {}),

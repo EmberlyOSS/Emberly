@@ -34,7 +34,7 @@ With Docker Compose, `DATABASE_URL` and `REDIS_URL` are set for you. Set `POSTGR
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EMBERLY_LICENSE_KEY` | — | Your license key. See [License & Branding](/docs/self-hosting/licensing). |
+| `EMBERLY_LICENSE_KEY` | — | Your license key. See [License & Branding](/self-hosting/licensing). |
 | `EMBERLY_LICENSE_CHECKIN` | `true` | Set to `false` on servers that can't reach licenses.embrly.ca |
 | `EMBERLY_RUN_EVENT_WORKER` | `true` in Compose | Runs background jobs (OCR, malware scans, emails) in the app process. Set to `false` if you run `bun run worker` separately. |
 | `NEXTAUTH_TRUSTED_ORIGINS` | — | Extra origins allowed to sign in, comma separated |
@@ -51,7 +51,7 @@ With Docker Compose, `DATABASE_URL` and `REDIS_URL` are set for you. Set `POSTGR
 
 ## Storage
 
-Leave these empty to store uploads on local disk. Setting `STORAGE_PROVIDER=s3` overrides the storage settings in the Admin Panel. See [Storage](/docs/self-hosting/storage).
+Leave these empty to store uploads on local disk. Setting `STORAGE_PROVIDER=s3` overrides the storage settings in the Admin Panel. See [Storage](/self-hosting/storage).
 
 | Variable | Description |
 |----------|-------------|

@@ -6,10 +6,7 @@ import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join, posix } from 'path'
 
 import { requireAuth } from '@/lib/auth/api-auth'
-import {
-  uploadCache,
-  type UploadMetadata,
-} from '@/lib/cache/upload-cache'
+import { uploadCache, type UploadMetadata } from '@/lib/cache/upload-cache'
 import { isRedisConnected } from '@/lib/cache/redis'
 import { getConfig } from '@/lib/config'
 import { prisma } from '@emberly/db'
@@ -18,10 +15,8 @@ import { validateUploadRequest } from '@/lib/files/upload-validation'
 import { validateFileSecurityChecksWithVT } from '@/lib/files/security-validation'
 import { loggers } from '@/lib/logger'
 import { processImageOCR } from '@/lib/ocr'
-import {
-  getStorageProvider,
-  getUploadBucketForUser,
-} from '@/lib/storage'
+import { queuePreview } from '@/lib/embeds/preview'
+import { getStorageProvider, getUploadBucketForUser } from '@/lib/storage'
 import { bytesToMB } from '@/lib/utils'
 import { getLimitIncreaseHint } from '@/lib/plans/features'
 import { dataPath } from '@/lib/storage/paths'
@@ -426,6 +421,8 @@ export async function PUT(req: Request) {
 
       return file
     })
+
+    queuePreview(fileRecord)
 
     await deleteUploadMetadata(localId)
 

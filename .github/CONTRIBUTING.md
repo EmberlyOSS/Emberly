@@ -309,7 +309,7 @@ Contributors are recognized in several ways:
 - Contributor badge on your Emberly profile
 - Tiered perks based on contribution level (Bronze → Diamond)
 
-See the [contributor perks documentation](https://docs.embrly.ca/docs/user-guide/contributor-perks) for details.
+See the [contributor perks documentation](https://docs.embrly.ca/user-guide/contributor-perks) for details.
 
 ---
 

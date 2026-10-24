@@ -1,7 +1,7 @@
-import { DocsLayout, type DocsLayoutProps } from 'fumadocs-ui/layouts/docs';
-import type { ReactNode } from 'react';
-import { baseOptions, linkItems } from '@/app/layout.config';
-import { source } from '@/lib/source';
+import { DocsLayout, type DocsLayoutProps } from 'fumadocs-ui/layouts/docs'
+import type { ReactNode } from 'react'
+import { baseOptions, linkItems } from '@/app/layout.config'
+import { source } from '@/lib/source'
 
 const sectionColors: Record<string, string> = {
   'getting-started': 'var(--getting-started-color)',
@@ -11,7 +11,7 @@ const sectionColors: Record<string, string> = {
   security: 'var(--security-color)',
   'self-hosting': 'var(--self-hosting-color)',
   staff: 'var(--staff-color)',
-};
+}
 
 const docsOptions: DocsLayoutProps = {
   ...baseOptions,
@@ -20,10 +20,10 @@ const docsOptions: DocsLayoutProps = {
   sidebar: {
     tabs: {
       transform(option, node) {
-        const meta = source.getNodeMeta(node);
-        if (!meta) return option;
-        const color = sectionColors[meta.file.dirname];
-        if (!color) return option;
+        const meta = source.getNodeMeta(node)
+        if (!meta) return option
+        const color = sectionColors[meta.file.dirname]
+        if (!color) return option
         return {
           ...option,
           icon: (
@@ -37,12 +37,12 @@ const docsOptions: DocsLayoutProps = {
               {option.icon}
             </div>
           ),
-        };
+        }
       },
     },
   },
-};
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return <DocsLayout {...docsOptions}>{children}</DocsLayout>;
+  return <DocsLayout {...docsOptions}>{children}</DocsLayout>
 }

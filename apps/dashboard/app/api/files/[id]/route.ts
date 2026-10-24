@@ -8,6 +8,7 @@ import { prisma } from '@emberly/db'
 import { emitAuditEvent } from '@/lib/events/audit-helper'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
+import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.files
 
@@ -107,6 +108,7 @@ export async function DELETE(
         file.storageBucketId
       )
       await storageProvider.deleteFile(file.path)
+      await removePreview(file.id)
     } catch (error) {
       logger.error('Error deleting file from storage', error as Error, {
         fileId,

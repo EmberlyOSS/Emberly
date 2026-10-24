@@ -6,17 +6,13 @@ import { getSessionToken } from './lib/auth/session-cookie'
 
 import { apiError, HTTP_STATUS } from './lib/api/response'
 import { isCloudEnabled } from './lib/config/env'
-import {
-  handleBotRequest,
-  isBotRequest,
-} from './lib/middleware/bot-handler'
+import { routeFileRequest } from './lib/embeds/routing'
 import {
   CLOUD_ONLY_API_PATHS,
   CLOUD_ONLY_PAGE_PATHS,
   FILE_URL_PATTERN,
   PROTECTED_PAGE_PATHS,
   SUPERADMIN_PATHS,
-  VIDEO_EXTENSIONS,
 } from './lib/middleware/constants'
 import { Permission, hasPermission } from './lib/permissions'
 
@@ -31,7 +27,6 @@ if (!globalThis.__nextAuthLoginContext) {
 // Computed once per isolate, not on every request
 const BASE_URL = appUrl()
 const MAIN_HOST = new URL(BASE_URL).hostname
-const VIDEO_EXTENSIONS_SET = new Set(VIDEO_EXTENSIONS)
 const ALPHA_CUTOFF_DATE = new Date('2025-12-27T00:00:00.000Z')
 
 function getClientIP(request: NextRequest): string | undefined {
@@ -79,6 +74,9 @@ export async function proxy(request: NextRequest) {
     url.pathname = normalizedPathname
     return NextResponse.redirect(url, 308)
   }
+
+  const fileResponse = await routeFileRequest(request)
+  if (fileResponse) return fileResponse
 
   const incomingHost = request.headers.get('host')?.replace(/:\d+$/, '')
 
@@ -194,35 +192,6 @@ export async function proxy(request: NextRequest) {
   const isNextAuthRoute = pathname.startsWith('/api/auth/')
   const isApiRoute = pathname.startsWith('/api/')
 
-  const isFileUrl =
-    FILE_URL_PATTERN.test(normalizedPathname) &&
-    !normalizedPathname.endsWith('/raw') &&
-    !normalizedPathname.endsWith('/direct')
-
-  if (isFileUrl) {
-    const fileExt = normalizedPathname.split('.').pop()?.toLowerCase()
-    const rangeHeader = request.headers.get('range')
-    const acceptHeader = request.headers.get('accept') || ''
-    const isMediaRequest =
-      rangeHeader != null ||
-      (acceptHeader !== '' && !acceptHeader.includes('text/html'))
-
-    if (fileExt && VIDEO_EXTENSIONS_SET.has(fileExt) && isMediaRequest) {
-      const url = new URL(request.url)
-      url.pathname = `${normalizedPathname}/raw`
-      return NextResponse.rewrite(url)
-    }
-
-    if (pathname === normalizedPathname) {
-      const userAgent = request.headers.get('user-agent') || ''
-      if (!isBotRequest(userAgent)) {
-        const url = new URL(request.url)
-        url.pathname = `${pathname}/`
-        return NextResponse.rewrite(url)
-      }
-    }
-  }
-
   const token = await getAuthToken()
   if (token) {
     const createdAt = token.createdAt ? new Date(token.createdAt) : null
@@ -277,11 +246,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (
-    normalizedPathname.endsWith('/raw') ||
-    normalizedPathname.endsWith('/direct') ||
-    pathname.startsWith('/u/')
-  ) {
+  if (pathname.startsWith('/u/')) {
     return NextResponse.next()
   }
 
@@ -324,9 +289,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', BASE_URL))
     }
   }
-
-  const botResponse = await handleBotRequest(request)
-  if (botResponse) return botResponse
 
   return NextResponse.next()
 }

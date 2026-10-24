@@ -14,10 +14,7 @@ import {
   apiResponse,
   paginatedResponse,
 } from '@/lib/api/response'
-import {
-  getSquadFromBearerToken,
-  requireAuth,
-} from '@/lib/auth/api-auth'
+import { getSquadFromBearerToken, requireAuth } from '@/lib/auth/api-auth'
 import { getConfig } from '@/lib/config'
 import { prisma } from '@emberly/db'
 import {
@@ -32,6 +29,7 @@ import {
 } from '@/lib/files/security-validation'
 import { loggers } from '@/lib/logger'
 import { processImageOCR } from '@/lib/ocr'
+import { queuePreview } from '@/lib/embeds/preview'
 import {
   getStorageProvider,
   getUploadBucketForUser,
@@ -46,8 +44,7 @@ export async function POST(req: Request) {
   let filePath = ''
   let userId: string | undefined
   let storageProvider:
-    | Awaited<ReturnType<typeof getStorageProvider>>
-    | undefined
+    Awaited<ReturnType<typeof getStorageProvider>> | undefined
 
   try {
     // ── Auth: try squad token/API key first, then fall back to user session ──
@@ -279,6 +276,8 @@ export async function POST(req: Request) {
 
       return file
     })
+
+    queuePreview(fileRecord)
 
     if (uploadedFile.type.startsWith('image/')) {
       processImageOCR(filePath, fileRecord.id).catch((error) => {

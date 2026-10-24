@@ -17,6 +17,7 @@ import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { File, Prisma, User } from '@emberly/db'
 import { compare, hash } from 'bcryptjs'
+import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.files
 
@@ -169,6 +170,7 @@ export async function deleteFileWithCleanup(
     // Delete from storage provider
     const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     await storageProvider.deleteFile(file.path)
+    await removePreview(file.id)
 
     // Delete from database
     await prisma.file.delete({
@@ -221,6 +223,7 @@ export async function deleteFilesWithCleanup(
         file.storageBucketId
       )
       await storageProvider.deleteFile(file.path)
+      await removePreview(file.id)
       await prisma.file.delete({ where: { id: file.id } })
       deletedCount++
       totalStorageBytes += file.size

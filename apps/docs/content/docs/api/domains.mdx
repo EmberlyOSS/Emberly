@@ -4,7 +4,7 @@ description: Manage custom domains for file uploads via the Emberly API.
 ---
 
 <Callout type="warn">
-  **Cloud only.** Custom domains run on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted). 
+  **Cloud only.** Custom domains run on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/self-hosting/cloud-vs-self-hosted). 
   
   * Requires a **session cookie** (authenticated browser session), not an upload token these are used by the dashboard, not typically needed for external integrations.
 </Callout>
@@ -157,4 +157,4 @@ curl -s -X PATCH \
   https://embrly.ca/api/domains/dom_abc123
 ```
 
-See the [Custom Domains user guide](/docs/user-guide/custom-domains) for full setup instructions including Cloudflare and DNS configuration.
+See the [Custom Domains user guide](/user-guide/custom-domains) for full setup instructions including Cloudflare and DNS configuration.

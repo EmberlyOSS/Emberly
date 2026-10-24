@@ -8,7 +8,7 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [3.0.0] - 2026-10-23
 
-**Made to self-host.** Emberly now ships as a Docker image with a one-command Compose setup and a Dokploy template, can be configured entirely from environment variables, and has rewritten self-hosting docs. Self-hosted instances show their own name, and a license adds your own logo and branding. Emberly moves to the Elastic License 2.0, and the code now lives in a monorepo.
+**Made to self-host.** Emberly now ships as a Docker image with a one-command Compose setup and a Dokploy template, can be configured entirely from environment variables, and has rewritten self-hosting docs. Self-hosted instances show their own name, and a license adds your own logo and branding. Link previews are rebuilt so images show up in Discord reliably and fast. Emberly moves to the Elastic License 2.0, and the code now lives in a monorepo.
 
 ### Upgrading
 
@@ -30,6 +30,8 @@ bun run start   # and `bun run worker` if you run the worker separately
   - `STRIPE_WEBHOOK_SECRET` replaces `STRIPE_WEBHOOK`
 - **Removed settings:** `NEXT_PUBLIC_EMBERLY_RUN_CLOUD` (`EMBERLY_RUN_CLOUD` alone now controls cloud mode) and the unused `NEXT_PUBLIC_STRIPE_PRODUCT_STARTER` and `NEXT_PUBLIC_STRIPE_PRODUCT_PRO`.
 - **Check your settings after upgrading.** Earlier versions could load settings from the wrong database row (see Fixed), so changes made since you last uploaded a favicon or created a system API key may not have been saved. Open **Admin → Settings** and set anything that looks wrong again.
+- Run `bun run db:deploy`. Migration `20261025000000_add_file_dimensions` adds `width` and `height` to files, used by link previews.
+- **Optional:** run `bun run previews:backfill` to make link previews for images uploaded before this release. Without it, each older image gets its preview the first time it's shared. Previews are kept in `DATA_DIR/cache/previews` and are safe to delete; they're made again when needed.
 - Run `bun run db:deploy`. Migration `20261024000000_clear_unrequested_avatar_decorations` removes Discord avatar decorations from profiles that don't use their Discord avatar.
 - Run `bun run db:deploy`. Migration `20261023200000_add_device_authorization` adds the `DeviceAuthorization` table.
 
@@ -38,11 +40,13 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **License keys.** Set `EMBERLY_LICENSE_KEY` to unlock licensed features. Keys are checked offline, never contact a server, and can be tied to your domain.
 - **Automatic license renewals.** Instances with a license key check in with licenses.embrly.ca once a day and pick up renewed keys or domain changes on their own. A check-in sends only the key, an anonymous instance ID, your domain and the Emberly version. If it can't connect, Emberly keeps using its current key. Set `EMBERLY_LICENSE_CHECKIN=false` to turn it off. Instances without a license never check in.
 - **White-label branding** with a license: your own logo across the app, your name in emails and link previews instead of Emberly, and no "Powered by Emberly" credit. Without a license you can still set your instance's name and favicon.
-- **Docker support.** An official image (`ghcr.io/emberlyoss/emberly`) and a `compose.yaml` that runs Emberly with PostgreSQL and Redis. It runs database migrations on start, keeps uploads in a `/data` volume and includes a health check. Set `APP_URL` and `AUTH_SECRET`, then `docker compose up -d`.
+- **Docker support.** An official image (`ghcr.io/emberlyoss/emberly`) and a `compose.yaml` that runs Emberly with PostgreSQL and Redis. It runs database migrations and the background worker, keeps uploads in a `/data` volume and includes a health check. You only need `compose.yaml` and `.env`, not the source: set `APP_URL` and `AUTH_SECRET`, then `docker compose up -d`. Set `EMBERLY_IMAGE` to run your own build instead.
 - **Dokploy template** in `dokploy/`, which asks for a domain and generates the secret and database password for you.
 - **S3 storage from environment variables.** Set `STORAGE_PROVIDER=s3` and the `S3_*` variables to use AWS, Cloudflare R2, Backblaze, RustFS, MinIO or any S3-compatible store without opening the admin panel. Emberly creates the bucket on first start if it doesn't exist. `compose.s3.yaml` adds a RustFS server for a bucket out of the box.
 - **`S3_PUBLIC_ENDPOINT`** for S3 servers that Emberly reaches on a private address. Upload links handed to apps such as Flicker use the public address instead.
 - **Sign in to apps from the browser** — desktop apps such as Flicker can ask for a short code, open `/activate`, and receive their own API key once you approve, so they never handle your password. Approving again from the same app and device replaces its old key, and every key can be revoked in Profile → API. Endpoints: `POST /api/device/code`, `POST /api/device/approve` (signed in) and `POST /api/device/token`.
+- **Fast image previews for link embeds.** Every image gets a small WebP preview (at most 1920px on its longest side) made right after upload, and embeds now point to it at `/<id>/<name>/preview.webp` with the exact width and height. A 950 KB screenshot becomes a preview of about 70 KB, and because the URL ends in `.webp`, Cloudflare caches it. HEIC, AVIF, TIFF and SVG images now show up in embeds too. GIFs and animated images keep using the original so they still animate.
+- **Image dimensions** are recorded for every image when it's uploaded or first shared.
 - **Self-hosting licenses on the pricing page.** embrly.ca's pricing page gains a Self-hosting tab listing license plans from licenses.embrly.ca.
 - **`GET /api/instance`** — public details about the server for apps: name, version, whether it's the hosted cloud, whether billing is on, and which features are available.
 
@@ -56,6 +60,9 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **Smaller production builds.** The standalone output no longer copies the whole source tree.
 - **Node.js 24.** The Docker images, CI, Railpack and Nixpacks configs now use Node.js 24, as Node.js 22 reaches end of life in April 2027. Running Emberly yourself needs Node.js 24 or later.
 - **The pricing page only shows tabs with something in them**, and opens on the first one.
+- **Faster file downloads.** `/raw` no longer looks up the session for public files, and asks storage for the file's size and contents at the same time instead of one after the other. A malformed `Range` header now gets `416` instead of an error.
+- **File links are handled in one place.** Deciding whether a link shows the page, the media or the preview, for people and for link-preview bots, now happens in `lib/embeds/routing.ts` instead of three places in the proxy. Slack, Mastodon and Embedly are now recognised as link-preview bots.
+- **With rich embeds off, image links give bots the preview** instead of the full original, so the image appears in Discord straight away. Videos and other files still serve the original.
 
 ### Fixed
 
@@ -63,6 +70,7 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **A database outage sent everyone to the setup page.** When Emberly couldn't reach the database it assumed no admin existed yet and redirected visitors to `/setup`. It now reports the outage instead. Creating an admin was never possible during an outage.
 - **Discord avatar decorations appeared without being chosen** and sat awkwardly over the picture. Emberly saved your Discord decoration automatically whenever it checked your booster perk, even if you used a different avatar. Decorations now only appear when you choose your Discord avatar in your profile, are removed when you pick another avatar or upload your own, and are drawn around a round avatar the way Discord shows them. Decorations that were added automatically are cleared by the migration below.
 - **Signed-in users sent back to the login page.** If only `AUTH_SECRET` was set, or `NEXTAUTH_COOKIE_DOMAIN` was set, the checks in front of protected pages couldn't read the session and treated everyone as signed out.
+- **Images missing from Discord embeds, or stuck on a dark placeholder.** Embeds pointed Discord at the full original image, served through Emberly at a few hundred KB/s with about a second before the first byte, and never cached by Cloudflare. Discord gave up on slow images, so whether a link showed its image, and whether it worked with a trailing slash, came down to timing. Embeds now use the small cached preview with its dimensions, and links with and without a trailing slash are handled identically.
 - **Link previews that switched between the image and the page** — when Discord or another app previewed a file, Emberly checked the uploader's rich-embed setting through an internal request with a two-second timeout. When that request was slow it assumed rich embeds were on, so files from people who turned them off sometimes previewed as the Emberly page instead of the image. The setting is now read directly from the database and cached for a minute. Older files with spaces or special characters in their names were also never matched and always used the rich page.
 - **Changing the favicon reported an error** even though it saved. It also wrote a copy of the whole instance configuration to storage, where on S3-compatible storage it ended up in the bucket. That copy was never read and is no longer written.
 - **Deleting an account left files behind on S3-compatible storage**, and left avatars and banners behind on every storage type. Files are now removed through whichever storage they were uploaded to.

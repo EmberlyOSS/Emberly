@@ -29,7 +29,7 @@ Open your `APP_URL` and the setup wizard creates the first admin account. Upload
 - **Dokploy:** a one-click template lives in [`dokploy`](dokploy).
 - **Without Docker:** `bun install`, `bun run db:deploy`, `bun run build` and `bun run start`. Railpack and Nixpacks configs are included.
 
-The full guide, including every setting, is at [docs.embrly.ca](https://docs.embrly.ca/docs/self-hosting).
+The full guide, including every setting, is at [docs.embrly.ca](https://docs.embrly.ca/self-hosting).
 
 ## Development
 
@@ -79,4 +79,4 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md). Please report security issues pr
 
 Emberly is licensed under the [Elastic License 2.0](LICENSE). You can use, modify and self-host it, including for your business. You may not offer it to others as a hosted service, or get around its license keys. Releases before the switch remain available under the GNU AGPL v3.
 
-White-label branding and hosted (cloud) features are available with a license key. Contact [hey@embrly.ca](mailto:hey@embrly.ca).
+White-label branding and hosted (cloud) features are available with a license key from [licenses.embrly.ca](https://licenses.embrly.ca). See [License & Branding](https://docs.embrly.ca/self-hosting/licensing) for what each license includes.

@@ -2,11 +2,7 @@ import { NextResponse } from 'next/server'
 import { apiError, HTTP_STATUS } from '@/lib/api/response'
 import { isCloudEnabled } from '@/lib/config/env'
 import { prisma } from '@emberly/db'
-import {
-  getCommitDetail,
-  getOrgRepos,
-  getRepoCommits,
-} from '@/lib/github'
+import { getCommitDetail, getOrgRepos, getRepoCommits } from '@/lib/github'
 import { getContributorLinesOfCode } from '@/lib/perks/github'
 
 export async function GET(

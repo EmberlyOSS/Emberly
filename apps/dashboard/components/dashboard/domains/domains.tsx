@@ -474,7 +474,7 @@ export function ProfileDomains() {
         <p className="text-sm text-muted-foreground text-center">
           Need help? Check our{' '}
           <a
-            href="https://docs.embrly.ca/docs/user-guide/custom-domains"
+            href="https://docs.embrly.ca/user-guide/custom-domains"
             className="text-primary hover:underline"
           >
             domain setup guide

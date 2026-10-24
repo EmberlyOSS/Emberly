@@ -151,7 +151,11 @@ export function LicensePanel() {
         )}
         {license?.state !== 'valid' && (
           <Button asChild variant="outline" size="sm">
-            <a href="mailto:hey@embrly.ca?subject=Emberly%20license">
+            <a
+              href="https://licenses.embrly.ca"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Get a license
             </a>
           </Button>

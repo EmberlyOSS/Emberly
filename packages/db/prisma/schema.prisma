@@ -143,6 +143,8 @@ model File {
   urlPath          String               @unique
   mimeType         String
   size             Float
+  width            Int?
+  height           Int?
   visibility       FileVisibility       @default(PUBLIC)
   uploadedAt       DateTime             @default(now())
   updatedAt        DateTime             @default(now()) @updatedAt

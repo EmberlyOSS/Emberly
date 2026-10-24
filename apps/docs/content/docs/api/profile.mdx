@@ -6,7 +6,7 @@ description: Manage your Emberly profile, security settings, upload tokens, inte
 The Profile API gives authenticated users access to their full account — security settings, upload tokens, linked accounts, perks, referrals, and data export.
 
 <Callout type="info">
-  All Profile endpoints require a **session cookie** (authenticated browser session) unless otherwise noted. They are not typically called from external integrations. Use the [Files API](/docs/api/files) with your upload token for programmatic file operations.
+  All Profile endpoints require a **session cookie** (authenticated browser session) unless otherwise noted. They are not typically called from external integrations. Use the [Files API](/api/files) with your upload token for programmatic file operations.
 </Callout>
 
 ## Endpoints Overview
@@ -523,11 +523,11 @@ These endpoints generate pre-configured upload scripts and configs using your cu
 
 ### `GET /api/profile/sharex`
 
-Download a ShareX `.sxcu` config file. See [ShareX Integration](/docs/integrations/sharex).
+Download a ShareX `.sxcu` config file. See [ShareX Integration](/integrations/sharex).
 
 ### `POST /api/profile/flameshot`
 
-Generate a Flameshot upload script. See [Flameshot Integration](/docs/integrations/flameshot).
+Generate a Flameshot upload script. See [Flameshot Integration](/integrations/flameshot).
 
 **Request Body:**
 ```json
@@ -618,8 +618,8 @@ Send a test embed to the Discord webhook URL configured in your profile. Useful 
 
 ## Related
 
-- [Account Settings Guide](/docs/user-guide/account-settings) — dashboard walkthrough
-- [Contributor Perks](/docs/user-guide/contributor-perks)
-- [Discord Perks](/docs/user-guide/discord-perks)
-- [ShareX Integration](/docs/integrations/sharex)
-- [Flameshot Integration](/docs/integrations/flameshot)
+- [Account Settings Guide](/user-guide/account-settings) — dashboard walkthrough
+- [Contributor Perks](/user-guide/contributor-perks)
+- [Discord Perks](/user-guide/discord-perks)
+- [ShareX Integration](/integrations/sharex)
+- [Flameshot Integration](/integrations/flameshot)

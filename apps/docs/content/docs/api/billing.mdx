@@ -4,7 +4,7 @@ description: Create checkout/portal sessions and manage subscriptions via the Em
 ---
 
 <Callout type="warn">
-  **Cloud only.** Billing runs on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/docs/self-hosting/cloud-vs-self-hosted). 
+  **Cloud only.** Billing runs on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/self-hosting/cloud-vs-self-hosted). 
   
   * Requires a **session cookie** (authenticated browser session), not an upload token these power the dashboard's upgrade/billing flows and aren't intended for external integrations. 
   * Requires Stripe to be configured on the server if it isn't, they return `501` (or `503` for sync) instead of processing anything.

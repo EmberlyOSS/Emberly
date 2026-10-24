@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "dev": "bun run --cwd apps/dashboard dev",
+    "dev:docs": "bun run --cwd apps/docs dev",
     "dev:all": "turbo run dev",
     "build": "turbo run build --filter=@emberly/dashboard",
     "build:all": "turbo run build",
@@ -29,6 +30,7 @@
     "db:migrate": "bun run --cwd packages/db migrate",
     "db:deploy": "bun run --cwd packages/db deploy",
     "db:seed": "bun run --cwd apps/dashboard db:seed",
+    "previews:backfill": "bun run --cwd apps/dashboard previews:backfill",
     "db:studio": "bun run --cwd packages/db studio",
     "prepare": "husky"
   },

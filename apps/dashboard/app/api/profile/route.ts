@@ -1,7 +1,4 @@
-import {
-  ProfileResponse,
-  UpdateProfileSchema,
-} from '@/types/dto/profile'
+import { ProfileResponse, UpdateProfileSchema } from '@/types/dto/profile'
 import { Prisma } from '@emberly/db'
 import { compare, hash } from 'bcryptjs'
 
@@ -17,6 +14,7 @@ import {
   checkPasswordReuse,
   recordPasswordHistory,
 } from '@/lib/security/password-reuse-checker'
+import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.users
 
@@ -311,6 +309,7 @@ export async function DELETE(req: Request) {
       include: {
         files: {
           select: {
+            id: true,
             path: true,
             storageBucketId: true,
           },
@@ -326,6 +325,7 @@ export async function DELETE(req: Request) {
       try {
         const storage = await getProviderForStoredFile(file.storageBucketId)
         await storage.deleteFile(file.path)
+        await removePreview(file.id)
       } catch (error) {
         logger.error(`Error deleting file ${file.path}:`, error as Error)
       }

@@ -22,7 +22,9 @@ import {
   buildDirectMediaMetadata,
   buildMinimalMetadata,
   buildRichMetadata,
+  embedImageFor,
 } from '@/lib/embeds/metadata'
+import { queuePreview } from '@/lib/embeds/preview'
 import { findFileByUrlPath } from '@/lib/files/lookup'
 import { formatFileSize } from '@/lib/utils'
 
@@ -141,12 +143,22 @@ export async function generateMetadata({
 
   // When rich embeds are disabled, point crawlers to the raw file URL
   // This preserves media inline behavior (video/image/audio) without branded cards.
+  if (file.mimeType.startsWith('image/') && !file.width) queuePreview(file)
+
   if (file.user.enableRichEmbeds === false) {
     return buildDirectMediaMetadata({
       fileName: file.name,
       rawUrl,
       mimeType: file.mimeType,
       brand,
+      image: embedImageFor({
+        baseUrl,
+        fileUrlPath: canonicalPath,
+        rawUrl,
+        mimeType: file.mimeType,
+        width: file.width,
+        height: file.height,
+      }),
     })
   }
 
@@ -158,6 +170,8 @@ export async function generateMetadata({
     fileName: file.name,
     mimeType: file.mimeType,
     size: file.size,
+    width: file.width,
+    height: file.height,
     uploadedAt: file.uploadedAt,
     uploaderName: file.user.name || 'Anonymous',
   })

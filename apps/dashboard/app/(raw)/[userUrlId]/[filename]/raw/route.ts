@@ -1,286 +1,42 @@
 import { NextResponse } from 'next/server'
 
-import { getServerSession } from 'next-auth'
-import { Readable } from 'stream'
-
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@emberly/db'
-import {
-  NO_STORE,
-  checkFileAccess,
-  fileCacheControl,
-} from '@/lib/files/access'
 import { findFileByUrlPath } from '@/lib/files/lookup'
-import { loggers } from '@/lib/logger'
-import { getProviderForStoredFile } from '@/lib/storage'
+import {
+  CORS_HEADERS,
+  denyFileAccess,
+  emptyResponse,
+  serveStoredFile,
+} from '@/lib/files/serve'
 
-const logger = loggers.files.getChildLogger('raw')
+type Params = { params: Promise<{ userUrlId: string; filename: string }> }
 
-// CORS headers for video embeds (Discord, Twitter, etc.)
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-  'Access-Control-Allow-Headers': 'Range, Content-Type',
-  'Access-Control-Expose-Headers':
-    'Content-Length, Content-Range, Accept-Ranges',
-}
-
-function encodeFilename(filename: string): string {
-  const encoded = encodeURIComponent(filename)
-  return `"${encoded.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-}
-
-function createRobustStream(nodeStream: Readable): ReadableStream {
-  let streamClosed = false
-  let controller: ReadableStreamDefaultController | null = null
-  let isPulling = false
-
-  return new ReadableStream(
-    {
-      start(ctrl) {
-        controller = ctrl
-
-        nodeStream.on('data', (chunk) => {
-          if (streamClosed) return
-
-          try {
-            controller?.enqueue(new Uint8Array(chunk))
-          } catch (error) {
-            const err = error as Error & { code?: string }
-            if (
-              err.code !== 'ECONNRESET' &&
-              !err.message?.includes('aborted')
-            ) {
-              console.error('Error enqueueing chunk:', error)
-            }
-            if (!streamClosed) {
-              streamClosed = true
-              if (!nodeStream.destroyed) {
-                nodeStream.destroy()
-              }
-            }
-          }
-        })
-
-        nodeStream.on('end', () => {
-          if (!streamClosed) {
-            try {
-              controller?.close()
-            } catch {
-              // Client disconnected
-            }
-            streamClosed = true
-          }
-        })
-
-        nodeStream.on('error', (error) => {
-          const err = error as Error & { code?: string }
-          if (
-            err.code !== 'ECONNRESET' &&
-            err.code !== 'ERR_STREAM_PREMATURE_CLOSE' &&
-            !err.message?.includes('aborted')
-          ) {
-            console.error('Node stream error:', error)
-          }
-          if (!streamClosed) {
-            streamClosed = true
-            if (!nodeStream.destroyed) {
-              nodeStream.destroy()
-            }
-          }
-        })
-      },
-
-      pull() {
-        if (!isPulling && !streamClosed) {
-          isPulling = true
-          nodeStream.resume()
-          process.nextTick(() => {
-            isPulling = false
-          })
-        }
-      },
-
-      cancel() {
-        streamClosed = true
-        if (!nodeStream.destroyed) {
-          nodeStream.destroy()
-        }
-      },
-    },
-    {
-      highWaterMark: 65536, // 64KB buffer for smooth streaming
-    }
-  )
-}
-
-// Handle CORS preflight requests
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  })
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
 }
 
-// Handle HEAD requests (used by Discord, Twitter, etc. to check video before fetching)
-export async function HEAD(
-  req: Request,
-  { params }: { params: Promise<{ userUrlId: string; filename: string }> }
-) {
+async function handle(req: Request, { params }: Params, head: boolean) {
   try {
-    const session = await getServerSession(authOptions)
     const { userUrlId, filename } = await params
-    const urlPath = `/${userUrlId}/${filename}`
-    const url = new URL(req.url)
-    const providedPassword = url.searchParams.get('password')
-
     const file = await findFileByUrlPath(userUrlId, filename)
+    if (!file) return emptyResponse(404)
 
-    if (!file) {
-      return new Response(null, {
-        status: 404,
-        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-      })
-    }
+    const deny = await denyFileAccess(req, file)
+    if (deny) return deny
 
-    const deny = await checkFileAccess(file, {
-      userId: session?.user?.id,
-      providedPassword,
-    })
-    if (deny)
-      return new Response(null, {
-        status: deny.status,
-        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-      })
-
-    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
-    const size = await storageProvider.getFileSize(file.path)
-
-    return new NextResponse(null, {
-      status: 200,
-      headers: {
-        ...CORS_HEADERS,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': size.toString(),
-        'Content-Type': file.mimeType,
-        'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-        'Cache-Control': fileCacheControl(file),
-      },
-    })
+    return await serveStoredFile(req, file, { head })
   } catch (error) {
-    console.error('HEAD request error:', error)
-    return new Response(null, {
-      status: 500,
-      headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-    })
-  }
-}
-
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ userUrlId: string; filename: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    const { userUrlId, filename } = await params
-    const urlPath = `/${userUrlId}/${filename}`
-    const url = new URL(req.url)
-    const providedPassword = url.searchParams.get('password')
-
-    const file = await findFileByUrlPath(userUrlId, filename)
-
-    if (!file) {
-      return new Response(null, {
-        status: 404,
-        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-      })
-    }
-
-    const deny = await checkFileAccess(file, {
-      userId: session?.user?.id,
-      providedPassword,
-    })
-    if (deny)
-      return new Response(null, {
-        status: deny.status,
-        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-      })
-
-    const storageProvider = await getProviderForStoredFile(file.storageBucketId)
-    logger.info('raw route storage debug', {
-      filePath: file.path,
-      storageBucketId: file.storageBucketId ?? 'global',
-    })
-    const range = req.headers.get('range')
-
-    const size = await storageProvider.getFileSize(file.path)
-    logger.info('raw route head success', {
-      filePath: file.path,
-      size,
-    })
-
-    if (range) {
-      const parts = range.replace(/bytes=/, '').split('-')
-      const start = parseInt(parts[0], 10)
-      const end = parts[1] ? parseInt(parts[1], 10) : size - 1
-      const chunkSize = end - start + 1
-
-      const stream = await storageProvider.getFileStream(file.path, {
-        start,
-        end,
-      })
-      logger.info('raw route range stream ready', {
-        filePath: file.path,
-        start,
-        end,
-      })
-
-      const headers = {
-        ...CORS_HEADERS,
-        'Content-Range': `bytes ${start}-${end}/${size}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunkSize.toString(),
-        'Content-Type': file.mimeType,
-        'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-        'Cache-Control': fileCacheControl(file),
-        Connection: 'keep-alive',
-        'Keep-Alive': 'timeout=300, max=1000',
-      }
-
-      return new NextResponse(createRobustStream(stream), {
-        status: 206,
-        headers,
-      })
-    }
-
-    const stream = await storageProvider.getFileStream(file.path)
-    logger.info('raw route full stream ready', {
-      filePath: file.path,
-      size,
-    })
-    const headers = {
-      ...CORS_HEADERS,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': size.toString(),
-      'Content-Type': file.mimeType,
-      'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
-      'Cache-Control': fileCacheControl(file),
-      Connection: 'keep-alive',
-      'Keep-Alive': 'timeout=300, max=1000',
-    }
-
-    return new NextResponse(createRobustStream(stream), { headers })
-  } catch (error) {
-    console.error('File serve error:', error)
     if (error instanceof Error && error.message.includes('NoSuchKey')) {
-      return new Response(null, {
-        status: 404,
-        headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-      })
+      return emptyResponse(404)
     }
-    return new Response(null, {
-      status: 500,
-      headers: { ...CORS_HEADERS, 'Cache-Control': NO_STORE },
-    })
+    console.error('File serve error:', error)
+    return emptyResponse(500)
   }
+}
+
+export function HEAD(req: Request, ctx: Params) {
+  return handle(req, ctx, true)
+}
+
+export function GET(req: Request, ctx: Params) {
+  return handle(req, ctx, false)
 }

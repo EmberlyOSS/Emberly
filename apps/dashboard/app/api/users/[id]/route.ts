@@ -7,6 +7,7 @@ import { prisma } from '@emberly/db'
 import { emitAuditEvent } from '@/lib/events/audit-helper'
 import { loggers } from '@/lib/logger'
 import { getStorageProvider } from '@/lib/storage'
+import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.users
 
@@ -25,6 +26,7 @@ export async function DELETE(
       include: {
         files: {
           select: {
+            id: true,
             path: true,
           },
         },
@@ -40,6 +42,7 @@ export async function DELETE(
     for (const file of user.files) {
       try {
         await storageProvider.deleteFile(file.path)
+        await removePreview(file.id)
       } catch (error) {
         logger.error(`Error deleting file ${file.path}:`, error as Error)
       }
