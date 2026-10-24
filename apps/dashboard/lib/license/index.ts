@@ -27,12 +27,26 @@ export type LicenseStatus =
       license: LicensePayload
     }
 
-const revokedIds = new Set<string>()
+// Kept on globalThis so the proxy, which is bundled separately, sees the
+// same license as the rest of the app
+interface LicenseState {
+  revoked: Set<string>
+  stored: string | null
+  refreshed: string | null
+  cached: { key: string; status: LicenseStatus; day: string } | null
+}
+
+const g = globalThis as typeof globalThis & { __emberlyLicense?: LicenseState }
+const state: LicenseState = (g.__emberlyLicense ??= {
+  revoked: new Set(),
+  stored: null,
+  refreshed: null,
+  cached: null,
+})
 
 export function setRevokedLicenseIds(ids: string[]) {
-  revokedIds.clear()
-  for (const id of ids) revokedIds.add(id)
-  cached = null
+  state.revoked = new Set(ids)
+  state.cached = null
 }
 
 function hostMatches(host: string, pattern: string) {
@@ -77,7 +91,7 @@ export function parseLicense(
   if (!valid) return { state: 'invalid', reason: 'Signature does not match' }
   if (license.v !== 1)
     return { state: 'invalid', reason: 'Unsupported key version' }
-  if (revokedIds.has(license.id)) return { state: 'revoked', license }
+  if (state.revoked.has(license.id)) return { state: 'revoked', license }
 
   if (license.expiresAt && new Date(license.expiresAt) < now) {
     return { state: 'expired', license }
@@ -94,25 +108,41 @@ export function parseLicense(
   return { state: 'valid', license }
 }
 
-let cached: { key: string; status: LicenseStatus; day: string } | null = null
-let refreshedKey: string | null = null
-
 const envLicenseKey = () => process.env.EMBERLY_LICENSE_KEY?.trim() || null
 
-export function currentLicenseKey() {
-  return refreshedKey ?? envLicenseKey()
+/** Where the license key comes from: the environment wins over settings. */
+export function licenseKeySource(): 'env' | 'settings' | null {
+  if (envLicenseKey()) return 'env'
+  return state.stored ? 'settings' : null
 }
 
+const baseLicenseKey = () => envLicenseKey() ?? state.stored
+
+const licenseId = (key: string | null) => {
+  const parsed = key ? parseLicense(key, { checkDomain: false }) : null
+  return parsed && 'license' in parsed ? parsed.license.id : null
+}
+
+export function currentLicenseKey() {
+  return state.refreshed ?? baseLicenseKey()
+}
+
+/** Sets the key entered in the admin panel, or clears it with null. */
+export function setStoredLicenseKey(key: string | null) {
+  state.stored = key
+  if (licenseId(state.refreshed) !== licenseId(baseLicenseKey())) {
+    state.refreshed = null
+    state.revoked = new Set()
+  }
+  state.cached = null
+}
+
+/** Accepts a renewed key from a check-in, only for the license in use. */
 export function setRefreshedLicenseKey(key: string) {
-  const next = parseLicense(key, { checkDomain: false })
-  const base = envLicenseKey()
-    ? parseLicense(envLicenseKey()!, { checkDomain: false })
-    : null
-  if (!('license' in next)) return false
-  if (base && 'license' in base && base.license.id !== next.license.id)
-    return false
-  refreshedKey = key
-  cached = null
+  const id = licenseId(key)
+  if (!id || id !== licenseId(baseLicenseKey())) return false
+  state.refreshed = key
+  state.cached = null
   return true
 }
 
@@ -120,10 +150,10 @@ export function getLicense(): LicenseStatus {
   const key = currentLicenseKey()
   if (!key) return { state: 'none' }
   const day = new Date().toISOString().slice(0, 10)
-  if (cached?.key !== key || cached.day !== day) {
-    cached = { key, status: parseLicense(key), day }
+  if (state.cached?.key !== key || state.cached.day !== day) {
+    state.cached = { key, status: parseLicense(key), day }
   }
-  return cached.status
+  return state.cached.status
 }
 
 export function hasLicenseFeature(feature: LicenseFeature) {

@@ -6,6 +6,26 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-10-24
+
+License keys can be added from the admin panel, and branding settings live in one place.
+
+### Upgrading
+
+- No database changes. Update and restart. Keys set with `EMBERLY_LICENSE_KEY` keep working as before.
+
+### Added
+
+- **Add your license key in the admin panel.** Paste it in **Admin → Settings → License & branding** instead of setting `EMBERLY_LICENSE_KEY`. Keys are checked when you save them, the first check-in runs straight away, and a key can be replaced or removed from the same place. `EMBERLY_LICENSE_KEY` still works and takes priority.
+
+### Changed
+
+- **One place for branding.** Site name, description, logo and footer settings now sit together under **Admin → Settings → License & branding**, replacing the separate Branding and Credits & Attribution sections. The logo and removing the "Powered by Emberly" credit still need a license; the rest stays free.
+
+### Fixed
+
+- **Renewed license keys weren't seen everywhere.** A key renewed by the daily check-in only reached part of the app. License state is now shared across the whole server process.
+
 ## [3.0.1] - 2026-10-24
 
 A security fix. Self-hosters should upgrade.

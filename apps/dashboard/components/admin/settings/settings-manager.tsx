@@ -1200,12 +1200,14 @@ export function SettingsManager() {
             </div>
           </SettingsSection>
 
-          {/* Branding */}
+          {/* License & branding */}
           <SettingsSection
-            icon={InfoIcon}
-            title="Branding"
-            description="Customize the name and meta description shown for your instance"
+            icon={KeyRound}
+            title="License & branding"
+            description="Your license, logo, name and footer. The logo and removing the Emberly credit need a license."
           >
+            <LicensePanel />
+
             <div className="space-y-2 pl-0.5">
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium">Site Name</Label>
@@ -1251,6 +1253,48 @@ export function SettingsManager() {
                 rows={3}
               />
             </div>
+
+            <SettingRow
+              label="Show footer"
+              description={
+                whiteLabel
+                  ? 'Show the site footer'
+                  : 'Hiding the footer still leaves a small "Powered by Emberly" credit. A white-label license removes it.'
+              }
+              changed={isFieldChanged('general', ['credits', 'showFooter'])}
+            >
+              <Switch
+                checked={workingConfig.settings.general.credits.showFooter}
+                onCheckedChange={(checked) =>
+                  handleSettingChange('general', {
+                    credits: { showFooter: checked },
+                  })
+                }
+                className={getFieldClasses('general', [
+                  'credits',
+                  'showFooter',
+                ])}
+              />
+            </SettingRow>
+
+            {!workingConfig.settings.general.credits.showFooter && (
+              <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400">
+                <Heart className="h-4 w-4" />
+                <AlertDescription>
+                  {whiteLabel ? 'Thanks for supporting Emberly! ' : ''}If you
+                  hide the footer, please consider{' '}
+                  <a
+                    href="https://github.com/sponsors/EmberlyOSS"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline font-medium hover:no-underline"
+                  >
+                    sponsoring the project
+                  </a>{' '}
+                  to support its development.
+                </AlertDescription>
+              </Alert>
+            )}
           </SettingsSection>
 
           {/* User Management */}
@@ -1340,63 +1384,6 @@ export function SettingsManager() {
               </SettingRow>
             </SettingsSection>
           )}
-
-          <SettingsSection
-            icon={KeyRound}
-            title="License & branding"
-            description="Your license key and instance logo"
-          >
-            <LicensePanel />
-          </SettingsSection>
-
-          {/* Credits */}
-          <SettingsSection
-            icon={Heart}
-            title="Credits & Attribution"
-            description="Manage footer credits visibility"
-          >
-            <SettingRow
-              label="Show footer"
-              description={
-                whiteLabel
-                  ? 'Show the site footer'
-                  : 'Hiding the footer still leaves a small "Powered by Emberly" credit. A white-label license removes it.'
-              }
-              changed={isFieldChanged('general', ['credits', 'showFooter'])}
-            >
-              <Switch
-                checked={workingConfig.settings.general.credits.showFooter}
-                onCheckedChange={(checked) =>
-                  handleSettingChange('general', {
-                    credits: { showFooter: checked },
-                  })
-                }
-                className={getFieldClasses('general', [
-                  'credits',
-                  'showFooter',
-                ])}
-              />
-            </SettingRow>
-
-            {!workingConfig.settings.general.credits.showFooter && (
-              <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400">
-                <Heart className="h-4 w-4" />
-                <AlertDescription>
-                  {whiteLabel ? 'Thanks for supporting Emberly! ' : ''}If you
-                  hide the footer, please consider{' '}
-                  <a
-                    href="https://github.com/sponsors/EmberlyOSS"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline font-medium hover:no-underline"
-                  >
-                    sponsoring the project
-                  </a>{' '}
-                  to support its development.
-                </AlertDescription>
-              </Alert>
-            )}
-          </SettingsSection>
         </TabsContent>
 
         {/* Storage Tab */}

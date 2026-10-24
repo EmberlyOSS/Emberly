@@ -2,19 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { ImageUp, Loader2, Trash2 } from 'lucide-react'
+import { ImageUp, KeyRound, Loader2, Trash2 } from 'lucide-react'
 
 import { useBranding } from '@/components/providers/branding-provider'
 import { useFeatures } from '@/components/providers/features-provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 
-type LicenseInfo =
+type KeySource = 'env' | 'settings' | null
+
+type LicenseInfo = { source?: KeySource } & (
   | { state: 'none' }
   | { state: 'invalid'; reason: string }
   | {
-      state: 'valid' | 'expired' | 'wrong-domain'
+      state: 'valid' | 'expired' | 'wrong-domain' | 'revoked'
       licensee: string
       features: string[]
       domains?: string[]
@@ -29,6 +32,7 @@ type LicenseInfo =
         overLimit: boolean
       } | null
     }
+)
 
 const STATE_LABEL: Record<LicenseInfo['state'], string> = {
   none: 'No license',
@@ -36,6 +40,7 @@ const STATE_LABEL: Record<LicenseInfo['state'], string> = {
   valid: 'Active',
   expired: 'Expired',
   'wrong-domain': 'Wrong domain',
+  revoked: 'Revoked',
 }
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -50,7 +55,34 @@ export function LicensePanel() {
   const [license, setLicense] = useState<LicenseInfo | null>(null)
   const [logo, setLogo] = useState(branding.logo)
   const [busy, setBusy] = useState(false)
+  const [key, setKey] = useState('')
+  const [saving, setSaving] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+
+  const changeKey = async (method: 'PUT' | 'DELETE') => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/license', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: method === 'PUT' ? JSON.stringify({ key }) : undefined,
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error ?? 'Could not save the key')
+      toast({
+        title: method === 'PUT' ? 'License key saved' : 'License key removed',
+        description: 'Reloading to apply it.',
+      })
+      window.location.reload()
+    } catch (error) {
+      toast({
+        title: 'License key not saved',
+        description: (error as Error).message,
+        variant: 'destructive',
+      })
+      setSaving(false)
+    }
+  }
 
   useEffect(() => {
     fetch('/api/admin/license')
@@ -143,8 +175,13 @@ export function LicensePanel() {
             )}
             {license.state === 'none' && (
               <p className="text-muted-foreground">
-                Set <code>EMBERLY_LICENSE_KEY</code> on the server to unlock
-                white-label branding.
+                Add a license key to use your own logo and remove the "Powered
+                by Emberly" credit.
+              </p>
+            )}
+            {license.source === 'env' && (
+              <p className="text-muted-foreground">
+                Set with <code>EMBERLY_LICENSE_KEY</code> on the server.
               </p>
             )}
           </div>
@@ -161,6 +198,51 @@ export function LicensePanel() {
           </Button>
         )}
       </div>
+
+      {license && license.source !== 'env' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <KeyRound className="h-4 w-4 text-muted-foreground" />
+            License key
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder={
+                license.source === 'settings'
+                  ? 'Paste a new key to replace the current one'
+                  : 'emb_lic_...'
+              }
+              className="min-w-0 flex-1 font-mono text-xs"
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <Button
+              size="sm"
+              disabled={saving || !key.trim()}
+              onClick={() => changeKey('PUT')}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+            </Button>
+            {license.source === 'settings' && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => changeKey('DELETE')}
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Renewed keys are picked up automatically. You can also set
+            <code className="mx-1">EMBERLY_LICENSE_KEY</code>on the server
+            instead.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">

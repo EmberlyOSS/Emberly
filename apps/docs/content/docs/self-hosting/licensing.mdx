@@ -11,10 +11,11 @@ Emberly is free to self-host. A license is only needed to remove Emberly's brand
 
 Every instance can set:
 
-- **Site name**, in **Admin → Settings → Branding**. It is used in the page title, navigation and emails.
-- **Favicon**, in **Admin → Settings → Favicon**.
+- **Site name** and **description**, in **Admin → Settings → License & branding**. The name is used in the page title, navigation and emails.
+- **Favicon**, in **Admin → Settings → Appearance**.
+- **Footer**: you can hide the site footer, in **Admin → Settings → License & branding**.
 
-Unlicensed instances show a small "Powered by Emberly" credit and keep the Emberly logo.
+Unlicensed instances show a small "Powered by Emberly" credit, even with the footer hidden, and keep the Emberly logo.
 
 ## What a License Adds
 
@@ -27,13 +28,15 @@ Unlicensed instances show a small "Powered by Emberly" credit and keep the Ember
 
 1. Buy a license at [licenses.embrly.ca](https://licenses.embrly.ca). You enter the domains your instance runs on, such as `files.example.com` or `*.example.com`.
 2. Copy the key from the email or from your portal.
-3. Set it as an environment variable and restart Emberly:
+3. Open **Admin → Settings → License & branding**, paste the key and click **Save**. It should show your license as **Active**. Upload your logo there.
+
+You can set the key as an environment variable instead, for example to manage it with the rest of your deployment:
 
 ```env
 EMBERLY_LICENSE_KEY="emb_lic_..."
 ```
 
-4. Open **Admin → Settings → License & branding**. It should show your license as **Active**. Upload your logo there.
+A key in the environment takes priority, and the admin panel then shows it as set on the server.
 
 The key must match the host in `APP_URL`. `localhost` always works, so you can test a key locally.
 

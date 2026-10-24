@@ -12,6 +12,7 @@ import {
   setRefreshedLicenseKey,
   setRevokedLicenseIds,
 } from './index'
+import { loadStoredLicenseKey } from './store'
 
 const logger = loggers.licenses
 const STATE_KEY = 'license_check_in'
@@ -33,9 +34,9 @@ const server = () =>
   (
     process.env.EMBERLY_LICENSE_SERVER?.trim() || 'https://licenses.embrly.ca'
   ).replace(/\/+$/, '')
-export const checkInEnabled = () =>
-  !!process.env.EMBERLY_LICENSE_KEY?.trim() &&
-  process.env.EMBERLY_LICENSE_CHECKIN !== 'false'
+const checkInsAllowed = () => process.env.EMBERLY_LICENSE_CHECKIN !== 'false'
+
+export const checkInEnabled = () => !!currentLicenseKey() && checkInsAllowed()
 
 async function read<T>(key: string): Promise<T | null> {
   return (
@@ -77,6 +78,7 @@ export async function getCheckInState() {
 }
 
 export async function checkInNow(): Promise<CheckInState | null> {
+  await loadStoredLicenseKey().catch(() => {})
   const key = currentLicenseKey()
   if (!key || !checkInEnabled()) return null
   const previous = (await getCheckInState()) ?? {}
@@ -128,7 +130,12 @@ export async function checkInNow(): Promise<CheckInState | null> {
 }
 
 export async function startLicenseCheckIns() {
-  if (!checkInEnabled()) return
+  await loadStoredLicenseKey().catch((error) =>
+    logger.warn('Could not load the license key from settings', {
+      error: (error as Error).message,
+    })
+  )
+  if (!checkInsAllowed()) return
   const state = await getCheckInState().catch(() => null)
   if (state?.key) setRefreshedLicenseKey(state.key)
   if (state) applyRevocation(state)
