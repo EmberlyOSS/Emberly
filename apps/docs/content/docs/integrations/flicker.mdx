@@ -3,22 +3,22 @@ title: Flicker
 description: Emberly's desktop app for screenshots, recordings and uploads on Windows, macOS and Linux.
 ---
 
-**Flicker** is Emberly's own desktop app. Press a shortcut, pick an area, and the link is on your clipboard a moment later. It connects to embrly.ca.
+**Flicker** is Emberly's own desktop app. Press a shortcut, pick an area, and the link is on your clipboard a moment later. It works with embrly.ca and with self-hosted Emberly servers.
 
 ## Download
 
-Get the installer for your system from the [Flicker releases page](https://github.com/EmberlyOSS/Flicker/releases):
+Get Flicker from [embrly.ca/downloads](https://embrly.ca/downloads), which picks the right installer for your system. Every release is also on the [GitHub releases page](https://github.com/EmberlyOSS/Flicker/releases).
 
 | System | Download |
 |--------|----------|
-| **Windows** | `.msi` or `.exe` installer |
-| **macOS** | `.dmg`, for Apple silicon or Intel |
+| **Windows** | `.exe` installer or `.msi` package |
+| **macOS** | `.dmg`, separate downloads for Apple silicon and Intel |
 | **Linux** | `.AppImage`, `.deb` or `.rpm` |
 
 Flicker updates itself: **Settings → About** checks for new versions and installs them.
 
 <Callout type="info">
-  The installers aren't code-signed yet, so Windows may show "unknown publisher" and macOS "unidentified developer". On macOS, right-click Flicker and choose **Open** the first time.
+  The installers aren't code-signed yet. Windows may warn about an unknown publisher; choose **More info → Run anyway**. On macOS, move Flicker to Applications, then run `xattr -cr /Applications/Flicker.app` once in Terminal if macOS says Flicker is damaged or can't be checked.
 </Callout>
 
 ## Sign In
@@ -29,6 +29,8 @@ Open Flicker and choose how to sign in:
 - **Email and password**, if you'd rather not use the browser.
 - **Upload token**, pasted from **Profile → Uploads** on the website.
 
+The sign-in screen shows which server you're signing in to. To use a self-hosted Emberly, click **Change** next to it and enter your server's address; Flicker checks it's an Emberly server before switching.
+
 ## Capture and Upload
 
 | Action | Default shortcut | What it does |
@@ -38,12 +40,19 @@ Open Flicker and choose how to sign in:
 | **Capture all screens** | `Ctrl+Shift+A` | Every monitor in one image |
 | **Record video** | `Ctrl+Alt+R` (`Cmd+Shift+R` on macOS) | Press again to stop |
 | **Upload clipboard** | `Ctrl+Alt+U` | Upload a copied image or file |
+| **Open Flicker** | `Ctrl+Alt+F` (`Control+Option+F` on macOS) | Show the window, or hide it if it's in front |
 
 Shortcuts work while Flicker is in the background. Change them in **Settings → Hotkeys**; **Reset to defaults** puts them back.
 
 You can also drag files onto Flicker's **Upload** page, or use the quick actions there.
 
 When an upload finishes, the link is copied to your clipboard and you get a notification with a sound. You can change both in **Settings → Preferences**.
+
+## Closing and Reopening
+
+By default, closing the window keeps Flicker running in the system tray (the menu bar on macOS), so your shortcuts keep working. To get the window back, press **Open Flicker** (`Ctrl+Alt+F`), click the Flicker icon in the tray, or open Flicker again from the Start menu, Dock or a shortcut.
+
+To minimize to the taskbar (Dock on macOS) or quit instead, change **Settings → Preferences → Window**. To quit from the tray, right-click the icon and choose **Quit**.
 
 ## Pages
 
@@ -62,14 +71,14 @@ When an upload finishes, the link is copied to your clipboard and you get a noti
 | **Account** | Who you're signed in as, your upload token, perks, and signing out |
 | **Capture** | Screenshot and recording options, default visibility and password for uploads, and which domain links use |
 | **Hotkeys** | Every shortcut |
-| **Preferences** | Theme, text size, sounds, notifications, what's copied after an upload, and running in the background |
+| **Preferences** | Theme, text size, sounds, notifications, what's copied after an upload, and what closing the window does |
 | **About** | Updates, the activity log, console logs for bug reports, and links |
 
 ## macOS Permissions
 
 Flicker needs **Screen Recording** to capture the screen, and **Accessibility** for shortcuts to work in other apps. **Settings → Capture** shows whether each is granted, with a button to open the right System Settings page. After granting Screen Recording, quit and reopen Flicker.
 
-The same section shows whether Flicker starts at login. On macOS, closing the window keeps Flicker running in the menu bar.
+The same section shows whether Flicker starts at login. While its window is open, Flicker has a Dock icon and shows in Cmd+Tab; when you close it, it stays in the menu bar.
 
 ## Troubleshooting
 

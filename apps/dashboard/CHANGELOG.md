@@ -6,6 +6,10 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- **A Downloads page.** `/downloads` offers Flicker, Emberly's desktop app, with a button for the visitor's system (Windows, macOS or Linux) and every installer listed by platform, with sizes. The version, date and files come from the latest Flicker release on GitHub, cached for 10 minutes, and the last good copy is shown if GitHub is unavailable. The page also covers ShareX, Flameshot, Spectacle, scripts and the API, with setup guides. It's linked from the navbar, the footer and **Profile → Uploads**, and works on self-hosted instances too.
+
 ---
 
 ## [3.2.0] - 2026-10-24

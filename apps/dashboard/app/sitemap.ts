@@ -7,8 +7,7 @@ import { LEGAL_DOCUMENTS } from '@/lib/legal/documents'
 
 export const dynamic = 'force-dynamic'
 
-const BASE_URL =
-  appUrl()
+const BASE_URL = appUrl()
 
 /** Static routes with priority + changefreq hints */
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
@@ -40,6 +39,12 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
     url: '/legal',
     priority: 0.6,
     changeFrequency: 'monthly',
+    lastModified: new Date(),
+  },
+  {
+    url: '/downloads',
+    priority: 0.8,
+    changeFrequency: 'weekly',
     lastModified: new Date(),
   },
   {
