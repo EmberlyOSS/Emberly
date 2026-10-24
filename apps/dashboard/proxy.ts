@@ -1,4 +1,5 @@
 import { appUrl } from '@/lib/config/env'
+import { prisma } from '@emberly/db'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -269,7 +270,18 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith('/admin/') || pathname === '/admin') {
     const auth = await ensureAuthenticated()
     if (auth instanceof NextResponse) return auth
-    const role = auth.token?.role
+
+    // The role comes from the database, not the token, so tokens for deleted
+    // accounts or from another install sharing AUTH_SECRET can't reach admin
+    const account = auth.token?.id
+      ? await prisma.user
+          .findUnique({ where: { id: auth.token.id }, select: { role: true } })
+          .catch(() => null)
+      : null
+    if (!account) {
+      return NextResponse.redirect(new URL('/auth/login', BASE_URL))
+    }
+    const role = account.role
 
     const isSuperAdminRoute = SUPERADMIN_PATHS.some((path) =>
       pathname.startsWith(path)

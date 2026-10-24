@@ -489,6 +489,11 @@ export const authOptions: NextAuthOptions = {
             select: userSelect,
           })
 
+          // A validly signed token for an account that isn't in this database
+          // (deleted, or from a previous install sharing AUTH_SECRET) must not
+          // keep the role it was issued with. An empty session is signed out.
+          if (!freshUser) return {} as Session
+
           if (freshUser) {
             // Update session with fresh data
             session.user.role = freshUser.role
@@ -528,8 +533,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   // Trust multiple origins for cross-domain auth (supported at runtime in next-auth v4)
-  ...(NEXTAUTH_TRUSTED_ORIGINS.length > 0 ||
-  (appUrl()).includes('localhost')
+  ...(NEXTAUTH_TRUSTED_ORIGINS.length > 0 || appUrl().includes('localhost')
     ? { trustHost: true as any }
     : {}),
   ...(NEXTAUTH_COOKIE_DOMAIN
