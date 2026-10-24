@@ -5,7 +5,7 @@ services:
     image: ghcr.io/emberlyoss/emberly:latest
     build:
       context: .
-      dockerfile: docker/dashboard.Dockerfile
+      dockerfile: Dockerfile
       target: runtime
     restart: unless-stopped
     ports:
