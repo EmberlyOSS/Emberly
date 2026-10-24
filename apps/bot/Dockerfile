@@ -3,6 +3,7 @@
 FROM oven/bun:1.3.14-alpine AS bun
 
 FROM node:22-alpine AS runtime
+RUN apk add --no-cache openssl
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 COPY package.json ./

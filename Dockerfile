@@ -7,6 +7,7 @@ ARG PRISMA_VERSION=7.10.1
 FROM oven/bun:${BUN_VERSION}-alpine AS bun
 
 FROM node:${NODE_VERSION}-alpine AS base
+RUN apk add --no-cache openssl
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /repo
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -34,6 +35,7 @@ ENV NODE_ENV=production
 CMD ["bun", "scripts/worker.ts"]
 
 FROM node:${NODE_VERSION}-alpine AS runtime
+RUN apk add --no-cache openssl
 ARG PRISMA_VERSION
 WORKDIR /app
 ENV NODE_ENV=production \
