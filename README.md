@@ -79,4 +79,4 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md). Please report security issues pr
 
 Emberly is licensed under the [Elastic License 2.0](LICENSE). You can use, modify and self-host it, including for your business. You may not offer it to others as a hosted service, or get around its license keys. Releases before the switch remain available under the GNU AGPL v3.
 
-White-label branding and hosted (cloud) features are available with a license key. Contact [hey@embrly.ca](mailto:hey@embrly.ca).
+White-label branding and hosted (cloud) features are available with a license key from [licenses.embrly.ca](https://licenses.embrly.ca). See [License & Branding](https://docs.embrly.ca/self-hosting/licensing) for what each license includes.
