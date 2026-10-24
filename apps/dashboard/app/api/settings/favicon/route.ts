@@ -3,10 +3,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { join } from 'path'
 
-import { Prisma } from '@emberly/db'
 import { authOptions } from '@/lib/auth'
-import { getConfig } from '@/lib/config'
-import { prisma } from '@emberly/db'
+import { getConfig, updateConfig } from '@/lib/config'
 import { loggers } from '@/lib/logger'
 import { getStorageProvider } from '@/lib/storage'
 
@@ -67,11 +65,7 @@ export async function POST(req: Request) {
 
     config.settings.appearance.favicon = publicPath
 
-    await prisma.config.upsert({
-      where: { key: 'emberly_config' },
-      create: { key: 'emberly_config', value: config as Prisma.InputJsonValue },
-      update: { value: config as Prisma.InputJsonValue },
-    })
+    await updateConfig(config)
 
     return new NextResponse('Favicon updated successfully', { status: 200 })
   } catch (error) {

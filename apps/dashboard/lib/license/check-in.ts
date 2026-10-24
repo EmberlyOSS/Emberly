@@ -54,8 +54,8 @@ async function write(key: string, value: unknown) {
 }
 
 async function instanceId() {
-  const existing = await read<string>(INSTANCE_KEY)
-  if (existing) return existing
+  const existing = await read<unknown>(INSTANCE_KEY)
+  if (typeof existing === 'string') return existing
   const id = randomUUID()
   await write(INSTANCE_KEY, id)
   return id
@@ -72,7 +72,8 @@ function applyRevocation(state: CheckInState) {
 }
 
 export async function getCheckInState() {
-  return read<CheckInState>(STATE_KEY)
+  const state = await read<CheckInState & { settings?: unknown }>(STATE_KEY)
+  return state && !('settings' in state) ? state : null
 }
 
 export async function checkInNow(): Promise<CheckInState | null> {

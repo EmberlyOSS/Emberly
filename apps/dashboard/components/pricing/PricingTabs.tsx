@@ -105,7 +105,19 @@ export default function PricingTabs({
   storageTiers,
   licenses,
 }: Props) {
-  const [tabValue, setTabValue] = useState<string>('plans')
+  const hasPlans = plans.length > 0
+  const visibleTabs = [
+    hasPlans && 'plans',
+    licenses && 'self-hosting',
+    discoveryPlans.length > 0 && 'discovery',
+    addOns.length > 0 && 'user-addons',
+    addOns.length > 0 && 'squad-addons',
+    storageTiers.length > 0 && 's3',
+    hasPlans && 'discounts',
+    hasPlans && 'faq',
+    'donations',
+  ].filter(Boolean) as string[]
+  const [tabValue, setTabValue] = useState<string>(visibleTabs[0] ?? 'faq')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(
     'monthly'
   )
@@ -113,7 +125,7 @@ export default function PricingTabs({
   useEffect(() => {
     if (typeof window === 'undefined') return
     const raw = window.location.hash.replace('#', '').toLowerCase()
-    if (raw && slugToTab[raw]) {
+    if (raw && slugToTab[raw] && visibleTabs.includes(slugToTab[raw])) {
       setTabValue(slugToTab[raw])
     }
   }, [])
@@ -234,13 +246,15 @@ export default function PricingTabs({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-1.5 rounded-2xl glass">
         <ScrollIndicator className="w-full sm:w-auto">
           <TabsList className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 h-auto min-w-max">
-            <TabsTrigger
-              value="plans"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              Plans
-            </TabsTrigger>
+            {hasPlans && (
+              <TabsTrigger
+                value="plans"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Plans
+              </TabsTrigger>
+            )}
             {licenses && (
               <TabsTrigger
                 value="self-hosting"
@@ -250,48 +264,60 @@ export default function PricingTabs({
                 Self-hosting
               </TabsTrigger>
             )}
-            <TabsTrigger
-              value="discovery"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <Shield className="h-3.5 w-3.5" />
-              Discovery
-            </TabsTrigger>
-            <TabsTrigger
-              value="user-addons"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <User className="h-3.5 w-3.5" />
-              User Add-ons
-            </TabsTrigger>
-            <TabsTrigger
-              value="squad-addons"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Squad Add-ons
-            </TabsTrigger>
-            <TabsTrigger
-              value="s3"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <Database className="h-3.5 w-3.5" />
-              S3 Storage
-            </TabsTrigger>
-            <TabsTrigger
-              value="discounts"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <Tag className="h-3.5 w-3.5" />
-              Discounts
-            </TabsTrigger>
-            <TabsTrigger
-              value="faq"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
-            >
-              <HelpCircle className="h-3.5 w-3.5" />
-              FAQ
-            </TabsTrigger>
+            {discoveryPlans.length > 0 && (
+              <TabsTrigger
+                value="discovery"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <Shield className="h-3.5 w-3.5" />
+                Discovery
+              </TabsTrigger>
+            )}
+            {addOns.length > 0 && (
+              <TabsTrigger
+                value="user-addons"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <User className="h-3.5 w-3.5" />
+                User Add-ons
+              </TabsTrigger>
+            )}
+            {addOns.length > 0 && (
+              <TabsTrigger
+                value="squad-addons"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Squad Add-ons
+              </TabsTrigger>
+            )}
+            {storageTiers.length > 0 && (
+              <TabsTrigger
+                value="s3"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <Database className="h-3.5 w-3.5" />
+                S3 Storage
+              </TabsTrigger>
+            )}
+            {hasPlans && (
+              <TabsTrigger
+                value="discounts"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                Discounts
+              </TabsTrigger>
+            )}
+            {hasPlans && (
+              <TabsTrigger
+                value="faq"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                FAQ
+              </TabsTrigger>
+            )}
           </TabsList>
         </ScrollIndicator>
 

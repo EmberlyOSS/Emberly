@@ -402,15 +402,17 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
   },
 }
 
+const CONFIG_KEY = 'site_config'
+
 export async function initConfig(): Promise<EmberlyConfig> {
   try {
     let configRow
     try {
       configRow = await prisma.config.upsert({
-        where: { key: 'site_config' },
-        update: {}, // Don't update if it exists
+        where: { key: CONFIG_KEY },
+        update: {},
         create: {
-          key: 'site_config',
+          key: CONFIG_KEY,
           value: DEFAULT_CONFIG as Prisma.InputJsonValue,
         },
       })
@@ -424,7 +426,7 @@ export async function initConfig(): Promise<EmberlyConfig> {
         throw error
       }
       configRow = await prisma.config.findUniqueOrThrow({
-        where: { key: 'site_config' },
+        where: { key: CONFIG_KEY },
       })
     }
 
@@ -481,7 +483,9 @@ export async function getConfig(): Promise<EmberlyConfig> {
     }
 
     // Cache miss - fetch from database
-    const configRow = await prisma.config.findFirst()
+    const configRow = await prisma.config.findUnique({
+      where: { key: CONFIG_KEY },
+    })
 
     if (!configRow) return initConfig()
 
@@ -600,24 +604,14 @@ export async function updateConfig(
 
     const validatedConfig = configSchema.parse(mergedConfig)
 
-    // Save validated config. Use findFirst -> update by id, or create if none.
-    const existing = await prisma.config.findFirst()
-    if (existing) {
-      await prisma.config.update({
-        where: { id: existing.id },
-        data: { value: validatedConfig as Prisma.InputJsonValue },
-      })
-    } else {
-      // Use upsert to handle race conditions
-      await prisma.config.upsert({
-        where: { key: 'site_config' },
-        update: { value: validatedConfig as Prisma.InputJsonValue },
-        create: {
-          key: 'site_config',
-          value: validatedConfig as Prisma.InputJsonValue,
-        },
-      })
-    }
+    await prisma.config.upsert({
+      where: { key: CONFIG_KEY },
+      update: { value: validatedConfig as Prisma.InputJsonValue },
+      create: {
+        key: CONFIG_KEY,
+        value: validatedConfig as Prisma.InputJsonValue,
+      },
+    })
 
     // Invalidate cache
     await configCache.invalidateConfig()
