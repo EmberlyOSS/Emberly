@@ -32,7 +32,7 @@ export const UpdateProfileSchema = z.object({
   randomizeFileUrls: z.boolean().optional(),
   enableRichEmbeds: z.boolean().optional(),
   theme: z.string().nullable().optional(),
-  customColors: z.record(z.string()).nullable().optional(),
+  customColors: z.record(z.string(), z.string()).nullable().optional(),
   defaultFileExpiration: z.enum(['HOUR', 'DAY', 'WEEK', 'MONTH']).optional(),
   defaultFileExpirationAction: z.enum(['DELETE', 'SET_PRIVATE']).optional(),
   // Email notification preferences

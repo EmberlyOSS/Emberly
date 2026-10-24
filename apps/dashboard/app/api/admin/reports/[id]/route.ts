@@ -10,10 +10,11 @@ import { ReportStatus } from '@emberly/db'
 const logger = loggers.api.getChildLogger('admin-reports-resolve')
 
 const ResolveReportSchema = z.object({
-  status: z.nativeEnum(ReportStatus, {
-    errorMap: () => ({ message: 'Invalid report status' }),
-  }),
-  resolution: z.string().max(2000, 'Resolution must be at most 2000 characters').optional(),
+  status: z.nativeEnum(ReportStatus, { error: 'Invalid report status' }),
+  resolution: z
+    .string()
+    .max(2000, 'Resolution must be at most 2000 characters')
+    .optional(),
   action: z.enum(['banned', 'dismissed', 'warned']).optional(),
 })
 
@@ -70,7 +71,11 @@ export async function PATCH(
       })
     }
 
-    logger.info('Report updated', { reportId: report.id, adminId: adminUser.id, status })
+    logger.info('Report updated', {
+      reportId: report.id,
+      adminId: adminUser.id,
+      status,
+    })
 
     return apiResponse(report)
   } catch (error) {

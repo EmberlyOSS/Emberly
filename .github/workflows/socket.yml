@@ -1,0 +1,38 @@
+name: Socket
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: socket-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    container: socketdev/cli:latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Scan dependencies
+        env:
+          SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
+        run: |
+          if [ -z "$SOCKET_SECURITY_API_KEY" ]; then
+            echo "SOCKET_SECURITY_API_KEY is not set, skipping"
+            exit 0
+          fi
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          socketcli --target-path "$GITHUB_WORKSPACE" --scm github --pr-number "$PR_NUMBER"

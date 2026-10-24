@@ -33,8 +33,8 @@ import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
 
 const flameshotFormSchema = z.object({
-  useWayland: z.boolean().default(false),
-  useCompositor: z.boolean().default(false),
+  useWayland: z.boolean(),
+  useCompositor: z.boolean(),
 })
 
 export function FlameshotTool() {
@@ -121,7 +121,7 @@ export function FlameshotTool() {
               onSubmit={form.handleSubmit(handleFlameshotDownload)}
               className="space-y-6"
             >
-              { }
+              {}
               <div className="flex items-start space-x-3 rounded-md bg-blue-50 dark:bg-blue-950/50 p-3 text-blue-600 dark:text-blue-400">
                 <Terminal className="mt-0.5 h-5 w-5 flex-shrink-0" />
                 <div className="space-y-1">

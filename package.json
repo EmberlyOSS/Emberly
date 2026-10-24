@@ -2,7 +2,7 @@
   "name": "emberly",
   "private": true,
   "license": "Elastic-2.0",
-  "author": "CodeMeAPixel",
+  "author": "CodeMeAPixel <https://codemeapixel.dev>",
   "homepage": "https://embrly.ca",
   "repository": {
     "type": "git",
@@ -43,5 +43,9 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,json,md,css}": "prettier --write"
+  },
+  "overrides": {
+    "zod": "^4.6.7",
+    "nodemailer": "^10.2.1"
   }
 }

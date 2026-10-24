@@ -7,7 +7,11 @@ import { prisma } from '@emberly/db'
 import { events } from '@/lib/events'
 
 const BanSchema = z.object({
-  reason: z.string().trim().min(10, 'Reason must be at least 10 characters').max(500, 'Reason must be at most 500 characters'),
+  reason: z
+    .string()
+    .trim()
+    .min(10, 'Reason must be at least 10 characters')
+    .max(500, 'Reason must be at most 500 characters'),
   type: z.enum(['temporary', 'permanent']),
   expiresAt: z.string().optional(),
   notes: z.string().optional(),
@@ -31,7 +35,10 @@ export async function POST(
 
   const parsed = BanSchema.safeParse(body)
   if (!parsed.success) {
-    return apiError(parsed.error.errors[0]?.message ?? 'Invalid input', HTTP_STATUS.BAD_REQUEST)
+    return apiError(
+      parsed.error.issues[0]?.message ?? 'Invalid input',
+      HTTP_STATUS.BAD_REQUEST
+    )
   }
 
   const { reason, type, expiresAt, notes: _notes } = parsed.data
@@ -39,11 +46,17 @@ export async function POST(
   // Validate expiresAt for temporary bans
   if (type === 'temporary') {
     if (!expiresAt) {
-      return apiError('expiresAt is required for temporary bans', HTTP_STATUS.BAD_REQUEST)
+      return apiError(
+        'expiresAt is required for temporary bans',
+        HTTP_STATUS.BAD_REQUEST
+      )
     }
     const expiresDate = new Date(expiresAt)
     if (isNaN(expiresDate.getTime()) || expiresDate <= new Date()) {
-      return apiError('expiresAt must be a valid future date', HTTP_STATUS.BAD_REQUEST)
+      return apiError(
+        'expiresAt must be a valid future date',
+        HTTP_STATUS.BAD_REQUEST
+      )
     }
   }
 
@@ -61,7 +74,10 @@ export async function POST(
 
   // Cannot ban admins or superadmins
   if (targetUser.role === 'ADMIN' || targetUser.role === 'SUPERADMIN') {
-    return apiError('Cannot ban admin or superadmin users', HTTP_STATUS.FORBIDDEN)
+    return apiError(
+      'Cannot ban admin or superadmin users',
+      HTTP_STATUS.FORBIDDEN
+    )
   }
 
   // Apply ban and create record in a transaction

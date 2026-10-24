@@ -11,14 +11,15 @@ const logger = loggers.api.getChildLogger('reports')
 
 const SubmitReportSchema = z.object({
   reportedUserId: z.string().min(1, 'Reported user ID is required'),
-  category: z.nativeEnum(ReportCategory, {
-    errorMap: () => ({ message: 'Invalid report category' }),
-  }),
+  category: z.nativeEnum(ReportCategory, { error: 'Invalid report category' }),
   reason: z
     .string()
     .min(10, 'Reason must be at least 10 characters')
     .max(500, 'Reason must be at most 500 characters'),
-  details: z.string().max(2000, 'Details must be at most 2000 characters').optional(),
+  details: z
+    .string()
+    .max(2000, 'Details must be at most 2000 characters')
+    .optional(),
 })
 
 export async function POST(req: Request) {
@@ -83,7 +84,11 @@ export async function POST(req: Request) {
       reason,
     })
 
-    logger.info('User report submitted', { reportId: report.id, reporterUserId: user.id, reportedUserId })
+    logger.info('User report submitted', {
+      reportId: report.id,
+      reporterUserId: user.id,
+      reportedUserId,
+    })
 
     return apiResponse(report)
   } catch (error) {
@@ -91,4 +96,3 @@ export async function POST(req: Request) {
     return apiError('Internal server error')
   }
 }
-
