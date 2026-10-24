@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { getStorageProvider } from '@/lib/storage'
+import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.files
 
@@ -17,7 +18,10 @@ export async function DELETE(
     const session = await getServerSession(authOptions)
     const { id: userId, fileId } = await params
 
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
+    if (
+      !session?.user ||
+      (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')
+    ) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
@@ -35,6 +39,7 @@ export async function DELETE(
     try {
       const storageProvider = await getStorageProvider()
       await storageProvider.deleteFile(file.path)
+      await removePreview(file.id)
     } catch (error) {
       logger.error('Error deleting file from storage:', error as Error)
     }
@@ -72,7 +77,10 @@ export async function PATCH(
     const session = await getServerSession(authOptions)
     const { id: userId, fileId } = await params
 
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')) {
+    if (
+      !session?.user ||
+      (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')
+    ) {
       return new NextResponse('Unauthorized', { status: 401 })
     }
 

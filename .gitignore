@@ -24,3 +24,4 @@ Thumbs.db
 !.vscode/extensions.json
 .idea
 *.traineddata
+.tmp/uploads

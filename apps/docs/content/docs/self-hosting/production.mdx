@@ -51,7 +51,7 @@ curl -fsSLo compose.s3.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly
 docker compose -f compose.yaml -f compose.s3.yaml up -d
 ```
 
-Set `S3_SECRET_ACCESS_KEY` and `S3_PUBLIC_ENDPOINT` in `.env` first. See [Storage](/docs/self-hosting/storage#rustfs-with-docker-compose).
+Set `S3_SECRET_ACCESS_KEY` and `S3_PUBLIC_ENDPOINT` in `.env` first. See [Storage](/self-hosting/storage#rustfs-with-docker-compose).
 
 ### Updating
 
@@ -109,7 +109,7 @@ The repository includes `railpack.json` and `nixpacks.toml`, so hosts that build
 
 Set at least `APP_URL`, `AUTH_SECRET`, `DATABASE_URL`, `REDIS_URL` and `EMBERLY_RUN_EVENT_WORKER=true`.
 
-These hosts usually don't keep files between deploys, so use [S3 storage](/docs/self-hosting/storage).
+These hosts usually don't keep files between deploys, so use [S3 storage](/self-hosting/storage).
 
 ---
 
@@ -130,7 +130,7 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Fill in `.env`. See [Environment Variables](/docs/self-hosting/environment).
+Fill in `.env`. See [Environment Variables](/self-hosting/environment).
 
 ### 2. Build
 
@@ -220,7 +220,7 @@ Then run `sudo certbot --nginx -d files.example.com`. `client_max_body_size 0` l
 
 ## After Deploying
 
-1. Open your domain and complete the [Setup Wizard](/docs/self-hosting/first-time-setup).
+1. Open your domain and complete the [Setup Wizard](/self-hosting/first-time-setup).
 2. Set up email in **Admin → Settings → Integrations**, so verification and password reset emails send.
 3. Upload a test file.
 

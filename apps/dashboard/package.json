@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "worker": "bun --env-file=../../.env scripts/worker.ts",
     "db:seed": "bun --env-file=../../.env scripts/seed-plans.ts",
+    "previews:backfill": "bun --env-file=../../.env scripts/backfill-previews.ts",
     "next:dev": "next dev --turbopack",
     "next:build": "next build",
     "next:start": "next start"
@@ -99,6 +100,7 @@
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^3.0.1",
     "resend": "^3.2.0",
+    "sharp": "^0.35.5",
     "stripe": "^20.0.0",
     "tailwind-merge": "^3.4.0",
     "tesseract.js": "^6.0.1",

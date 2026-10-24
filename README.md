@@ -29,7 +29,7 @@ Open your `APP_URL` and the setup wizard creates the first admin account. Upload
 - **Dokploy:** a one-click template lives in [`dokploy`](dokploy).
 - **Without Docker:** `bun install`, `bun run db:deploy`, `bun run build` and `bun run start`. Railpack and Nixpacks configs are included.
 
-The full guide, including every setting, is at [docs.embrly.ca](https://docs.embrly.ca/docs/self-hosting).
+The full guide, including every setting, is at [docs.embrly.ca](https://docs.embrly.ca/self-hosting).
 
 ## Development
 

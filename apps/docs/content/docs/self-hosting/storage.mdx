@@ -133,6 +133,12 @@ Backblaze B2, Wasabi, Vultr, Linode, DigitalOcean Spaces and any other S3-compat
 
 ---
 
+## Link Preview Images
+
+Emberly makes a small WebP copy of each uploaded image for link previews in Discord and other apps. These are kept on local disk in `DATA_DIR/cache/previews`, whichever storage you use for uploads. They're safe to delete, and are made again when an image is next shared. To make them for images uploaded before 3.0, run `bun run previews:backfill`.
+
+---
+
 ## Checking It Works
 
 Upload a file from the dashboard and open its link. `GET /api/health` also tests storage by writing and deleting a small file.
@@ -148,5 +154,5 @@ If uploads fail:
 
 ## Related
 
-- [Deploying](/docs/self-hosting/production)
-- [Environment Variables](/docs/self-hosting/environment)
+- [Deploying](/self-hosting/production)
+- [Environment Variables](/self-hosting/environment)

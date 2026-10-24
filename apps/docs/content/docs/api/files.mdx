@@ -34,7 +34,7 @@ description: Upload, retrieve, update, and delete files via the Emberly REST API
 | `GET` | `/api/files/[id]/suggestions` | List edit suggestions on a file |
 | `GET` | `/api/files/suggestions/pending` | List pending suggestions across all your files |
 
-See [File Collaboration](/docs/user-guide/file-collaboration) for the full collaborator/suggestion workflow and role details (`EDITOR` / `SUGGESTER`).
+See [File Collaboration](/user-guide/file-collaboration) for the full collaborator/suggestion workflow and role details (`EDITOR` / `SUGGESTER`).
 
 ---
 
@@ -112,7 +112,7 @@ console.log(data.url);
 Every upload runs:
 1. Extension + MIME type checks (50+ blocked types)
 2. Zip bomb detection (max 100:1 ratio)
-3. VirusTotal hash scan (skipped for images, video, and audio — see [VirusTotal Scanning](/docs/security/virustotal) for why)
+3. VirusTotal hash scan (skipped for images, video, and audio — see [VirusTotal Scanning](/security/virustotal) for why)
 
 **Blocked extensions:** `.exe`, `.bat`, `.sh`, `.py`, `.rb`, `.php`, `.dll`, `.jar`, `.msi`, and others.
 

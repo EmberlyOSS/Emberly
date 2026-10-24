@@ -27,11 +27,11 @@ export async function GET(
       userId: id,
       ...(search
         ? {
-          OR: [
-            { shortCode: { contains: search, mode: 'insensitive' as const } },
-            { targetUrl: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
+            OR: [
+              { shortCode: { contains: search, mode: 'insensitive' as const } },
+              { targetUrl: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }
         : {}),
     }
 

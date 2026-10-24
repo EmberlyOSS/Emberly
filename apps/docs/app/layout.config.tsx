@@ -1,6 +1,6 @@
-import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { type LinkItemType } from 'fumadocs-ui/layouts/docs';
-import { FaDiscord } from 'react-icons/fa';
+import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
+import { type LinkItemType } from 'fumadocs-ui/layouts/docs'
+import { FaDiscord } from 'react-icons/fa'
 import {
   X,
   Rocket,
@@ -10,8 +10,8 @@ import {
   Shield,
   Server,
   Users,
-} from 'lucide-react';
-import Image from 'next/image';
+} from 'lucide-react'
+import Image from 'next/image'
 
 export const linkItems: LinkItemType[] = [
   {
@@ -28,7 +28,7 @@ export const linkItems: LinkItemType[] = [
     url: 'https://twitter.com/TryEmberly',
     label: 'Twitter / X',
   },
-];
+]
 
 export const baseOptions: BaseLayoutProps = {
   githubUrl: 'https://github.com/EmberlyOSS',
@@ -51,49 +51,49 @@ export const baseOptions: BaseLayoutProps = {
     {
       type: 'menu',
       text: 'Documentation',
-      url: '/docs/getting-started',
+      url: '/getting-started',
       items: [
         {
           icon: <Rocket className="size-4" />,
           text: 'Getting Started',
           description: 'Create your account and upload your first file.',
-          url: '/docs/getting-started',
+          url: '/getting-started',
         },
         {
           icon: <BookUser className="size-4" />,
           text: 'User Guide',
           description: 'File management, domains, teams, and settings.',
-          url: '/docs/user-guide',
+          url: '/user-guide',
         },
         {
           icon: <Plug className="size-4" />,
           text: 'Integrations',
           description: 'ShareX, Flicker, Flameshot, Python SDK, and more.',
-          url: '/docs/integrations',
+          url: '/integrations',
         },
         {
           icon: <Braces className="size-4" />,
           text: 'API Reference',
           description: 'Full REST API for files, domains, and accounts.',
-          url: '/docs/api',
+          url: '/api',
         },
         {
           icon: <Shield className="size-4" />,
           text: 'Security',
           description: 'VirusTotal scanning, HIBP checks, and encryption.',
-          url: '/docs/security',
+          url: '/security',
         },
         {
           icon: <Server className="size-4" />,
           text: 'Self-Hosting',
           description: 'Deploy your own Emberly on any infrastructure.',
-          url: '/docs/self-hosting',
+          url: '/self-hosting',
         },
         {
           icon: <Users className="size-4" />,
           text: 'Staff & Operations',
           description: 'Moderation, support, and incident response.',
-          url: '/docs/staff',
+          url: '/staff',
         },
       ],
     },
@@ -103,5 +103,4 @@ export const baseOptions: BaseLayoutProps = {
     },
     ...linkItems,
   ],
-};
-
+}

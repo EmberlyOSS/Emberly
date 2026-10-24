@@ -6,6 +6,7 @@ import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { emit, getEventQueue } from '../bullmq/queue'
 import type { HandlerMap } from '../bullmq/types'
+import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.events.getChildLogger('file-expiry')
 
@@ -75,6 +76,7 @@ export const fileExpiryHandlers: HandlerMap = {
             file.storageBucketId
           )
           await storageProvider.deleteFile(file.path)
+          await removePreview(file.id)
           logger.info('Deleted file from storage', { path: file.path })
 
           await prisma.user.update({

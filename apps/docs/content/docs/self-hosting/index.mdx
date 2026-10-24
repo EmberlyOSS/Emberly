@@ -6,14 +6,14 @@ description: Run your own Emberly instance with Docker, Dokploy, a PaaS, or dire
 Emberly's source is public under the Elastic License 2.0. You can run a complete instance on your own server, with your own storage, domain and users, for free.
 
 <Cards>
-  <Card title="Deploying" description="Docker Compose, Dokploy, Railpack/Nixpacks, or a plain Linux server." href="/docs/self-hosting/production" />
-  <Card title="First-Time Setup" description="The Setup Wizard that creates your admin account." href="/docs/self-hosting/first-time-setup" />
-  <Card title="Environment Variables" description="Every variable Emberly reads, and which ones you need." href="/docs/self-hosting/environment" />
-  <Card title="Storage" description="Local disk, or any S3-compatible bucket." href="/docs/self-hosting/storage" />
-  <Card title="License & Branding" description="Your own name and logo, and what a license adds." href="/docs/self-hosting/licensing" />
-  <Card title="Cloud vs. Self-Hosted" description="What a self-hosted instance includes." href="/docs/self-hosting/cloud-vs-self-hosted" />
-  <Card title="Development" description="Run the monorepo locally." href="/docs/self-hosting/development" />
-  <Card title="Contributing" description="Code standards and the pull request process." href="/docs/self-hosting/contributing" />
+  <Card title="Deploying" description="Docker Compose, Dokploy, Railpack/Nixpacks, or a plain Linux server." href="/self-hosting/production" />
+  <Card title="First-Time Setup" description="The Setup Wizard that creates your admin account." href="/self-hosting/first-time-setup" />
+  <Card title="Environment Variables" description="Every variable Emberly reads, and which ones you need." href="/self-hosting/environment" />
+  <Card title="Storage" description="Local disk, or any S3-compatible bucket." href="/self-hosting/storage" />
+  <Card title="License & Branding" description="Your own name and logo, and what a license adds." href="/self-hosting/licensing" />
+  <Card title="Cloud vs. Self-Hosted" description="What a self-hosted instance includes." href="/self-hosting/cloud-vs-self-hosted" />
+  <Card title="Development" description="Run the monorepo locally." href="/self-hosting/development" />
+  <Card title="Contributing" description="Code standards and the pull request process." href="/self-hosting/contributing" />
 </Cards>
 
 ## Quick Start
@@ -28,9 +28,9 @@ curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/.env.
 docker compose up -d
 ```
 
-Open `http://localhost:3000` and the [Setup Wizard](/docs/self-hosting/first-time-setup) walks you through creating the admin account. Database migrations run automatically when the container starts.
+Open `http://localhost:3000` and the [Setup Wizard](/self-hosting/first-time-setup) walks you through creating the admin account. Database migrations run automatically when the container starts.
 
-For other ways to deploy, see [Deploying](/docs/self-hosting/production).
+For other ways to deploy, see [Deploying](/self-hosting/production).
 
 ## What You Need
 
@@ -45,7 +45,7 @@ For other ways to deploy, see [Deploying](/docs/self-hosting/production).
 
 Only a few things must be set before the first start: `APP_URL`, `AUTH_SECRET`, `DATABASE_URL` and `REDIS_URL`. Everything else, including email, storage and integrations, can be set either as environment variables or later in **Admin → Settings**. When both are set, environment variables win for storage, and the Admin Panel value wins for email.
 
-See [Environment Variables](/docs/self-hosting/environment) for the full list.
+See [Environment Variables](/self-hosting/environment) for the full list.
 
 ## Repository Layout
 

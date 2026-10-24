@@ -6,6 +6,12 @@ import { formatFileSize } from '@/lib/utils'
 import { getFileDescription } from '@/lib/utils/metadata'
 
 import { classifyMimeType } from './file-classification'
+import {
+  PREVIEW_TYPE,
+  baseMime,
+  isPreviewable,
+  previewSize,
+} from './preview-rules'
 
 // ============================================================================
 // Types
@@ -18,8 +24,52 @@ interface BuildMetadataOptions {
   fileName: string
   mimeType: string
   size: number
+  width?: number | null
+  height?: number | null
   uploadedAt: Date
   uploaderName: string
+}
+
+export interface EmbedImage {
+  url: string
+  secureUrl: string
+  type: string
+  width?: number
+  height?: number
+}
+
+/**
+ * The image an embed shows for an image file: its small preview when one can
+ * be made, otherwise the original. Dimensions are included when known so
+ * Discord can lay the embed out without downloading the image first.
+ */
+export function embedImageFor(options: {
+  baseUrl: string
+  fileUrlPath: string
+  rawUrl: string
+  mimeType: string
+  width?: number | null
+  height?: number | null
+}): EmbedImage {
+  const { baseUrl, fileUrlPath, rawUrl, mimeType, width, height } = options
+  const known = !!width && !!height
+
+  if (isPreviewable(mimeType)) {
+    const url = new URL(`${fileUrlPath}/preview.webp`, baseUrl).toString()
+    return {
+      url,
+      secureUrl: url,
+      type: PREVIEW_TYPE,
+      ...(known ? previewSize(width!, height!) : {}),
+    }
+  }
+
+  return {
+    url: rawUrl,
+    secureUrl: rawUrl,
+    type: baseMime(mimeType),
+    ...(known ? { width: width!, height: height! } : {}),
+  }
 }
 
 // ============================================================================
@@ -30,7 +80,7 @@ interface BuildMetadataOptions {
  * Build rich metadata for file embeds with proper strategy per file type.
  *
  * Strategy per type:
- * - Images  → og:image = raw URL (Discord/Twitter display the actual image)
+ * - Images  → og:image = the image's small preview (or the original for GIFs)
  * - Videos  → og:video = raw URL for inline playback (Discord/Telegram/Slack);
  *              og:image = opengraph-image URL as poster thumbnail;
  *              twitter:player = /player iframe for Twitter
@@ -48,6 +98,8 @@ export async function buildRichMetadata({
   fileName,
   mimeType,
   size,
+  width,
+  height,
   uploadedAt,
   uploaderName,
 }: BuildMetadataOptions): Promise<Metadata> {
@@ -119,14 +171,17 @@ export async function buildRichMetadata({
       height: 720,
     }
   } else if (classification.isImage) {
-    // Use the raw image URL directly — Discord and Twitter render the actual image
-    // in the embed rather than a generic branded card, which is far better UX.
     ogType = 'website'
     openGraphImages = [
       {
-        url: rawUrl,
-        secureUrl: rawUrl,
-        type: mimeType,
+        ...embedImageFor({
+          baseUrl,
+          fileUrlPath,
+          rawUrl,
+          mimeType,
+          width,
+          height,
+        }),
         alt: fileName,
       },
     ]
@@ -231,8 +286,9 @@ export function buildDirectMediaMetadata(options: {
   rawUrl: string
   mimeType: string
   brand?: string
+  image?: EmbedImage
 }): Metadata {
-  const { fileName, rawUrl, mimeType, brand = 'Emberly' } = options
+  const { fileName, rawUrl, mimeType, brand = 'Emberly', image } = options
   const normalizedMime = mimeType.toLowerCase().split(';')[0].trim()
   const isImage = normalizedMime.startsWith('image/')
   const isVideo = normalizedMime.startsWith('video/')
@@ -260,12 +316,7 @@ export function buildDirectMediaMetadata(options: {
       description: `Shared via ${brand}`,
       type: isVideo ? ('video.other' as any) : 'website',
       images: isImage
-        ? [
-            {
-              url: rawUrl,
-              alt: fileName,
-            },
-          ]
+        ? [{ ...(image ?? { url: rawUrl }), alt: fileName }]
         : undefined,
       videos: isVideo
         ? [
@@ -292,7 +343,7 @@ export function buildDirectMediaMetadata(options: {
           card: 'summary_large_image',
           title: fileName,
           description: `Shared via ${brand}`,
-          images: [rawUrl],
+          images: [image?.url ?? rawUrl],
         }
       : {
           card: 'summary',

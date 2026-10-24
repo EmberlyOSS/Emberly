@@ -6,15 +6,15 @@ description: The Emberly REST API — upload, manage, and serve files programmat
 The Emberly REST API lets you upload files, shorten URLs, manage metadata, and configure custom domains from any language or tool.
 
 <Cards>
-  <Card title="Files API" description="Upload, update, delete, and serve files." href="/docs/api/files" />
-  <Card title="URL Shortener API" description="Create and manage short links." href="/docs/api/urls" />
-  <Card title="Domains API (Cloud only)" description="Manage custom domains for your uploads." href="/docs/api/domains" />
-  <Card title="Billing API (Cloud only)" description="Checkout, portal, purchases, and subscription sync." href="/docs/api/billing" />
-  <Card title="Analytics API" description="Storage stats, top files, and activity data." href="/docs/api/analytics" />
-  <Card title="Profile API" description="Manage security, tokens, linked accounts, and perks." href="/docs/api/profile" />
-  <Card title="Discovery API (Cloud only)" description="Nexium profiles, squads, opportunities, and applications." href="/docs/api/discovery" />
-  <Card title="User API Reference" description="Comprehensive reference for all user-facing endpoints." href="/docs/api/user-reference" />
-  <Card title="Staff & Admin API" description="Admin-only endpoints for user management and moderation." href="/docs/api/staff-admin-reference" />
+  <Card title="Files API" description="Upload, update, delete, and serve files." href="/api/files" />
+  <Card title="URL Shortener API" description="Create and manage short links." href="/api/urls" />
+  <Card title="Domains API (Cloud only)" description="Manage custom domains for your uploads." href="/api/domains" />
+  <Card title="Billing API (Cloud only)" description="Checkout, portal, purchases, and subscription sync." href="/api/billing" />
+  <Card title="Analytics API" description="Storage stats, top files, and activity data." href="/api/analytics" />
+  <Card title="Profile API" description="Manage security, tokens, linked accounts, and perks." href="/api/profile" />
+  <Card title="Discovery API (Cloud only)" description="Nexium profiles, squads, opportunities, and applications." href="/api/discovery" />
+  <Card title="User API Reference" description="Comprehensive reference for all user-facing endpoints." href="/api/user-reference" />
+  <Card title="Staff & Admin API" description="Admin-only endpoints for user management and moderation." href="/api/staff-admin-reference" />
 </Cards>
 
 ## Health Check
@@ -83,7 +83,7 @@ Error responses:
 
 ## Rate Limits
 
-There's no general per-plan API rate limit — file uploads, listing, and most other endpoints aren't rate-limited beyond your plan's storage/upload-size caps. A small number of security-sensitive endpoints (registration, password reset, resend-verification, contact form, domain verification) have flat, IP-scoped limits regardless of plan. See the [User API Reference](/docs/api/user-reference#rate-limits) for the full list.
+There's no general per-plan API rate limit — file uploads, listing, and most other endpoints aren't rate-limited beyond your plan's storage/upload-size caps. A small number of security-sensitive endpoints (registration, password reset, resend-verification, contact form, domain verification) have flat, IP-scoped limits regardless of plan. See the [User API Reference](/api/user-reference#rate-limits) for the full list.
 
 Exceeding a limited endpoint's limit returns `429 Too Many Requests` with a `Retry-After` header.
 

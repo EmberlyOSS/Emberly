@@ -14,7 +14,7 @@ const sections = [
   {
     title: 'Getting Started',
     description: 'Create your account and upload your first file in minutes.',
-    href: '/docs/getting-started',
+    href: '/getting-started',
     label: 'Start here',
     icon: Rocket,
     color: 'var(--getting-started-color)',
@@ -22,7 +22,7 @@ const sections = [
   {
     title: 'User Guide',
     description: 'Manage files, domains, teams, and account settings.',
-    href: '/docs/user-guide',
+    href: '/user-guide',
     label: 'Explore',
     icon: BookUser,
     color: 'var(--user-guide-color)',
@@ -31,7 +31,7 @@ const sections = [
     title: 'Integrations',
     description:
       'Connect ShareX, Flicker, Flameshot, PowerShell, Python, and more.',
-    href: '/docs/integrations',
+    href: '/integrations',
     label: 'View integrations',
     icon: Plug,
     color: 'var(--integrations-color)',
@@ -40,7 +40,7 @@ const sections = [
     title: 'API Reference',
     description:
       'Complete REST API documentation for files, domains, and account management.',
-    href: '/docs/api',
+    href: '/api',
     label: 'API docs',
     icon: Braces,
     color: 'var(--api-color)',
@@ -49,7 +49,7 @@ const sections = [
     title: 'Security',
     description:
       'VirusTotal scanning, HIBP checks, password protection, and encryption.',
-    href: '/docs/security',
+    href: '/security',
     label: 'Security docs',
     icon: Shield,
     color: 'var(--security-color)',
@@ -57,7 +57,7 @@ const sections = [
   {
     title: 'Self-Hosting',
     description: 'Deploy your own Emberly instance on any infrastructure.',
-    href: '/docs/self-hosting',
+    href: '/self-hosting',
     label: 'Self-host',
     icon: Server,
     color: 'var(--self-hosting-color)',
@@ -66,7 +66,7 @@ const sections = [
     title: 'Staff & Operations',
     description:
       'Moderation, support, and incident response for the Emberly team.',
-    href: '/docs/staff',
+    href: '/staff',
     label: 'Staff docs',
     icon: Users,
     color: 'var(--staff-color)',
@@ -74,13 +74,13 @@ const sections = [
 ]
 
 const quickLinks = [
-  { label: 'Plans & Pricing', href: '/docs/getting-started/plans-overview' },
-  { label: 'Feature Matrix', href: '/docs/getting-started/feature-matrix' },
-  { label: 'Teams & Squads', href: '/docs/user-guide/teams-and-squads' },
-  { label: 'Flicker Desktop App', href: '/docs/integrations/flicker' },
-  { label: 'Webhooks', href: '/docs/integrations/webhooks' },
-  { label: 'Billing API', href: '/docs/api/billing' },
-  { label: 'Contributing', href: '/docs/self-hosting/contributing' },
+  { label: 'Plans & Pricing', href: '/getting-started/plans-overview' },
+  { label: 'Feature Matrix', href: '/getting-started/feature-matrix' },
+  { label: 'Teams & Squads', href: '/user-guide/teams-and-squads' },
+  { label: 'Flicker Desktop App', href: '/integrations/flicker' },
+  { label: 'Webhooks', href: '/integrations/webhooks' },
+  { label: 'Billing API', href: '/api/billing' },
+  { label: 'Contributing', href: '/self-hosting/contributing' },
 ]
 
 export default function HomePage() {
@@ -106,14 +106,14 @@ export default function HomePage() {
         </p>
         <div className="flex flex-wrap justify-center gap-3 mt-8">
           <Link
-            href="/docs/getting-started"
+            href="/getting-started"
             className="glow-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-fd-primary text-fd-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity"
           >
             Get Started
             <ArrowRight className="size-4" />
           </Link>
           <Link
-            href="/docs/api"
+            href="/api"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-fd-border text-fd-foreground font-medium text-sm hover:bg-fd-accent transition-colors"
           >
             API Reference

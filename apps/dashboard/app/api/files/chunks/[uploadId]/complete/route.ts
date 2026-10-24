@@ -14,6 +14,7 @@ import { scheduleFileExpiration } from '@/lib/events/handlers/file-expiry'
 import { validateFileSecurityChecksWithVT } from '@/lib/files/security-validation'
 import { loggers } from '@/lib/logger'
 import { processImageOCR } from '@/lib/ocr'
+import { queuePreview } from '@/lib/embeds/preview'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { bytesToMB } from '@/lib/utils'
 import { getConfig } from '@/lib/config'
@@ -245,6 +246,8 @@ export async function POST(
       return file
     })
 
+    queuePreview(fileRecord)
+
     await deleteUploadMetadata(localId)
 
     // Check if quota is being exceeded and emit event
@@ -254,8 +257,7 @@ export async function POST(
     })
 
     if (updatedUser?.email) {
-      const { getEffectiveQuotaMB } =
-        await import('@/lib/storage/quota')
+      const { getEffectiveQuotaMB } = await import('@/lib/storage/quota')
       const config = await getConfig()
       const defaultQuotaMB =
         config.settings.general.storage.quotas.default.unit === 'GB'
