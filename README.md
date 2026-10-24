@@ -2,7 +2,7 @@
 
 Emberly is a self-hostable platform for file sharing, short links and pastes. Run your own instance with Docker in a few minutes, or use the hosted service at [embrly.ca](https://embrly.ca).
 
-[![CI](https://github.com/EmberlyOSS/Emberly/actions/workflows/ci.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/ci.yml) [![CodeQL](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml)
+[![CI](https://github.com/EmberlyOSS/Emberly/actions/workflows/ci.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/ci.yml) [![CodeQL](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/codeql.yml) [![Socket](https://github.com/EmberlyOSS/Emberly/actions/workflows/socket.yml/badge.svg)](https://github.com/EmberlyOSS/Emberly/actions/workflows/socket.yml)
 
 ## Features
 

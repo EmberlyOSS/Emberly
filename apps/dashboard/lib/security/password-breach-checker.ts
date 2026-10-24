@@ -29,7 +29,7 @@ export async function checkPasswordBreach(
     // SHA-1 is mandated by the HaveIBeenPwned k-anonymity API protocol — it is NOT
     // used to store the password. Only the first 5 hex characters of the hash are
     // ever transmitted; the full hash and the plaintext are discarded immediately.
-    const hash = createHash('sha1').update(password).digest('hex').toUpperCase() // codeql[js/insufficient-password-hash]
+    const hash = createHash('sha1').update(password).digest('hex').toUpperCase()
 
     // Take first 5 characters of hash (k-anonymity approach)
     const hashPrefix = hash.substring(0, 5)
