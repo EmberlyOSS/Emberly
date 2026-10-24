@@ -174,7 +174,7 @@ const faqItems = (billingEnabled: boolean) => [
 ]
 
 export default async function HomePage() {
-  const setupComplete = await checkSetupCompletion()
+  const setupComplete = await checkSetupCompletion().catch(() => true)
 
   if (!setupComplete) {
     redirect('/setup')

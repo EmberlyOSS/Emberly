@@ -8,6 +8,7 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ### Upgrading
 
+- Run `bun run db:deploy`. Migration `20261024000000_clear_unrequested_avatar_decorations` removes Discord avatar decorations from profiles that don't use their Discord avatar.
 - Run `bun run db:deploy`. Migration `20261023200000_add_device_authorization` adds the `DeviceAuthorization` table.
 
 ### Added
@@ -17,6 +18,8 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ### Fixed
 
+- **A database outage sent everyone to the setup page.** When Emberly couldn't reach the database it assumed no admin existed yet and redirected visitors to `/setup`. It now reports the outage instead. Creating an admin was never possible during an outage.
+- **Discord avatar decorations appeared without being chosen** and sat awkwardly over the picture. Emberly saved your Discord decoration automatically whenever it checked your booster perk, even if you used a different avatar. Decorations now only appear when you choose your Discord avatar in your profile, are removed when you pick another avatar or upload your own, and are drawn around a round avatar the way Discord shows them. Decorations that were added automatically are cleared by the migration below.
 - **Link previews that switched between the image and the page** — when Discord or another app previewed a file, Emberly checked the uploader's rich-embed setting through an internal request with a two-second timeout. When that request was slow it assumed rich embeds were on, so files from people who turned them off sometimes previewed as the Emberly page instead of the image. The setting is now read directly from the database and cached for a minute. Older files with spaces or special characters in their names were also never matched and always used the rich page.
 - **Changing the favicon reported an error** even though it saved. It also wrote a copy of the whole instance configuration to storage, where on S3-compatible storage it ended up in the bucket. That copy was never read and is no longer written.
 - **Deleting an account left files behind on S3-compatible storage**, and left avatars and banners behind on every storage type. Files are now removed through whichever storage they were uploaded to.

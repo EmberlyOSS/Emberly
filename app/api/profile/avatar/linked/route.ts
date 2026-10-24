@@ -12,7 +12,8 @@ const ALLOWED_PROVIDERS = ['github', 'discord'] as const
  * Resolves the avatar URL from the user's linked account (GitHub avatar or Discord avatar)
  * and sets it as their Emberly profile picture.
  *
- * For Discord, we also resolve avatar decorations via the providerData field.
+ * Choosing Discord also applies the user's Discord avatar decoration; any other
+ * avatar clears it.
  */
 export async function POST(req: Request) {
   const { user, response } = await requireAuth(req)
@@ -21,13 +22,22 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const provider = body?.provider as string
 
-  if (!ALLOWED_PROVIDERS.includes(provider as (typeof ALLOWED_PROVIDERS)[number])) {
-    return apiError('provider must be "github" or "discord"', HTTP_STATUS.BAD_REQUEST)
+  if (
+    !ALLOWED_PROVIDERS.includes(provider as (typeof ALLOWED_PROVIDERS)[number])
+  ) {
+    return apiError(
+      'provider must be "github" or "discord"',
+      HTTP_STATUS.BAD_REQUEST
+    )
   }
 
   const linkedAccount = await prisma.linkedAccount.findFirst({
     where: { userId: user.id, provider },
-    select: { providerUserId: true, providerUsername: true, providerData: true },
+    select: {
+      providerUserId: true,
+      providerUsername: true,
+      providerData: true,
+    },
   })
 
   if (!linkedAccount) {
@@ -60,16 +70,23 @@ export async function POST(req: Request) {
   }
 
   if (!avatarUrl) {
-    return apiError('Could not resolve avatar URL from linked account', HTTP_STATUS.UNPROCESSABLE_ENTITY)
+    return apiError(
+      'Could not resolve avatar URL from linked account',
+      HTTP_STATUS.UNPROCESSABLE_ENTITY
+    )
   }
+
+  const avatarDecoration =
+    provider === 'discord'
+      ? ((pd?.avatarDecoration as string | undefined) ?? null)
+      : null
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { image: avatarUrl },
+    data: { image: avatarUrl, avatarDecoration },
   })
 
   await sessionCache.invalidateUserSession(user.id)
 
   return apiResponse({ image: avatarUrl })
 }
-

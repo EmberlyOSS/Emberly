@@ -46,7 +46,7 @@ export async function DELETE(
 
     await prisma.user.update({
       where: { id },
-      data: { image: null },
+      data: { image: null, avatarDecoration: null },
     })
 
     return new NextResponse(null, { status: 204 })

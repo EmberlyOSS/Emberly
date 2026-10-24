@@ -17,9 +17,14 @@ const DISCORD_API_BASE = `https://discord.com/api/v${DISCORD_API_VERSION}`
 async function getDiscordConfig() {
   const integrations = await getIntegrations()
   return {
-    serverId: integrations.discord?.serverId || process.env.DISCORD_SERVER_ID || '',
-    botToken: integrations.discord?.botToken || process.env.DISCORD_BOT_TOKEN || '',
-    supporterRoleId: integrations.discord?.supporterRole || process.env.DISCORD_SUPPORTER_ROLE || '',
+    serverId:
+      integrations.discord?.serverId || process.env.DISCORD_SERVER_ID || '',
+    botToken:
+      integrations.discord?.botToken || process.env.DISCORD_BOT_TOKEN || '',
+    supporterRoleId:
+      integrations.discord?.supporterRole ||
+      process.env.DISCORD_SUPPORTER_ROLE ||
+      '',
   }
 }
 
@@ -46,7 +51,9 @@ async function discordApiCall<T>(endpoint: string): Promise<T> {
 /**
  * Assign the Discord supporter role to a guild member.
  */
-export async function assignDiscordSupporterRole(discordUserId: string): Promise<void> {
+export async function assignDiscordSupporterRole(
+  discordUserId: string
+): Promise<void> {
   const { botToken, serverId, supporterRoleId } = await getDiscordConfig()
   if (!botToken || !supporterRoleId) return
   try {
@@ -61,17 +68,25 @@ export async function assignDiscordSupporterRole(discordUserId: string): Promise
       }
     )
     if (!res.ok && res.status !== 204) {
-      logger.warn('Failed to assign Discord supporter role', { discordUserId, status: res.status })
+      logger.warn('Failed to assign Discord supporter role', {
+        discordUserId,
+        status: res.status,
+      })
     }
   } catch (error) {
-    logger.warn('Error assigning Discord supporter role', { discordUserId, error })
+    logger.warn('Error assigning Discord supporter role', {
+      discordUserId,
+      error,
+    })
   }
 }
 
 /**
  * Remove the Discord supporter role from a guild member.
  */
-export async function removeDiscordSupporterRole(discordUserId: string): Promise<void> {
+export async function removeDiscordSupporterRole(
+  discordUserId: string
+): Promise<void> {
   const { botToken, serverId, supporterRoleId } = await getDiscordConfig()
   if (!botToken || !supporterRoleId) return
   try {
@@ -81,16 +96,23 @@ export async function removeDiscordSupporterRole(discordUserId: string): Promise
         method: 'DELETE',
         headers: {
           Authorization: `Bot ${botToken}`,
-          'X-Audit-Log-Reason': 'Emberly: no active subscription or server boost',
+          'X-Audit-Log-Reason':
+            'Emberly: no active subscription or server boost',
         },
       }
     )
     // 204 = success, 404 = member not in server or role not assigned — both are acceptable
     if (!res.ok && res.status !== 204 && res.status !== 404) {
-      logger.warn('Failed to remove Discord supporter role', { discordUserId, status: res.status })
+      logger.warn('Failed to remove Discord supporter role', {
+        discordUserId,
+        status: res.status,
+      })
     }
   } catch (error) {
-    logger.warn('Error removing Discord supporter role', { discordUserId, error })
+    logger.warn('Error removing Discord supporter role', {
+      discordUserId,
+      error,
+    })
   }
 }
 
@@ -99,7 +121,10 @@ export async function removeDiscordSupporterRole(discordUserId: string): Promise
  * Assigns the role if they have an active booster perk OR an active subscription;
  * removes it if neither condition is true.
  */
-export async function syncDiscordSupporterRole(userId: string, discordUserId: string): Promise<void> {
+export async function syncDiscordSupporterRole(
+  userId: string,
+  discordUserId: string
+): Promise<void> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -110,7 +135,9 @@ export async function syncDiscordSupporterRole(userId: string, discordUserId: st
     })
     if (!user) return
 
-    const hasBoosterPerk = user.perkRoles.some((p) => p.startsWith('DISCORD_BOOSTER:'))
+    const hasBoosterPerk = user.perkRoles.some((p) =>
+      p.startsWith('DISCORD_BOOSTER:')
+    )
     const hasActiveSubscription = user.subscriptions.length > 0
 
     if (hasBoosterPerk || hasActiveSubscription) {
@@ -119,7 +146,11 @@ export async function syncDiscordSupporterRole(userId: string, discordUserId: st
       await removeDiscordSupporterRole(discordUserId)
     }
   } catch (error) {
-    logger.warn('Failed to sync Discord supporter role', { userId, discordUserId, error })
+    logger.warn('Failed to sync Discord supporter role', {
+      userId,
+      discordUserId,
+      error,
+    })
   }
 }
 
@@ -135,7 +166,9 @@ export async function isDiscordBooster(discordUserId: string): Promise<{
 }> {
   const { botToken, serverId } = await getDiscordConfig()
   if (!botToken) {
-    logger.warn('Discord bot token not configured — cannot verify booster status')
+    logger.warn(
+      'Discord bot token not configured — cannot verify booster status'
+    )
     return { isBooster: false, premiumSince: null, avatarDecorationUrl: null }
   }
 
@@ -153,7 +186,11 @@ export async function isDiscordBooster(discordUserId: string): Promise<{
 
     // premium_since is the ISO timestamp of when the user started boosting
     if (member.premium_since) {
-      return { isBooster: true, premiumSince: new Date(member.premium_since), avatarDecorationUrl }
+      return {
+        isBooster: true,
+        premiumSince: new Date(member.premium_since),
+        avatarDecorationUrl,
+      }
     }
 
     return { isBooster: false, premiumSince: null, avatarDecorationUrl }
@@ -161,7 +198,9 @@ export async function isDiscordBooster(discordUserId: string): Promise<{
     const errorMessage = (error as Error).message
     if (errorMessage.includes('404')) {
       // Member not found in guild
-      logger.debug(`Discord user ${discordUserId} not in server`, { error: error instanceof Error ? error.message : String(error) })
+      logger.debug(`Discord user ${discordUserId} not in server`, {
+        error: error instanceof Error ? error.message : String(error),
+      })
       return { isBooster: false, premiumSince: null, avatarDecorationUrl: null }
     }
     logger.error('Failed to check Discord booster status', error as Error, {
@@ -182,15 +221,35 @@ export async function verifyDiscordBoosterStatus(
   try {
     // Import here to avoid circular dependency
     const { hasEarnedOneTimePerk, removePerkRole } = await import('./index')
-    
-    const hadBoosterPerk = await hasEarnedOneTimePerk(userId, 'DISCORD_BOOSTER')
-    
-    const { isBooster, premiumSince, avatarDecorationUrl } = await isDiscordBooster(discordUserId)
 
-    // Store avatar decoration regardless of booster status
-    if (avatarDecorationUrl) {
-      await prisma.user.update({
-        where: { id: userId },
+    const hadBoosterPerk = await hasEarnedOneTimePerk(userId, 'DISCORD_BOOSTER')
+
+    const { isBooster, premiumSince, avatarDecorationUrl } =
+      await isDiscordBooster(discordUserId)
+
+    const linked = await prisma.linkedAccount.findUnique({
+      where: { userId_provider: { userId, provider: 'discord' } },
+      select: { providerData: true },
+    })
+    if (linked) {
+      const providerData = (linked.providerData ?? {}) as Record<
+        string,
+        unknown
+      >
+      await prisma.linkedAccount.update({
+        where: { userId_provider: { userId, provider: 'discord' } },
+        data: {
+          providerData: {
+            ...providerData,
+            avatarDecoration: avatarDecorationUrl,
+          },
+        },
+      })
+      await prisma.user.updateMany({
+        where: {
+          id: userId,
+          image: { startsWith: 'https://cdn.discordapp.com/' },
+        },
         data: { avatarDecoration: avatarDecorationUrl },
       })
     }
@@ -204,7 +263,12 @@ export async function verifyDiscordBoosterStatus(
 
       // Store the duration in the perk role for milestone calculation
       await addPerkRole(userId, `DISCORD_BOOSTER:${months}`)
-      logger.info('Discord booster perk updated', { userId, discordUserId, months, premiumSince })
+      logger.info('Discord booster perk updated', {
+        userId,
+        discordUserId,
+        months,
+        premiumSince,
+      })
       await syncDiscordSupporterRole(userId, discordUserId)
 
       if (!hadBoosterPerk) {
@@ -219,7 +283,8 @@ export async function verifyDiscordBoosterStatus(
             userId,
             email: user.email,
             perkName: 'Discord Booster',
-            perkDescription: 'Unlock exclusive perks for boosting the Emberly Discord server',
+            perkDescription:
+              'Unlock exclusive perks for boosting the Emberly Discord server',
             perkIcon: '🚀',
             expiresAt: undefined,
           })
@@ -230,7 +295,10 @@ export async function verifyDiscordBoosterStatus(
       // User is not currently boosting — revoke perk if they had it
       if (hadBoosterPerk) {
         await removePerkRole(userId, 'DISCORD_BOOSTER')
-        logger.info('Discord booster perk revoked — user stopped boosting', { userId, discordUserId })
+        logger.info('Discord booster perk revoked — user stopped boosting', {
+          userId,
+          discordUserId,
+        })
       }
       await syncDiscordSupporterRole(userId, discordUserId)
       return false

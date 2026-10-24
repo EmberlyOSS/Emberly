@@ -63,7 +63,7 @@ export async function checkSetupCompletion(): Promise<boolean> {
     return isComplete
   } catch (error) {
     logger.error('Setup check failed', error as Error)
-    return false
+    throw error
   }
 }
 
