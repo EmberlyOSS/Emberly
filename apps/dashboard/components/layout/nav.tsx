@@ -33,6 +33,7 @@ import {
   Database,
   LayoutDashboard,
   Shield,
+  Download,
 } from 'lucide-react'
 
 import { useFeatures } from '@/components/providers/features-provider'
@@ -113,6 +114,7 @@ const extrasRoutes = [
     icon: ChartBar,
     cloudOnly: true,
   },
+  { href: '/downloads', label: 'Downloads', icon: Download },
   { href: '/changelogs', label: 'Changelogs', icon: GitGraph, cloudOnly: true },
   { href: '/press', label: 'Press Kit', icon: FileText, cloudOnly: true },
   { href: DISCORD_INVITE_URL, label: 'Support', icon: MessageSquare },
