@@ -6,6 +6,10 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-23
+
+**Made to self-host.** Emberly now ships as a Docker image with a one-command Compose setup and a Dokploy template, can be configured entirely from environment variables, and has rewritten self-hosting docs. Self-hosted instances show their own name, and a license adds your own logo and branding. Emberly moves to the Elastic License 2.0, and the code now lives in a monorepo.
+
 ### Upgrading
 
 Emberly now lives in a monorepo, with the app in `apps/dashboard`. Keep your `.env` at the root of the repository and run everything from there:
@@ -25,6 +29,7 @@ bun run start   # and `bun run worker` if you run the worker separately
   - `STRIPE_SECRET_KEY` replaces `STRIPE_SECRET`
   - `STRIPE_WEBHOOK_SECRET` replaces `STRIPE_WEBHOOK`
 - **Removed settings:** `NEXT_PUBLIC_EMBERLY_RUN_CLOUD` (`EMBERLY_RUN_CLOUD` alone now controls cloud mode) and the unused `NEXT_PUBLIC_STRIPE_PRODUCT_STARTER` and `NEXT_PUBLIC_STRIPE_PRODUCT_PRO`.
+- **Check your settings after upgrading.** Earlier versions could load settings from the wrong database row (see Fixed), so changes made since you last uploaded a favicon or created a system API key may not have been saved. Open **Admin → Settings** and set anything that looks wrong again.
 - Run `bun run db:deploy`. Migration `20261024000000_clear_unrequested_avatar_decorations` removes Discord avatar decorations from profiles that don't use their Discord avatar.
 - Run `bun run db:deploy`. Migration `20261023200000_add_device_authorization` adds the `DeviceAuthorization` table.
 
@@ -38,6 +43,7 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **S3 storage from environment variables.** Set `STORAGE_PROVIDER=s3` and the `S3_*` variables to use AWS, Cloudflare R2, Backblaze, RustFS, MinIO or any S3-compatible store without opening the admin panel. Emberly creates the bucket on first start if it doesn't exist. `compose.s3.yaml` adds a RustFS server for a bucket out of the box.
 - **`S3_PUBLIC_ENDPOINT`** for S3 servers that Emberly reaches on a private address. Upload links handed to apps such as Flicker use the public address instead.
 - **Sign in to apps from the browser** — desktop apps such as Flicker can ask for a short code, open `/activate`, and receive their own API key once you approve, so they never handle your password. Approving again from the same app and device replaces its old key, and every key can be revoked in Profile → API. Endpoints: `POST /api/device/code`, `POST /api/device/approve` (signed in) and `POST /api/device/token`.
+- **Self-hosting licenses on the pricing page.** embrly.ca's pricing page gains a Self-hosting tab listing license plans from licenses.embrly.ca.
 - **`GET /api/instance`** — public details about the server for apps: name, version, whether it's the hosted cloud, whether billing is on, and which features are available.
 
 ### Changed
@@ -48,9 +54,11 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **Builds no longer hang** when Redis isn't reachable, which also makes building in CI and Docker possible without a Redis server.
 - **Type errors now fail the build** instead of being ignored.
 - **Smaller production builds.** The standalone output no longer copies the whole source tree.
+- **The pricing page only shows tabs with something in them**, and opens on the first one.
 
 ### Fixed
 
+- **Admin settings that reverted or didn't save.** Emberly loaded and saved settings using whichever row of the `Config` table came first. Once that table held another row, such as the one created by uploading a favicon or creating a system API key, settings could be read from or written to the wrong row, so switches like Accept Payments flipped back after a refresh. Settings are now always stored in their own row, and favicon uploads save through the normal settings.
 - **A database outage sent everyone to the setup page.** When Emberly couldn't reach the database it assumed no admin existed yet and redirected visitors to `/setup`. It now reports the outage instead. Creating an admin was never possible during an outage.
 - **Discord avatar decorations appeared without being chosen** and sat awkwardly over the picture. Emberly saved your Discord decoration automatically whenever it checked your booster perk, even if you used a different avatar. Decorations now only appear when you choose your Discord avatar in your profile, are removed when you pick another avatar or upload your own, and are drawn around a round avatar the way Discord shows them. Decorations that were added automatically are cleared by the migration below.
 - **Signed-in users sent back to the login page.** If only `AUTH_SECRET` was set, or `NEXTAUTH_COOKIE_DOMAIN` was set, the checks in front of protected pages couldn't read the session and treated everyone as signed out.
@@ -64,6 +72,7 @@ bun run start   # and `bun run worker` if you run the worker separately
 
 ### Documentation
 
+- **Rewritten self-hosting docs:** deploying with Docker Compose, Dokploy, Railpack/Nixpacks or a plain Linux server; every environment variable; S3 storage set up from environment variables (with RustFS, MinIO, AWS and R2 examples); and a new License & Branding page.
 - **Analytics API docs** showed the wrong response shapes for `/api/analytics/summary` and `/api/analytics/storage`, and sizes in bytes. They now match the API, note that sizes are in megabytes, and list upload tokens and API keys as accepted auth.
 
 ## [2.8.1] - 2026-10-23

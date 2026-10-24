@@ -15,7 +15,7 @@ Emberly stores uploads either on local disk or in an S3-compatible bucket. You c
 This is the default. Uploads are written to `DATA_DIR`:
 
 - In Docker it is `/data`, kept in the `emberly-data` volume.
-- On a Linux server it defaults to `apps/dashboard`. Set `DATA_DIR` to somewhere you back up, such as `/var/lib/emberly`.
+- On a Linux server it defaults to the repository root, in an `uploads` folder. Set `DATA_DIR` to somewhere you back up, such as `/var/lib/emberly`.
 
 Local disk is the simplest setup, but you can't run more than one app server, and you're responsible for disk space and backups.
 

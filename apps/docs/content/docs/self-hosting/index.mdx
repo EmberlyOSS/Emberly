@@ -18,12 +18,12 @@ Emberly's source is public under the Elastic License 2.0. You can run a complete
 
 ## Quick Start
 
-With Docker installed:
+With Docker installed, you only need two files. PostgreSQL and Redis come with them:
 
 ```bash
-git clone https://github.com/EmberlyOSS/Emberly.git
-cd Emberly
-cp .env.example .env
+mkdir emberly && cd emberly
+curl -fsSLo compose.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/compose.yaml
+curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/.env.example
 # set AUTH_SECRET (openssl rand -base64 32) and APP_URL in .env
 docker compose up -d
 ```

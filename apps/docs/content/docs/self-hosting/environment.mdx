@@ -41,6 +41,7 @@ With Docker Compose, `DATABASE_URL` and `REDIS_URL` are set for you. Set `POSTGR
 | `NEXTAUTH_COOKIE_DOMAIN` | — | Share the session across subdomains, e.g. `.example.com` |
 | `EMBERLY_SKIP_MIGRATIONS` | `false` | Docker only: skip running migrations when the container starts |
 | `EMBERLY_PORT` | `3000` | Docker Compose only: the host port |
+| `EMBERLY_IMAGE` | `ghcr.io/emberlyoss/emberly:latest` | Docker Compose only: the image to run |
 
 <Callout type="warn">
   Outside Docker Compose, the worker is off in production unless `EMBERLY_RUN_EVENT_WORKER=true`. Without it uploads work, but OCR, scans and emails never run.
@@ -54,7 +55,7 @@ Leave these empty to store uploads on local disk. Setting `STORAGE_PROVIDER=s3` 
 
 | Variable | Description |
 |----------|-------------|
-| `DATA_DIR` | Where local uploads are kept. Defaults to `/data` in Docker and `apps/dashboard` otherwise. |
+| `DATA_DIR` | Where local uploads are kept. Defaults to `/data` in Docker and the repository root otherwise. |
 | `STORAGE_PROVIDER` | Set to `s3` to use the S3 settings below |
 | `S3_ENDPOINT` | S3 API address. Leave empty for AWS. |
 | `S3_PUBLIC_ENDPOINT` | Address users' browsers and apps use to reach the bucket, if different from `S3_ENDPOINT` |

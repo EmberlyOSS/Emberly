@@ -18,12 +18,12 @@ Whatever you choose, put Emberly behind HTTPS (see [Reverse Proxy](#reverse-prox
 
 ## Docker Compose
 
-The repository's `compose.yaml` runs Emberly, PostgreSQL and Redis. Uploads are stored in a Docker volume.
+`compose.yaml` runs Emberly, PostgreSQL and Redis from published images, so you don't need the source code. Uploads are stored in a Docker volume.
 
 ```bash
-git clone https://github.com/EmberlyOSS/Emberly.git
-cd Emberly
-cp .env.example .env
+mkdir emberly && cd emberly
+curl -fsSLo compose.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/compose.yaml
+curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/.env.example
 ```
 
 Edit `.env`:
@@ -47,6 +47,7 @@ Emberly listens on port `3000`. Set `EMBERLY_PORT` to use a different host port.
 To store uploads in S3 instead of the local volume, `compose.s3.yaml` adds a [RustFS](https://rustfs.com) server:
 
 ```bash
+curl -fsSLo compose.s3.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/compose.s3.yaml
 docker compose -f compose.yaml -f compose.s3.yaml up -d
 ```
 
@@ -55,9 +56,15 @@ Set `S3_SECRET_ACCESS_KEY` and `S3_PUBLIC_ENDPOINT` in `.env` first. See [Storag
 ### Updating
 
 ```bash
-git pull
 docker compose pull
 docker compose up -d
+```
+
+To run your own build instead, build the image from a clone of the repository and point Compose at it:
+
+```bash
+docker build -t emberly .
+EMBERLY_IMAGE=emberly docker compose up -d
 ```
 
 ---

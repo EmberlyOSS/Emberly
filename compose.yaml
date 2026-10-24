@@ -2,11 +2,7 @@ name: emberly
 
 services:
   emberly:
-    image: ghcr.io/emberlyoss/emberly:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runtime
+    image: ${EMBERLY_IMAGE:-ghcr.io/emberlyoss/emberly:latest}
     restart: unless-stopped
     ports:
       - "${EMBERLY_PORT:-3000}:3000"

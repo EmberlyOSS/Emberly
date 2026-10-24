@@ -1,6 +1,6 @@
 {
   "name": "@emberly/dashboard",
-  "version": "2.8.1",
+  "version": "3.0.0",
   "private": true,
   "license": "Elastic-2.0",
   "scripts": {
