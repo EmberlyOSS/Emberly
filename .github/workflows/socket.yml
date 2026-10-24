@@ -35,4 +35,8 @@ jobs:
             exit 0
           fi
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          socketcli --target-path "$GITHUB_WORKSPACE" --scm github --pr-number "$PR_NUMBER"
+          if [ "$PR_NUMBER" != "0" ]; then
+            socketcli --target-path "$GITHUB_WORKSPACE" --scm github --pr-number "$PR_NUMBER"
+          else
+            socketcli --target-path "$GITHUB_WORKSPACE"
+          fi
