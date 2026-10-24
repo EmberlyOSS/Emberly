@@ -87,6 +87,21 @@ body {
     0 4px 16px -4px rgba(0, 0, 0, 0.12);
 }
 
+/* The fixed band behind the floating navbar, so content scrolls away under it */
+.site-header {
+  padding-bottom: 1rem;
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background)) 0%,
+    hsl(var(--background) / 0.92) 65%,
+    hsl(var(--background) / 0) 100%
+  );
+}
+
+.site-header .glass-elevated {
+  @apply bg-card/90;
+}
+
 /* Subtle surface — for nested panels inside other containers */
 .glass-subtle {
   @apply bg-muted/30 border border-border/60 rounded-xl;

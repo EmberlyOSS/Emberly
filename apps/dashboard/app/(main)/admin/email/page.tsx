@@ -9,7 +9,7 @@ import { isCloudEnabled } from '@/lib/config/env'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
-  title: 'Email Broadcasts',
+  title: 'Email',
   description: 'Send announcements and operational emails to users.',
 })
 
@@ -30,7 +30,7 @@ export default async function AdminEmailPage() {
 
   return (
     <AdminShell
-      title="Email Broadcasts"
+      title="Email"
       description="Send announcements and operational emails to users."
     >
       <AdminEmailManager />

@@ -70,9 +70,19 @@ export async function PATCH(
     const updatedFile = await prisma.file.update({
       where: { id },
       data: updates,
+      select: {
+        id: true,
+        name: true,
+        urlPath: true,
+        mimeType: true,
+        size: true,
+        visibility: true,
+        password: true,
+      },
     })
 
-    return NextResponse.json(updatedFile)
+    const { password: hashed, ...updated } = updatedFile
+    return NextResponse.json({ ...updated, hasPassword: !!hashed })
   } catch (error) {
     logger.error('File update error', error as Error)
     return NextResponse.json(

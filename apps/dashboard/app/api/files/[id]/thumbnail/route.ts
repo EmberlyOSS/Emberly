@@ -6,6 +6,8 @@ import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/lib/api/cors'
+import { readPreview } from '@/lib/embeds/preview'
+import { PREVIEW_TYPE, isPreviewable } from '@/lib/embeds/preview-rules'
 
 const logger = loggers.files
 
@@ -30,7 +32,11 @@ export async function GET(
     const file = await prisma.file.findUnique({
       where: { id },
       select: {
+        id: true,
         mimeType: true,
+        size: true,
+        width: true,
+        height: true,
         path: true,
         visibility: true,
         userId: true,
@@ -85,10 +91,22 @@ export async function GET(
       })
     }
 
+    if (isPreviewable(file.mimeType)) {
+      const preview = await readPreview(file)
+      if (preview) {
+        return new NextResponse(new Uint8Array(preview), {
+          headers: {
+            'Content-Type': PREVIEW_TYPE,
+            'Cache-Control': fileCacheControl(file),
+            ...getCORSHeaders(),
+          },
+        })
+      }
+    }
+
     const storageProvider = await getProviderForStoredFile(file.storageBucketId)
     const fileStream = await storageProvider.getFileStream(file.path)
 
-    // Just serve the original image - let the browser/CSS handle sizing
     return new NextResponse(fileStream as unknown as BodyInit, {
       headers: {
         'Content-Type': file.mimeType,

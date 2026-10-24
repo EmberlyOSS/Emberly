@@ -2,13 +2,5 @@
   "title": "Getting Started",
   "root": true,
   "defaultOpen": true,
-  "pages": [
-    "index",
-    "plans-overview",
-    "feature-matrix",
-    "quickstart",
-    "features",
-    "faq",
-    "status"
-  ]
+  "pages": ["index", "limits", "features", "quickstart", "faq", "status"]
 }

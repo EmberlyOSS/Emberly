@@ -22,8 +22,8 @@ With Docker installed, you only need two files. PostgreSQL and Redis come with t
 
 ```bash
 mkdir emberly && cd emberly
-curl -fsSLo compose.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/compose.yaml
-curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/.env.example
+curl -fsSLo compose.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/master/compose.yaml
+curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/master/.env.example
 # set AUTH_SECRET (openssl rand -base64 32) and APP_URL in .env
 docker compose up -d
 ```

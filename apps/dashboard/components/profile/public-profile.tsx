@@ -196,7 +196,8 @@ export function PublicProfile({
   nexiumProfile,
   currentUserId,
 }: PublicProfileProps) {
-  const displayName = user.name || 'Anonymous User'
+  const displayName = user.fullName?.trim() || user.name || 'Anonymous User'
+  const handle = user.fullName?.trim() && user.name ? `@${user.name}` : null
   const memberSince = format(user.createdAt, 'MMMM yyyy')
   const [contributions, setContributions] = useState<any>(null)
   const [files, setFiles] = useState<any[]>([])
@@ -469,10 +470,8 @@ export function PublicProfile({
                   )}
                 </div>
 
-                {user.fullName && (
-                  <p className="text-sm text-muted-foreground">
-                    {user.fullName}
-                  </p>
+                {handle && (
+                  <p className="text-sm text-muted-foreground">{handle}</p>
                 )}
                 {nexiumProfile?.title && (
                   <p className="text-sm font-medium text-foreground/70 mt-0.5">

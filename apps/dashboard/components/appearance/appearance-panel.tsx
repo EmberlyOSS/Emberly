@@ -2,14 +2,9 @@
 
 import { useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Sparkles, Zap, RotateCcw } from 'lucide-react'
+import { Check, Zap, RotateCcw } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -186,16 +181,24 @@ export function AppearancePanel({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Appearance
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Customize your visual experience
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="text-2xl">{metadata?.emoji || '🎨'}</div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 font-medium">
+              {metadata?.name ?? 'Theme'}
+              {isPreview && (
+                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs text-primary">
+                  Preview
+                </span>
+              )}
+            </div>
+            {metadata?.description && (
+              <div className="truncate text-xs text-muted-foreground">
+                {metadata.description}
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {isPreview && (
@@ -219,26 +222,6 @@ export function AppearancePanel({
           </Button>
         </div>
       </div>
-
-      {/* Current Theme Info */}
-      {metadata && (
-        <Card className="p-3 glass-subtle">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">{metadata.emoji || '🎨'}</div>
-            <div className="flex-1">
-              <div className="font-medium">{metadata.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {metadata.description}
-              </div>
-            </div>
-            {isPreview && (
-              <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
-                Preview
-              </span>
-            )}
-          </div>
-        </Card>
-      )}
 
       {/* Theme Presets */}
       <Card className="p-4 glass-subtle">
@@ -329,37 +312,32 @@ export function AppearancePanel({
 
       {/* Hue Customizer */}
       <Card className="p-4 glass-subtle">
-        <h4 className="text-sm font-semibold mb-3">Custom Hues</h4>
-        <p className="text-xs text-muted-foreground mb-4">
-          Quick color adjustments based on a single hue value
+        <h4 className="text-sm font-semibold">Custom color</h4>
+        <p className="text-xs text-muted-foreground mb-3">
+          Tint the default theme with a single color.
         </p>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+        <div className="flex flex-wrap gap-2">
           {PRESET_HUES.map(({ hue, name, saturation, lightness }) => {
             const isSelected = themeId === `hue:${hue}`
             return (
               <button
                 key={hue}
+                type="button"
                 onClick={() => handleHueSelect(hue)}
+                title={name}
+                aria-label={name}
+                aria-pressed={isSelected}
                 className={cn(
-                  'group relative aspect-square rounded-lg border-2 transition-all duration-200',
-                  'hover:scale-105 hover:shadow-lg',
+                  'relative flex h-9 w-9 items-center justify-center rounded-full transition-transform duration-150 hover:scale-110',
                   isSelected
-                    ? 'border-white ring-2 ring-white/50'
-                    : 'border-transparent hover:border-border/50'
+                    ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                    : 'ring-1 ring-inset ring-white/10'
                 )}
                 style={{
                   background: `linear-gradient(135deg, hsl(${hue}, ${saturation}%, ${lightness}%), hsl(${hue}, ${saturation}%, ${lightness - 15}%))`,
                 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-lg" />
-                <span className="absolute bottom-1 left-1 right-1 text-[10px] font-medium text-white text-center truncate">
-                  {name}
-                </span>
-                {isSelected && (
-                  <div className="absolute top-1 right-1">
-                    <Check className="h-3 w-3 text-white" />
-                  </div>
-                )}
+                {isSelected && <Check className="h-4 w-4 text-white" />}
               </button>
             )
           })}

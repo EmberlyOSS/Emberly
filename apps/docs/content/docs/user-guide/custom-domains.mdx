@@ -3,31 +3,19 @@ title: Custom Domains
 description: Serve your uploads from your own branded domain with automatic TLS certificates.
 ---
 
-<Callout type="warn">
-  **Cloud only.** Custom domains run on embrly.ca's managed Cloudflare integration and aren't available on self-hosted instances — see [Cloud vs. Self-Hosted](/self-hosting/cloud-vs-self-hosted).
+<Callout type="info">
+  Custom domains are available on embrly.ca, and on self-hosted instances running in cloud mode.
 </Callout>
 
-Custom domains let you host your Emberly files under your own domain — e.g., `files.yourbrand.com` — with automatic TLS via Cloudflare.
+Custom domains let you share files and [short links](/user-guide/url-shortener) from your own domain, like `files.yourbrand.com`, with HTTPS set up for you.
 
-## Domain Slot Limits
+## How Many You Can Add
 
-Your total domain slots come from three sources:
+Everyone gets the same number of domains; see [Limits](/getting-started/limits). You can get more by:
 
-| Plan | Base Slots |
-|------|-----------|
-| Spark | 3 |
-| Glow | 5 |
-| Flare | 10 |
-| Blaze | Unlimited |
-| Inferno | Unlimited |
-| Ember | Unlimited |
-
-**Bonus slots** stack on top:
-- GitHub contributors earn +1 to +5 slots — see [Contributor Perks](/user-guide/contributor-perks)
-- Discord boosters earn +1 to +3 slots — see [Discord Perks](/user-guide/discord-perks)
-- Additional slots can be purchased individually in your dashboard
-
-**Total = Base Plan + Perk Bonuses + Purchased**
+- Contributing to Emberly on GitHub: +1 to +5, see [Contributor Perks](/user-guide/contributor-perks)
+- Boosting the Emberly Discord server: +1 to +3, see [Discord Perks](/user-guide/discord-perks)
+- Asking for a [limit increase](/getting-started/limits#getting-more)
 
 ---
 
@@ -56,6 +44,10 @@ For a root domain (`@`), use a CNAME-flattening provider (Cloudflare supports th
   Set the record to **DNS only** (grey cloud) during verification. You can enable proxying (orange cloud) after the domain is active.
 </Callout>
 
+### Or Let Emberly Do It
+
+If your domain's DNS is on Cloudflare, click **Set up with Cloudflare** on the domain instead and paste a Cloudflare API token with **Zone → Zone → Read** and **Zone → DNS → Edit** permission for that domain. Emberly creates the records for you. The token is used once and isn't stored.
+
 ### Step 3: Verify
 
 1. Return to [Dashboard → Domains](https://embrly.ca/dashboard/domains)
@@ -66,13 +58,13 @@ For a root domain (`@`), use a CNAME-flattening provider (Cloudflare supports th
 
 ## Setting a Primary Domain
 
-Your **primary domain** is used for all new uploads automatically:
+Your **primary domain** is used for new uploads and short links, unless you've chosen a different upload domain in **Profile → Uploads**:
 
 1. Open your domain list
 2. Click the ⋯ menu next to a verified domain
 3. Select **"Set as Primary"**
 
-You can still select a different domain per-file during upload.
+Upload tools such as ShareX follow the same rule. From the API, pass a `domain` field with an upload to choose one yourself.
 
 ---
 

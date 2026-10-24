@@ -9,13 +9,10 @@ import { ApplicationReplies } from '@/components/applications/application-replie
 import { Badge } from '@/components/ui/badge'
 import { prisma } from '@emberly/db'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
-import {
-  ApplicationStatus,
-  ApplicationType,
-} from '@emberly/db'
+import { ApplicationStatus, ApplicationType } from '@emberly/db'
 
 export const metadata = buildPageMetadata({
-  title: 'Review Application',
+  title: 'Review application',
   description: 'Review and process a user application.',
 })
 
@@ -65,7 +62,7 @@ export default async function AdminApplicationDetailPage({
 
   return (
     <AdminShell
-      title="Review Application"
+      title="Review application"
       description={`Submitted ${application.createdAt.toLocaleDateString(
         undefined,
         {

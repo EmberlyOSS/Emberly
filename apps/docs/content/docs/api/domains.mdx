@@ -1,59 +1,22 @@
 ---
-title: Domains API
-description: Manage custom domains for file uploads via the Emberly API.
+title: Custom Domains API
+description: Add, verify and manage your own domains for upload links.
 ---
 
-<Callout type="warn">
-  **Cloud only.** Custom domains run on embrly.ca and these endpoints return `404` on self-hosted instances see [Cloud vs. Self-Hosted](/self-hosting/cloud-vs-self-hosted). 
-  
-  * Requires a **session cookie** (authenticated browser session), not an upload token these are used by the dashboard, not typically needed for external integrations.
+<Callout type="info">
+  Custom domains are available on embrly.ca and on instances running in cloud mode. See the [Custom Domains guide](/user-guide/custom-domains) for the DNS steps.
 </Callout>
 
-## Endpoints
+All endpoints need [authentication](/api#authentication). These endpoints return plain JSON or plain-text errors, without the `success`/`data` wrapper.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/domains` | List your domains |
-| `POST` | `/api/domains` | Add a new domain |
-| `POST` | `/api/domains/[id]/cf-check` | Trigger DNS verification |
-| `PATCH` | `/api/domains/[id]` | Update a domain (set primary etc.) |
-| `DELETE` | `/api/domains/[id]` | Remove a domain |
-
----
-
-## List Domains
-
-### `GET /api/domains`
-
-Returns all your custom domains and your usage limits.
-
-**Response (200):**
-
-```json
-{
-  "domains": [
-    {
-      "id": "dom_abc123",
-      "domain": "files.example.com",
-      "verified": true,
-      "isPrimary": true,
-      "cfStatus": "active",
-      "createdAt": "2026-01-15T10:00:00Z"
-    }
-  ],
-  "domainLimit": {
-    "allowed": 3,
-    "base": 1,
-    "purchased": 1,
-    "perkBonus": 1,
-    "used": 1,
-    "remaining": 2
-  }
-}
-```
-
-`domainLimit.allowed = base + purchased + perkBonus`  
-`perkBonus` comes from GitHub contributor and Discord booster perks.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/domains` | List your domains and how many you can add |
+| `POST` | `/api/domains` | Add a domain |
+| `POST` | `/api/domains/{id}/cf-check` | Check DNS and verify the domain |
+| `POST` | `/api/domains/{id}/cloudflare-setup` | Create the DNS records in your own Cloudflare account |
+| `PATCH` | `/api/domains/{id}` | Make it your main domain, or rename it |
+| `DELETE` | `/api/domains/{id}` | Remove a domain |
 
 ---
 
@@ -65,96 +28,63 @@ Returns all your custom domains and your usage limits.
 { "domain": "files.example.com" }
 ```
 
-**Responses:**
+Returns the new domain as `{ "domain": { ... } }`. It starts unverified.
 
-| Status | Meaning |
-|--------|---------|
-| `200` | Domain created — add CNAME to verify |
-| `400` | Invalid domain format |
-| `403` | Domain slot limit reached |
-| `409` | Domain already registered |
-
-A new domain is created with `cfStatus: "awaiting_cname"`. You must add a CNAME before verifying.
+| Status | When |
+|--------|------|
+| `400` | Not a valid domain name |
+| `403` | You've reached your domain limit |
+| `409` | Someone has already added this domain |
 
 ---
 
 ## Verify a Domain
 
-### `POST /api/domains/[id]/cf-check`
+Point a `CNAME` record for your domain at `cname.emberly.site`, then call:
 
-Triggers a DNS check and Cloudflare provisioning attempt.
+### `POST /api/domains/{id}/cf-check`
 
-**Responses:**
+Returns `{ "status": "...", "cf": { ... } }` with the current verification and certificate state. Call it again until the domain shows as verified; this usually takes a few minutes after the DNS change. Limited to 10 checks per 10 minutes.
 
-| Status | Meaning |
-|--------|---------|
-| `202` | Verification started — check again in a moment |
-| `200` | Verification complete — `status` field shows new state |
-| `409` | CNAME missing or incorrect — `expected` field shows required target |
-| `429` | Too many attempts (10 per 10 minutes) |
+### `POST /api/domains/{id}/cloudflare-setup`
 
-```bash
-curl -X POST \
-  -b cookies.txt -c cookies.txt \
-  https://embrly.ca/api/domains/dom_abc123/cf-check
+If your domain is on Cloudflare, Emberly can create the records for you:
+
+```json
+{
+  "apiToken": "your-cloudflare-api-token",
+  "replaceConflicts": false
+}
 ```
+
+The token needs **Zone → Zone → Read** and **Zone → DNS → Edit** permission for that domain. It's used once and not stored. Set `replaceConflicts` to `true` to replace existing records with the same name.
 
 ---
 
-## Update a Domain
+## Manage a Domain
 
-### `PATCH /api/domains/[id]`
+### `PATCH /api/domains/{id}`
 
-**Set as primary domain:**
+Make a verified domain the one your upload links use:
 
 ```json
 { "action": "setPrimary" }
 ```
 
-The domain must be verified before it can be set as primary.
-
-**Rename the domain:**
+Rename a domain. It becomes unverified until you verify it again:
 
 ```json
-{ "action": "update", "domain": "new.example.com" }
+{ "action": "update", "domain": "cdn.example.com" }
 ```
 
-Returns `204 No Content`.
+### `DELETE /api/domains/{id}`
+
+Removes the domain. Links using it stop working.
 
 ---
 
-## Delete a Domain
+## List Your Domains
 
-### `DELETE /api/domains/[id]`
+### `GET /api/domains`
 
-Returns `204 No Content`. If the domain was primary, no domain becomes primary — you must set a new one.
-
----
-
-## Example: Full Setup Flow
-
-```bash
-# 1. Add domain
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -b cookies.txt -c cookies.txt \
-  -d '{"domain":"files.example.com"}' \
-  https://embrly.ca/api/domains
-
-# 2. Add CNAME in your DNS panel:
-#    files.example.com → CNAME → cname.emberly.site
-
-# 3. Trigger verification
-curl -s -X POST \
-  -b cookies.txt -c cookies.txt \
-  https://embrly.ca/api/domains/dom_abc123/cf-check
-
-# 4. Set as primary
-curl -s -X PATCH \
-  -H "Content-Type: application/json" \
-  -b cookies.txt -c cookies.txt \
-  -d '{"action":"setPrimary"}' \
-  https://embrly.ca/api/domains/dom_abc123
-```
-
-See the [Custom Domains user guide](/user-guide/custom-domains) for full setup instructions including Cloudflare and DNS configuration.
+Returns your domains, with their verification state and whether each is your main domain, plus your domain limit.

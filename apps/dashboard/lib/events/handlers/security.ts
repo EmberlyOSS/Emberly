@@ -33,7 +33,7 @@ export const securityHandlers: HandlerMap = {
             ip: payload.context?.ip || 'Unknown',
             location: payload.context?.geo?.city
               ? `${payload.context.geo.city}, ${payload.context.geo.country}`
-              : 'Unknown location',
+              : undefined,
             detectedAt: new Date().toISOString(),
           },
           userId: payload.userId,

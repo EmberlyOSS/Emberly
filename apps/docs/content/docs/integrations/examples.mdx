@@ -93,7 +93,7 @@ const { apiRequest } = require("./api");
 
 async function shortenUrl(longUrl) {
   const result = await apiRequest("POST", "/urls", { url: longUrl });
-  console.log("Short URL:", result.shortUrl);
+  console.log("Short URL:", `https://embrly.ca/u/${result.shortCode}`);
   return result;
 }
 
@@ -233,7 +233,7 @@ from emberly import api_post
 
 def shorten_url(long_url):
     result = api_post("/urls", json={"url": long_url})
-    print(f"Short URL: {result['data']['shortUrl']}")
+    print(f"Short URL: https://embrly.ca/u/{result['data']['shortCode']}")
     return result["data"]
 
 shorten_url("https://example.com/really/long/url")
@@ -358,8 +358,8 @@ import "fmt"
 type URLResponse struct {
     Success bool `json:"success"`
     Data    struct {
-        ShortURL  string `json:"shortUrl"`
         ShortCode string `json:"shortCode"`
+        TargetURL string `json:"targetUrl"`
     } `json:"data"`
 }
 
@@ -372,7 +372,7 @@ func shortenURL(longURL string) (*URLResponse, error) {
     if err != nil {
         return nil, err
     }
-    fmt.Println("Short URL:", result.Data.ShortURL)
+    fmt.Println("Short URL:", "https://embrly.ca/u/"+result.Data.ShortCode)
     return result, nil
 }
 ```
@@ -420,7 +420,7 @@ shorten() {
     -H "Authorization: Bearer $EMBERLY_TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"url\": \"${url}\"}" \
-    "${BASE}/urls" | jq -r '.data.shortUrl'
+    "${BASE}/urls" | jq -r '"https://embrly.ca/u/" + .data.shortCode'
 }
 
 shorten "https://example.com/my/very/long/link"
@@ -489,7 +489,7 @@ except requests.HTTPError as e:
 
 ## Rate Limits
 
-File uploads and most API endpoints aren't rate-limited by plan — only a handful of security-sensitive endpoints (registration, password reset, contact form, domain verification) have flat, IP-scoped limits. See the [User API Reference](/api/user-reference#rate-limits) for the full list. A limited endpoint returns `429 Too Many Requests` with a `Retry-After` header when exceeded.
+File uploads and most API endpoints aren't rate-limited by plan — only a handful of security-sensitive endpoints (registration, password reset, contact form, domain verification) have flat, IP-scoped limits. See [Rate Limits](/api#rate-limits) for the full list. A limited endpoint returns `429 Too Many Requests`, and most also send a `Retry-After` header.
 
 ---
 
@@ -498,5 +498,5 @@ File uploads and most API endpoints aren't rate-limited by plan — only a handf
 - [Files API Reference](/api/files)
 - [URL Shortener API](/api/urls)
 - [Profile API Reference](/api/profile)
-- [User API Reference](/api/user-reference)
+- [API Reference](/api)
 - [Webhooks](/integrations/webhooks)

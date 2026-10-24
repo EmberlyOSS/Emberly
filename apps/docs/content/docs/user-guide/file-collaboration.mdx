@@ -17,7 +17,7 @@ From the file detail page:
 4. Choose a role: **Editor** or **Suggester**
 5. Click **Invite**
 
-The collaborator receives an email notification and the file appears in their **Shared with Me** view.
+The collaborator receives an email notification and the file appears in their **Shared with me** tab.
 
 <Callout title="Owner only">
   Only the file owner can add or remove collaborators.
@@ -56,7 +56,7 @@ Approved suggestions replace the file content. Rejected suggestions are dismisse
 
 ## Shared With Me
 
-All files shared with you appear at [embrly.ca/dashboard/files](https://embrly.ca/dashboard/files) under the **Shared** filter. Each entry shows:
+Files shared with you appear in the **Shared with me** tab of [Dashboard → Files](https://embrly.ca/dashboard/files). Each entry shows:
 
 - File name and type
 - Owner name and avatar
@@ -71,7 +71,7 @@ All files shared with you appear at [embrly.ca/dashboard/files](https://embrly.c
 
 ```http
 GET /api/files/shared
-Authorization: Bearer YOUR_UPLOAD_TOKEN
+Authorization: Bearer ebk_...
 ```
 
 **Query parameters:**
@@ -120,7 +120,7 @@ Authorization: Bearer YOUR_UPLOAD_TOKEN
 
 ```http
 GET /api/files/{id}/collaborators
-Authorization: Bearer YOUR_UPLOAD_TOKEN
+Authorization: Bearer ebk_...
 ```
 
 Returns the list of collaborators and whether suggestions are enabled. Only the file owner can call this endpoint.
@@ -131,6 +131,7 @@ Returns the list of collaborators and whether suggestions are enabled. Only the 
 {
   "collaborators": [
     {
+      "id": "clcol...",
       "role": "EDITOR",
       "user": {
         "id": "cluser...",
@@ -151,7 +152,7 @@ Returns the list of collaborators and whether suggestions are enabled. Only the 
 
 ```http
 POST /api/files/{id}/collaborators
-Authorization: Bearer YOUR_UPLOAD_TOKEN
+Authorization: Bearer ebk_...
 Content-Type: application/json
 ```
 
@@ -179,11 +180,11 @@ The collaborator receives an email notification upon being added.
 ### Remove a Collaborator
 
 ```http
-DELETE /api/files/{id}/collaborators/{userId}
-Authorization: Bearer YOUR_UPLOAD_TOKEN
+DELETE /api/files/{id}/collaborators?collaboratorId={collaboratorId}
+Authorization: Bearer ebk_...
 ```
 
-Removes the specified user as a collaborator. Only the file owner can do this.
+`collaboratorId` is the collaborator's `id` from the list above, not their user ID. Only the file owner can do this.
 
 ---
 
@@ -191,7 +192,7 @@ Removes the specified user as a collaborator. Only the file owner can do this.
 
 ```http
 GET /api/files/{id}/suggestions?status=PENDING
-Authorization: Bearer YOUR_UPLOAD_TOKEN
+Authorization: Bearer ebk_...
 ```
 
 | `status` value | Description |

@@ -122,17 +122,16 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
   }
 
   return (
-    <form
-      onSubmit={handleSave}
-      className="glass-subtle overflow-hidden"
-    >
+    <form onSubmit={handleSave} className="glass-subtle overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-muted/20">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
             <FileText className="h-4 w-4 text-primary" />
           </div>
-          <span className="font-medium">{postId ? 'Edit Post' : 'New Post'}</span>
+          <span className="font-medium">
+            {postId ? 'Edit Post' : 'New Post'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -142,7 +141,11 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
             onClick={() => setShowPreview((v) => !v)}
             className="gap-2"
           >
-            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPreview ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
             {showPreview ? 'Hide Preview' : 'Preview'}
           </Button>
         </div>
@@ -152,7 +155,9 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
         {/* Title & Slug */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">Title</Label>
+            <Label htmlFor="title" className="text-sm font-medium">
+              Title
+            </Label>
             <Input
               id="title"
               value={title}
@@ -162,7 +167,9 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="slug" className="text-sm font-medium">Slug</Label>
+            <Label htmlFor="slug" className="text-sm font-medium">
+              Slug
+            </Label>
             <Input
               id="slug"
               value={slug}
@@ -175,7 +182,9 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
 
         {/* Excerpt */}
         <div className="space-y-2">
-          <Label htmlFor="excerpt" className="text-sm font-medium">Excerpt</Label>
+          <Label htmlFor="excerpt" className="text-sm font-medium">
+            Excerpt
+          </Label>
           <Input
             id="excerpt"
             value={excerpt}
@@ -186,7 +195,9 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
         </div>
 
         {/* Editor & Preview */}
-        <div className={`grid gap-4 ${showPreview ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+        <div
+          className={`grid gap-4 ${showPreview ? 'md:grid-cols-2' : 'grid-cols-1'}`}
+        >
           <div className="space-y-2">
             <Label className="text-sm font-medium">Content (Markdown)</Label>
             <div className="glass-subtle overflow-hidden">
@@ -205,7 +216,9 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Preview</Label>
               <div className="glass-subtle p-4 h-[320px] overflow-auto prose prose-sm max-w-none dark:prose-invert">
-                <MarkdownRenderer>{content || '*Nothing to preview*'}</MarkdownRenderer>
+                <MarkdownRenderer>
+                  {content || '*Nothing to preview*'}
+                </MarkdownRenderer>
               </div>
             </div>
           )}
@@ -214,7 +227,12 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
         {/* Status & Actions */}
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <div className="flex items-center gap-2">
-            <Label htmlFor="status" className="text-sm font-medium whitespace-nowrap">Status:</Label>
+            <Label
+              htmlFor="status"
+              className="text-sm font-medium whitespace-nowrap"
+            >
+              Status:
+            </Label>
             <Select value={status} onValueChange={(v) => setStatus(v)}>
               <SelectTrigger className="w-[140px] bg-background/50 border-border/50">
                 <SelectValue />
@@ -228,7 +246,12 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Label htmlFor="publishedAt" className="text-sm font-medium whitespace-nowrap">Publish Date:</Label>
+            <Label
+              htmlFor="publishedAt"
+              className="text-sm font-medium whitespace-nowrap"
+            >
+              Publish Date:
+            </Label>
             <Input
               id="publishedAt"
               type="datetime-local"
@@ -239,7 +262,12 @@ export function BlogEditor({ postId, onSaved, onCancel }: Props) {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button type="button" variant="ghost" onClick={() => onCancel?.()} className="gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onCancel?.()}
+              className="gap-2"
+            >
               <X className="h-4 w-4" />
               Cancel
             </Button>

@@ -11,7 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export const metadata = buildPageMetadata({
-  title: 'Upload Files',
+  title: 'Upload',
   description: 'Upload and manage your files with Emberly.',
 })
 
@@ -39,7 +39,7 @@ export default async function UploadPage() {
 
   return (
     <DashboardShell
-      title="Upload Files"
+      title="Upload"
       description="Upload and share files with optional password protection"
     >
       <UploadForm

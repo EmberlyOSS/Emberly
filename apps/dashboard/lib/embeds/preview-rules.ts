@@ -21,7 +21,6 @@ export function isPreviewable(mimeType: string) {
   return PREVIEWABLE.has(baseMime(mimeType))
 }
 
-/** The size of the preview for an image of the given size. */
 export function previewSize(width: number, height: number) {
   const scale = Math.min(1, PREVIEW_MAX_EDGE / Math.max(width, height))
   return {

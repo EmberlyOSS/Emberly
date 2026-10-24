@@ -9,7 +9,7 @@ import { useFeatures } from '@/components/providers/features-provider'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { Separator } from '@/components/ui/separator'
-import { ScrollIndicator } from '@/components/ui/scroll-indicator'
+import { SectionBar } from '@/components/layout/section-shell'
 
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -32,10 +32,10 @@ import {
 import { ProfileAccount } from './account'
 import { ProfileSettings } from './account'
 import { ProfileDomains } from '../dashboard/domains'
+import { DeleteAccount } from './delete-account'
 import { ProfileExport } from './export'
 import { EmailPreferences } from './notifications'
 import { ProfileSecurity } from './security'
-import ProfileDataExplorer from './data-explorer'
 import { ProfileStorage } from './storage'
 import { ProfileTools } from './tools'
 import { ApiKeysPanel } from './api-keys-panel'
@@ -125,6 +125,12 @@ function visibleProfileSections(
       ),
     }))
     .filter((s) => s.items.length > 0)
+    .map((s) =>
+      s.group === 'Billing & Data' &&
+      !s.items.some((i) => i.value === 'billing')
+        ? { ...s, group: 'Data' }
+        : s
+    )
 }
 
 // Glass card wrapper component for consistent styling
@@ -170,6 +176,10 @@ function GlassCardTitle({
       {children}
     </h3>
   )
+}
+
+function GlassCardDescription({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-muted-foreground">{children}</p>
 }
 
 function GlassCardContent({
@@ -269,85 +279,31 @@ export function ProfileClient({
   const activeSection = visibleTabs.find((t) => t.value === selectedTab)
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 overflow-hidden lg:items-start">
-      {/* Sidebar Navigation — full on desktop, horizontal scroll on mobile */}
-      <nav className="lg:w-56 shrink-0">
-        {/* Mobile: horizontal scrollable strip */}
-        <ScrollIndicator className="lg:hidden glass-card p-1.5">
-          <div className="flex gap-1 w-max">
-            {visibleTabs.map((item) => {
-              const Icon = item.icon
-              const isActive = selectedTab === item.value
-              return (
-                <button
-                  key={item.value}
-                  onClick={() => handleTabChange(item.value)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
-                    isActive
-                      ? 'bg-secondary text-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-                  }`}
-                >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary' : ''}`}
-                  />
-                  {item.label}
-                </button>
-              )
-            })}
-          </div>
-        </ScrollIndicator>
+    <div className="space-y-6">
+      <SectionBar
+        label="Profile"
+        activeKey={selectedTab}
+        groups={sections.map((section) => ({
+          label: section.group,
+          items: section.items.map((item) => ({
+            key: item.value,
+            label: item.label,
+            icon: item.icon,
+            onSelect: () => handleTabChange(item.value),
+          })),
+        }))}
+      />
 
-        {/* Desktop: full grouped sidebar */}
-        <div className="hidden lg:block glass-card p-2 lg:sticky lg:top-28 space-y-3">
-          <p className="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
-            Profile
-          </p>
-          {sections.map((section) => (
-            <div key={section.group}>
-              <p className="px-3 pb-1 text-xs font-medium text-muted-foreground/60">
-                {section.group}
-              </p>
-              <div className="space-y-0.5">
-                {section.items.map((item) => {
-                  const Icon = item.icon
-                  const isActive = selectedTab === item.value
-                  return (
-                    <button
-                      key={item.value}
-                      onClick={() => handleTabChange(item.value)}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-secondary text-foreground font-medium'
-                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-                      }`}
-                    >
-                      <Icon
-                        className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary' : ''}`}
-                      />
-                      {item.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
-
-      {/* Content Area */}
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="space-y-6">
         {header}
         {selectedTab === 'profile' && (
           <>
             <GlassCard>
               <GlassCardHeader>
-                <GlassCardTitle>Profile Information</GlassCardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your identity, bio, and social links
-                </p>
+                <GlassCardTitle>Profile</GlassCardTitle>
+                <GlassCardDescription>
+                  How you appear to other people.
+                </GlassCardDescription>
               </GlassCardHeader>
               <GlassCardContent>
                 <ProfileAccount user={user} onUpdate={handleRefresh} />
@@ -360,9 +316,9 @@ export function ProfileClient({
           <GlassCard>
             <GlassCardHeader>
               <GlassCardTitle>Settings</GlassCardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Control visibility, expiry defaults, and file URL options
-              </p>
+              <GlassCardDescription>
+                Who can see your profile, and defaults for new uploads.
+              </GlassCardDescription>
             </GlassCardHeader>
             <GlassCardContent>
               <ProfileSettings user={user} onUpdate={handleRefresh} />
@@ -462,7 +418,12 @@ export function ProfileClient({
           <>
             <GlassCard>
               <GlassCardHeader>
-                <GlassCardTitle>Storage Usage</GlassCardTitle>
+                <GlassCardTitle>Storage</GlassCardTitle>
+                <GlassCardDescription>
+                  {quotasEnabled
+                    ? 'How much of your storage you have used.'
+                    : 'How much storage you are using.'}
+                </GlassCardDescription>
               </GlassCardHeader>
               <GlassCardContent>
                 <ProfileStorage
@@ -478,7 +439,11 @@ export function ProfileClient({
 
             <GlassCard>
               <GlassCardHeader>
-                <GlassCardTitle>Upload Tools</GlassCardTitle>
+                <GlassCardTitle>Upload tools</GlassCardTitle>
+                <GlassCardDescription>
+                  Choose your upload domain and download ready-made configs for
+                  your screenshot tools.
+                </GlassCardDescription>
               </GlassCardHeader>
               <GlassCardContent>
                 <ProfileTools />
@@ -508,7 +473,11 @@ export function ProfileClient({
             />
             <GlassCard>
               <GlassCardHeader>
-                <GlassCardTitle>Security Settings</GlassCardTitle>
+                <GlassCardTitle>Security</GlassCardTitle>
+                <GlassCardDescription>
+                  Your password, two-factor authentication, devices and sign-in
+                  history.
+                </GlassCardDescription>
               </GlassCardHeader>
               <GlassCardContent>
                 <ProfileSecurity onUpdate={handleRefresh} />
@@ -549,7 +518,10 @@ export function ProfileClient({
         {selectedTab === 'notifications' && (
           <GlassCard>
             <GlassCardHeader>
-              <GlassCardTitle>Email Notifications</GlassCardTitle>
+              <GlassCardTitle>Notifications</GlassCardTitle>
+              <GlassCardDescription>
+                Choose where you hear about activity on your account.
+              </GlassCardDescription>
             </GlassCardHeader>
             <GlassCardContent>
               <EmailPreferences
@@ -583,6 +555,9 @@ export function ProfileClient({
           <GlassCard>
             <GlassCardHeader>
               <GlassCardTitle>Appearance</GlassCardTitle>
+              <GlassCardDescription>
+                Pick a theme for the dashboard. Changes preview straight away.
+              </GlassCardDescription>
             </GlassCardHeader>
             <GlassCardContent>
               <ProfileAppearance />
@@ -611,13 +586,15 @@ export function ProfileClient({
           <GlassCard>
             <GlassCardHeader>
               <GlassCardTitle>Data</GlassCardTitle>
+              <GlassCardDescription>
+                Get a copy of everything stored about your account, or delete
+                it.
+              </GlassCardDescription>
             </GlassCardHeader>
             <GlassCardContent className="space-y-6">
               <ProfileExport />
 
-              <Separator className="my-6 bg-muted/50" />
-
-              <ProfileDataExplorer />
+              <DeleteAccount />
             </GlassCardContent>
           </GlassCard>
         )}

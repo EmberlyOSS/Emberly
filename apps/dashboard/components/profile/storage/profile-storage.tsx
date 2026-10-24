@@ -17,15 +17,6 @@ export function ProfileStorage({
 }: ProfileStorageProps) {
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">Storage Usage</h3>
-        <p className="text-sm text-muted-foreground">
-          {quotasEnabled
-            ? 'Monitor your storage usage and available space.'
-            : 'Track how much storage space you are using.'}
-        </p>
-      </div>
-
       <div className="space-y-4">
         {quotasEnabled ? (
           <>

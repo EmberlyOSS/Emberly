@@ -46,7 +46,7 @@ export function UploadHost() {
       })
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
-      setSelected(data.selected || domain)
+      setSelected(data.selected ?? null)
     } catch (e) {
       // ignore
     }
@@ -56,11 +56,12 @@ export function UploadHost() {
     <div className="space-y-2">
       <Label>Upload Host</Label>
       <p className="text-sm text-muted-foreground">
-        Choose which domain your uploaded files are served from.
+        Choose which domain your uploads and short links use. By default they
+        use your primary domain, or the main site if you have none.
       </p>
       <div className="flex items-center gap-2 max-w-sm">
         <Select
-          value={selected || ''}
+          value={selected || 'default'}
           onValueChange={setDomain}
           disabled={loadingDomains}
         >
@@ -68,7 +69,9 @@ export function UploadHost() {
             <SelectValue placeholder="Select a host" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">(default)</SelectItem>
+            <SelectItem value="default">
+              Default (your primary domain)
+            </SelectItem>
             {(domains || []).map((d) => (
               <SelectItem key={d} value={d}>
                 {d}

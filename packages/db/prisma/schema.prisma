@@ -104,6 +104,9 @@ model User {
   editSuggestions             FileEditSuggestion[]    @relation("SuggestionAuthor")
   reviewedSuggestions         FileEditSuggestion[]    @relation("SuggestionReviewer")
   loginHistory                LoginHistory[]
+  devices                     UserDevice[]
+  notifications               Notification[]
+  dataExports                 DataExport[]
   linkedAccounts              LinkedAccount[]
   twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
   passwordHistory             PasswordHistory[]
@@ -233,6 +236,7 @@ model ShortenedUrl {
   id        String   @id @default(cuid())
   shortCode String   @unique
   targetUrl String
+  domain    String?
   clicks    Int      @default(0)
   createdAt DateTime @default(now())
   userId    String
@@ -448,6 +452,54 @@ model CreditTransaction {
 }
 
 // Login history for detecting suspicious/new device logins
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  category  String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model DataExport {
+  id          String    @id @default(cuid())
+  userId      String
+  status      String    @default("pending") // pending, ready, failed
+  path        String?
+  size        BigInt?
+  error       String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UserDevice {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  userAgent     String?
+  lastIp        String?
+  lastLocation  String?
+  firstSeenAt   DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  revokedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model LoginHistory {
   id          String   @id @default(cuid())
   userId      String

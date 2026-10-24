@@ -40,6 +40,7 @@ export function TwoFactorForm({
 
     try {
       const result = await signIn('credentials', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         emailOrUsername,
         password,
         twoFactorCode: code,

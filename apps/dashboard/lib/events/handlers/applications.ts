@@ -9,6 +9,7 @@ import {
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import type { HandlerMap } from '../bullmq/types'
+import { createNotification } from '@/lib/notifications'
 
 const logger = loggers.events.getChildLogger('applications-handler')
 
@@ -115,6 +116,13 @@ export const applicationHandlers: HandlerMap = {
         approved: `Your ${applicationType} application has been approved!`,
         rejected: `Update on your ${applicationType} application`,
       }
+
+      await createNotification({
+        userId: payload.userId,
+        category: 'account',
+        title: subjectMap[status],
+        link: '/me?tab=applications',
+      })
 
       try {
         await sendTemplateEmail({

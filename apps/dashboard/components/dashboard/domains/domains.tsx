@@ -1,29 +1,18 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import {
-  Globe,
-  Plus,
-  Search,
-  Info,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-} from 'lucide-react'
+import { Globe, Plus, Search } from 'lucide-react'
 import { SiCloudflare } from 'react-icons/si'
 
 import { Icons } from '@/components/shared/icons'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import {
+  EmptyState,
+  Panel,
+  StatGrid,
+  StatTile,
+} from '@/components/layout/page-kit'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 import { useToast } from '@/hooks/use-toast'
@@ -323,242 +312,152 @@ export function ProfileDomains() {
       return a.domain.localeCompare(b.domain)
     })
 
+  const atLimit = Boolean(
+    domainLimit && !domainLimit.unlimited && (domainLimit.remaining ?? 1) <= 0
+  )
+  const slotsLeft = domainLimit?.unlimited
+    ? '∞'
+    : (domainLimit?.remaining ?? '∞')
+
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="glass-subtle p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Globe className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{domains.length}</p>
-                <p className="text-xs text-muted-foreground">Total Domains</p>
-              </div>
-            </div>
-          </div>
+      <StatGrid>
+        <StatTile label="Domains" value={domains.length} />
+        <StatTile label="Verified" value={verifiedCount} tone="success" />
+        <StatTile
+          label="Needs setup"
+          value={pendingCount}
+          tone={pendingCount ? 'warning' : 'default'}
+        />
+        <StatTile
+          label="Slots left"
+          value={slotsLeft}
+          hint={
+            domainLimit && !domainLimit.unlimited
+              ? `${domainLimit.used} of ${domainLimit.allowed} used`
+              : undefined
+          }
+        />
+      </StatGrid>
 
-          <div className="glass-subtle p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{verifiedCount}</p>
-                <p className="text-xs text-muted-foreground">Verified</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-subtle p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <Clock className="h-4 w-4 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingCount}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-subtle p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-violet-500/10">
-                <Sparkles className="h-4 w-4 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {domainLimit?.unlimited
-                    ? '∞'
-                    : (domainLimit?.remaining ?? '∞')}
-                </p>
-                <p className="text-xs text-muted-foreground">Available Slots</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cloudflare tip */}
-        <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
-          <SiCloudflare className="mt-0.5 h-5 w-5 shrink-0 text-[#F38020]" />
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">
-              Using Cloudflare?
-            </span>{' '}
-            We can add the DNS records for you. Open a domain and choose{' '}
-            <span className="font-medium text-foreground">
-              Set up with Cloudflare
-            </span>
-            . Any DNS provider that supports CNAME records works too.
-          </p>
-        </div>
-
-        {/* Search and Actions Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search domains..."
-              className="pl-9 bg-background/50"
-            />
-          </div>
-          <Button
-            onClick={() => setOpenAdd(true)}
-            disabled={Boolean(
-              domainLimit &&
-              !domainLimit.unlimited &&
-              (domainLimit.remaining ?? 1) <= 0
-            )}
-            className="shrink-0"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Domain
-          </Button>
-        </div>
-
-        {/* Domain Limit Info */}
-        {domainLimit && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Info className="h-4 w-4" />
-            {domainLimit.unlimited ? (
-              <span>
-                Using {domainLimit.used} domain
-                {domainLimit.used !== 1 ? 's' : ''} &mdash;{' '}
-                <span className="text-primary">Unlimited slots</span>
-              </span>
-            ) : (
-              <span>
-                Using {domainLimit.used} of {domainLimit.allowed} domain slots
-                {(domainLimit.purchased ?? 0) > 0 &&
-                  ` (${domainLimit.purchased} ${billingEnabled ? 'purchased' : 'extra'})`}
-              </span>
-            )}
-            {!domainLimit.unlimited &&
-              (domainLimit.remaining ?? 1) <= 2 &&
-              (domainLimit.remaining ?? 1) > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {domainLimit.remaining} remaining
-                </Badge>
-              )}
-            {!domainLimit.unlimited && (domainLimit.remaining ?? 1) <= 0 && (
-              <Badge variant="destructive" className="text-xs">
-                Limit reached
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Domain List */}
-        <div className="glass-subtle overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Icons.spinner className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <DomainList
-              domains={filteredDomains}
-              cfCheckingIds={cfCheckingIds}
-              onSetPrimary={setPrimary}
-              onRecheck={recheckCloudflare}
-              onDelete={removeDomain}
-            />
-          )}
-        </div>
-
-        {/* Help Text */}
-        <p className="text-sm text-muted-foreground text-center">
-          Need help? Check our{' '}
-          <a
-            href="https://docs.embrly.ca/user-guide/custom-domains"
-            className="text-primary hover:underline"
-          >
-            domain setup guide
-          </a>{' '}
-          or{' '}
-          <a href="/contact" className="text-primary hover:underline">
-            contact support
-          </a>
-          .
-        </p>
-
-        {/* Add Domain Dialog */}
-        <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Add Custom Domain
-              </DialogTitle>
-              <DialogDescription>
-                Connect your own domain to serve files from a custom URL.
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={addDomain} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Domain Name
-                </label>
-                <Input
-                  value={newDomain}
-                  onChange={(e) => {
-                    setNewDomain(e.target.value)
-                    setError(null)
-                  }}
-                  placeholder="files.yourdomain.com"
-                  className="font-mono"
-                  autoFocus
-                />
-                {error && (
-                  <p className="text-sm text-destructive mt-2">{error}</p>
-                )}
-              </div>
-
-              <div className="rounded-lg border border-border/50 bg-muted/30 p-4 space-y-3">
-                <h4 className="text-sm font-medium flex items-center gap-2">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                  Setup Instructions
-                </h4>
-                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                  <li>
-                    Add a CNAME record pointing to{' '}
-                    <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">
-                      cname.emberly.site
-                    </code>
-                  </li>
-                  <li>We&apos;ll automatically verify and provision TLS</li>
-                  <li>Your domain will be ready once verified</li>
-                </ol>
-              </div>
-
-              <DialogFooter>
+      {openAdd && (
+        <Panel
+          title="Add a domain"
+          description="Use a subdomain you control, like files.yourdomain.com."
+        >
+          <form onSubmit={addDomain} className="space-y-4">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={newDomain}
+                onChange={(e) => {
+                  setNewDomain(e.target.value)
+                  setError(null)
+                }}
+                placeholder="files.yourdomain.com"
+                aria-label="Domain name"
+                className="font-mono sm:flex-1"
+                autoFocus
+              />
+              <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setOpenAdd(false)}
                 >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={adding || !newDomain.trim()}>
-                  {adding ? (
-                    <>
-                      <Icons.spinner className="h-4 w-4 mr-2 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    'Add Domain'
+                  {adding && (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                   )}
+                  Add domain
                 </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+              </div>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <p className="text-sm text-muted-foreground">
+              Next, add a CNAME record pointing to{' '}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                cname.emberly.site
+              </code>
+              . HTTPS is set up automatically once it&apos;s verified.
+            </p>
+          </form>
+        </Panel>
+      )}
+
+      <Panel
+        flush
+        title="Your domains"
+        description={
+          <span className="inline-flex items-center gap-1.5">
+            <SiCloudflare className="h-4 w-4 shrink-0 text-[#F38020]" />
+            On Cloudflare? Open a domain and choose Set up with Cloudflare to
+            add the DNS record for you.
+          </span>
+        }
+        actions={
+          !openAdd && (
+            <Button
+              size="sm"
+              onClick={() => setOpenAdd(true)}
+              disabled={atLimit}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              {atLimit ? 'Limit reached' : 'Add domain'}
+            </Button>
+          )
+        }
+      >
+        {domains.length > 3 && (
+          <div className="border-b border-border/50 px-5 py-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search domains"
+                aria-label="Search domains"
+                className="h-9 bg-background/50 pl-9"
+              />
+            </div>
+          </div>
+        )}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Icons.spinner className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : domains.length === 0 ? (
+          <EmptyState
+            icon={Globe}
+            title="No domains yet"
+            description="Connect your own domain to share files and short links from it."
+          />
+        ) : (
+          <DomainList
+            domains={filteredDomains}
+            cfCheckingIds={cfCheckingIds}
+            onSetPrimary={setPrimary}
+            onRecheck={recheckCloudflare}
+            onDelete={removeDomain}
+          />
+        )}
+      </Panel>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Need help? Read the{' '}
+        <a
+          href="https://docs.embrly.ca/user-guide/custom-domains"
+          className="text-primary hover:underline"
+        >
+          domain setup guide
+        </a>{' '}
+        or{' '}
+        <a href="/contact" className="text-primary hover:underline">
+          contact support
+        </a>
+        .
+      </p>
     </TooltipProvider>
   )
 }

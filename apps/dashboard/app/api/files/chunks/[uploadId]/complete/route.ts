@@ -9,6 +9,7 @@ import { join } from 'node:path'
 
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@emberly/db'
+import { defaultUploadDomain } from '@/lib/domain/default'
 import { events } from '@/lib/events'
 import { scheduleFileExpiration } from '@/lib/events/handlers/file-expiry'
 import { validateFileSecurityChecksWithVT } from '@/lib/files/security-validation'
@@ -38,6 +39,7 @@ async function getAuthenticatedUser(req: Request) {
         storageQuotaMB: true,
         urlId: true,
         role: true,
+        preferredUploadDomain: true,
       },
     })
     return user
@@ -54,6 +56,7 @@ async function getAuthenticatedUser(req: Request) {
         storageQuotaMB: true,
         urlId: true,
         role: true,
+        preferredUploadDomain: true,
       },
     })
     return user
@@ -324,18 +327,26 @@ export async function POST(
       ? finalFullUrl
       : `https://${finalFullUrl}`
 
+    const toBase = (host: string) => {
+      const trimmed = host.replace(/\/+$/, '')
+      return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`
+    }
+
     if (metadata.domain) {
       try {
         const domainRecord = await prisma.customDomain.findFirst({
           where: { domain: metadata.domain, userId: user.id, verified: true },
         })
-        if (domainRecord) {
-          const host = domainRecord.domain.replace(/\/$/, '')
-          finalFullUrl = host.startsWith('http') ? host : `https://${host}`
-        }
+        if (domainRecord) finalFullUrl = toBase(domainRecord.domain)
       } catch (err) {
         // ignore and fall back to server URL
       }
+    } else {
+      const defaultDomain = await defaultUploadDomain(
+        user.id,
+        user.preferredUploadDomain
+      ).catch(() => null)
+      if (defaultDomain) finalFullUrl = toBase(defaultDomain)
     }
 
     const responseData: FileUploadResponse = {

@@ -33,6 +33,7 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
       },
       select: {
         name: true,
+        fullName: true,
         bio: true,
       },
     })
@@ -44,10 +45,15 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
       })
     }
 
+    const fullName = user.fullName?.trim()
+    const title =
+      fullName && user.name
+        ? `${fullName} (@${user.name})`
+        : fullName || user.name || 'User'
     return buildPageMetadata({
-      title: user.name || 'User',
+      title,
       description:
-        user.bio || `View ${user.name || 'this user'}'s Emberly profile`,
+        user.bio || `View ${fullName || user.name || 'this user'}'s profile`,
     })
   } catch (error) {
     return buildPageMetadata({

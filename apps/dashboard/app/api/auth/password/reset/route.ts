@@ -7,104 +7,141 @@ import { z } from 'zod'
 import { prisma } from '@emberly/db'
 import { AccountChangeEmail, sendTemplateEmail } from '@/lib/emails'
 import { rateLimiter } from '@/lib/cache/rate-limit'
-import { checkPasswordReuse, recordPasswordHistory } from '@/lib/security/password-reuse-checker'
+import {
+  checkPasswordReuse,
+  recordPasswordHistory,
+} from '@/lib/security/password-reuse-checker'
 import { events } from '@/lib/events'
 import { appUrl } from '@/lib/config/env'
+import { createNotification } from '@/lib/notifications'
 
 const requestSchema = z.object({
-    email: z.string().email(),
-    token: z.string().min(10),
-    password: z.string().min(8),
+  email: z.string().email(),
+  token: z.string().min(10),
+  password: z.string().min(8),
 })
 
 export async function POST(req: Request) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
 
-    // Rate limit: 5 attempts per 10 minutes per IP
-    const { allowed } = await rateLimiter.check(`auth:password:reset:${ip}`, 5, 600)
-    if (!allowed) {
-        return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429 })
-    }
+  // Rate limit: 5 attempts per 10 minutes per IP
+  const { allowed } = await rateLimiter.check(
+    `auth:password:reset:${ip}`,
+    5,
+    600
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Please try again later.' },
+      { status: 429 }
+    )
+  }
 
-    const body = await req.json().catch(() => null)
-    const parsed = requestSchema.safeParse(body)
+  const body = await req.json().catch(() => null)
+  const parsed = requestSchema.safeParse(body)
 
-    if (!parsed.success) {
-        return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
-    }
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
 
-    const { email, token, password } = parsed.data
-    const hashedToken = createHash('sha256').update(token).digest('hex')
+  const { email, token, password } = parsed.data
+  const hashedToken = createHash('sha256').update(token).digest('hex')
 
-    const user = await prisma.user.findUnique({
-        where: { email },
-    })
+  const user = await prisma.user.findUnique({
+    where: { email },
+  })
 
-    if (
-        !user ||
-        !user.passwordResetToken ||
-        !user.passwordResetExpires ||
-        user.passwordResetToken !== hashedToken ||
-        user.passwordResetExpires.getTime() < Date.now()
-    ) {
-        return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 })
-    }
+  if (
+    !user ||
+    !user.passwordResetToken ||
+    !user.passwordResetExpires ||
+    user.passwordResetToken !== hashedToken ||
+    user.passwordResetExpires.getTime() < Date.now()
+  ) {
+    return NextResponse.json(
+      { error: 'Invalid or expired token' },
+      { status: 400 }
+    )
+  }
 
-    // If password is unchanged, reject to avoid no-op resets
-    if (user.password && (await compare(password, user.password))) {
-        return NextResponse.json({ error: 'New password must be different' }, { status: 400 })
-    }
+  // If password is unchanged, reject to avoid no-op resets
+  if (user.password && (await compare(password, user.password))) {
+    return NextResponse.json(
+      { error: 'New password must be different' },
+      { status: 400 }
+    )
+  }
 
-    // Check if password is being reused
-    const reuseCheck = await checkPasswordReuse(user.id, password)
-    if (reuseCheck.isReused) {
-        return NextResponse.json(
-            { error: 'Cannot reuse a recent password. Please use a different password.' },
-            { status: 400 }
-        )
-    }
+  // Check if password is being reused
+  const reuseCheck = await checkPasswordReuse(user.id, password)
+  if (reuseCheck.isReused) {
+    return NextResponse.json(
+      {
+        error:
+          'Cannot reuse a recent password. Please use a different password.',
+      },
+      { status: 400 }
+    )
+  }
 
-    // Record the current password to history before updating
-    if (user.password) {
-        await recordPasswordHistory(user.id, user.password)
-    }
+  // Record the current password to history before updating
+  if (user.password) {
+    await recordPasswordHistory(user.id, user.password)
+  }
 
-    const newPassword = await hash(password, 10)
+  const newPassword = await hash(password, 10)
 
-    await prisma.user.update({
-        where: { id: user.id },
-        data: {
-            password: newPassword,
-            passwordResetToken: null,
-            passwordResetExpires: null,
-            sessionVersion: (user.sessionVersion || 1) + 1,
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: newPassword,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+      sessionVersion: (user.sessionVersion || 1) + 1,
+    },
+  })
+
+  const baseUrl = appUrl()
+  const manageUrl = `${baseUrl}/me?tab=security`
+
+  void createNotification({
+    userId: user.id,
+    category: 'security',
+    title: 'Your password was changed',
+    body: "If this wasn't you, reset your password and check your devices.",
+  })
+
+  if (user.email) {
+    void sendTemplateEmail({
+      to: user.email,
+      subject: 'Your password was changed',
+      template: AccountChangeEmail,
+      props: {
+        userName: user.name || undefined,
+        changes: ['Password updated'],
+        manageUrl,
+        supportUrl: `${baseUrl}/contact`,
+      },
+    }).catch((error) =>
+      console.error('Failed to send password change email', error)
+    )
+
+    // Emit auditable event (fire-and-forget)
+    void events
+      .emit('auth.password-reset-completed', {
+        userId: user.id,
+        email: user.email,
+        context: {
+          ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? undefined,
         },
-    })
+      })
+      .catch((err) =>
+        console.error(
+          '[Events] Failed to emit auth.password-reset-completed',
+          err
+        )
+      )
+  }
 
-    const baseUrl = appUrl()
-    const manageUrl = `${baseUrl}/dashboard/security`
-
-    if (user.email) {
-        void sendTemplateEmail({
-            to: user.email,
-            subject: 'Your password was changed',
-            template: AccountChangeEmail,
-            props: {
-                userName: user.name || undefined,
-                changes: ['Password updated'],
-                manageUrl,
-                supportUrl: `${baseUrl}/contact`,
-            },
-        }).catch((error) => console.error('Failed to send password change email', error))
-
-        // Emit auditable event (fire-and-forget)
-        void events.emit('auth.password-reset-completed', {
-            userId: user.id,
-            email: user.email,
-            context: { ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? undefined },
-        }).catch((err) => console.error('[Events] Failed to emit auth.password-reset-completed', err))
-    }
-
-    return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true })
 }
-

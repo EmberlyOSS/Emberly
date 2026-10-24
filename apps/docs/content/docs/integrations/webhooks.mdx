@@ -1,53 +1,30 @@
 ---
-title: Webhooks
-description: How Emberly uses inbound Stripe webhooks, and the status of outbound webhooks.
+title: Discord Webhooks
+description: Get your Emberly notifications in a Discord channel.
 ---
 
-<Callout type="warn" title="Outbound webhooks not yet available">
-  Emberly does not currently support outbound webhooks — you cannot subscribe to events like file uploads or deletions from your own application. This page documents the **inbound** webhook Emberly uses to receive events from Stripe. Watch the [changelog](https://embrly.ca/changelog) for outbound webhook announcements.
-</Callout>
+Emberly can post your notifications to a Discord channel through a webhook, as well as or instead of emailing you.
 
----
+## Set It Up
 
-## Stripe Payment Webhook
+1. In Discord, open the channel's settings, go to **Integrations → Webhooks**, create a webhook and copy its URL.
+2. In Emberly, open **Profile → Notifications**.
+3. Paste the URL into **Discord webhook** and click **Save**. Discord notifications turn on, and **Send test** posts a test message.
 
-Emberly receives Stripe events at:
+Only Discord webhook URLs (`https://discord.com/api/webhooks/...`) are accepted.
 
-```
-POST /api/payments/webhook
-```
+## What Gets Sent
 
-This endpoint is for Stripe's use only — do not call it directly. Stripe signs every request with your webhook secret; Emberly verifies the signature before processing.
+Each notification is posted as an embed with its title, a link to the right page, and a color for its category. Choose which categories go to Discord in the **Discord** column of the notification settings. They're the same categories as email and the site, set separately:
 
-### Handled Events
+| Category | Examples | On by default |
+|----------|----------|---------------|
+| **Security** | New sign-ins, password and 2FA changes, API keys | Yes |
+| **Account** | Email changes, applications, shared files, data exports | No |
+| **Billing** | Payments, subscriptions and refunds, where billing is on | Yes |
+| **Product updates** | Perks, extra storage, new features | No |
+| **Announcements** | Offers and newsletters | No |
 
-| Event | What Emberly does |
-|-------|------------------|
-| `checkout.session.completed` | Activates a new subscription or one-off purchase (domain slots, storage buckets, etc.) and provisions any associated resources |
-| `invoice.payment_succeeded` | Records the payment, renews the subscription period, and sends a receipt email |
-| `invoice.payment_failed` | Marks the subscription as past-due and sends a payment failure email with the next retry date |
-| `customer.subscription.updated` | Syncs plan changes (upgrades and downgrades) and adjusts storage/feature limits accordingly |
-| `customer.subscription.deleted` | Cancels the subscription, revokes plan-specific features, and deprovisions dedicated storage buckets |
-| `charge.failed` | Logs the failed charge for support visibility |
-| `charge.refunded` | Records the refund against the relevant transaction |
+## Webhooks for Other Apps
 
-All other event types are acknowledged with `200 OK` and ignored.
-
-### Self-Hosted Setup
-
-If you are running a self-hosted instance with Stripe billing enabled:
-
-1. In the [Stripe Dashboard](https://dashboard.stripe.com/webhooks), create a webhook endpoint pointing to `https://yourdomain.com/api/payments/webhook`
-2. Subscribe to all events listed in the table above
-3. Copy the **Signing secret** (starts with `whsec_`)
-4. Add it in **Admin Panel → Settings → Integrations → Stripe** along with your API key
-
-Without the signing secret, Emberly will reject all webhook deliveries with `400`.
-
----
-
-## Outbound Webhooks (Roadmap)
-
-Outbound webhooks — letting your application subscribe to Emberly events like `file.uploaded`, `file.deleted`, or `url.created` — are planned for a future release. When available they will be configured per-account from the dashboard and support HMAC signature verification.
-
-To be notified when this ships, watch the [GitHub repository](https://github.com/EmberlyOSS/Emberly) or join the [Emberly Discord](https://discord.gg/36spBmzZVB).
+Emberly doesn't send webhooks to your own apps yet. To react to new uploads, poll [`GET /api/files`](/api/files#list-your-files) with `sortBy=newest`.

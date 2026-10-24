@@ -6,6 +6,91 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Upgrading
+
+- **Background jobs now run inside the app by default, in production too.** Previously a production server needed `EMBERLY_RUN_EVENT_WORKER=true` or a separate `bun run worker` process, and without either one emails, notifications and Discord alerts were queued but never sent. If you already run a separate worker, you can keep it: set `EMBERLY_RUN_EVENT_WORKER=false` on the app so it doesn't also process jobs. Leaving both on is safe too, since each job still runs only once.
+- Run `bun run db:deploy`. Migrations `20261025010000_add_user_devices` and `20261025020000_add_notifications` add the `UserDevice` and `Notification` tables, `20261025030000_add_short_link_domain` adds a `domain` column to short links, and `20261025040000_add_data_exports` adds the `DataExport` table.
+- Sessions now end properly when you sign out everywhere, reset a password or an admin signs a user out (see Security). After upgrading, anyone those actions should already have signed out will be signed out.
+
+### Added
+
+- **Notifications on the site.** A bell in the top bar shows unread notifications, and **Dashboard → Notifications** lists them all, filtered by category, where you can mark them read or clear them. Everything that used to arrive only by email now also appears here: new sign-ins, password and 2FA changes, linked accounts, application decisions and replies, files shared with you, account and billing updates. Email preferences still decide what's emailed; notifications always appear on the site. Old notifications are removed after 90 days. Through the API: `GET`/`PATCH`/`DELETE /api/notifications`.
+- **Data exports are emailed.** **Profile → Data → Email me my data** prepares a ZIP of your files and account details in the background, and emails you a download link that lasts 7 days and only works while you're signed in. Big accounts no longer time out, files over 100MB are no longer left out, and files in your own storage buckets are included. The page shows whether an export is being prepared or ready. The raw JSON view of your account on that page is gone; the same details are in the export's `account.json`. Through the API, `POST /api/profile/export` starts one and `GET /api/profile/export` reports on it.
+- **Short links on your own domains.** **Dashboard → Links** has a domain picker when you have verified custom domains, so links like `https://files.yourbrand.com/u/aB3dE7` are one click away. New links start on your preferred upload domain, or your primary domain. `POST /api/urls` takes an optional `domain`, and both `POST` and `GET` now return each link's full `url`. The Discord bot's `/shorten` uses it too.
+- **Your devices.** **Profile → Security** lists every browser signed in to your account, where it was last used and when. Rename a device, or sign it out from there; it has to sign in again. Each browser is remembered with a long-lived device cookie, and `GET`/`PATCH`/`DELETE /api/profile/devices` do the same through the API.
+
+### Changed
+
+- **Dashboard polish.** Content now scrolls away under the top bar instead of colliding with it. Profile tabs no longer repeat their headings, the security tab shows whether two-factor authentication is on, the appearance tab uses compact color swatches, and the profile header buttons are smaller. File thumbnails use the same lightweight preview as link embeds instead of the full original. Password managers no longer fill your email into a paste's filename or your password into upload passwords. The Domains page shows a domain's status instead of Cloudflare's internal ID.
+- **System health shows more, and copies debug info for bug reports.** Admin → Overview now also shows whether email and Discord alerts are set up, the license status, free disk space for local storage (flagged when under 10%), the server's runtime and memory, the PostgreSQL version and the latest database migration. **Copy debug info** puts a summary of all of it, plus your browser, on the clipboard to paste into an issue. It never includes keys, passwords, tokens or webhook URLs. The details come from a new admin-only `GET /api/admin/system`; the public `/api/health` is unchanged.
+- **A new section bar replaces the sidebar** in the dashboard, admin and profile areas. The section's pages sit in one row under the main navbar and stay there as you scroll, so pages use the full width. On small screens the row scrolls sideways.
+- **Admin → Audit Logs reads like an activity feed**, grouped by day: "someone@example.com signed in", with when, where and on what device underneath. Click an entry for its IP, browser, error and data. Filter by area (sign-ins, account, security, admin, billing, files), search, or time period; it works on phones, and **Refresh** now actually reloads. Only failed or queued events get a status badge.
+- **Admin → Settings → Integrations** shows one integration at a time (Email, Discord, Stripe, Cloudflare, GitHub, storage providers or the system API key) instead of every one stacked on one page.
+- **Admin → Users** edits a user and shows their content on the page, above the list, instead of in pop-ups.
+- **Greetings use your display name.** The dashboard's "Welcome back" and the greeting in emails use the first word of your display name, falling back to your username.
+- **Public profiles lead with your display name**, with `@username` underneath, and the page title reads "Name (@username)". Profiles without a display name show the username as before.
+- **Files and Upload pages were rebuilt.** **Files** has an always-visible search box, a tidier toolbar for sort, visibility, type and date, removable chips for each active filter with **Clear all**, tabs for your files, files shared with you and your squads, a file count, and empty states that say what to do next. Pagination shows "1–24 of 130" and scrolls back to the top. **Upload** puts your files on the left and the options on the right, like **Paste**: drop files, add more or clear the list, and see each file's progress and speed in one list. Expiry is picked from presets (1 hour, 1 day, 1 week, 1 month) or a date, on the page instead of in a pop-up, and finished uploads stay listed with copy and open buttons until you leave the page.
+- **File cards show the image itself.** The dark overlay with nine buttons that covered every thumbnail on hover is gone. Copy link sits next to the name, and everything else (download, share, visibility, password, expiry, extract text, delete) is in a ⋯ menu that works on touch screens too.
+- **A consistent look across the dashboard and admin.** Pages share one set of cards, filter tabs, stat tiles and badges, without the oversized icon tiles. Reports, Applications, Blog, Partners, Testimonials, Users, Email, Domains, Analytics, Perks, Connections and Notifications were reworked. Editing blog posts, partners and domains, unlinking accounts, signing out everywhere and clearing notifications now happen on the page instead of in pop-ups.
+- **Admin → Settings → Storage is split** into General, Buckets and Provider pools, with one provider's pools shown at a time.
+- **Admin → Email** shows the recipient picker right under Recipients when you choose selected users, instead of on a separate tab.
+- **Delete account moved to Profile → Data**, next to the data export.
+- **One place for notification settings.** **Profile → Notifications** is now a single grid with Site, Email and Discord columns for each category, with a switch at the top of each column to turn that channel off. Discord gets every notification the site does, for the categories you choose, instead of a separate, smaller set of alerts. Each one links to the right page.
+- **Every email has a new design.** All 33 emails share one clean layout with your instance's logo and name, clearer wording, details laid out in tables, and a footer that says why you got the email and links to your notification settings. Self-hosted instances show their own name, logo and links everywhere, instead of Emberly's and a NodeByte copyright line. Each email now also has a readable plain-text version, and dates show in UTC instead of the server's locale.
+- **New sign-in alerts** are sent for devices Emberly hasn't seen before, instead of guessing from the IP address and browser. An account's very first sign-in doesn't trigger one. The email now shows the device ("Chrome on Windows"), the location ("Calgary, Alberta, Canada") and the time in the reader's own timezone, and its button goes to the security page.
+- **Two-factor authentication** is set up and turned off right on the security tab, step by step, with six-digit code boxes that accept paste and autofill.
+- **Deleting your account needs your password**, in the dashboard and through `DELETE /api/profile`, so a leaked API key or upload token can't delete it.
+- **Signing in with a magic link** no longer signs you out on your other devices.
+- **Admin → Products only appears while Accept Payments is on**, and points to `lib/products/catalog.ts`, where plans are defined.
+
+### Fixed
+
+- **New sign-in alerts said "Unknown" for everything** and showed the server's time. The sign-in details were read from the wrong place, the location field showed the alert's reason, and Android and iPhone were reported as Linux and macOS.
+- **Duplicate emails.** A new device triggered two alerts, and any event email could be sent up to three times: when one of an event's handlers failed, all of them ran again, including ones that had already sent their email. Handlers that succeeded are now skipped on retry.
+- **Local storage didn't work on Windows.** Every upload failed with `mkdir ''` because folder paths were cut at `/`, which Windows paths don't use.
+- **You couldn't go back to the default upload domain.** Choosing "Default" or the reset button was rejected by the server. Changes also now apply straight away instead of after the account cache expired.
+- **SMTP set in environment variables was ignored.** Emails always went to Resend unless SMTP was also chosen in Admin → Settings → Integrations, so instances using only `SMTP_*` variables failed with "Resend API key is not configured". Emberly now uses whichever provider is configured, and the one chosen in settings when both are.
+- **Sign-in alerts said "Unknown location"** when Emberly couldn't tell where a sign-in came from. They now leave the location out, or say "Local network" for sign-ins from the same network.
+- **Saving admin settings could fail silently.** If the configuration didn't pass validation it wasn't saved, but the page still said it was. Failed saves now show the reason.
+- **Discord webhook failures weren't logged.** When Discord rejects a webhook post, for example because the webhook was deleted, the server log now says so.
+- **The health check couldn't tell when nothing was processing events.** It now counts connected event workers, whether in the app or a separate `bun run worker` process. Admin → Overview warns when none are running, since emails, notifications and Discord alerts are queued but not sent until one is.
+- **Setting a primary domain did nothing for your own uploads.** Uploads, short links and the ShareX and Flameshot configs now use your primary domain when you haven't chosen an upload domain in **Profile → Uploads**. Large uploads, which are sent in chunks, also ignored your chosen upload domain and always returned main-site links; they now follow the same rule.
+- **Uploading straight to a custom domain with a port in the address** returned links on the main site, because the port was never removed before looking up the domain.
+- **Pop-ups had no spacing between their sections**, so text, warnings and buttons ran into each other, and their buttons touched when stacked on phones.
+- **Link previews of the home page had no image.**
+- **The password-reset confirmation email linked to a page that doesn't exist.**
+- **Email mistakes.** The "email address changed" email read "was changed user.", payment amounts ignored the currency's symbol, and the Discovery opportunity email linked to a page that doesn't exist. The welcome email claimed end-to-end encryption, and perk emails listed made-up benefits.
+- **File links containing a null byte crashed the page** with a database error instead of returning "not found". Scanners send these; they now get a 404.
+- **The changelog page hit GitHub's rate limit** after a handful of visits, because every visit fetched every repository's releases. Releases are now cached for 10 minutes, and the last good copy is shown if GitHub is unavailable.
+
+### Security
+
+- **"Sign out everywhere", password resets and admin sign-outs didn't end existing sessions.** They marked sessions as outdated, but outdated sessions kept working. They now end.
+- **The user search endpoint exposed email addresses.** `GET /api/users/search` needed no sign-in, matched partial email addresses and returned them, so anyone could collect users' emails. It now needs sign-in, only matches a full email address, and never returns one.
+- **The Discord webhook URL could be any address.** The server posted to whatever URL was saved, including internal addresses. Only Discord webhook URLs are accepted now, and saved URLs that aren't are ignored. Webhook messages also can't ping `@everyone` or roles any more.
+- **Admin announcement emails didn't escape HTML.** The message body was inserted as raw HTML and allowed any link, including `javascript:` links. HTML is now escaped and only `http`, `https` and `mailto` links are kept.
+- **Editing a file returned its password hash**, through `PATCH /api/files/{id}` and the admin equivalent. Passwords set by admins were also saved without hashing, so they never worked.
+
+## [3.1.0] - 2026-10-24
+
+License keys can be added from the admin panel, and branding settings live in one place.
+
+### Upgrading
+
+- No database changes. Update and restart. Keys set with `EMBERLY_LICENSE_KEY` keep working as before.
+
+### Added
+
+- **Add your license key in the admin panel.** Paste it in **Admin → Settings → License & branding** instead of setting `EMBERLY_LICENSE_KEY`. Keys are checked when you save them, the first check-in runs straight away, and a key can be replaced or removed from the same place. `EMBERLY_LICENSE_KEY` still works and takes priority.
+
+### Changed
+
+- **One place for branding.** Site name, description, logo and footer settings now sit together under **Admin → Settings → License & branding**, replacing the separate Branding and Credits & Attribution sections. The logo and removing the "Powered by Emberly" credit still need a license; the rest stays free.
+
+### Fixed
+
+- **Renewed license keys weren't seen everywhere.** A key renewed by the daily check-in only reached part of the app. License state is now shared across the whole server process.
+
 ## [3.0.1] - 2026-10-24
 
 A security fix. Self-hosters should upgrade.

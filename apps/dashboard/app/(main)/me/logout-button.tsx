@@ -25,13 +25,13 @@ export function LogoutButton() {
 
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="sm"
       onClick={handleLogout}
-      className="flex items-center gap-2"
+      className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
     >
-      <LogOut className="h-4 w-4" />
-      Sign Out
+      <LogOut className="h-3.5 w-3.5" />
+      Sign out
     </Button>
   )
 }

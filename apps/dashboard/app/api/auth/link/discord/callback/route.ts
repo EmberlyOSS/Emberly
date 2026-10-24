@@ -7,6 +7,7 @@ import { AccountChangeEmail, sendTemplateEmail } from '@/lib/emails'
 import { verifyDiscordBoosterStatus } from '@/lib/perks/discord'
 import { getDiscordUserInfo } from '@/lib/perks/discord'
 import { getServerSession } from 'next-auth/next'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * GET /api/auth/link/discord/callback
@@ -169,7 +170,13 @@ export async function GET(request: NextRequest) {
     // Verify booster status
     await verifyDiscordBoosterStatus(session.user.id, userInfo.id)
 
-    // Send account change email notification
+    void createNotification({
+      userId: session.user.id,
+      category: 'security',
+      title: 'Discord account linked',
+      link: '/me?tab=connections',
+    })
+
     if (session.user.email) {
       sendTemplateEmail({
         to: session.user.email,

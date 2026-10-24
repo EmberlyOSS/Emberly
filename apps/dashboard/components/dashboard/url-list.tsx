@@ -1,8 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-
-import { Copy, Trash2 } from 'lucide-react'
+import { Copy, ExternalLink, Link2, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,184 +17,176 @@ import { writeToClipboard } from '@/lib/utils/clipboard'
 
 import { useToast } from '@/hooks/use-toast'
 
-interface ShortenedUrl {
+export interface ShortenedUrl {
   id: string
   shortCode: string
   targetUrl: string
+  domain: string | null
+  url: string
   clicks: number
   createdAt: string
 }
 
 interface URLListProps {
-  refreshTrigger?: number
+  urls: ShortenedUrl[]
+  isLoading: boolean
+  onDeleted?: (id: string) => void
 }
 
-function URLTableSkeleton() {
+const shell =
+  'rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg overflow-hidden'
+
+function Header() {
   return (
-    <div className="rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-border/50 hover:bg-transparent">
-            <TableHead className="text-muted-foreground/80">Original URL</TableHead>
-            <TableHead className="text-muted-foreground/80">Short URL</TableHead>
-            <TableHead className="text-right text-muted-foreground/80">Clicks</TableHead>
-            <TableHead className="text-right text-muted-foreground/80">Created</TableHead>
-            <TableHead className="text-right text-muted-foreground/80">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[...Array(3)].map((_, i) => (
-            <TableRow key={i} className="border-border/30">
-              <TableCell>
-                <Skeleton className="h-4 w-[250px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-[180px]" />
-              </TableCell>
-              <TableCell className="text-right">
-                <Skeleton className="h-4 w-8 ml-auto" />
-              </TableCell>
-              <TableCell className="text-right">
-                <Skeleton className="h-4 w-24 ml-auto" />
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Skeleton className="h-8 w-8 rounded-lg" />
-                  <Skeleton className="h-8 w-8 rounded-lg" />
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <TableHeader>
+      <TableRow className="border-border/50 hover:bg-transparent">
+        <TableHead>Short link</TableHead>
+        <TableHead className="hidden md:table-cell">Goes to</TableHead>
+        <TableHead className="text-right">Clicks</TableHead>
+        <TableHead className="hidden text-right sm:table-cell">
+          Created
+        </TableHead>
+        <TableHead className="w-24" />
+      </TableRow>
+    </TableHeader>
   )
 }
 
-export function URLList({ refreshTrigger = 0 }: URLListProps) {
-  const [urls, setUrls] = useState<ShortenedUrl[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function URLList({ urls, isLoading, onDeleted }: URLListProps) {
   const { toast } = useToast()
 
-  const fetchUrls = useCallback(async () => {
-    try {
-      const response = await fetch('/api/urls')
-      if (!response.ok) throw new Error('Failed to fetch URLs')
-      const data = await response.json()
-      setUrls(data.data?.urls || [])
-    } catch (error) {
-      console.error('Failed to load URLs:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load shortened URLs',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [toast])
-
-  const copyUrl = async (shortCode: string) => {
-    const url = `${window.location.origin}/u/${shortCode}`
+  const copyUrl = async (url: string) => {
     try {
       await writeToClipboard(url)
-      toast({
-        title: 'URL copied',
-        description: 'Shortened URL has been copied to clipboard',
-      })
+      toast({ title: 'Link copied', description: url })
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy URL',
-        variant: 'destructive',
-      })
+      toast({ title: "Couldn't copy the link", variant: 'destructive' })
     }
   }
 
   const deleteUrl = async (id: string) => {
     try {
-      const response = await fetch(`/api/urls/${id}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) throw new Error('Failed to delete URL')
-
-      setUrls(urls.filter((url) => url.id !== id))
-
-      toast({
-        title: 'URL deleted',
-        description: 'Shortened URL has been deleted',
-      })
+      const response = await fetch(`/api/urls/${id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error()
+      onDeleted?.(id)
+      toast({ title: 'Short link deleted' })
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete URL',
-        variant: 'destructive',
-      })
+      toast({ title: "Couldn't delete the link", variant: 'destructive' })
     }
   }
 
-  useEffect(() => {
-    fetchUrls()
-  }, [refreshTrigger, fetchUrls])
-
   if (isLoading) {
-    return <URLTableSkeleton />
+    return (
+      <div className={shell}>
+        <Table>
+          <Header />
+          <TableBody>
+            {[...Array(3)].map((_, i) => (
+              <TableRow key={i} className="border-border/30">
+                <TableCell>
+                  <Skeleton className="h-4 w-44" />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Skeleton className="h-4 w-56" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="ml-auto h-4 w-8" />
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <Skeleton className="ml-auto h-4 w-20" />
+                </TableCell>
+                <TableCell />
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
   }
 
   if (urls.length === 0) {
     return (
-      <div className="rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg p-12 text-center">
-        <div className="mx-auto w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-4">
-          <Copy className="h-6 w-6 text-muted-foreground/60" />
+      <div className={`${shell} p-12 text-center`}>
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50">
+          <Link2 className="h-6 w-6 text-muted-foreground/60" />
         </div>
-        <p className="text-muted-foreground font-medium">No shortened URLs yet</p>
-        <p className="text-sm text-muted-foreground/60 mt-1">Create your first shortened URL above</p>
+        <p className="font-medium text-muted-foreground">No short links yet</p>
+        <p className="mt-1 text-sm text-muted-foreground/60">
+          Paste a URL above to create one.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-background/80 backdrop-blur-lg overflow-hidden">
+    <div className={shell}>
       <Table>
-        <TableHeader>
-          <TableRow className="border-border/50 hover:bg-transparent">
-            <TableHead className="text-muted-foreground/80 font-medium">Original URL</TableHead>
-            <TableHead className="text-muted-foreground/80 font-medium">Short URL</TableHead>
-            <TableHead className="text-right text-muted-foreground/80 font-medium">Clicks</TableHead>
-            <TableHead className="text-right text-muted-foreground/80 font-medium">Created</TableHead>
-            <TableHead className="text-right text-muted-foreground/80 font-medium">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
+        <Header />
         <TableBody>
           {urls.map((url) => (
-            <TableRow key={url.id} className="border-border/50 hover:bg-muted/30 transition-colors">
-              <TableCell className="font-medium max-w-[300px] truncate text-foreground/90">
-                {url.targetUrl}
+            <TableRow
+              key={url.id}
+              className="border-border/50 transition-colors hover:bg-muted/30"
+            >
+              <TableCell className="max-w-[16rem]">
+                <a
+                  href={url.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate font-mono text-sm text-primary hover:underline"
+                >
+                  {url.url.replace(/^https?:\/\//, '')}
+                </a>
+                <p className="truncate text-xs text-muted-foreground md:hidden">
+                  {url.targetUrl}
+                </p>
               </TableCell>
-              <TableCell className="text-primary/80 font-mono text-sm">{`${window.location.origin}/u/${url.shortCode}`}</TableCell>
-              <TableCell className="text-right">
-                <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                  {url.clicks}
+              <TableCell className="hidden max-w-[22rem] md:table-cell">
+                <span
+                  className="block truncate text-sm text-foreground/80"
+                  title={url.targetUrl}
+                >
+                  {url.targetUrl}
                 </span>
               </TableCell>
-              <TableCell className="text-right text-muted-foreground text-sm">
+              <TableCell className="text-right tabular-nums">
+                {url.clicks}
+              </TableCell>
+              <TableCell className="hidden text-right text-sm text-muted-foreground sm:table-cell">
                 {new Date(url.createdAt).toLocaleDateString()}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell>
                 <div className="flex justify-end gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => copyUrl(url.shortCode)}
-                    className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors"
+                    onClick={() => copyUrl(url.url)}
+                    className="h-8 w-8"
+                    aria-label="Copy short link"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
+                    asChild
+                    className="hidden h-8 w-8 sm:inline-flex"
+                  >
+                    <a
+                      href={url.targetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Open destination"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => deleteUrl(url.id)}
-                    className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Delete short link"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

@@ -1,12 +1,13 @@
 import { z } from 'zod'
 
-// Email preferences schema
+import { isDiscordWebhookUrl } from '@/lib/events/utils/discord-webhook'
+
 export const EmailPreferencesSchema = z.object({
-  security: z.boolean().default(true), // Login alerts, password changes, 2FA
-  account: z.boolean().default(true), // Welcome, verification, profile changes
-  billing: z.boolean().default(true), // Payments, subscriptions, invoices
-  marketing: z.boolean().default(false), // Promotions, newsletters
-  productUpdates: z.boolean().default(true), // Feature announcements, changelogs
+  security: z.boolean().default(true),
+  account: z.boolean().default(true),
+  billing: z.boolean().default(true),
+  marketing: z.boolean().default(false),
+  productUpdates: z.boolean().default(true),
 })
 
 export type EmailPreferences = z.infer<typeof EmailPreferencesSchema>
@@ -35,14 +36,20 @@ export const UpdateProfileSchema = z.object({
   customColors: z.record(z.string(), z.string()).nullable().optional(),
   defaultFileExpiration: z.enum(['HOUR', 'DAY', 'WEEK', 'MONTH']).optional(),
   defaultFileExpirationAction: z.enum(['DELETE', 'SET_PRIVATE']).optional(),
-  // Email notification preferences
   emailNotificationsEnabled: z.boolean().optional(),
   emailPreferences: EmailPreferencesSchema.partial().optional(),
-  // Discord webhook notification preferences
-  discordWebhookUrl: z.string().url().nullable().optional(),
+  discordWebhookUrl: z
+    .string()
+    .trim()
+    .refine((url) => url === '' || isDiscordWebhookUrl(url), {
+      error:
+        'Enter a Discord webhook URL (https://discord.com/api/webhooks/...)',
+    })
+    .transform((url) => url || null)
+    .nullable()
+    .optional(),
   discordNotificationsEnabled: z.boolean().optional(),
   discordPreferences: EmailPreferencesSchema.partial().optional(),
-  // Public profile fields
   bio: z.string().max(500).nullable().optional(),
   website: z.string().url().nullable().optional(),
   twitter: z.string().max(100).nullable().optional(),

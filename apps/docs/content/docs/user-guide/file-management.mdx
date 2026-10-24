@@ -7,9 +7,10 @@ description: Upload, organize, share, and manage your files in Emberly.
 
 ### Web Dashboard
 
-1. Go to **Dashboard → Files**
-2. Click **"Upload"** or drag files onto the page
-3. Files upload automatically — you get a shareable URL instantly
+1. Go to **Dashboard → Upload**, or drop files anywhere on the dashboard
+2. Add files by dropping them or clicking the drop area, then use **Add more** or **Clear** to adjust the list
+3. Choose visibility, an optional password, and when to delete the files (**Never**, a preset, or a date)
+4. Click **Upload**. Each file shows its progress and speed, and finished uploads stay listed with copy and open buttons until you leave the page
 
 ### Supported Upload Methods
 
@@ -23,6 +24,18 @@ description: Upload, organize, share, and manage your files in Emberly.
 
 ---
 
+## Finding Files
+
+**Dashboard → Files** shows your files newest first. Use the tabs to switch between your files, files shared with you, and your squads' files.
+
+- **Search** matches file names as you type
+- **Sort** by date, size, views or downloads
+- Filter by **Visibility** (public, private, password protected), **Type**, or a **date range**
+
+Each active filter appears as a chip under the toolbar. Click a chip to remove it, or **Clear all** to start over.
+
+---
+
 ## File Visibility
 
 | Visibility | Who Can Access |
@@ -30,7 +43,7 @@ description: Upload, organize, share, and manage your files in Emberly.
 | **PUBLIC** | Anyone with the URL |
 | **PRIVATE** | Only you and named collaborators |
 
-Change visibility anytime by clicking a file → **Edit**.
+Change visibility anytime from the file's **⋯** menu → **Visibility**.
 
 ---
 
@@ -38,9 +51,9 @@ Change visibility anytime by clicking a file → **Edit**.
 
 Add an optional password to any file:
 
-1. Click a file → **Edit**
-2. Enter a password in the **"Password"** field
-3. Click **"Save"**
+1. Open the file's **⋯** menu → **Add password** (or **Change password**)
+2. Enter a password
+3. Save
 
 Anyone accessing the file will be prompted for the password. Passwords are bcrypt-hashed server-side — we never see them in plain text.
 
@@ -50,7 +63,7 @@ Anyone accessing the file will be prompted for the password. Passwords are bcryp
 
 Files can auto-delete on a schedule:
 
-- Set on upload or afterward via **Edit**
+- Set on upload, or afterward from the file's **⋯** menu → **Set expiry**
 - Specify a specific date or days from now
 - You'll receive an email reminder 2 days before deletion
 - Cancel anytime by removing the expiration date
@@ -82,19 +95,24 @@ Collaborators with the **Suggester** role can submit **edit suggestions** withou
 
 ## File Actions
 
+**Copy link** sits next to each file's name. Everything else is in the file's **⋯** menu:
+
 | Action | How |
 |--------|-----|
-| **Download** | Click file → Download original |
-| **Delete** | Click file → Delete (permanent) |
-| **Edit metadata** | Click file → Edit |
-| **Copy URL** | Click file → Copy URL |
-| **View analytics** | Click file → see download count and access log |
+| **Download** | ⋯ → Download |
+| **Share** | ⋯ → Share |
+| **Visibility** | ⋯ → Visibility |
+| **Password** | ⋯ → Add password / Change password |
+| **Expiry** | ⋯ → Set expiry / Change expiry |
+| **Preview embed** | ⋯ → Preview embed |
+| **Extract text** | ⋯ → Extract text (images) |
+| **Delete** | ⋯ → Delete (permanent) |
 
 ---
 
 ## Shared Files
 
-Files shared with you by other users appear in **Dashboard → Files → Shared with Me**. You can download and (with edit permission) update metadata.
+Files shared with you by other users appear in **Dashboard → Files → Shared with me**. You can download and (with edit permission) update metadata.
 
 ---
 

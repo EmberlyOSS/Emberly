@@ -16,7 +16,10 @@ import { prisma } from '@emberly/db'
 type FileSelect = Prisma.FileSelect
 type FileInclude = Prisma.FileInclude
 
-type FindArgs<S extends FileSelect | undefined, I extends FileInclude | undefined> = {
+type FindArgs<
+  S extends FileSelect | undefined,
+  I extends FileInclude | undefined,
+> = {
   select?: S
   include?: I
 }
@@ -51,10 +54,16 @@ export async function findFileByUrlPath<
 >(
   userUrlId: string,
   filename: string,
-  args?: FindArgs<S, I>,
+  args?: FindArgs<S, I>
 ): Promise<Prisma.FileGetPayload<{ select: S; include: I }> | null> {
-  // Decode any percent-encoding so we always search with the real characters.
-  const decoded = decodeURIComponent(filename)
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(filename)
+  } catch {
+    return null
+  }
+  // Postgres rejects text containing NUL, and no stored path can contain one
+  if (decoded.includes('\u0000') || userUrlId.includes('\u0000')) return null
   const urlPath = `/${userUrlId}/${decoded}`
 
   const query: any = { where: { urlPath }, ...args }

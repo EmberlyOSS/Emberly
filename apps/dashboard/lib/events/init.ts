@@ -39,10 +39,10 @@ export async function initializeEventSystem(): Promise<void> {
   try {
     logger.debug('Initializing event system...')
 
-    const env = process.env.EMBERLY_RUN_EVENT_WORKER
-    const shouldStartWorker =
-      env === 'true' ||
-      (env !== 'false' && process.env.NODE_ENV !== 'production')
+    // The app processes events itself unless told not to, so a single
+    // process is enough. Larger setups can run `bun run worker` instead and
+    // set EMBERLY_RUN_EVENT_WORKER=false here.
+    const shouldStartWorker = process.env.EMBERLY_RUN_EVENT_WORKER !== 'false'
 
     if (shouldStartWorker) {
       const processor = createProcessor(allHandlers)

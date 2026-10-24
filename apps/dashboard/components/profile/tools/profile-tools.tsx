@@ -11,13 +11,6 @@ import { UploadHost } from './upload-host'
 export function ProfileTools() {
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Upload Tools</h3>
-        <p className="text-sm text-muted-foreground">
-          Download pre-configured settings for your favorite upload tools.
-        </p>
-      </div>
-
       <div className="space-y-6">
         <UploadHost />
 

@@ -6,7 +6,6 @@
     "integrations",
     "api",
     "security",
-    "self-hosting",
-    "staff"
+    "self-hosting"
   ]
 }

@@ -7,6 +7,7 @@ import { AccountChangeEmail, sendTemplateEmail } from '@/lib/emails'
 import { verifyContributorStatus } from '@/lib/perks/github'
 import { getGitHubUserInfo } from '@/lib/perks/github'
 import { getServerSession } from 'next-auth/next'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * GET /api/auth/link/github/callback
@@ -158,7 +159,13 @@ export async function GET(request: NextRequest) {
       tokenData.access_token
     )
 
-    // Send account change email notification
+    void createNotification({
+      userId: session.user.id,
+      category: 'security',
+      title: 'GitHub account linked',
+      link: '/me?tab=connections',
+    })
+
     if (session.user.email) {
       sendTemplateEmail({
         to: session.user.email,

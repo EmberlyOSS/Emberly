@@ -3,10 +3,14 @@ import { z } from 'zod'
 import { HTTP_STATUS, apiError, apiResponse } from '@/lib/api/response'
 import { requireAuth } from '@/lib/auth/api-auth'
 import { prisma } from '@emberly/db'
-import { notifyDiscord } from '@/lib/events/utils/discord-webhook'
+import { getBranding } from '@/lib/branding'
+import {
+  isDiscordWebhookUrl,
+  notifyDiscord,
+} from '@/lib/events/utils/discord-webhook'
 
 const testSchema = z.object({
-  webhookUrl: z.string().url().optional(),
+  webhookUrl: z.string().trim().refine(isDiscordWebhookUrl).optional(),
 })
 
 export async function POST(req: Request) {
@@ -28,35 +32,37 @@ export async function POST(req: Request) {
     const webhookUrl = parsed.data.webhookUrl || profile?.discordWebhookUrl
 
     if (!webhookUrl) {
-      return apiError('No Discord webhook URL configured', HTTP_STATUS.BAD_REQUEST)
+      return apiError(
+        'No Discord webhook URL configured',
+        HTTP_STATUS.BAD_REQUEST
+      )
+    }
+    if (!isDiscordWebhookUrl(webhookUrl)) {
+      return apiError('Invalid webhook URL', HTTP_STATUS.BAD_REQUEST)
     }
 
-    await notifyDiscord({
+    const { embedName } = await getBranding()
+    const sent = await notifyDiscord({
       webhookUrl,
       embeds: [
         {
-          title: '✅ Discord Notifications Connected',
-          description: 'Your Emberly Discord webhook is configured and ready.',
+          title: 'Discord notifications connected',
+          description: `Notifications from ${embedName} will be posted here.`,
           color: 0x22c55e,
-          fields: [
-            {
-              name: 'Account',
-              value: user.email || user.id,
-              inline: true,
-            },
-            {
-              name: 'Time',
-              value: new Date().toISOString(),
-              inline: true,
-            },
-          ],
+          footer: { text: embedName },
+          timestamp: new Date().toISOString(),
         },
       ],
     })
+    if (!sent) {
+      return apiError(
+        "Discord didn't accept the message. Check the webhook URL.",
+        HTTP_STATUS.BAD_REQUEST
+      )
+    }
 
     return apiResponse({ success: true })
   } catch {
     return apiError('Failed to send test notification')
   }
 }
-

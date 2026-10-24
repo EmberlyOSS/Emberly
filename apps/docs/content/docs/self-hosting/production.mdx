@@ -22,8 +22,8 @@ Whatever you choose, put Emberly behind HTTPS (see [Reverse Proxy](#reverse-prox
 
 ```bash
 mkdir emberly && cd emberly
-curl -fsSLo compose.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/compose.yaml
-curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/.env.example
+curl -fsSLo compose.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/master/compose.yaml
+curl -fsSLo .env https://raw.githubusercontent.com/EmberlyOSS/Emberly/master/.env.example
 ```
 
 Edit `.env`:
@@ -47,7 +47,7 @@ Emberly listens on port `3000`. Set `EMBERLY_PORT` to use a different host port.
 To store uploads in S3 instead of the local volume, `compose.s3.yaml` adds a [RustFS](https://rustfs.com) server:
 
 ```bash
-curl -fsSLo compose.s3.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/main/compose.s3.yaml
+curl -fsSLo compose.s3.yaml https://raw.githubusercontent.com/EmberlyOSS/Emberly/master/compose.s3.yaml
 docker compose -f compose.yaml -f compose.s3.yaml up -d
 ```
 
@@ -95,7 +95,6 @@ APP_URL=https://files.example.com
 AUTH_SECRET=...
 DATABASE_URL=postgresql://...
 REDIS_URL=redis://...
-EMBERLY_RUN_EVENT_WORKER=true
 ```
 
 5. Under **Advanced → Volumes**, mount a volume at `/data` so local uploads survive redeploys. You can skip this if you use S3.
@@ -107,7 +106,7 @@ EMBERLY_RUN_EVENT_WORKER=true
 
 The repository includes `railpack.json` and `nixpacks.toml`, so hosts that build with either detect Emberly automatically. Both run migrations and then start the app.
 
-Set at least `APP_URL`, `AUTH_SECRET`, `DATABASE_URL`, `REDIS_URL` and `EMBERLY_RUN_EVENT_WORKER=true`.
+Set at least `APP_URL`, `AUTH_SECRET`, `DATABASE_URL` and `REDIS_URL`.
 
 These hosts usually don't keep files between deploys, so use [S3 storage](/self-hosting/storage).
 
@@ -169,7 +168,7 @@ sudo systemctl enable --now emberly
 
 ### Running the Worker Separately
 
-By default the background worker (OCR, malware scans, emails) runs inside the app when `EMBERLY_RUN_EVENT_WORKER=true`. On busy instances you can move it to its own process: set `EMBERLY_RUN_EVENT_WORKER=false` and add a second service with `ExecStart=/usr/bin/env bun run worker`.
+The background worker (emails, notifications, Discord alerts, OCR, malware scans) runs inside the app, so you don't need a second process. On busy instances you can move it to its own: set `EMBERLY_RUN_EVENT_WORKER=false` on the app and add a second service with `ExecStart=/usr/bin/env bun run worker`. Running the app on several servers is fine too; each picks up its share of the jobs.
 
 ### Updating
 
@@ -213,6 +212,10 @@ server {
     }
 }
 ```
+
+<Callout type="info">
+  New sign-in alerts and the devices list show where someone signed in from when your proxy adds location headers. Cloudflare does this automatically (`CF-IPCountry`, and `CF-IPCity` with its location headers turned on), as does Vercel. Without them, sign-ins still show the device and time, just not the place.
+</Callout>
 
 Then run `sudo certbot --nginx -d files.example.com`. `client_max_body_size 0` leaves upload limits to Emberly.
 
@@ -267,11 +270,13 @@ Uploads live in the `emberly-data` volume (Docker), in `DATA_DIR` (Linux server)
 
 ## Troubleshooting
 
+**Admin → Overview** shows the state of the database, Redis, storage, the event worker, email and Discord alerts. When reporting a bug, click **Copy debug info** there and paste it into the issue. It never includes keys, passwords or tokens.
+
 | Problem | Check |
 |---------|-------|
 | `AUTH_SECRET is not set` on start | Set `AUTH_SECRET` (`openssl rand -base64 32`) |
 | Signed in but sent back to the login page | `APP_URL` must be the exact public address, including `https://` |
-| Background jobs never run | Set `EMBERLY_RUN_EVENT_WORKER=true`, or run `bun run worker` |
+| Emails, notifications or Discord alerts never arrive | **Admin → Overview** shows whether an event worker is running. If `EMBERLY_RUN_EVENT_WORKER=false`, run `bun run worker` |
 | Uploads disappear after a redeploy | Mount a volume at `/data`, or use S3 |
 | Uploads from Flicker or ShareX fail with S3 | `S3_PUBLIC_ENDPOINT` must be reachable from users' machines |
 | Emails don't send | Check the email settings in **Admin → Settings → Integrations** |

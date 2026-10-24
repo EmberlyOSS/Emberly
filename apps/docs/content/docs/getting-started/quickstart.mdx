@@ -1,59 +1,56 @@
 ---
-title: Quickstart
-description: Upload your first file with the Emberly API in under 5 minutes.
+title: Quickstart for Developers
+description: Upload a file from code in five minutes.
 ---
 
-This guide takes you from a fresh account to your first programmatic upload. If you prefer the web dashboard, see [Getting Started](/getting-started).
+This takes you from a new account to uploading from code. If you'd rather use the website, see [Getting Started](/getting-started).
 
-## 1. Get Your Upload Token
+## 1. Create an API Key
 
-1. Log in to [embrly.ca](https://embrly.ca)
-2. Go to **Profile → Uploads**
-3. Copy your **Upload Token**
+1. Sign in to [embrly.ca](https://embrly.ca).
+2. Open **Profile → API** and create a key. Give it a name you'll recognise, like "Backup script".
+3. Copy the key. It starts with `ebk_` and is only shown once.
 
-<Callout type="warn" title="Keep your token private">
-  Your upload token authenticates all API requests. Treat it like a password **never commit it to source control or expose it client-side**.
+<Callout type="warn" title="Keep it secret">
+  An API key can do anything your account can. Don't commit it to a repository or put it in code that runs in a browser. You can revoke it in **Profile → API** at any time.
 </Callout>
 
----
-
 ## 2. Upload a File
-
-Pick your language:
 
 ### cURL
 
 ```bash
-curl -X POST https://embrly.ca/api/files \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "file=@/path/to/your/file.png"
+curl https://embrly.ca/api/files \
+  -H "Authorization: Bearer ebk_..." \
+  -F "file=@photo.png"
 ```
 
-### JavaScript / TypeScript
+### JavaScript
 
 ```typescript
-const form = new FormData();
-form.append("file", fileInput.files[0]);
+const form = new FormData()
+form.append('file', file)
 
-const res = await fetch("https://embrly.ca/api/files", {
-  method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
+const res = await fetch('https://embrly.ca/api/files', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${process.env.EMBERLY_API_KEY}` },
   body: form,
-});
+})
 
-const { data } = await res.json();
-console.log(data.url); // https://embrly.ca/yourusername/file.png
+const { data } = await res.json()
+console.log(data.url)
 ```
 
 ### Python
 
 ```python
+import os
 import requests
 
-with open("file.png", "rb") as f:
+with open("photo.png", "rb") as f:
     res = requests.post(
         "https://embrly.ca/api/files",
-        headers={"Authorization": "Bearer YOUR_TOKEN"},
+        headers={"Authorization": f"Bearer {os.environ['EMBERLY_API_KEY']}"},
         files={"file": f},
     )
 
@@ -63,80 +60,58 @@ print(res.json()["data"]["url"])
 ### PowerShell
 
 ```powershell
-$headers = @{ Authorization = "Bearer YOUR_TOKEN" }
-$form = @{ file = Get-Item ".\file.png" }
+$headers = @{ Authorization = "Bearer $env:EMBERLY_API_KEY" }
 $res = Invoke-RestMethod -Uri "https://embrly.ca/api/files" `
-  -Method POST -Headers $headers -Form $form
-Write-Output $res.data.url
+  -Method Post -Headers $headers -Form @{ file = Get-Item ".\photo.png" }
+$res.data.url
 ```
 
----
-
-## 3. Understand the Response
-
-A successful upload returns:
+## 3. Use the Response
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "cm7xabc123",
-    "name": "file.png",
+    "id": "clx9k2m...",
+    "url": "https://embrly.ca/aB3dE/photo.png",
+    "name": "photo.png",
     "size": 204800,
-    "mimeType": "image/png",
-    "url": "https://embrly.ca/yourusername/file.png",
-    "visibility": "PUBLIC",
-    "password": false,
-    "createdAt": "2026-06-25T10:00:00Z",
-    "expiresAt": null,
-    "downloads": 0
+    "type": "image/png"
   }
 }
 ```
 
-The `url` field is the shareable link. Share it anywhere anyone with the URL can view or download the file.
+`url` is the link to share. Keep `id` if you want to change or delete the file later.
 
----
+## 4. Upload Options
 
-## 4. Common Upload Options
+Add these as form fields:
 
-Pass these as additional form fields:
-
-| Field | Values | Default | Description |
-|-------|--------|---------|-------------|
-| `visibility` | `PUBLIC`, `PRIVATE` | `PUBLIC` | Private files require login to access |
-| `password` | any string | none | Password-protect the download |
-| `expiresAt` | ISO 8601 date | none | Auto-delete the file at this time |
-| `domain` | verified domain | your primary | Custom domain for the URL |
-
-Example of a private file with a password that expires at year end:
+| Field | Values | Description |
+|-------|--------|-------------|
+| `visibility` | `PUBLIC` (default) or `PRIVATE` | Private files are only visible to you. |
+| `password` | any text | Viewers must enter it to open the file. |
+| `expiresAt` | ISO 8601 date | Delete the file at this time. |
+| `domain` | one of your verified domains | Use it in the returned link. |
 
 ```bash
-curl -X POST https://embrly.ca/api/files \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+curl https://embrly.ca/api/files \
+  -H "Authorization: Bearer ebk_..." \
   -F "file=@report.pdf" \
   -F "visibility=PRIVATE" \
   -F "password=s3cret" \
   -F "expiresAt=2026-12-31T23:59:59Z"
 ```
 
----
+## 5. Large Files
 
-## 5. Large Files: Chunked Upload
-
-Files larger than 100 MB should use the chunked upload API to avoid timeout issues and support resumable uploads.
-
-See the [Files API: Chunked Upload](/api/files#chunked-upload) for the full four-step flow with code examples.
-
----
+For files close to your upload limit, or anything over a few hundred megabytes, upload in parts so a dropped connection doesn't mean starting again. See [Large Files](/api/files#large-files).
 
 ## Next Steps
 
 <Cards>
-  <Card title="Files API" description="Full reference for upload, update, delete, and chunked upload." href="/api/files" />
-  <Card title="ShareX Integration" description="One-click screenshot uploads on Windows." href="/integrations/sharex" />
-  <Card title="Flameshot Integration" description="Automated screenshot uploads on Linux and macOS." href="/integrations/flameshot" />
-  <Card title="PowerShell Module" description="Automate uploads from the Windows terminal." href="/integrations/powershell" />
-  <Card title="Bash / cURL" description="Shell scripts for server-side automation." href="/integrations/bash-scripting" />
-  <Card title="Python SDK" description="Upload and manage files from Python." href="/integrations/python-sdk" />
+  <Card title="API Reference" description="Every endpoint, with authentication and errors." href="/api" />
+  <Card title="Files API" description="Upload, list, update and delete files." href="/api/files" />
+  <Card title="Device Sign-In" description="Sign a desktop app in without a password." href="/api/device" />
+  <Card title="Bash Scripts" description="Shell scripts for servers and automation." href="/integrations/bash-scripting" />
 </Cards>

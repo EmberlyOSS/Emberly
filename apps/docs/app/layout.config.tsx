@@ -1,16 +1,7 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
 import { type LinkItemType } from 'fumadocs-ui/layouts/docs'
 import { FaDiscord } from 'react-icons/fa'
-import {
-  X,
-  Rocket,
-  BookUser,
-  Plug,
-  Braces,
-  Shield,
-  Server,
-  Users,
-} from 'lucide-react'
+import { X, Rocket, BookUser, Plug, Braces, Shield, Server } from 'lucide-react'
 import Image from 'next/image'
 
 export const linkItems: LinkItemType[] = [
@@ -88,12 +79,6 @@ export const baseOptions: BaseLayoutProps = {
           text: 'Self-Hosting',
           description: 'Deploy your own Emberly on any infrastructure.',
           url: '/self-hosting',
-        },
-        {
-          icon: <Users className="size-4" />,
-          text: 'Staff & Operations',
-          description: 'Moderation, support, and incident response.',
-          url: '/staff',
         },
       ],
     },

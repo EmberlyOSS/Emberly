@@ -46,7 +46,7 @@ Keep access to your old email until the change is confirmed.
 
 ### Delete Account
 
-**Profile → Security → Delete Account**, then confirm with your password.
+**Profile → Data → Delete account**, then confirm with your password.
 
 <Callout type="error" title="This is permanent">
   All files, URLs, domains, and data are immediately and irreversibly deleted.
@@ -85,14 +85,19 @@ View and revoke active login sessions under **Profile → Security → Sessions*
 
 ## Notifications
 
-Configure email notifications under **Profile → Notifications**:
+Everything Emberly tells you about appears under the bell at the top of the dashboard and on **Dashboard → Notifications**, where you can filter by category, mark notifications read or clear them. Notifications are kept for 90 days.
 
-| Notification | Default |
-|-------------|---------|
-| File expiration warning (2 days before) | On |
-| New collaborator added to your file | On |
-| Collaborator edit suggestions | On |
-| Security alerts (new login from new device) | On |
+Under **Profile → Notifications**, choose which categories are also emailed to you or posted to [Discord](/integrations/webhooks):
+
+| Category | Examples | Email | Discord |
+|----------|----------|-------|---------|
+| **Security** | New sign-ins, password and 2FA changes, API keys | On | On |
+| **Account** | Email changes, applications, shared files, data exports | On | Off |
+| **Billing** | Payments, receipts, subscriptions, refunds | On | On |
+| **Product updates** | Perks, extra storage, new features | On | Off |
+| **Announcements** | Offers and newsletters | Off | Off |
+
+The switches at the top of the Email and Discord columns turn that channel off entirely. Password resets, sign-in links and verification codes are always emailed.
 
 ---
 

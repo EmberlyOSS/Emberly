@@ -198,6 +198,16 @@ export async function POST(req: Request) {
     return apiResponse<SettingsUpdateResponse>(responseData)
   } catch (error) {
     logger.error('Error updating settings', error as Error)
-    return apiError('Internal server error', HTTP_STATUS.INTERNAL_SERVER_ERROR)
+    const issues =
+      error && typeof error === 'object' && 'issues' in error
+        ? (error as { issues: Array<{ path: PropertyKey[]; message: string }> })
+            .issues
+        : null
+    return apiError(
+      issues?.length
+        ? `Settings weren't saved: ${issues[0].path.join('.')} ${issues[0].message}`
+        : "Settings weren't saved. Check the server logs for details.",
+      issues ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR
+    )
   }
 }

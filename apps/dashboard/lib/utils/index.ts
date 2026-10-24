@@ -1,6 +1,5 @@
 export { cn, formatBytes, bytesToMB, formatFileSize } from './formatting'
 
-export { updateProgress, clearProgress, getProgress } from './progress'
 export { getFileDescription } from './metadata'
 
 export function getRelativeTime(date: Date): string {

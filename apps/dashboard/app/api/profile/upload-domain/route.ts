@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { requireAuth } from '@/lib/auth/api-auth'
+import { sessionCache } from '@/lib/cache/session-cache'
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 
@@ -44,9 +45,15 @@ export async function POST(req: Request) {
     if (response) return response
 
     const body = await req.json()
-    const domain = (body?.domain || '').trim()
-    if (!domain)
-      return NextResponse.json({ error: 'Missing domain' }, { status: 400 })
+    const domain = String(body?.domain ?? '').trim()
+    if (!domain || domain === 'default') {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { preferredUploadDomain: null },
+      })
+      await sessionCache.invalidateUserSession(user.id)
+      return NextResponse.json({ selected: null })
+    }
 
     // Validate domain is either default host or a verified custom domain owned by the user
     const allowedDefault = DEFAULT_HOSTS.includes(domain)
@@ -66,6 +73,7 @@ export async function POST(req: Request) {
       data: { preferredUploadDomain: domain },
       select: { preferredUploadDomain: true },
     })
+    await sessionCache.invalidateUserSession(user.id)
 
     return NextResponse.json({ selected: updated.preferredUploadDomain })
   } catch (error) {
@@ -76,4 +84,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   Link2,
   Lock,
+  MoreHorizontal,
   MoreVertical,
   Music,
   Plus,
@@ -46,11 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,8 +62,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { EmptyState, Panel, StatusBadge } from '@/components/layout/page-kit'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
@@ -93,12 +92,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
   TooltipContent,
@@ -112,10 +106,7 @@ import { cn } from '@/lib/utils'
 import { sanitizeUrl } from '@/lib/utils/url'
 
 import { useToast } from '@/hooks/use-toast'
-import {
-  UserFormData,
-  useUserManagement,
-} from '@/hooks/use-user-management'
+import { UserFormData, useUserManagement } from '@/hooks/use-user-management'
 
 const ALL_GRANTS = [
   'STAFF',
@@ -391,6 +382,9 @@ function FileSettingsDialog({
               <Input
                 id="password-protection"
                 type="password"
+                autoComplete="new-password"
+                data-1p-ignore
+                data-lpignore="true"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Leave empty for no password"
@@ -604,6 +598,20 @@ export function UserList() {
       console.error('Error saving user:', error)
     }
   }
+
+  useEffect(() => {
+    if (isDialogOpen || isViewingFiles) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [isDialogOpen, isViewingFiles])
+
+  useEffect(() => {
+    if (isDialogOpen) setIsViewingFiles(false)
+  }, [isDialogOpen])
+
+  useEffect(() => {
+    if (isViewingFiles) setIsDialogOpen(false)
+  }, [isViewingFiles])
 
   const handleEdit = (user: User) => {
     setEditingUser(user)
@@ -956,384 +964,28 @@ export function UserList() {
     return <UserTableSkeleton />
   }
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'SUPERADMIN':
-        return (
-          <Badge className="bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border-0 gap-1">
-            <Shield className="h-3 w-3" />
-            Superadmin
-          </Badge>
-        )
-      case 'ADMIN':
-        return (
-          <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-0 gap-1">
-            <Shield className="h-3 w-3" />
-            Admin
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant="secondary" className="bg-muted/50 gap-1">
-            <Shield className="h-3 w-3" />
-            User
-          </Badge>
-        )
-    }
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <Users className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold">Users</h2>
-            <p className="text-sm text-muted-foreground">
-              {users.length} user{users.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        <Button onClick={handleNew} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New User
-        </Button>
-      </div>
-
-      <div className="glass-subtle overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent border-border/50">
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              {cloudEnabled && <TableHead>Plan</TableHead>}
-              <TableHead>URL ID</TableHead>
-              <TableHead>Files</TableHead>
-              <TableHead>Storage</TableHead>
-              <TableHead>URLs</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={cloudEnabled ? 8 : 7} className="h-32">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
-                      <Users className="h-6 w-6 text-primary" />
-                    </div>
-                    <p className="text-muted-foreground">No users found</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow key={user.id} className="border-border/50 group">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9 border border-border/50">
-                        <AvatarImage src={user.image || undefined} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {user.name
-                            ?.split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium leading-none">
-                            {user.name}
-                          </p>
-                          {user.isVerified && (
-                            <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center flex-wrap gap-1.5">
-                      {getRoleBadge(user.role)}
-                      {user.bannedAt && (
-                        <Badge className="bg-destructive/20 text-destructive hover:bg-destructive/30 border-0 gap-1">
-                          <Ban className="h-3 w-3" />
-                          Banned
-                        </Badge>
-                      )}
-                      {[...new Set(user.grants ?? [])].map((grant) => {
-                        const meta = GRANT_META[grant as Grant]
-                        if (!meta) return null
-                        return (
-                          <Badge
-                            key={grant}
-                            variant="outline"
-                            className={`text-xs gap-1 py-0 px-1.5 border ${meta.className}`}
-                          >
-                            {meta.label}
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  </TableCell>
-                  {cloudEnabled && (
-                    <TableCell>
-                      {user.subscriptions?.[0]?.product ? (
-                        <Badge
-                          variant="secondary"
-                          className="gap-1 text-xs bg-primary/10 text-primary border-0"
-                        >
-                          <Zap className="h-3 w-3" />
-                          {user.subscriptions[0].product.name}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs bg-muted/50 border-0"
-                        >
-                          Free
-                        </Badge>
-                      )}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <code className="relative rounded-md bg-muted/50 px-2 py-1 font-mono text-xs">
-                      {user.urlId}
-                    </code>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{user._count.files}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 min-w-[100px]">
-                      <span className="text-sm">
-                        {formatFileSize(user.storageUsed)}
-                      </span>
-                      {(() => {
-                        const quotaGB =
-                          user.subscriptions?.[0]?.product?.storageQuotaGB
-                        const quotaMB =
-                          user.storageQuotaMB ??
-                          (quotaGB != null ? quotaGB * 1024 : 10240)
-                        const pct =
-                          quotaMB > 0
-                            ? Math.min((user.storageUsed / quotaMB) * 100, 100)
-                            : 0
-                        return (
-                          <Progress
-                            value={pct}
-                            className={`h-1 ${pct > 90 ? '[&>div]:bg-red-500' : pct > 75 ? '[&>div]:bg-orange-500' : ''}`}
-                          />
-                        )
-                      })()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{user._count.shortenedUrls}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(user)}
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Edit User</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewFiles(user)}
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                            >
-                              <FolderOpen className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>View Content</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        {user.image && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveAvatar(user.id)}
-                                className="h-8 w-8 hover:bg-chart-4/10 hover:text-chart-4"
-                              >
-                                <UserX className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Remove Avatar</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-
-                        {user.role !== 'SUPERADMIN' &&
-                          user.role !== 'ADMIN' &&
-                          (user.bannedAt ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleUnbanUser(user)}
-                                  className="h-8 w-8 text-emerald-500 hover:text-emerald-500 hover:bg-emerald-500/10"
-                                >
-                                  <ShieldCheck className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Unban User</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleOpenBan(user)}
-                                  className="h-8 w-8 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10"
-                                >
-                                  <Ban className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Ban User</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleVerifyUser(user)}
-                              className={`h-8 w-8 ${user.isVerified ? 'text-blue-500 hover:text-blue-500 hover:bg-blue-500/10' : 'text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10'}`}
-                            >
-                              <BadgeCheck className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {user.isVerified
-                                ? 'Remove Verification'
-                                : 'Verify User'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setUserToDelete(user)
-                                setIsDeleteDialogOpen(true)
-                              }}
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Delete User</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {pagination && pagination.pageCount > 1 && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {pagination.pageCount} • {pagination.total}{' '}
-            total users
-          </div>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => fetchUsers(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="h-8 w-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </PaginationItem>
-              {getPaginationRange(currentPage, pagination.pageCount).map(
-                (page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => fetchUsers(page)}
-                      isActive={page === currentPage}
-                      className="h-8 w-8 cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
-              )}
-              <PaginationItem>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => fetchUsers(currentPage + 1)}
-                  disabled={currentPage === pagination.pageCount}
-                  className="h-8 w-8"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="glass border-white/[0.08] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? 'Edit User' : 'New User'}</DialogTitle>
-            <DialogDescription>
-              {editingUser
-                ? 'Edit user details and permissions.'
-                : 'Create a new user account.'}
-            </DialogDescription>
-          </DialogHeader>
+      {isDialogOpen && (
+        <Panel
+          title={editingUser ? `Edit ${editingUser.name}` : 'New user'}
+          description={
+            editingUser
+              ? 'Change their details, role and limits.'
+              : 'Create an account by hand.'
+          }
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsDialogOpen(false)}
+            >
+              Close
+            </Button>
+          }
+        >
           <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 pb-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Username</Label>
                 <Input
@@ -1634,17 +1286,23 @@ export function UserList() {
                 </div>
               )}
             </div>
-            <DialogFooter>
-              <Button type="submit">
-                {editingUser ? 'Save Changes' : 'Create User'}
+            <div className="flex justify-end gap-2 border-t border-border/50 pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
               </Button>
-            </DialogFooter>
+              <Button type="submit">
+                {editingUser ? 'Save changes' : 'Create user'}
+              </Button>
+            </div>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isViewingFiles} onOpenChange={setIsViewingFiles}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 glass">
+        </Panel>
+      )}
+      {isViewingFiles && (
+        <section className="glass-card overflow-hidden flex flex-col">
           {/* Header */}
           <div className="flex items-center gap-3 p-6 pb-4 border-b border-border/50">
             <Avatar className="h-10 w-10 border border-border/50">
@@ -1658,16 +1316,23 @@ export function UserList() {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg font-semibold truncate">
-                {viewingUser?.name}&apos;s Content
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
+              <h2 className="text-lg font-semibold truncate">
+                {viewingUser?.name}&apos;s content
+              </h2>
+              <p className="text-sm text-muted-foreground">
                 {filePagination?.total || 0} files · {urlPagination?.total || 0}{' '}
                 URLs ·{' '}
                 {viewingUser ? formatFileSize(viewingUser.storageUsed) : '0 B'}{' '}
                 used
-              </DialogDescription>
+              </p>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsViewingFiles(false)}
+            >
+              Close
+            </Button>
           </div>
 
           <Tabs defaultValue="files" className="flex-1 flex flex-col min-h-0">
@@ -2213,8 +1878,267 @@ export function UserList() {
               </div>
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </section>
+      )}
+      <Panel
+        flush
+        title={`${pagination?.total ?? users.length} ${(pagination?.total ?? users.length) === 1 ? 'user' : 'users'}`}
+        description="Edit accounts, review their content and manage access."
+        actions={
+          <Button size="sm" onClick={handleNew}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            New user
+          </Button>
+        }
+      >
+        {users.length === 0 ? (
+          <EmptyState icon={Users} title="No users found" />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-5">User</TableHead>
+                  <TableHead>Role</TableHead>
+                  {cloudEnabled && (
+                    <TableHead className="hidden lg:table-cell">Plan</TableHead>
+                  )}
+                  <TableHead className="hidden md:table-cell">
+                    Storage
+                  </TableHead>
+                  <TableHead className="pr-5" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => {
+                  const quotaGB =
+                    user.subscriptions?.[0]?.product?.storageQuotaGB
+                  const quotaMB =
+                    user.storageQuotaMB ??
+                    (quotaGB != null ? quotaGB * 1024 : 10240)
+                  const pct =
+                    quotaMB > 0
+                      ? Math.min((user.storageUsed / quotaMB) * 100, 100)
+                      : 0
+                  const isStaff =
+                    user.role === 'SUPERADMIN' || user.role === 'ADMIN'
+                  return (
+                    <TableRow key={user.id} className="border-border/50">
+                      <TableCell className="pl-5">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.image || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                              {(user.name ?? '?').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate font-medium">
+                                {user.name}
+                              </span>
+                              {user.isVerified && (
+                                <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                              )}
+                            </div>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {user.email}
+                              <span className="font-mono">
+                                {' '}
+                                · /{user.urlId}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <StatusBadge
+                            tone={
+                              user.role === 'SUPERADMIN'
+                                ? 'warning'
+                                : user.role === 'ADMIN'
+                                  ? 'info'
+                                  : 'neutral'
+                            }
+                          >
+                            {user.role === 'SUPERADMIN'
+                              ? 'Superadmin'
+                              : user.role === 'ADMIN'
+                                ? 'Admin'
+                                : 'User'}
+                          </StatusBadge>
+                          {user.bannedAt && (
+                            <StatusBadge tone="danger">Banned</StatusBadge>
+                          )}
+                          {[...new Set(user.grants ?? [])].map((grant) => {
+                            const meta = GRANT_META[grant as Grant]
+                            if (!meta) return null
+                            return (
+                              <Badge
+                                key={grant}
+                                variant="outline"
+                                className={`gap-1 px-1.5 py-0 text-xs ${meta.className}`}
+                              >
+                                {meta.label}
+                              </Badge>
+                            )
+                          })}
+                        </div>
+                      </TableCell>
+                      {cloudEnabled && (
+                        <TableCell className="hidden text-sm lg:table-cell">
+                          {user.subscriptions?.[0]?.product?.name ?? (
+                            <span className="text-muted-foreground">Free</span>
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell className="hidden md:table-cell">
+                        <div className="w-36 space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span>{formatFileSize(user.storageUsed)}</span>
+                            <span className="text-muted-foreground">
+                              {user._count.files} files ·{' '}
+                              {user._count.shortenedUrls} links
+                            </span>
+                          </div>
+                          <Progress
+                            value={pct}
+                            className={`h-1 ${pct > 90 ? '[&>div]:bg-red-500' : pct > 75 ? '[&>div]:bg-orange-500' : ''}`}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="pr-5">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleEdit(user)}
+                          >
+                            Edit
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label={`More actions for ${user.name}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => handleViewFiles(user)}
+                              >
+                                <FolderOpen className="mr-2 h-4 w-4" />
+                                View content
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleVerifyUser(user)}
+                              >
+                                <BadgeCheck className="mr-2 h-4 w-4" />
+                                {user.isVerified
+                                  ? 'Remove verification'
+                                  : 'Verify'}
+                              </DropdownMenuItem>
+                              {user.image && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRemoveAvatar(user.id)}
+                                >
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Remove avatar
+                                </DropdownMenuItem>
+                              )}
+                              {!isStaff && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    user.bannedAt
+                                      ? handleUnbanUser(user)
+                                      : handleOpenBan(user)
+                                  }
+                                >
+                                  {user.bannedAt ? (
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                  ) : (
+                                    <Ban className="mr-2 h-4 w-4" />
+                                  )}
+                                  {user.bannedAt ? 'Unban' : 'Ban'}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  setUserToDelete(user)
+                                  setIsDeleteDialogOpen(true)
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete user
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Panel>
+
+      {pagination && pagination.pageCount > 1 && (
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Page {currentPage} of {pagination.pageCount} • {pagination.total}{' '}
+            total users
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fetchUsers(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+              {getPaginationRange(currentPage, pagination.pageCount).map(
+                (page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => fetchUsers(page)}
+                      isActive={page === currentPage}
+                      className="h-8 w-8 cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fetchUsers(currentPage + 1)}
+                  disabled={currentPage === pagination.pageCount}
+                  className="h-8 w-8"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       <FileSettingsDialog
         file={selectedFile}

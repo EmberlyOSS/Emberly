@@ -21,10 +21,20 @@ export function createProcessor(handlers: Map<EventType, AnyHandlerFn[]>) {
       attempt: job.attemptsMade,
     })
 
+    const progress = job.progress as { done?: number[] } | number | undefined
+    const done = new Set(
+      typeof progress === 'object' && Array.isArray(progress?.done)
+        ? progress.done
+        : []
+    )
+
     const errors: Error[] = []
-    for (const fn of fns) {
+    for (const [index, fn] of fns.entries()) {
+      if (done.has(index)) continue
       try {
         await fn(job.data, job)
+        done.add(index)
+        await job.updateProgress({ done: [...done] }).catch(() => {})
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error))
         logger.error('Handler failed', err, { type: eventType, jobId: job.id })

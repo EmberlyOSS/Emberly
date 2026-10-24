@@ -1,47 +1,24 @@
 ---
 title: API Reference
-description: The Emberly REST API — upload, manage, and serve files programmatically.
+description: Use the Emberly REST API to upload files, shorten links and manage your account.
 ---
 
-The Emberly REST API lets you upload files, shorten URLs, manage metadata, and configure custom domains from any language or tool.
+Every Emberly instance has the same REST API, whether it's embrly.ca or your own server. Anything you can do in the dashboard for your own files, links and account, you can do through the API.
 
 <Cards>
-  <Card title="Files API" description="Upload, update, delete, and serve files." href="/api/files" />
-  <Card title="URL Shortener API" description="Create and manage short links." href="/api/urls" />
-  <Card title="Domains API (Cloud only)" description="Manage custom domains for your uploads." href="/api/domains" />
-  <Card title="Billing API (Cloud only)" description="Checkout, portal, purchases, and subscription sync." href="/api/billing" />
-  <Card title="Analytics API" description="Storage stats, top files, and activity data." href="/api/analytics" />
-  <Card title="Profile API" description="Manage security, tokens, linked accounts, and perks." href="/api/profile" />
-  <Card title="Discovery API (Cloud only)" description="Nexium profiles, squads, opportunities, and applications." href="/api/discovery" />
-  <Card title="User API Reference" description="Comprehensive reference for all user-facing endpoints." href="/api/user-reference" />
-  <Card title="Staff & Admin API" description="Admin-only endpoints for user management and moderation." href="/api/staff-admin-reference" />
+  <Card title="Files" description="Upload, list, update and delete files, including large uploads." href="/api/files" />
+  <Card title="Short Links" description="Create, list and delete short links." href="/api/urls" />
+  <Card title="Account" description="Profile, API keys, upload tokens, sessions and 2FA." href="/api/profile" />
+  <Card title="Device Sign-In" description="Let a desktop app sign in through the browser." href="/api/device" />
+  <Card title="Analytics" description="Usage, storage and top files." href="/api/analytics" />
+  <Card title="Custom Domains" description="Add and verify your own upload domains (embrly.ca)." href="/api/domains" />
+  <Card title="Discovery" description="Squads, profiles and opportunities (embrly.ca)." href="/api/discovery" />
+  <Card title="Admin" description="Endpoints behind the admin panel." href="/api/admin" />
 </Cards>
 
-## Health Check
-
-`GET /api/health` — works identically on cloud and self-hosted instances, no authentication required. Reports database, Redis, storage, and event-queue status, plus overall instance uptime and version:
-
-```json
-{
-  "success": true,
-  "data": {
-    "status": "ok",
-    "version": "2.5.1",
-    "uptimeSeconds": 3600,
-    "checks": {
-      "database": { "status": "up", "latencyMs": 4 },
-      "redis": { "status": "up", "latencyMs": 1 },
-      "storage": { "status": "up", "provider": "s3", "latencyMs": 120 },
-      "virusScanning": { "status": "not_configured" },
-      "eventQueue": { "status": "up", "workerRunning": true }
-    }
-  }
-}
-```
-
-`status` is `ok`, `degraded` (a non-critical check failing), or `down` (database unreachable — responds `503`). Point an uptime monitor or reverse-proxy health check at this endpoint.
-
 ## Base URL
+
+Use your instance's address. For embrly.ca:
 
 ```
 https://embrly.ca/api
@@ -49,54 +26,105 @@ https://embrly.ca/api
 
 ## Authentication
 
-All endpoints require a **Bearer token**:
+Send a key in the `Authorization` header:
 
+```bash
+curl https://embrly.ca/api/files \
+  -H "Authorization: Bearer ebk_..."
 ```
-Authorization: Bearer YOUR_UPLOAD_TOKEN
-```
 
-Get your token from **Profile → Uploads → Upload Token**.
+| Credential | Where to get it | Use it for |
+|------------|-----------------|------------|
+| **API key** (`ebk_...`) | **Profile → API**, or [`POST /api/profile/api-keys`](/api/profile#api-keys) | Scripts and apps. You can have up to 10, each with a name, and revoke them one by one. |
+| **Upload token** | **Profile → Uploads** | ShareX, Flameshot and other upload tools. You have one, and resetting it breaks every tool using it. |
+| **Browser session** | Signing in to the website | The dashboard itself. Not meant for scripts. |
 
-<Callout type="info">
-  Some endpoints (domains, profile, analytics) require a **session cookie** from a browser login rather than a token. These are noted per-endpoint.
-</Callout>
+API keys and upload tokens both act as your whole account, so keep them secret. Prefer API keys for anything new: you can see when each was last used and revoke one without affecting the others.
 
-## Response Format
+Desktop apps should use [device sign-in](/api/device) instead of asking for a password.
 
-All responses return JSON:
+## Responses
+
+Successful responses are JSON with `success: true` and the result in `data`:
 
 ```json
 {
   "success": true,
-  "data": { ... }
+  "data": { "id": "clx...", "url": "https://embrly.ca/aB3dE/photo.png" }
 }
 ```
 
-Error responses:
+Errors return `success: false` and a message:
 
 ```json
 {
   "success": false,
-  "error": "Human-readable error message"
+  "error": "File not found"
 }
 ```
 
-## Rate Limits
+Lists that support paging add a `pagination` object:
 
-There's no general per-plan API rate limit — file uploads, listing, and most other endpoints aren't rate-limited beyond your plan's storage/upload-size caps. A small number of security-sensitive endpoints (registration, password reset, resend-verification, contact form, domain verification) have flat, IP-scoped limits regardless of plan. See the [User API Reference](/api/user-reference#rate-limits) for the full list.
+```json
+{
+  "success": true,
+  "data": [ ... ],
+  "pagination": { "total": 120, "pageCount": 5, "page": 1, "limit": 24 }
+}
+```
 
-Exceeding a limited endpoint's limit returns `429 Too Many Requests` with a `Retry-After` header.
+A few older endpoints return the object directly, without the `success`/`data` wrapper. Each page says so where it applies.
 
 ## Status Codes
 
 | Code | Meaning |
 |------|---------|
 | `200` | Success |
-| `400` | Bad request — see `error` field |
-| `401` | Unauthenticated |
-| `403` | Forbidden (insufficient permissions or unverified resource) |
-| `404` | Resource not found |
-| `409` | Conflict (duplicate, already exists) |
-| `413` | File too large or quota exceeded |
-| `429` | Rate limited |
+| `201` | Created |
+| `202` | Accepted, still in progress (used while polling) |
+| `204` | Success, no content |
+| `400` | The request was invalid. The `error` field says why. |
+| `401` | Missing or invalid credentials, or a wrong file password |
+| `403` | Signed in, but not allowed to do this |
+| `404` | Not found, or private and not yours |
+| `413` | File too large for your upload limit |
+| `429` | Rate limited. Wait and try again. |
 | `500` | Server error |
+
+## Rate Limits
+
+Uploads and most endpoints aren't rate limited; storage quotas and upload size limits apply instead. These endpoints are limited per IP address:
+
+| Endpoint | Limit |
+|----------|-------|
+| `POST /api/auth/register` | 5 per minute |
+| `POST /api/auth/password/forgot` | 1 per 10 minutes |
+| `POST /api/auth/password/reset` | 5 per 10 minutes |
+| `POST /api/auth/resend-verification` | 3 per 10 minutes |
+| `POST /api/device/code` | 10 per 10 minutes |
+
+## Health Check
+
+`GET /api/health` needs no authentication. It reports whether the database, Redis, storage and background jobs are working, and returns `503` if the database is down. See [Health Checks](/self-hosting/production#health-checks).
+
+## Server Information
+
+`GET /api/instance` needs no authentication. Apps use it to adapt to the server they're connected to:
+
+```json
+{
+  "success": true,
+  "data": {
+    "name": "Emberly",
+    "version": "3.1.0",
+    "cloud": true,
+    "billingEnabled": false,
+    "features": {
+      "customDomains": true,
+      "squads": true,
+      "discovery": true,
+      "deviceSignIn": true
+    }
+  }
+}
+```

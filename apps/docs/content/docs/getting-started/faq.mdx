@@ -3,138 +3,82 @@ title: FAQ
 description: Quick answers to common questions about Emberly.
 ---
 
-## Account & Sign Up
+## Account
 
-### How do I create an account?
+### Is Emberly free?
 
-1. Visit [embrly.ca](https://embrly.ca) and click **"Sign Up"**
-2. Enter your email and create a password
-3. Verify your email (click the link we send you)
-
-You start on the **Spark plan** (10 GB free) with no credit card required.
-
-### Can I upgrade or downgrade my plan?
-
-Yes. Go to **Profile → Billing**:
-
-- **Upgrade** — instant, pro-rated for the remainder of your billing cycle
-- **Downgrade** — takes effect at the next renewal date
-- **Cancel** — anytime, no lock-in
+Yes. embrly.ca is free, with the same [limits](/getting-started/limits) for everyone. If you need more storage or domains, you can ask for them. [Self-hosting](/self-hosting) is free too.
 
 ### How do I reset my password?
 
-1. Go to the login page and click **"Forgot Password?"**
-2. Enter your email address
-3. Click the link in the email we send
-4. Set a new password
+Click **Forgot password?** on the login page, enter your email, and follow the link we send you.
+
+### Can I sign in with GitHub or Discord?
+
+No, you always sign in with your email. You can link GitHub and Discord in **Profile → Connections** for [perks](/user-guide/contributor-perks) and Discord roles.
 
 ### How do I delete my account?
 
-**Profile → Security → Delete Account**, then enter your password to confirm.
-
-<Callout type="warn">
-  Account deletion is permanent. All files and data are deleted immediately and cannot be recovered.
-</Callout>
+Go to **Profile → Data**, choose **Delete account** at the bottom and enter your password to confirm. Your files, links and data are deleted straight away and can't be recovered, so export a copy first from the same page if you want one.
 
 ---
 
-## Files & Uploads
+## Files
 
-### What file types are supported?
+### What can't I upload?
 
-Most file types are accepted. The following are blocked for security reasons:
+Executables and scripts, such as `.exe`, `.bat` and `.ps1`, along with zip bombs and files VirusTotal reports as malware. Almost everything else is fine.
 
-- Executable files (`.exe`, `.bat`, `.sh`, `.ps1`, etc. when uploaded directly)
-- Files that trigger malware detection by VirusTotal
+### How big can my files be?
 
-### What are the upload size limits?
-
-| Plan | Max single upload |
-|------|-------------------|
-| Spark | 500 MB |
-| Glow | 1 GB |
-| Flare | 2 GB |
-| Blaze | 5 GB |
-| Inferno | 10 GB |
-| Ember | Unlimited |
-
-Files larger than your plan limit must be split or upgraded.
+It depends on your upload limit, shown in **Profile → Uploads**. See [Limits](/getting-started/limits).
 
 ### Can I password-protect a file?
 
-Yes. When uploading or by editing an existing file, set a password. Anyone accessing the file will need to enter it. Passwords are hashed server-side — we never see them in plain text.
+Yes, when uploading or afterwards from the file's menu. Viewers have to enter the password before they can open the file. Passwords are stored hashed.
 
-### Can I set a file to auto-delete?
+### Can a file delete itself?
 
-Yes. Set an **expiration date** on upload or afterward via the edit dialog. The file is automatically deleted at the set time. You'll receive an email reminder 2 days before expiration.
+Yes. Set an expiry date when uploading or afterwards. At that time the file is deleted, or made private if you prefer. You can set a default for new uploads in **Profile → Settings**.
 
-### How do I share a private file with someone?
+### How do I share a private file with one person?
 
-Add them as a **collaborator**:
+Add a password and send it to them along with the link. To let someone work on a text file with you, add them as a [collaborator](/user-guide/file-collaboration).
 
-1. Open the file details
-2. Click **"Add Collaborator"**
-3. Enter their email address
-4. Choose **View** or **Edit** permission
+### Why doesn't my link show a preview in Discord?
 
-They'll receive an email invite. You can revoke access at any time.
+Previews don't show for private or password-protected files. If you changed a file recently, Discord may be showing an old preview; post the link again in a new message. To get a plain image instead of a card, turn off **rich embeds** in **Profile → Settings**.
 
 ---
 
-## Security & Privacy
+## Security and Privacy
 
-### Do you scan uploaded files?
+### Do you scan my uploads?
 
-Yes. Every upload is scanned using a **VirusTotal hash lookup** against 71+ antivirus engines. The file content itself is never sent to VirusTotal — only its SHA-256 hash. See [VirusTotal Integration](/security/virustotal) for details.
+Yes. Emberly sends the file's fingerprint (a SHA-256 hash), not the file itself, to [VirusTotal](/security/virustotal) and removes files known to be malware.
 
-### What is the HIBP check at login?
+### What's the breached password warning?
 
-When you sign in, Emberly checks whether your password appears in known data breach databases via [HaveIBeenPwned](https://haveibeenpwned.com/). Your password is never sent — only the first 5 characters of its SHA-1 hash. If found, you're warned and given the option to change your password. See [HIBP Integration](/security/hibp) for details.
+When you sign in, Emberly checks your password against [Have I Been Pwned](/security/hibp) without ever sending it. Only the first 5 characters of a hash of it leave the server. If it's appeared in a breach, you're asked to change it.
 
-### Is my data encrypted?
+### Should I turn on two-factor authentication?
 
-Yes:
-
-- Files are encrypted at rest in storage
-- All connections use HTTPS (TLS)
-- Passwords are hashed with bcrypt
-- File passwords use server-side hashing
+Yes. Set it up in **Profile → Security** with any authenticator app, and keep the recovery codes somewhere safe.
 
 ---
 
 ## Custom Domains
 
-### How many custom domains can I have?
+### How many domains can I add?
 
-Your limit is based on your plan, plus any bonuses from perks:
+See [Limits](/getting-started/limits). Contributors and Discord boosters [get extra](/user-guide/contributor-perks).
 
-| Plan | Base Domains |
-|------|-------------|
-| Spark | 3 |
-| Glow | 5 |
-| Flare | 10 |
-| Blaze | Unlimited |
-| Inferno | Unlimited |
-| Ember | Unlimited |
+### How do I set one up?
 
-Contributors and Discord boosters can earn additional slots. See [Domain Perks](/user-guide/contributor-perks).
-
-### How do I verify a custom domain?
-
-Add a CNAME record pointing your domain to `cname.emberly.site`, then click **"Verify"** in your dashboard. TLS is provisioned automatically via Cloudflare. See the [Custom Domains guide](/user-guide/custom-domains) for full instructions.
+Point a `CNAME` record at `cname.emberly.site` and click **Verify**, or let Emberly create the records on Cloudflare for you. HTTPS is set up automatically. See [Custom Domains](/user-guide/custom-domains).
 
 ---
 
-## Billing
+## Still Stuck?
 
-### What payment methods are accepted?
-
-Credit and debit cards via Stripe. More methods may be added in future.
-
-### Do you offer refunds?
-
-Contact [support@embrly.ca](mailto:support@embrly.ca) within 7 days of a charge for billing issues.
-
-### Do you offer student or non-profit discounts?
-
-Not currently. Check the [pricing page](https://embrly.ca/pricing) for any active promotions.
+Ask in the [Emberly Discord](https://discord.gg/36spBmzZVB), or check [service status](/getting-started/status).

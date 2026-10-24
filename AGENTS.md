@@ -25,7 +25,7 @@ bun install
 bun run dev            # dashboard on http://localhost:3000
 bun run dev:all        # every app
 bun run typecheck      # all apps
-bun run test
+bun run test           # unit tests in apps/dashboard/tests (Bun's test runner)
 bun run build:all
 bun run lint
 
@@ -87,7 +87,7 @@ Use `requireAdmin` or `requireSuperAdmin` for admin routes. Never return secrets
 
 ### Background jobs
 
-Emit events with `events.emit(type, payload)` from `lib/events`. Handlers live in `lib/events/handlers/`, one file per domain. Event types are a discriminated union in `types/events.ts`. Jobs run in-process when `EMBERLY_RUN_EVENT_WORKER=true`, or in `bun run worker`.
+Emit events with `events.emit(type, payload)` from `lib/events`. Handlers live in `lib/events/handlers/`, one file per domain. Event types are a discriminated union in `types/events.ts`. Jobs run in the app process unless `EMBERLY_RUN_EVENT_WORKER=false`, in which case `bun run worker` must run them.
 
 Don't open Redis or BullMQ connections at import time. Create them lazily (see `getEventQueue()`), otherwise builds hang without Redis.
 

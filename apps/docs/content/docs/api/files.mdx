@@ -1,326 +1,275 @@
 ---
 title: Files API
-description: Upload, retrieve, update, and delete files via the Emberly REST API.
+description: Upload, list, update and delete files, including large chunked uploads.
 ---
 
-## Endpoints Overview
+All endpoints need [authentication](/api#authentication) unless noted.
 
-### Upload
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/files` | Single file upload |
-| `POST` | `/api/files/chunks` | Initialize chunked upload |
-| `GET` | `/api/files/chunks/[id]/part/[n]` | Get presigned S3 URL for a chunk |
-| `POST` | `/api/files/chunks/[id]/complete` | Finalize chunked upload |
-
-### File Management
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/files/[id]` | Get file metadata |
-| `PATCH` | `/api/files/[id]` | Update visibility, password, etc. |
-| `DELETE` | `/api/files/[id]` | Delete a file |
-| `GET` | `/api/files/[id]/download` | Download a file |
-| `POST` | `/api/files/[id]/expiry` | Set file expiration |
-| `DELETE` | `/api/files/[id]/expiry` | Cancel file expiration |
-| `GET` | `/api/files/shared` | List files shared with you |
-
-### Collaboration
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/files/[id]/collaborators` | List a file's collaborators |
-| `POST` | `/api/files/[id]/collaborators` | Add a collaborator |
-| `DELETE` | `/api/files/[id]/collaborators/[collaboratorId]` | Remove a collaborator |
-| `GET` | `/api/files/[id]/collaborators/me` | Get your own collaborator role on a file |
-| `GET` | `/api/files/[id]/suggestions` | List edit suggestions on a file |
-| `GET` | `/api/files/suggestions/pending` | List pending suggestions across all your files |
-
-See [File Collaboration](/user-guide/file-collaboration) for the full collaborator/suggestion workflow and role details (`EDITOR` / `SUGGESTER`).
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/files` | Upload a file |
+| `GET` | `/api/files` | List your files |
+| `PATCH` | `/api/files/{id}` | Change visibility or password |
+| `DELETE` | `/api/files/{id}` | Delete a file |
+| `GET` `POST` `DELETE` | `/api/files/{id}/expiry` | Read, set or remove an expiry date |
+| `GET` | `/api/files/{id}/download` | Download a file |
+| `GET` | `/api/files/{id}/ocr` | Text found in an image |
+| `GET` | `/api/files/shared` | Files others have shared with you |
+| `POST` | `/api/files/chunks` | Start a large upload |
 
 ---
 
-## Single File Upload
+## Upload a File
 
 ### `POST /api/files`
 
-**Content-Type:** `multipart/form-data`  
-**Auth:** Bearer token
+Send the file as `multipart/form-data`. This is what ShareX and the other upload tools use.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `file` | File | Yes | The file to upload |
-| `visibility` | `PUBLIC` \| `PRIVATE` | No | Default: `PUBLIC` |
-| `password` | string | No | Password-protect the file |
-| `domain` | string | No | Custom domain for the URL |
-| `expiresAt` | ISO 8601 | No | Auto-delete date (must be future) |
-| `allowSuggestions` | `"true"` \| `"false"` | No | Allow edit suggestions |
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | file | **Required.** The file to upload. |
+| `visibility` | `PUBLIC` or `PRIVATE` | Defaults to `PUBLIC`. Private files are only visible to you. |
+| `password` | string | Ask viewers for this password before showing the file. |
+| `expiresAt` | ISO 8601 date | Delete the file at this time. |
+| `domain` | string | One of your verified [custom domains](/api/domains) to use in the returned link. |
+| `allowSuggestions` | `true` or `false` | Let collaborators suggest edits to text files. |
 
-**Response (200):**
+```bash
+curl https://embrly.ca/api/files \
+  -H "Authorization: Bearer ebk_..." \
+  -F "file=@screenshot.png" \
+  -F "visibility=PUBLIC"
+```
+
+**Response:**
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "cm7xabc123",
-    "name": "document.pdf",
-    "size": 2.5,
-    "mimeType": "application/pdf",
-    "url": "https://embrly.ca/yourusername/document.pdf",
-    "urlPath": "/yourusername/document.pdf",
-    "visibility": "PUBLIC",
-    "password": false,
-    "createdAt": "2026-03-29T15:30:00Z",
-    "expiresAt": null,
-    "downloads": 0
+    "id": "clx9k2m...",
+    "url": "https://embrly.ca/aB3dE/screenshot.png",
+    "name": "screenshot.png",
+    "size": 482113,
+    "type": "image/png"
   }
 }
 ```
 
-**cURL:**
-```bash
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "file=@document.pdf" \
-  -F "visibility=PUBLIC" \
-  -F "expiresAt=2026-12-31T23:59:59Z" \
-  https://embrly.ca/api/files
-```
+`url` is the link to share. If you upload through one of your verified custom domains, or pass `domain`, the link uses that domain.
 
-**JavaScript:**
-```javascript
-const form = new FormData();
-form.append("file", fileInput.files[0]);
-form.append("visibility", "PUBLIC");
+**Errors:**
 
-const res = await fetch("/api/files", {
-  method: "POST",
-  headers: { Authorization: "Bearer YOUR_TOKEN" },
-  body: form,
-});
-const { data } = await res.json();
-console.log(data.url);
-```
+| Status | When |
+|--------|------|
+| `400` | No file, an invalid field, or a blocked file type |
+| `403` | Your email isn't verified, or `domain` isn't one of your verified domains |
+| `413` | The file is larger than your upload limit, or would take you over your storage quota. Use a [chunked upload](#large-files) for big files. |
 
-### Plan Limits
-
-| Plan | Max file size |
-|------|--------------|
-| Spark (Free) | 500 MB |
-| Paid plans | Based on subscription |
-
-### Security Validation
-
-Every upload runs:
-1. Extension + MIME type checks (50+ blocked types)
-2. Zip bomb detection (max 100:1 ratio)
-3. VirusTotal hash scan (skipped for images, video, and audio — see [VirusTotal Scanning](/security/virustotal) for why)
-
-**Blocked extensions:** `.exe`, `.bat`, `.sh`, `.py`, `.rb`, `.php`, `.dll`, `.jar`, `.msi`, and others.
+Uploads are checked for malware in the background. A file found to be malicious is removed.
 
 ---
 
-## Chunked Upload
+## Large Files
 
-Use chunked upload for large files or unreliable connections. If you lose your connection mid-upload, the session is preserved (via Redis or the filesystem fallback) and can be resumed.
+Large files upload in parts. The web uploader uses 5 MB parts.
 
-**Auth:** Bearer token or session cookie
+### 1. Start the upload
 
----
-
-### Step 1 — Initialize
-
-**`POST /api/files/chunks`**
+#### `POST /api/files/chunks`
 
 ```json
 {
-  "filename": "large-video.mp4",
+  "filename": "video.mp4",
   "mimeType": "video/mp4",
-  "size": 5368709120,
-  "domain": "cdn.example.com"
+  "size": 734003200,
+  "domain": "files.example.com"
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `filename` | string | Yes | Original file name |
-| `mimeType` | string | Yes | MIME type of the file |
-| `size` | number | Yes | Total file size in bytes |
-| `domain` | string | No | Custom domain for the resulting URL |
+`domain` is optional, as for normal uploads.
 
-**Response (200):**
+**Response:**
 
 ```json
-{
-  "uploadId": "abc123xyz",
-  "partSize": 5242880
-}
+{ "data": { "uploadId": "a1b2c3...", "fileKey": "uploads/..." } }
 ```
 
-`partSize` is the recommended chunk size in bytes (5 MB by default). Split your file into chunks of this size.
+### 2. Upload each part
 
----
+#### `PUT /api/files/chunks/{uploadId}/part/{partNumber}`
 
-### Step 2 — Get a Presigned URL for Each Part
-
-**`GET /api/files/chunks/{uploadId}/part/{partNumber}`**
-
-- `partNumber` is 1-based (first chunk = `1`)
-
-Returns a short-lived presigned S3 URL.
-
-```json
-{
-  "url": "https://s3.amazonaws.com/bucket/...",
-  "partNumber": 1
-}
-```
-
----
-
-### Step 3 — Upload Each Chunk
-
-`PUT` the chunk binary directly to the presigned URL:
+Send the raw bytes of the part as the request body. Parts are numbered from `1`.
 
 ```bash
-curl -X PUT \
-  -H "Content-Type: video/mp4" \
-  --data-binary @chunk_001 \
-  "https://s3.amazonaws.com/bucket/..."
+curl -X PUT "https://embrly.ca/api/files/chunks/$UPLOAD_ID/part/1" \
+  -H "Authorization: Bearer ebk_..." \
+  --data-binary @part1.bin
 ```
 
-Save the `ETag` header from the response — you'll need it in step 4.
+**Response:**
 
----
+```json
+{ "data": { "etag": "\"9b2cf535f27731c974343645a3985328\"" } }
+```
 
-### Step 4 — Finalize
+Keep each part's number and `etag` for the last step.
 
-**`POST /api/files/chunks/{uploadId}/complete`**
+<Callout type="info" title="Uploading straight to storage">
+  On S3 storage you can upload parts directly to the bucket instead: `GET /api/files/chunks/{uploadId}/part/{partNumber}` returns a signed `url` to `PUT` the part to, and the `ETag` response header is the part's etag. This is faster for very large files, but the bucket must be reachable from your device.
+</Callout>
+
+### 3. Finish the upload
+
+#### `POST /api/files/chunks/{uploadId}/complete`
 
 ```json
 {
   "parts": [
-    { "PartNumber": 1, "ETag": "\"abc123\"" },
-    { "PartNumber": 2, "ETag": "\"def456\"" }
+    { "PartNumber": 1, "ETag": "\"9b2cf535...\"" },
+    { "PartNumber": 2, "ETag": "\"4e1f0a7c...\"" }
   ],
-  "expiresAt": "2026-12-31T23:59:59Z"
+  "expiresAt": "2026-12-31T00:00:00Z"
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `parts` | array | Yes | List of `{ PartNumber, ETag }` objects in order |
-| `expiresAt` | ISO 8601 | No | Optional auto-delete date |
+`expiresAt` is optional. The response is the file, without the `success`/`data` wrapper:
 
-Returns the same response shape as single file upload upon success. The file undergoes the same VirusTotal and MIME security checks.
+```json
+{
+  "id": "clx9k2m...",
+  "url": "https://embrly.ca/aB3dE/video.mp4",
+  "name": "video.mp4",
+  "size": 734003200,
+  "type": "video/mp4"
+}
+```
 
-<Callout type="info">
-  Chunked uploads are created as `PUBLIC` by default. Use `PATCH /api/files/{id}` after completion to change visibility or add a password.
-</Callout>
+Chunked uploads are public. Use [`PATCH /api/files/{id}`](#update-a-file) afterwards to make one private or add a password.
 
 ---
 
-### JavaScript Example
+## List Your Files
 
-```javascript
-const CHUNK_SIZE = 5 * 1024 * 1024 // 5 MB
+### `GET /api/files`
 
-async function chunkedUpload(file, token) {
-  // 1. Initialize
-  const { uploadId, partSize } = await fetch('/api/files/chunks', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ filename: file.name, mimeType: file.type, size: file.size }),
-  }).then(r => r.json())
+| Query | Description |
+|-------|-------------|
+| `page` | Page number, from `1`. |
+| `limit` | Files per page. Defaults to `24`. |
+| `search` | Match file names. |
+| `sortBy` | `newest` (default), `oldest`, `largest`, `smallest`, `name`, `most-viewed`, `least-viewed` or `most-downloaded`. |
+| `types` | Comma-separated file types, as returned by `GET /api/files/types`. |
+| `visibility` | `public`, `private` or `hasPassword`, comma-separated. |
+| `dateFrom`, `dateTo` | Only files uploaded in this range (ISO dates). |
+| `squadId` | List a squad's files instead of your own. You must be a member. |
 
-  // 2. Upload chunks
-  const parts = []
-  let partNumber = 1
-  for (let offset = 0; offset < file.size; offset += partSize) {
-    const chunk = file.slice(offset, offset + partSize)
+**Response:**
 
-    // Get presigned URL
-    const { url } = await fetch(`/api/files/chunks/${uploadId}/part/${partNumber}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then(r => r.json())
-
-    // Upload chunk
-    const uploadRes = await fetch(url, { method: 'PUT', body: chunk })
-    const etag = uploadRes.headers.get('ETag')
-    parts.push({ PartNumber: partNumber, ETag: etag })
-    partNumber++
-  }
-
-  // 3. Complete
-  const result = await fetch(`/api/files/chunks/${uploadId}/complete`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ parts }),
-  }).then(r => r.json())
-
-  return result.data.url
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "clx9k2m...",
+      "name": "screenshot.png",
+      "urlPath": "/aB3dE/screenshot.png",
+      "mimeType": "image/png",
+      "size": 0.46,
+      "uploadedAt": "2026-10-24T09:12:44.000Z",
+      "visibility": "PUBLIC",
+      "views": 12,
+      "downloads": 1,
+      "hasPassword": false,
+      "expiresAt": null
+    }
+  ],
+  "pagination": { "total": 120, "pageCount": 5, "page": 1, "limit": 24 }
 }
 ```
+
+`size` is in megabytes. Add `urlPath` to your instance's address to get the link.
 
 ---
 
 ## Update a File
 
-### `PATCH /api/files/[id]`
-
-**Auth:** Session or owner token
+### `PATCH /api/files/{id}`
 
 ```json
 {
   "visibility": "PRIVATE",
-  "password": "newpassword"
+  "password": "hunter2"
 }
 ```
 
-Returns updated file metadata.
+Both fields are optional. Set `password` to `null` to remove it. The response is the updated file, without the `success`/`data` wrapper:
+
+```json
+{
+  "id": "clx9k2m...",
+  "name": "screenshot.png",
+  "urlPath": "/aB3dE/screenshot.png",
+  "mimeType": "image/png",
+  "size": 0.46,
+  "visibility": "PRIVATE",
+  "hasPassword": true
+}
+```
 
 ---
 
 ## Delete a File
 
-### `DELETE /api/files/[id]`
+### `DELETE /api/files/{id}`
 
-**Auth:** Session or owner token
-
-**Response (200):**
-
-```json
-{ "success": true }
-```
-
-```bash
-curl -X DELETE \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  https://embrly.ca/api/files/cm7xabc123
-```
+Deletes the file and frees the storage. Returns `{ "success": true }`.
 
 ---
 
-## Set Expiration
+## Expiry
 
-### `POST /api/files/[id]/expiry`
+### `GET /api/files/{id}/expiry`
+
+Returns `{ "success": true, "data": { "expiresAt": "..." } }`, or `null` if the file doesn't expire.
+
+### `POST /api/files/{id}/expiry`
 
 ```json
-{ "expiresAt": "2026-12-31T23:59:59Z" }
+{
+  "expiresAt": "2026-12-31T00:00:00Z",
+  "action": "DELETE"
+}
 ```
 
-### `DELETE /api/files/[id]/expiry`
+`action` is what happens when the file expires: `DELETE` (default) or `SET_PRIVATE`.
 
-Cancels the scheduled deletion.
+### `DELETE /api/files/{id}/expiry`
+
+Removes the expiry.
 
 ---
 
-## Files Shared With You
+## Download a File
+
+### `GET /api/files/{id}/download`
+
+Downloads the file as an attachment and counts the download. Add `?password=...` for password-protected files.
+
+To show a file in a page or app instead, use its link with `/raw` added, for example `https://embrly.ca/aB3dE/screenshot.png/raw`.
+
+---
+
+## Text in Images
+
+### `GET /api/files/{id}/ocr`
+
+Returns the text Emberly found in an image, if any. Text is extracted in the background after upload. Add `?password=...` for password-protected files.
+
+---
+
+## Shared With You
 
 ### `GET /api/files/shared`
 
-Returns a paginated list of files other users have shared with you as a collaborator.
+Files other people have added you to as a collaborator. Supports `page` and `limit`.

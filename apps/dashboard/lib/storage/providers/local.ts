@@ -10,7 +10,7 @@ import {
   writeFile,
 } from 'fs/promises'
 import type { Writable as NodeWritable, Readable } from 'node:stream'
-import { isAbsolute, join, normalize } from 'path'
+import { dirname, isAbsolute, join, normalize } from 'path'
 
 import { urlForHost } from '@/lib/utils'
 
@@ -62,7 +62,7 @@ export class LocalStorageProvider implements StorageProvider {
   ): Promise<string> {
     const validPath = validateStoragePath(path)
     const fullPath = dataPath(validPath)
-    const dir = fullPath.substring(0, fullPath.lastIndexOf('/'))
+    const dir = dirname(fullPath)
     await mkdir(dir, { recursive: true })
 
     const uploadId = `local-${Date.now()}-${Math.random().toString(36).substring(2)}`
@@ -167,7 +167,7 @@ export class LocalStorageProvider implements StorageProvider {
   ): Promise<void> {
     const validPath = validateStoragePath(path)
     const fullPath = dataPath(validPath)
-    const dir = fullPath.substring(0, fullPath.lastIndexOf('/'))
+    const dir = dirname(fullPath)
     await mkdir(dir, { recursive: true })
     await writeFile(fullPath, file)
     if (metadata && Object.keys(metadata).length > 0) {
@@ -180,23 +180,17 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async deleteFile(path: string): Promise<void> {
-    const fullPath = path.startsWith('public/')
-      ? path
-      : dataPath(path)
+    const fullPath = path.startsWith('public/') ? path : dataPath(path)
     await unlink(fullPath)
   }
 
   async getFile(path: string): Promise<Buffer> {
-    const fullPath = path.startsWith('public/')
-      ? path
-      : dataPath(path)
+    const fullPath = path.startsWith('public/') ? path : dataPath(path)
     return readFile(fullPath)
   }
 
   async getFileStream(path: string, range?: RangeOptions): Promise<Readable> {
-    const fullPath = path.startsWith('public/')
-      ? path
-      : dataPath(path)
+    const fullPath = path.startsWith('public/') ? path : dataPath(path)
     const options: { start?: number; end?: number } = {}
     if (range) {
       if (typeof range.start !== 'undefined') options.start = range.start
@@ -210,9 +204,7 @@ export class LocalStorageProvider implements StorageProvider {
     _expiresIn?: number,
     hostOverride?: string
   ): Promise<string> {
-    const baseUrl = (
-      appUrl()
-    ).replace(/\/+$/, '')
+    const baseUrl = appUrl().replace(/\/+$/, '')
     const cleanPath = path.replace(/^\/+/, '').replace(/^uploads\//, '')
 
     if (hostOverride) {
@@ -232,9 +224,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async getFileSize(path: string): Promise<number> {
-    const fullPath = path.startsWith('public/')
-      ? path
-      : dataPath(path)
+    const fullPath = path.startsWith('public/') ? path : dataPath(path)
     const stats = await stat(fullPath)
     return stats.size
   }
@@ -247,7 +237,7 @@ export class LocalStorageProvider implements StorageProvider {
     const fullPath = targetPath.startsWith('public/')
       ? targetPath
       : dataPath(targetPath)
-    const dir = fullPath.substring(0, fullPath.lastIndexOf('/'))
+    const dir = dirname(fullPath)
     await mkdir(dir, { recursive: true })
 
     const chunkFiles = await readdir(chunksDir)
@@ -307,7 +297,7 @@ export class LocalStorageProvider implements StorageProvider {
   ): Promise<NodeWritable> {
     const validPath = validateStoragePath(path)
     const fullPath = dataPath(validPath)
-    const dir = fullPath.substring(0, fullPath.lastIndexOf('/'))
+    const dir = dirname(fullPath)
     await mkdir(dir, { recursive: true })
     return createWriteStream(fullPath)
   }

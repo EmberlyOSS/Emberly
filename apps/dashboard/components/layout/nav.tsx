@@ -53,6 +53,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 
 // ─── Route definitions ────────────────────────────────────────────────────────
 
@@ -406,7 +407,8 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
       </div>
 
       {/* Desktop right — avatar or auth buttons */}
-      <div className="hidden md:flex ml-auto items-center gap-3 shrink-0">
+      <div className="hidden md:flex ml-auto items-center gap-2 shrink-0">
+        {session && <NotificationBell />}
         {session ? (
           <Button variant="ghost" className="h-9 w-9 rounded-full p-0" asChild>
             <Link href="/me">
@@ -434,7 +436,8 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
       </div>
 
       {/* Mobile — sheet trigger */}
-      <div className="ml-auto flex md:hidden">
+      <div className="ml-auto flex items-center gap-1 md:hidden">
+        {session && <NotificationBell />}
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">

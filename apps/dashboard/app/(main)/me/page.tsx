@@ -181,40 +181,23 @@ export default async function ProfilePage() {
         usagePercentage={usagePercentage}
         isAdmin={user.role === 'ADMIN'}
         header={
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-                <UserIcon className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Profile
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Manage your account settings, preferences, and usage
-                </p>
-              </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Your profile
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Your account, settings and data.
+              </p>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {isCloudEnabled() && (
-                <>
-                  {user.isProfilePublic && (
-                    <Button asChild size="sm">
-                      <Link
-                        href={`/user/${encodeURIComponent(user.name ?? '')}`}
-                      >
-                        View public profile
-                        <ArrowUpRight className="ml-1.5 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                  <Button asChild size="sm" variant="outline">
-                    <Link href="/dashboard/discovery">Discovery</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href="/applications">Applications</Link>
-                  </Button>
-                </>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {isCloudEnabled() && user.isProfilePublic && (
+                <Button asChild size="sm" variant="outline" className="h-8">
+                  <Link href={`/user/${encodeURIComponent(user.name ?? '')}`}>
+                    Public profile
+                    <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
               )}
               <LogoutButton />
             </div>
