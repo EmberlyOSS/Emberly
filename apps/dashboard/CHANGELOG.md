@@ -6,6 +6,18 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-24
+
+A security fix. Self-hosters should upgrade.
+
+### Upgrading
+
+- No database changes. Update and restart.
+
+### Security
+
+- **Old sessions could keep their admin role.** Sessions are signed with `AUTH_SECRET`, and when a signed-in account no longer existed in the database, Emberly kept using the role stored in the session. Someone still signed in to an earlier install that shares the same `AUTH_SECRET`, or whose account was deleted, could reach the admin panel with their old role. Sessions for accounts that don't exist now count as signed out, and the admin panel checks the role in the database on every request.
+
 ## [3.0.0] - 2026-10-23
 
 **Made to self-host.** Emberly now ships as a Docker image with a one-command Compose setup and a Dokploy template, can be configured entirely from environment variables, and has rewritten self-hosting docs. Self-hosted instances show their own name, and a license adds your own logo and branding. Link previews are rebuilt so images show up in Discord reliably and fast. Emberly moves to the Elastic License 2.0, and the code now lives in a monorepo.
@@ -62,6 +74,7 @@ bun run start   # and `bun run worker` if you run the worker separately
 - **The pricing page only shows tabs with something in them**, and opens on the first one.
 - **Faster file downloads.** `/raw` no longer looks up the session for public files, and asks storage for the file's size and contents at the same time instead of one after the other. A malformed `Range` header now gets `416` instead of an error.
 - **File links are handled in one place.** Deciding whether a link shows the page, the media or the preview, for people and for link-preview bots, now happens in `lib/embeds/routing.ts` instead of three places in the proxy. Slack, Mastodon and Embedly are now recognised as link-preview bots.
+- **"Get a license" opens licenses.embrly.ca.** The button in **Admin → Settings → License & branding** used to start an email. It now opens the license store, where keys are delivered straight away.
 - **With rich embeds off, image links give bots the preview** instead of the full original, so the image appears in Discord straight away. Videos and other files still serve the original.
 
 ### Fixed
@@ -78,10 +91,12 @@ bun run start   # and `bun run worker` if you run the worker separately
 ### Security
 
 - **Dependency updates for published advisories.** Nodemailer is updated to 10.2.1 (several denial-of-service and address-parsing issues, the worst letting a crafted address stall the server) and Zod to 4.6.7 (oversized input could exhaust memory during validation).
+- **Tighter CI.** The CI workflow now runs with a read-only token, and every pull request gets a dependency scan from [Socket](https://socket.dev) that flags risky or malicious packages.
 - **File password hashes in file lists** — `GET /api/files` returned each file's password hash alongside `hasPassword`. In a squad's file list that meant any member could read the password hashes of other members' files and try to crack them offline. Lists now return only `hasPassword`.
 
 ### Documentation
 
+- **Shorter docs URLs.** Pages moved from `docs.embrly.ca/docs/...` to `docs.embrly.ca/...`, for example `docs.embrly.ca/self-hosting`. Old links redirect permanently.
 - **Rewritten self-hosting docs:** deploying with Docker Compose, Dokploy, Railpack/Nixpacks or a plain Linux server; every environment variable; S3 storage set up from environment variables (with RustFS, MinIO, AWS and R2 examples); and a new License & Branding page.
 - **Analytics API docs** showed the wrong response shapes for `/api/analytics/summary` and `/api/analytics/storage`, and sizes in bytes. They now match the API, note that sizes are in megabytes, and list upload tokens and API keys as accepted auth.
 
