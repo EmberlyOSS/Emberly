@@ -1,10 +1,12 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
-import { Edit2, FileText, Plus, Trash2 } from 'lucide-react'
+import { Edit2, FileText, Trash2 } from 'lucide-react'
+
+import { EmptyState, StatusBadge } from '@/components/layout/page-kit'
+import { humanize } from '@/lib/utils/humanize'
 
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -28,15 +30,25 @@ type Post = {
 
 function PostTableSkeleton() {
   return (
-    <div className="glass-subtle overflow-hidden">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="border-border/50 hover:bg-transparent">
-            <TableHead className="text-muted-foreground font-medium">Title</TableHead>
-            <TableHead className="text-muted-foreground font-medium">Slug</TableHead>
-            <TableHead className="text-muted-foreground font-medium">Status</TableHead>
-            <TableHead className="text-right text-muted-foreground font-medium">Published</TableHead>
-            <TableHead className="text-right text-muted-foreground font-medium">Actions</TableHead>
+            <TableHead className="text-muted-foreground font-medium">
+              Title
+            </TableHead>
+            <TableHead className="text-muted-foreground font-medium">
+              Slug
+            </TableHead>
+            <TableHead className="text-muted-foreground font-medium">
+              Status
+            </TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">
+              Published
+            </TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -71,13 +83,13 @@ function PostTableSkeleton() {
 function getStatusBadge(status: string) {
   switch (status) {
     case 'PUBLISHED':
-      return <Badge className="bg-chart-2/20 text-chart-2 hover:bg-chart-2/30 border-0">Published</Badge>
-    case 'DRAFT':
-      return <Badge variant="secondary" className="bg-muted/50">Draft</Badge>
+      return <StatusBadge tone="success">Published</StatusBadge>
     case 'ARCHIVED':
-      return <Badge variant="outline" className="text-muted-foreground">Archived</Badge>
+      return <StatusBadge tone="neutral">Archived</StatusBadge>
+    case 'DRAFT':
+      return <StatusBadge tone="warning">Draft</StatusBadge>
     default:
-      return <Badge variant="secondary">{status}</Badge>
+      return <StatusBadge>{humanize(status)}</StatusBadge>
   }
 }
 
@@ -144,30 +156,34 @@ export function BlogList({ onEdit }: { onEdit?: (id: string) => void }) {
 
   if (!loading && posts.length === 0) {
     return (
-      <div className="glass-subtle border-dashed p-12 text-center">
-        <div className="flex justify-center mb-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <FileText className="h-7 w-7 text-primary" />
-          </div>
-        </div>
-        <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-          Start creating blog posts to share news and updates with your audience.
-        </p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No posts yet"
+        description="Write your first post to share news and updates."
+      />
     )
   }
 
   return (
-    <div className="glass-subtle overflow-hidden">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="border-border/50 hover:bg-transparent">
-            <TableHead className="text-muted-foreground font-medium">Title</TableHead>
-            <TableHead className="text-muted-foreground font-medium">Slug</TableHead>
-            <TableHead className="text-muted-foreground font-medium">Status</TableHead>
-            <TableHead className="text-right text-muted-foreground font-medium">Published</TableHead>
-            <TableHead className="text-right text-muted-foreground font-medium">Actions</TableHead>
+            <TableHead className="text-muted-foreground font-medium">
+              Title
+            </TableHead>
+            <TableHead className="text-muted-foreground font-medium">
+              Slug
+            </TableHead>
+            <TableHead className="text-muted-foreground font-medium">
+              Status
+            </TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">
+              Published
+            </TableHead>
+            <TableHead className="text-right text-muted-foreground font-medium">
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -181,17 +197,33 @@ export function BlogList({ onEdit }: { onEdit?: (id: string) => void }) {
                   </div>
                 )}
               </TableCell>
-              <TableCell className="max-w-[220px] truncate text-muted-foreground font-mono text-sm">{p.slug}</TableCell>
+              <TableCell className="max-w-[220px] truncate text-muted-foreground font-mono text-sm">
+                {p.slug}
+              </TableCell>
               <TableCell>{getStatusBadge(p.status)}</TableCell>
               <TableCell className="text-right text-sm text-muted-foreground">
-                {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}
+                {p.publishedAt
+                  ? new Date(p.publishedAt).toLocaleDateString()
+                  : '—'}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit?.(p.id)} className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
+                <div className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit?.(p.id)}
+                    className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                    aria-label="Edit post"
+                  >
                     <Edit2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(p.id)}
+                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Delete post"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

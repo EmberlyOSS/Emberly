@@ -1,0 +1,68 @@
+---
+title: Admin API
+description: The endpoints behind the admin panel, and the system key for automating admin tasks.
+---
+
+These endpoints power **Admin** in the dashboard. They need an admin or superadmin account, and change between releases more often than the rest of the API. Use the admin panel where you can.
+
+## System Key
+
+For scripts that manage the whole instance, create a **system key** in **Admin → Settings → Integrations → System API Key**. It starts with `esk_` and acts as a superadmin:
+
+```bash
+curl https://files.example.com/api/admin/reports \
+  -H "Authorization: Bearer esk_..."
+```
+
+Only superadmins can create one. Treat it like the database password: anyone with it controls the instance.
+
+## Who Can Use What
+
+| Role | Access |
+|------|--------|
+| **Admin** | Users, reports, content moderation, audit logs. Can view settings. |
+| **Superadmin** | Everything, including settings, integrations, storage, email and the system key. |
+
+## Endpoints
+
+### Users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` `POST` `PUT` | `/api/users` | List users, create a user, change a user's role |
+| `GET` | `/api/users/search` | Find users by name or email |
+| `DELETE` | `/api/users/{id}` | Delete a user and their files |
+| `GET` | `/api/users/{id}/files` | A user's files |
+| `PATCH` `DELETE` | `/api/users/{id}/files/{fileId}` | Change or delete one of a user's files |
+| `GET` | `/api/users/{id}/urls` | A user's short links |
+| `DELETE` | `/api/users/{id}/sessions` | Sign a user out everywhere |
+| `DELETE` | `/api/users/{id}/avatar` | Remove a user's avatar |
+| `PUT` `DELETE` | `/api/users/{id}/banner` | Change or remove a user's banner |
+| `GET` `POST` `DELETE` | `/api/admin/users/{id}/ban` | Ban status, ban, unban |
+| `POST` `DELETE` | `/api/admin/users/{id}/verify` | Mark a user's email verified or unverified |
+| `PUT` | `/api/admin/users/{id}/storage` | Change a user's storage quota |
+| `GET` `POST` `DELETE` | `/api/admin/users/{id}/grants` | Extra storage or domains given to a user |
+
+### Moderation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/admin/reports` | Open reports |
+| `PATCH` | `/api/admin/reports/{id}` | Resolve or dismiss a report |
+| `POST` | `/api/admin/content/flag` | Flag or unflag a file or short link |
+| `GET` | `/api/admin/audit/logs` | Audit log |
+
+### Instance
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/admin/system` | Runtime, database, disk, email, Discord and license details for the health panel. Never includes keys or tokens |
+| `GET` `PATCH` `POST` | `/api/settings` | Read and change settings (superadmin) |
+| `GET` `PUT` `DELETE` | `/api/admin/license` | License status; add or remove the license key |
+| `POST` | `/api/admin/storage/test` | Test the storage settings |
+| `POST` | `/api/admin/integrations/test` | Test an integration's credentials |
+| `GET` `POST` `DELETE` | `/api/admin/system-key` | Show, create or revoke the system key |
+| `POST` | `/api/admin/email/send` | Send an email to users |
+| `GET` | `/api/admin/email/logs`, `/api/admin/email/stats` | Sent email history |
+
+Cloud mode adds endpoints for billing (`/api/admin/stripe`, `/api/admin/products`, `/api/admin/promo-codes`), managed storage buckets (`/api/admin/storage/...`) and applications (`/api/admin/applications`).

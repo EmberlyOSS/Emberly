@@ -6,7 +6,6 @@ import {
   Braces,
   Shield,
   Server,
-  Users,
   ArrowRight,
 } from 'lucide-react'
 
@@ -62,25 +61,16 @@ const sections = [
     icon: Server,
     color: 'var(--self-hosting-color)',
   },
-  {
-    title: 'Staff & Operations',
-    description:
-      'Moderation, support, and incident response for the Emberly team.',
-    href: '/staff',
-    label: 'Staff docs',
-    icon: Users,
-    color: 'var(--staff-color)',
-  },
 ]
 
 const quickLinks = [
-  { label: 'Plans & Pricing', href: '/getting-started/plans-overview' },
-  { label: 'Feature Matrix', href: '/getting-started/feature-matrix' },
-  { label: 'Teams & Squads', href: '/user-guide/teams-and-squads' },
+  { label: 'Limits', href: '/getting-started/limits' },
+  { label: 'Run with Docker', href: '/self-hosting/production' },
   { label: 'Flicker Desktop App', href: '/integrations/flicker' },
-  { label: 'Webhooks', href: '/integrations/webhooks' },
-  { label: 'Billing API', href: '/api/billing' },
-  { label: 'Contributing', href: '/self-hosting/contributing' },
+  { label: 'ShareX', href: '/integrations/sharex' },
+  { label: 'Files API', href: '/api/files' },
+  { label: 'Custom Domains', href: '/user-guide/custom-domains' },
+  { label: 'License & Branding', href: '/self-hosting/licensing' },
 ]
 
 export default function HomePage() {
@@ -179,7 +169,7 @@ export default function HomePage() {
       <p className="mt-10 text-sm text-center text-fd-muted-foreground">
         Something missing?{' '}
         <a
-          href="https://github.com/EmberlyOSS/Documentation/issues"
+          href="https://github.com/EmberlyOSS/Emberly/issues"
           className="underline transition-colors underline-offset-2 hover:text-fd-foreground"
           target="_blank"
           rel="noopener noreferrer"

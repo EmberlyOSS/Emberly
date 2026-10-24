@@ -7,11 +7,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Eye, FileCode, Link as LinkIcon, User } from 'lucide-react'
 
 import { getFileIcon } from '@/components/dashboard/file-card/utils'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -86,7 +82,6 @@ export function SharedFileCard({ file }: SharedFileCardProps) {
   return (
     <Card className="group relative overflow-hidden bg-background/80 backdrop-blur-lg border-border/50 shadow-sm hover:shadow-md hover:bg-background/90 hover:border-border/50 transition-all duration-300">
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-muted/10 via-transparent to-transparent pointer-events-none" />
 
       {/* Preview Area */}
       <Link href={sanitizeUrl(file.urlPath)} className="block relative">
@@ -106,7 +101,6 @@ export function SharedFileCard({ file }: SharedFileCardProps) {
           )}
 
           {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
       </Link>
 

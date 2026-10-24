@@ -635,7 +635,8 @@ export async function updateConfig(
     logger.error('Could not save config to database', {
       error: error instanceof Error ? error.message : String(error),
     })
-    return newConfig as EmberlyConfig
+    // Callers must know the save failed, or the admin is told it worked
+    throw error
   }
 }
 
@@ -658,6 +659,7 @@ export async function updateConfigSection<
     logger.debug('Config section updated', { section })
   } catch (error) {
     logger.warn('Could not update config section', { section, error })
+    throw error
   }
 }
 

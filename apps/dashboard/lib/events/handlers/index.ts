@@ -9,7 +9,6 @@ import { fileHandlers } from './file'
 import { fileExpiryHandlers } from './file-expiry'
 import { billingHandlers } from './billing'
 import { securityHandlers } from './security'
-import { discordHandlers } from './discord'
 import { adminDiscordHandlers } from './admin-discord'
 import { adminHandlers } from './admin'
 import { userHandlers } from './user'
@@ -28,7 +27,6 @@ export const allHandlers = mergeHandlerMaps([
   fileExpiryHandlers,
   billingHandlers,
   securityHandlers,
-  discordHandlers,
   adminDiscordHandlers,
   adminHandlers,
   userHandlers,

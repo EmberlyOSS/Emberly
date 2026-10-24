@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Bell,
   ChartBar,
   Clipboard,
   Database,
@@ -42,6 +43,11 @@ const groups: Array<{ label?: string; items: DashboardItem[] }> = [
     label: 'Account',
     items: [
       { href: '/dashboard/analytics', label: 'Analytics', icon: ChartBar },
+      {
+        href: '/dashboard/notifications',
+        label: 'Notifications',
+        icon: Bell,
+      },
       {
         href: '/dashboard/domains',
         label: 'Domains',

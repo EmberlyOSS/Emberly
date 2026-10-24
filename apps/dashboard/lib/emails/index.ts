@@ -5,8 +5,47 @@ import nodemailer from 'nodemailer'
 import type { Transporter } from 'nodemailer'
 import { Resend } from 'resend'
 import { prisma } from '@emberly/db'
-import { getEmailBrander } from '@/lib/branding'
+import { getBranding, getEmailBrander } from '@/lib/branding'
+import { appUrl } from '@/lib/config/env'
+
+import { type EmailBrand, plainTextOptions, withEmailBrand } from './components'
+
+async function getEmailBrand(): Promise<EmailBrand> {
+  const branding = await getBranding()
+  const siteUrl = appUrl().replace(/\/$/, '')
+  return {
+    name: branding.embedName,
+    logoUrl: branding.logo
+      ? new URL(branding.logo, siteUrl).toString()
+      : `${siteUrl}/icon-192.png`,
+    siteUrl,
+    manageUrl: `${siteUrl}/me?tab=notifications`,
+    showCredit: branding.showCredit,
+  }
+}
 import { getIntegrations } from '@/lib/config'
+
+/**
+ * The provider to send with: the one chosen in settings if it's set up,
+ * otherwise whichever one is (in settings or environment variables).
+ */
+export async function resolveEmailProvider(): Promise<{
+  provider: 'resend' | 'smtp'
+  configured: boolean
+}> {
+  const integrations = (await getIntegrations()) as Record<string, any>
+  const resendReady = Boolean(
+    integrations.resend?.apiKey || process.env.RESEND_API_KEY
+  )
+  const smtpReady = Boolean(integrations.smtp?.host || process.env.SMTP_HOST)
+  const chosen: 'resend' | 'smtp' =
+    integrations.emailProvider === 'smtp' ? 'smtp' : 'resend'
+  const ready = { resend: resendReady, smtp: smtpReady }
+  if (ready[chosen]) return { provider: chosen, configured: true }
+  if (resendReady) return { provider: 'resend', configured: true }
+  if (smtpReady) return { provider: 'smtp', configured: true }
+  return { provider: chosen, configured: false }
+}
 
 let cachedResend: Resend | null = null
 let cachedResendKey: string | null = null
@@ -150,14 +189,27 @@ export async function sendEmail({
   }
 
   const brand = await getEmailBrander()
-  const htmlContent = brand(html ?? (react ? await render(react) : undefined))
-  const textContent = brand(text)
+  const emailBrand = react ? await getEmailBrand() : undefined
+  const htmlContent = brand(
+    html ??
+      (react && emailBrand
+        ? await withEmailBrand(emailBrand, () => render(react))
+        : undefined)
+  )
+  const textContent = brand(
+    text ??
+      (react && emailBrand
+        ? await withEmailBrand(emailBrand, () =>
+            render(react, {
+              plainText: true,
+              htmlToTextOptions: plainTextOptions,
+            })
+          )
+        : undefined)
+  )
   subject = brand(subject)
 
-  const integrations = await getIntegrations()
-  const provider =
-    ((integrations as Record<string, unknown>).emailProvider as
-      string | undefined) ?? 'resend'
+  const { provider } = await resolveEmailProvider()
 
   let messageId: string | undefined
 

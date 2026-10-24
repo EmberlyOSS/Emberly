@@ -1,9 +1,8 @@
-import React, { memo, useEffect, useRef, useState } from 'react'
+import React, { memo, useEffect, useState } from 'react'
 
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 
 import { useDebounce } from '@/hooks/use-debounce'
 
@@ -17,8 +16,6 @@ export const SearchInput = memo(function SearchInput({
   initialValue = '',
 }: SearchInputProps) {
   const [value, setValue] = useState(initialValue)
-  const [isOpen, setIsOpen] = useState(Boolean(initialValue))
-  const inputRef = useRef<HTMLInputElement>(null)
   const debouncedSearch = useDebounce(value, 300)
 
   useEffect(() => {
@@ -29,56 +26,28 @@ export const SearchInput = memo(function SearchInput({
     onSearch(debouncedSearch)
   }, [debouncedSearch, onSearch])
 
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
-  const toggleSearch = () => {
-    if (isOpen) {
-      setIsOpen(false)
-      if (inputRef.current) inputRef.current.blur()
-    } else {
-      setIsOpen(true)
-    }
-  }
-
-  const handleBlur = () => {
-    if (!value) {
-      setIsOpen(false)
-    }
-  }
-
   return (
-    <div className="flex items-center gap-2 flex-1 sm:flex-none">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-10 w-10 bg-background/80 backdrop-blur-lg border-border/50 hover:bg-background/90 hover:border-border/50 transition-all duration-200"
-        onClick={toggleSearch}
-        aria-label="Open search"
-        aria-expanded={isOpen}
-      >
-        <Search className="h-4 w-4" />
-      </Button>
-
-      <div
-        className={`relative flex-1 transition-all duration-200 sm:overflow-hidden ${isOpen ? 'sm:w-[260px] sm:opacity-100' : 'sm:w-0 sm:opacity-0 sm:pointer-events-none'
-          }`}
-      >
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-        <Input
-          ref={inputRef}
-          placeholder="Search files..."
-          className="pl-9 bg-background/80 backdrop-blur-lg border-border/50 focus:bg-background/90 focus:border-border/50 transition-all duration-200"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onBlur={handleBlur}
-        />
-      </div>
+    <div className="relative min-w-[12rem] flex-1">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        type="search"
+        placeholder="Search by name"
+        aria-label="Search files"
+        className="h-9 border-border/60 bg-background/50 pl-9 pr-8 [&::-webkit-search-cancel-button]:hidden"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && setValue('')}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => setValue('')}
+          aria-label="Clear search"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   )
 })

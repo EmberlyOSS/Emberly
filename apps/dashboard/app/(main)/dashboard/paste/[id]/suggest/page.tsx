@@ -64,7 +64,7 @@ export default async function SuggestEditPage({
 
   return (
     <DashboardShell
-      title="Suggest Edit"
+      title="Suggest an edit"
       description={
         <>
           Suggest changes to{' '}

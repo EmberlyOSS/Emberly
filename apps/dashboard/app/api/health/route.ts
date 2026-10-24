@@ -88,9 +88,14 @@ export async function GET() {
     // Real round-trip (write + delete through the exact provider/path
     // uploads use), cached briefly — see checkStorageRoundTrip above.
     checkStorageRoundTrip(),
-    timed(() =>
-      getEventQueue().getJobCounts('waiting', 'active', 'failed', 'delayed')
-    ),
+    timed(async () => {
+      const queue = getEventQueue()
+      const [counts, workers] = await Promise.all([
+        queue.getJobCounts('waiting', 'active', 'failed', 'delayed'),
+        queue.getWorkersCount(),
+      ])
+      return { ...counts, workers }
+    }),
     cloud ? isStripeConfigured() : Promise.resolve(null),
     getConfig(),
   ])
@@ -114,7 +119,12 @@ export async function GET() {
       status: process.env.VIRUSTOTAL_API_KEY ? 'configured' : 'not_configured',
     },
     eventQueue: {
-      status: !workerRunning ? 'disabled' : queueCheck.ok ? 'up' : 'down',
+      // Any connected worker counts, in this process or a separate one
+      status: !queueCheck.ok
+        ? 'down'
+        : (queueCheck.value?.workers ?? 0) > 0
+          ? 'up'
+          : 'no_worker',
       workerRunning,
       latencyMs: queueCheck.latencyMs,
       ...(queueCheck.value ?? {}),
@@ -128,10 +138,9 @@ export async function GET() {
   }
 
   const isDown = !dbCheck.ok
+  const noWorker = queueCheck.ok && (queueCheck.value?.workers ?? 0) === 0
   const isDegraded =
-    !redisCheck.ok ||
-    !storageCheck.ok ||
-    (workerRunning && !queueCheck.ok)
+    !redisCheck.ok || !storageCheck.ok || !queueCheck.ok || noWorker
 
   const status = isDown ? 'down' : isDegraded ? 'degraded' : 'ok'
 
@@ -148,7 +157,11 @@ export async function GET() {
       version: pkg.version,
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
       cloud,
-      warnings: [],
+      warnings: noWorker
+        ? [
+            'No event worker is running, so emails, notifications and Discord alerts are queued but not sent. EMBERLY_RUN_EVENT_WORKER is probably set to false: remove it, or run `bun run worker` alongside the app.',
+          ]
+        : [],
       checks,
     },
     status === 'down' ? 503 : 200

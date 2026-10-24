@@ -17,44 +17,10 @@ import {
 } from './lib/middleware/constants'
 import { Permission, hasPermission } from './lib/permissions'
 
-declare global {
-  var __nextAuthLoginContext: Record<string, any>
-}
-
-if (!globalThis.__nextAuthLoginContext) {
-  globalThis.__nextAuthLoginContext = {}
-}
-
 // Computed once per isolate, not on every request
 const BASE_URL = appUrl()
 const MAIN_HOST = new URL(BASE_URL).hostname
 const ALPHA_CUTOFF_DATE = new Date('2025-12-27T00:00:00.000Z')
-
-function getClientIP(request: NextRequest): string | undefined {
-  const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0]?.trim()
-
-  return (
-    request.headers.get('x-real-ip') ??
-    request.headers.get('cf-connecting-ip') ??
-    request.headers.get('x-client-ip') ??
-    undefined
-  )
-}
-
-function getGeoInfo(request: NextRequest) {
-  const country =
-    request.headers.get('x-vercel-ip-country') ||
-    request.headers.get('cf-ipcountry') ||
-    null
-
-  const city =
-    request.headers.get('x-vercel-ip-city') ||
-    request.headers.get('cf-ipcity') ||
-    null
-
-  return { country, city }
-}
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
@@ -105,32 +71,6 @@ export async function proxy(request: NextRequest) {
       } catch (e) {
         console.error('[Proxy] Custom domain lookup failed:', e)
       }
-    }
-  }
-
-  if (
-    pathname === '/api/auth/callback/credentials' &&
-    request.method === 'POST'
-  ) {
-    const ip = getClientIP(request)
-    const { country, city } = getGeoInfo(request)
-    const userAgent = request.headers.get('user-agent')
-
-    const contextKey = `login_context:${Date.now()}`
-    globalThis.__nextAuthLoginContext[contextKey] = {
-      ip: ip || undefined,
-      userAgent: userAgent || undefined,
-      geo: country || city ? { country, city } : null,
-    }
-
-    const now = Date.now()
-    for (const key in globalThis.__nextAuthLoginContext) {
-      try {
-        const ts = parseInt(key.split(':')[1])
-        if (now - ts > 60000) {
-          delete globalThis.__nextAuthLoginContext[key]
-        }
-      } catch {}
     }
   }
 

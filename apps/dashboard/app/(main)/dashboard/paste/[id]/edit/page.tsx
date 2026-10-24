@@ -53,7 +53,7 @@ export default async function EditPastePage({ params }: EditPastePageProps) {
 
   return (
     <DashboardShell
-      title="Edit Paste"
+      title="Edit paste"
       description="Update your code snippet or paste content."
     >
       <div className="glass-card p-6">

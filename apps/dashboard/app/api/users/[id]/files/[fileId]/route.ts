@@ -1,3 +1,4 @@
+import { hash } from 'bcryptjs'
 import { NextResponse } from 'next/server'
 
 import { getServerSession } from 'next-auth'
@@ -94,11 +95,19 @@ export async function PATCH(
       },
       data: {
         visibility,
-        ...(password && { password }),
+        ...(password && { password: await hash(password, 10) }),
+      },
+      select: {
+        id: true,
+        name: true,
+        urlPath: true,
+        visibility: true,
+        password: true,
       },
     })
 
-    return NextResponse.json(file)
+    const { password: hashed, ...updated } = file
+    return NextResponse.json({ ...updated, hasPassword: !!hashed })
   } catch (error) {
     logger.error('Error updating file:', error as Error)
     return new NextResponse('Internal Server Error', { status: 500 })

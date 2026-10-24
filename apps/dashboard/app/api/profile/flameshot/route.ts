@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth/api-auth'
 import { z } from 'zod'
 
 import { prisma } from '@emberly/db'
+import { defaultUploadDomain } from '@/lib/domain/default'
 import { loggers } from '@/lib/logger'
 import { urlForHost } from '@/lib/utils'
 
@@ -45,8 +46,12 @@ export async function POST(req: Request) {
         ? 'http://localhost:3000'
         : appUrl()
     const normalizedBaseUrl = baseUrl.replace(/\/+$/, '')
-    const preferredHost = dbUser.preferredUploadDomain
-      ? urlForHost(dbUser.preferredUploadDomain).replace(/\/+$/, '')
+    const defaultDomain = await defaultUploadDomain(
+      user.id,
+      dbUser.preferredUploadDomain
+    )
+    const preferredHost = defaultDomain
+      ? urlForHost(defaultDomain).replace(/\/+$/, '')
       : null
     let resolvedBaseUrl = preferredHost || normalizedBaseUrl
     // If the request came from a verified custom upload domain for this user,
@@ -124,7 +129,6 @@ function generateFlameshotScript({
   useCompositor,
   baseUrl,
 }: ScriptOptions): string {
-
   return `#!/bin/bash
 
 # Emberly Upload Script for Flameshot
@@ -248,4 +252,3 @@ echo "Screenshot uploaded successfully: $URL"
 ${useWayland ? 'notify-send "Screenshot Uploaded" "URL copied to clipboard: $URL"' : 'notify-send "Screenshot Uploaded" "URL copied to clipboard: $URL"'}
 exit 0`
 }
-

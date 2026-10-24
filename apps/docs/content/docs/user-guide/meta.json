@@ -3,20 +3,18 @@
   "root": true,
   "pages": [
     "index",
-    "account-settings",
     "file-management",
     "file-collaboration",
     "paste",
     "url-shortener",
+    "account-settings",
+    "reporting",
+    "discord-bot",
     "custom-domains",
     "teams-and-squads",
     "nexium",
-    "storage-bucket",
-    "verification-codes",
     "leaderboard",
-    "reporting",
     "contributor-perks",
-    "discord-perks",
-    "discord-bot"
+    "discord-perks"
   ]
 }

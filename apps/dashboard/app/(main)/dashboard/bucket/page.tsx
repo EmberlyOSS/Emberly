@@ -12,7 +12,7 @@ import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 import { BucketSecretReveal } from '@/components/dashboard/bucket-secret-reveal'
 
 export const metadata = buildPageMetadata({
-  title: 'Storage Bucket',
+  title: 'Storage bucket',
   description: 'View your dedicated S3 storage bucket credentials and status.',
 })
 
@@ -125,7 +125,7 @@ export default async function BucketPage() {
   if (!bucket) {
     return (
       <DashboardShell
-        title="Storage Bucket"
+        title="Storage bucket"
         description="Dedicated S3-compatible storage with unlimited capacity."
       >
         {/* No bucket assigned */}
@@ -165,7 +165,7 @@ export default async function BucketPage() {
   }
 
   return (
-    <DashboardShell title="Storage Bucket" description={bucket.name}>
+    <DashboardShell title="Storage bucket" description={bucket.name}>
       {/* Coming soon notice */}
       <div className="flex items-start gap-3 rounded-lg border border-blue-500/40 bg-blue-500/10 px-5 py-4 text-sm text-blue-700 dark:text-blue-400">
         <Clock className="mt-0.5 h-4 w-4 shrink-0" />

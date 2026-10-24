@@ -59,7 +59,13 @@ export default async function DashboardPage() {
   // Unlimited plans report a 100 TB sentinel quota
   const unlimited = !quota || quota.quotaMB >= 100 * 1024 * 1024
 
-  const firstName = (session!.user.name ?? '').split(' ')[0] || 'there'
+  const { fullName } =
+    (await prisma.user.findUnique({
+      where: { id: userId },
+      select: { fullName: true },
+    })) ?? {}
+  const firstName =
+    fullName?.trim().split(/\s+/)[0] || session!.user.name || 'there'
 
   return (
     <DashboardShell

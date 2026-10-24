@@ -5,7 +5,8 @@
  * token via /link.
  */
 
-const BASE = process.env.EMBERLY_API_URL?.replace(/\/$/, '') ?? 'https://embrly.ca'
+const BASE =
+  process.env.EMBERLY_API_URL?.replace(/\/$/, '') ?? 'https://embrly.ca'
 
 const TIMEOUT_MS = 10_000
 
@@ -18,7 +19,10 @@ export class EmberlyAuthError extends Error {
 }
 
 function authHeaders(token: string) {
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
 }
 
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
@@ -27,7 +31,9 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
     res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) })
   } catch (err) {
     if ((err as Error)?.name === 'TimeoutError') {
-      throw new Error('Emberly took too long to respond. Please try again in a moment.')
+      throw new Error(
+        'Emberly took too long to respond. Please try again in a moment.'
+      )
     }
     throw new Error('Could not reach Emberly. Please try again in a moment.')
   }
@@ -36,12 +42,17 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
 
   // Error pages from the proxy (502s etc.) aren't JSON, so don't assume a body
   const json = (await res.json().catch(() => null)) as { error?: string } | null
-  if (!res.ok) throw new Error(json?.error ?? `Emberly returned an error (${res.status}).`)
+  if (!res.ok)
+    throw new Error(json?.error ?? `Emberly returned an error (${res.status}).`)
   if (json === null) throw new Error('Emberly returned an unexpected response.')
   return json as T
 }
 
-function get<T>(token: string, path: string, params: Record<string, string> = {}): Promise<T> {
+function get<T>(
+  token: string,
+  path: string,
+  params: Record<string, string> = {}
+): Promise<T> {
   const url = new URL(`${BASE}${path}`)
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
   return request<T>(url.toString(), { headers: authHeaders(token) })
@@ -70,7 +81,7 @@ export interface AnalyticsSummary {
   plan: string
   basic: {
     totalFiles: number
-    storageUsed: number        // MB
+    storageUsed: number // MB
     totalUrls: number
     totalUrlClicks: number
     totalViews: number
@@ -78,14 +89,26 @@ export interface AnalyticsSummary {
     domainsCount: number
     verifiedDomains: number
   }
-  allowed: { topFiles: boolean; topUrls: boolean; recentUploads: boolean; detailedList: boolean }
-  recentUploads?: Array<{ id: string; name: string; size: number; uploadedAt: string; views: number; downloads: number }>
+  allowed: {
+    topFiles: boolean
+    topUrls: boolean
+    recentUploads: boolean
+    detailedList: boolean
+  }
+  recentUploads?: Array<{
+    id: string
+    name: string
+    size: number
+    uploadedAt: string
+    views: number
+    downloads: number
+  }>
 }
 
 export interface FileItem {
   id: string
   name: string
-  urlPath: string              // starts with "/"
+  urlPath: string // starts with "/"
   mimeType: string
   size: number
   visibility: string
@@ -108,6 +131,7 @@ export interface DomainItem {
 export interface ShortenedUrl {
   shortCode: string
   targetUrl: string
+  url?: string
 }
 
 export interface SquadItem {
@@ -119,7 +143,7 @@ export interface SquadItem {
   isPublic: boolean
   isVerified: boolean
   maxSize: number
-  storageUsed: number          // MB
+  storageUsed: number // MB
   storageQuotaMB: number | null
   _count: { members: number }
   myRole: string
@@ -142,10 +166,14 @@ export const emberlyApi = {
 
   /** GET /api/files?limit=N&sortBy=newest → recent files */
   getFiles: (token: string, limit = 5) =>
-    get<{ data: FileItem[]; pagination: { total: number }; success: true }>(token, '/api/files', {
-      limit: String(limit),
-      sortBy: 'newest',
-    }),
+    get<{ data: FileItem[]; pagination: { total: number }; success: true }>(
+      token,
+      '/api/files',
+      {
+        limit: String(limit),
+        sortBy: 'newest',
+      }
+    ),
 
   /** GET /api/domains → custom domains + limit info */
   getDomains: (token: string) =>
@@ -157,7 +185,11 @@ export const emberlyApi = {
 
   /** GET /api/discovery/squads?mine=true → all squads the user belongs to */
   getSquads: (token: string) =>
-    get<{ data: { squads: SquadItem[] }; success: true }>(token, '/api/discovery/squads', { mine: 'true' }),
+    get<{ data: { squads: SquadItem[] }; success: true }>(
+      token,
+      '/api/discovery/squads',
+      { mine: 'true' }
+    ),
 
   /**
    * GET /api/profile/sharex → the user's ShareX config, built by the site so
@@ -165,5 +197,4 @@ export const emberlyApi = {
    */
   getShareXConfig: (token: string) =>
     get<Record<string, unknown>>(token, '/api/profile/sharex'),
-
 }

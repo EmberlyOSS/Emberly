@@ -73,7 +73,7 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md). Please report security issues pr
 ## Support
 
 - [Discord](https://discord.gg/36spBmzZVB)
-- [hey@embrly.ca](mailto:hey@embrly.ca)
+- [support@embrly.ca](mailto:support@embrly.ca)
 
 ## License
 

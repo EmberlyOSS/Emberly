@@ -10,6 +10,7 @@ const config = {
     return [
       { source: '/docs', destination: '/getting-started', permanent: true },
       { source: '/docs/:path*', destination: '/:path*', permanent: true },
+      { source: '/staff/:path*', destination: '/', permanent: false },
     ]
   },
 }

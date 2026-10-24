@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -23,21 +23,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 
-const SEED_SCRIPT_URL = 'https://github.com/EmberlyOSS/Emberly/blob/dev/scripts/seed-plans.ts'
+const SEED_SCRIPT_URL =
+  'https://github.com/EmberlyOSS/Emberly/blob/master/apps/dashboard/lib/products/catalog.ts'
 const PAGE_SIZE = 10
 
 function TypeBadge({ type }: { type: string }) {
   switch (type) {
     case 'plan':
-      return <Badge className="bg-blue-500/15 text-blue-400 border border-blue-400/30 font-mono text-[10px] py-0">plan</Badge>
+      return (
+        <Badge className="bg-blue-500/15 text-blue-400 border border-blue-400/30 font-mono text-[10px] py-0">
+          plan
+        </Badge>
+      )
     case 'addon':
-      return <Badge className="bg-violet-500/15 text-violet-400 border border-violet-400/30 font-mono text-[10px] py-0">addon</Badge>
+      return (
+        <Badge className="bg-violet-500/15 text-violet-400 border border-violet-400/30 font-mono text-[10px] py-0">
+          addon
+        </Badge>
+      )
     case 'nexium-plan':
-      return <Badge className="bg-orange-500/15 text-orange-400 border border-orange-400/30 font-mono text-[10px] py-0">nexium-plan</Badge>
+      return (
+        <Badge className="bg-orange-500/15 text-orange-400 border border-orange-400/30 font-mono text-[10px] py-0">
+          nexium-plan
+        </Badge>
+      )
     case 'one-time':
-      return <Badge className="bg-slate-500/15 text-slate-400 border border-slate-400/30 font-mono text-[10px] py-0">one-time</Badge>
+      return (
+        <Badge className="bg-slate-500/15 text-slate-400 border border-slate-400/30 font-mono text-[10px] py-0">
+          one-time
+        </Badge>
+      )
     default:
-      return <Badge variant="outline" className="font-mono text-[10px] py-0">{type || 'plan'}</Badge>
+      return (
+        <Badge variant="outline" className="font-mono text-[10px] py-0">
+          {type || 'plan'}
+        </Badge>
+      )
   }
 }
 
@@ -56,17 +77,29 @@ export default function AdminProductManager() {
       if (!res.ok) throw new Error('Failed to load products')
       setProducts(await res.json())
     } catch (err: any) {
-      toast({ title: 'Failed to load products', description: err.message, variant: 'destructive' })
+      toast({
+        title: 'Failed to load products',
+        description: err.message,
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchProducts() }, [])
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
-  const handleToggle = async (id: string, field: 'active' | 'popular', value: boolean) => {
+  const handleToggle = async (
+    id: string,
+    field: 'active' | 'popular',
+    value: boolean
+  ) => {
     setToggling(`${id}:${field}`)
-    setProducts((prev) => prev.map((p) => p.id === id ? { ...p, [field]: value } : p))
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+    )
     try {
       const res = await fetch(`/api/products/${id}`, {
         method: 'PATCH',
@@ -75,8 +108,14 @@ export default function AdminProductManager() {
       })
       if (!res.ok) throw new Error('Update failed')
     } catch (err: any) {
-      setProducts((prev) => prev.map((p) => p.id === id ? { ...p, [field]: !value } : p))
-      toast({ title: 'Update failed', description: err.message, variant: 'destructive' })
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, [field]: !value } : p))
+      )
+      toast({
+        title: 'Update failed',
+        description: err.message,
+        variant: 'destructive',
+      })
     } finally {
       setToggling(null)
     }
@@ -85,13 +124,22 @@ export default function AdminProductManager() {
   const handleSync = async (id: string, name: string) => {
     setSyncing(id)
     try {
-      const res = await fetch(`/api/admin/products/${id}/sync`, { method: 'POST' })
+      const res = await fetch(`/api/admin/products/${id}/sync`, {
+        method: 'POST',
+      })
       if (!res.ok) throw new Error('Sync failed')
       const data = await res.json()
       await fetchProducts()
-      toast({ title: data.synced ? 'Synced to Stripe' : 'Already up to date', description: name })
+      toast({
+        title: data.synced ? 'Synced to Stripe' : 'Already up to date',
+        description: name,
+      })
     } catch (err: any) {
-      toast({ title: 'Sync failed', description: err.message, variant: 'destructive' })
+      toast({
+        title: 'Sync failed',
+        description: err.message,
+        variant: 'destructive',
+      })
     } finally {
       setSyncing(null)
     }
@@ -108,12 +156,18 @@ export default function AdminProductManager() {
           onClick={async () => {
             setToggling(`${id}:delete`)
             try {
-              const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' })
+              const res = await fetch(`/api/admin/products/${id}`, {
+                method: 'DELETE',
+              })
               if (!res.ok) throw new Error('Delete failed')
               setProducts((prev) => prev.filter((p) => p.id !== id))
               toast({ title: 'Product deleted' })
             } catch (err: any) {
-              toast({ title: 'Delete failed', description: err.message, variant: 'destructive' })
+              toast({
+                title: 'Delete failed',
+                description: err.message,
+                variant: 'destructive',
+              })
             } finally {
               setToggling(null)
             }
@@ -160,8 +214,16 @@ export default function AdminProductManager() {
         </TabsList>
 
         <TabsContent value="products" className="m-0">
-          <Button variant="outline" size="sm" onClick={fetchProducts} disabled={loading} className="gap-1.5">
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchProducts}
+            disabled={loading}
+            className="gap-1.5"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`}
+            />
             Refresh
           </Button>
         </TabsContent>
@@ -175,13 +237,24 @@ export default function AdminProductManager() {
             <FileCode className="h-4 w-4 shrink-0 text-primary mt-0.5" />
             <span>
               Products are defined in{' '}
-              <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">scripts/seed-plans.ts</code>.
-              Run <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">bun run db:seed</code> to upsert
-              and sync Stripe in one step. Use <strong className="text-foreground font-medium">Sync</strong> to push
-              individual products without re-seeding.
+              <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">
+                lib/products/catalog.ts
+              </code>
+              . Run{' '}
+              <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">
+                bun run db:seed
+              </code>{' '}
+              to upsert and sync Stripe in one step. Use{' '}
+              <strong className="text-foreground font-medium">Sync</strong> to
+              push individual products without re-seeding.
             </span>
           </div>
-          <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shrink-0"
+          >
             <Link href={SEED_SCRIPT_URL} target="_blank">
               <ExternalLink className="h-3 w-3" />
               Edit on GitHub
@@ -199,8 +272,10 @@ export default function AdminProductManager() {
             </div>
             <h3 className="text-lg font-semibold mb-2">No products yet</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-              Add plans to <code className="font-mono text-xs">scripts/seed-plans.ts</code> and run{' '}
-              <code className="font-mono text-xs">bun run db:seed</code>.
+              Add plans to{' '}
+              <code className="font-mono text-xs">lib/products/catalog.ts</code>{' '}
+              and run <code className="font-mono text-xs">bun run db:seed</code>
+              .
             </p>
             <Button asChild variant="outline" size="sm" className="gap-1.5">
               <Link href={SEED_SCRIPT_URL} target="_blank">
@@ -215,144 +290,222 @@ export default function AdminProductManager() {
               <div className="divide-y divide-border/50">
                 {loading
                   ? Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-4 w-36" />
-                          <Skeleton className="h-4 w-14 rounded-full" />
+                      <div key={i} className="p-5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-36" />
+                            <Skeleton className="h-4 w-14 rounded-full" />
+                          </div>
+                          <div className="flex gap-1">
+                            <Skeleton className="h-7 w-7 rounded-md" />
+                            <Skeleton className="h-7 w-7 rounded-md" />
+                            <Skeleton className="h-7 w-7 rounded-md" />
+                          </div>
                         </div>
-                        <div className="flex gap-1">
-                          <Skeleton className="h-7 w-7 rounded-md" />
-                          <Skeleton className="h-7 w-7 rounded-md" />
-                          <Skeleton className="h-7 w-7 rounded-md" />
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-4 w-64" />
+                        <div className="flex gap-2">
+                          <Skeleton className="h-5 w-20 rounded-full" />
+                          <Skeleton className="h-5 w-24 rounded-full" />
                         </div>
                       </div>
-                      <Skeleton className="h-3 w-28" />
-                      <Skeleton className="h-4 w-64" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                        <Skeleton className="h-5 w-24 rounded-full" />
-                      </div>
-                    </div>
-                  ))
+                    ))
                   : paginated.map((p) => (
-                  <div key={p.id} className="p-5 hover:bg-muted/20 transition-colors">
-                    {/* Header: name + type + status | actions */}
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                      <div className="flex items-center gap-2 flex-wrap min-w-0">
-                        <span className="font-semibold text-sm">{p.name}</span>
-                        <TypeBadge type={p.type} />
-                        {!p.active && (
-                          <Badge variant="secondary" className="bg-muted/50 text-muted-foreground text-[10px] py-0">Inactive</Badge>
+                      <div
+                        key={p.id}
+                        className="p-5 hover:bg-muted/20 transition-colors"
+                      >
+                        {/* Header: name + type + status | actions */}
+                        <div className="flex items-start justify-between gap-3 mb-1">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <span className="font-semibold text-sm">
+                              {p.name}
+                            </span>
+                            <TypeBadge type={p.type} />
+                            {!p.active && (
+                              <Badge
+                                variant="secondary"
+                                className="bg-muted/50 text-muted-foreground text-[10px] py-0"
+                              >
+                                Inactive
+                              </Badge>
+                            )}
+                            {p.popular && (
+                              <Badge className="bg-amber-500/15 text-amber-500 border border-amber-400/30 text-[10px] py-0">
+                                Popular
+                              </Badge>
+                            )}
+                          </div>
+                          {/* Always-visible action buttons */}
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            {p.stripeProductId && (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                title="Open in Stripe"
+                              >
+                                <Link
+                                  href={`https://dashboard.stripe.com/products/${p.stripeProductId}`}
+                                  target="_blank"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </Link>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleSync(p.id, p.name)}
+                              disabled={syncing === p.id}
+                              title="Sync to Stripe"
+                            >
+                              <RefreshCw
+                                className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`}
+                              />
+                            </Button>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Edit seed script"
+                            >
+                              <Link href={SEED_SCRIPT_URL} target="_blank">
+                                <FileCode className="h-3.5 w-3.5" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDelete(p.id)}
+                              disabled={toggling === `${p.id}:delete`}
+                              title="Delete product"
+                            >
+                              {toggling === `${p.id}:delete` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Slug */}
+                        <p className="text-[11px] font-mono text-muted-foreground/60 mb-2">
+                          {p.slug}
+                        </p>
+
+                        {/* Description */}
+                        {p.description && (
+                          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                            {p.description}
+                          </p>
                         )}
-                        {p.popular && (
-                          <Badge className="bg-amber-500/15 text-amber-500 border border-amber-400/30 text-[10px] py-0">Popular</Badge>
+
+                        {/* Stats */}
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground mb-3">
+                          {p.defaultPriceCents != null && (
+                            <span>
+                              <span className="text-foreground font-medium">
+                                ${(p.defaultPriceCents / 100).toFixed(2)}
+                              </span>
+                              {p.billingInterval && (
+                                <span className="text-muted-foreground">
+                                  {' '}
+                                  / {p.billingInterval}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {p.storageQuotaGB != null && (
+                            <span>
+                              Storage:{' '}
+                              <span className="text-foreground font-medium">
+                                {p.storageQuotaGB} GB
+                              </span>
+                            </span>
+                          )}
+                          {p.uploadSizeCapMB != null && (
+                            <span>
+                              Upload cap:{' '}
+                              <span className="text-foreground font-medium">
+                                {p.uploadSizeCapMB >= 1024
+                                  ? `${p.uploadSizeCapMB / 1024} GB`
+                                  : `${p.uploadSizeCapMB} MB`}
+                              </span>
+                            </span>
+                          )}
+                          {p.customDomainsLimit != null && (
+                            <span>
+                              Domains:{' '}
+                              <span className="text-foreground font-medium">
+                                {p.customDomainsLimit}
+                              </span>
+                            </span>
+                          )}
+                          {p.stripeProductId && (
+                            <span className="font-mono text-[10px] text-muted-foreground/50">
+                              {p.stripeProductId}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Features */}
+                        {Array.isArray(p.features) && p.features.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-4">
+                            {p.features
+                              .slice(0, 4)
+                              .map((f: string, i: number) => (
+                                <Badge
+                                  key={i}
+                                  variant="outline"
+                                  className="text-[11px] font-normal max-w-[220px] truncate"
+                                >
+                                  {f}
+                                </Badge>
+                              ))}
+                            {p.features.length > 4 && (
+                              <Badge
+                                variant="outline"
+                                className="text-[11px] font-normal"
+                              >
+                                +{p.features.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
                         )}
+
+                        {/* Controls */}
+                        <div className="flex items-center gap-5 pt-3 border-t border-border/30">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground">
+                            <Switch
+                              checked={!!p.active}
+                              onCheckedChange={(v) =>
+                                handleToggle(p.id, 'active', v)
+                              }
+                              disabled={toggling === `${p.id}:active`}
+                              aria-label="Active"
+                            />
+                            Active
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground">
+                            <Switch
+                              checked={!!p.popular}
+                              onCheckedChange={(v) =>
+                                handleToggle(p.id, 'popular', v)
+                              }
+                              disabled={toggling === `${p.id}:popular`}
+                              aria-label="Popular"
+                            />
+                            Popular
+                          </label>
+                        </div>
                       </div>
-                      {/* Always-visible action buttons */}
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        {p.stripeProductId && (
-                          <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Open in Stripe">
-                            <Link href={`https://dashboard.stripe.com/products/${p.stripeProductId}`} target="_blank">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleSync(p.id, p.name)}
-                          disabled={syncing === p.id}
-                          title="Sync to Stripe"
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
-                        </Button>
-                        <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Edit seed script">
-                          <Link href={SEED_SCRIPT_URL} target="_blank">
-                            <FileCode className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDelete(p.id)}
-                          disabled={toggling === `${p.id}:delete`}
-                          title="Delete product"
-                        >
-                          {toggling === `${p.id}:delete`
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <Trash2 className="h-3.5 w-3.5" />}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Slug */}
-                    <p className="text-[11px] font-mono text-muted-foreground/60 mb-2">{p.slug}</p>
-
-                    {/* Description */}
-                    {p.description && (
-                      <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{p.description}</p>
-                    )}
-
-                    {/* Stats */}
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground mb-3">
-                      {p.defaultPriceCents != null && (
-                        <span>
-                          <span className="text-foreground font-medium">${(p.defaultPriceCents / 100).toFixed(2)}</span>
-                          {p.billingInterval && <span className="text-muted-foreground"> / {p.billingInterval}</span>}
-                        </span>
-                      )}
-                      {p.storageQuotaGB != null && (
-                        <span>Storage: <span className="text-foreground font-medium">{p.storageQuotaGB} GB</span></span>
-                      )}
-                      {p.uploadSizeCapMB != null && (
-                        <span>Upload cap: <span className="text-foreground font-medium">{p.uploadSizeCapMB >= 1024 ? `${p.uploadSizeCapMB / 1024} GB` : `${p.uploadSizeCapMB} MB`}</span></span>
-                      )}
-                      {p.customDomainsLimit != null && (
-                        <span>Domains: <span className="text-foreground font-medium">{p.customDomainsLimit}</span></span>
-                      )}
-                      {p.stripeProductId && (
-                        <span className="font-mono text-[10px] text-muted-foreground/50">{p.stripeProductId}</span>
-                      )}
-                    </div>
-
-                    {/* Features */}
-                    {Array.isArray(p.features) && p.features.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {p.features.slice(0, 4).map((f: string, i: number) => (
-                          <Badge key={i} variant="outline" className="text-[11px] font-normal max-w-[220px] truncate">{f}</Badge>
-                        ))}
-                        {p.features.length > 4 && (
-                          <Badge variant="outline" className="text-[11px] font-normal">+{p.features.length - 4} more</Badge>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Controls */}
-                    <div className="flex items-center gap-5 pt-3 border-t border-border/30">
-                      <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground">
-                        <Switch
-                          checked={!!p.active}
-                          onCheckedChange={(v) => handleToggle(p.id, 'active', v)}
-                          disabled={toggling === `${p.id}:active`}
-                          aria-label="Active"
-                        />
-                        Active
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground">
-                        <Switch
-                          checked={!!p.popular}
-                          onCheckedChange={(v) => handleToggle(p.id, 'popular', v)}
-                          disabled={toggling === `${p.id}:popular`}
-                          aria-label="Popular"
-                        />
-                        Popular
-                      </label>
-                    </div>
-                  </div>
-                ))}
+                    ))}
               </div>
             </div>
 
@@ -360,7 +513,8 @@ export default function AdminProductManager() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
-                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} of {sorted.length}
+                  Showing {(page - 1) * PAGE_SIZE + 1}–
+                  {Math.min(page * PAGE_SIZE, sorted.length)} of {sorted.length}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -372,17 +526,19 @@ export default function AdminProductManager() {
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                    <Button
-                      key={n}
-                      variant={n === page ? 'default' : 'outline'}
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setPage(n)}
-                    >
-                      {n}
-                    </Button>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (n) => (
+                      <Button
+                        key={n}
+                        variant={n === page ? 'default' : 'outline'}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(n)}
+                      >
+                        {n}
+                      </Button>
+                    )
+                  )}
                   <Button
                     variant="outline"
                     size="icon"

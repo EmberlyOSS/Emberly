@@ -49,7 +49,8 @@ export function ProfileSettings({ user, onUpdate }: ProfileSettingsProps) {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update settings',
+        description:
+          error instanceof Error ? error.message : 'Failed to update settings',
         variant: 'destructive',
       })
     } finally {
@@ -58,118 +59,165 @@ export function ProfileSettings({ user, onUpdate }: ProfileSettingsProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Public profile */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="profile-visibility">Public Profile</Label>
-          <p className="text-sm text-muted-foreground">
-            Make your profile visible to others at{' '}
-            <span className="font-medium">/user/{(user as any).name}</span>
-          </p>
-        </div>
-        <Switch
-          id="profile-visibility"
-          checked={(user as any).isProfilePublic ?? true}
-          onCheckedChange={(c) => handleValueChange(c, 'isProfilePublic', 'Profile visibility updated')}
-          disabled={isLoading}
-        />
-      </div>
+    <div className="space-y-6">
+      <section className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">
+          Public profile
+        </h3>
+        <div className="divide-y divide-border/60 rounded-xl border border-border/60">
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="space-y-0.5">
+              <Label htmlFor="profile-visibility">Public profile</Label>
+              <p className="text-sm text-muted-foreground">
+                Anyone can see your profile at{' '}
+                <span className="font-medium">/user/{(user as any).name}</span>
+              </p>
+            </div>
+            <Switch
+              id="profile-visibility"
+              checked={(user as any).isProfilePublic ?? true}
+              onCheckedChange={(c) =>
+                handleValueChange(
+                  c,
+                  'isProfilePublic',
+                  'Profile visibility updated'
+                )
+              }
+              disabled={isLoading}
+            />
+          </div>
 
-      {/* Show linked accounts on profile */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="show-linked-accounts">Show Linked Accounts</Label>
-          <p className="text-sm text-muted-foreground">
-            Display your linked GitHub and Discord accounts on your public profile
-          </p>
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="space-y-0.5">
+              <Label htmlFor="show-linked-accounts">Show linked accounts</Label>
+              <p className="text-sm text-muted-foreground">
+                Show your GitHub and Discord on your public profile.
+              </p>
+            </div>
+            <Switch
+              id="show-linked-accounts"
+              checked={(user as any).showLinkedAccounts ?? false}
+              onCheckedChange={(c) =>
+                handleValueChange(
+                  c,
+                  'showLinkedAccounts',
+                  'Linked accounts visibility updated'
+                )
+              }
+              disabled={isLoading}
+            />
+          </div>
         </div>
-        <Switch
-          id="show-linked-accounts"
-          checked={(user as any).showLinkedAccounts ?? false}
-          onCheckedChange={(c) => handleValueChange(c, 'showLinkedAccounts', 'Linked accounts visibility updated')}
-          disabled={isLoading}
-        />
-      </div>
+      </section>
 
-      {/* Randomize file URLs */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="randomize-urls">Randomize File URLs</Label>
-          <p className="text-sm text-muted-foreground">
-            New uploads will use randomized URLs instead of the original filename
-          </p>
-        </div>
-        <Switch
-          id="randomize-urls"
-          checked={user.randomizeFileUrls}
-          onCheckedChange={(c) => handleValueChange(c, 'randomizeFileUrls', 'File URL settings updated')}
-          disabled={isLoading}
-        />
-      </div>
+      <section className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Uploads</h3>
+        <div className="divide-y divide-border/60 rounded-xl border border-border/60">
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="space-y-0.5">
+              <Label htmlFor="randomize-urls">Random file names</Label>
+              <p className="text-sm text-muted-foreground">
+                New uploads get a random link instead of using their file name.
+              </p>
+            </div>
+            <Switch
+              id="randomize-urls"
+              checked={user.randomizeFileUrls}
+              onCheckedChange={(c) =>
+                handleValueChange(
+                  c,
+                  'randomizeFileUrls',
+                  'File URL settings updated'
+                )
+              }
+              disabled={isLoading}
+            />
+          </div>
 
-      {/* Rich embeds */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="rich-embeds">Enable Rich Embeds</Label>
-          <p className="text-sm text-muted-foreground">
-            Shared files will include rich metadata previews on Discord, X, and other platforms
-          </p>
-        </div>
-        <Switch
-          id="rich-embeds"
-          checked={user.enableRichEmbeds}
-          onCheckedChange={(v) => handleValueChange(v, 'enableRichEmbeds', 'Rich embed settings updated')}
-          disabled={isLoading}
-        />
-      </div>
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="space-y-0.5">
+              <Label htmlFor="rich-embeds">Rich link previews</Label>
+              <p className="text-sm text-muted-foreground">
+                Links you share show a preview card on Discord, X and other
+                sites.
+              </p>
+            </div>
+            <Switch
+              id="rich-embeds"
+              checked={user.enableRichEmbeds}
+              onCheckedChange={(v) =>
+                handleValueChange(
+                  v,
+                  'enableRichEmbeds',
+                  'Rich embed settings updated'
+                )
+              }
+              disabled={isLoading}
+            />
+          </div>
 
-      {/* Default file expiry action */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label>Default file expiry action</Label>
-          <p className="text-sm text-muted-foreground">What happens to a file when it expires</p>
-        </div>
-        <div className="w-40">
-          <Select
-            value={user.defaultFileExpirationAction ?? undefined}
-            onValueChange={(v) => handleValueChange(v, 'defaultFileExpirationAction', 'Default expiry action updated')}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DELETE">Delete file</SelectItem>
-              <SelectItem value="SET_PRIVATE">Set to private</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="space-y-0.5">
+              <Label>When a file expires</Label>
+              <p className="text-sm text-muted-foreground">
+                Delete it, or keep it but make it private.
+              </p>
+            </div>
+            <div className="w-40">
+              <Select
+                value={user.defaultFileExpirationAction ?? undefined}
+                onValueChange={(v) =>
+                  handleValueChange(
+                    v,
+                    'defaultFileExpirationAction',
+                    'Default expiry action updated'
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DELETE">Delete file</SelectItem>
+                  <SelectItem value="SET_PRIVATE">Make it private</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      {/* Default file expiry time */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label>Default file expiry time</Label>
-          <p className="text-sm text-muted-foreground">Default duration before a new upload expires</p>
+          <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+            <div className="space-y-0.5">
+              <Label>Expire new uploads after</Label>
+              <p className="text-sm text-muted-foreground">
+                You can still change it per file.
+              </p>
+            </div>
+            <div className="w-40">
+              <Select
+                value={user.defaultFileExpiration ?? undefined}
+                onValueChange={(v) =>
+                  handleValueChange(
+                    v,
+                    'defaultFileExpiration',
+                    'Default expiry time updated'
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DISABLED">Never</SelectItem>
+                  <SelectItem value="HOUR">One hour</SelectItem>
+                  <SelectItem value="DAY">One day</SelectItem>
+                  <SelectItem value="WEEK">One week</SelectItem>
+                  <SelectItem value="MONTH">One month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-        <div className="w-40">
-          <Select
-            value={user.defaultFileExpiration ?? undefined}
-            onValueChange={(v) => handleValueChange(v, 'defaultFileExpiration', 'Default expiry time updated')}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DISABLED">Disabled</SelectItem>
-              <SelectItem value="HOUR">One hour</SelectItem>
-              <SelectItem value="DAY">One day</SelectItem>
-              <SelectItem value="WEEK">One week</SelectItem>
-              <SelectItem value="MONTH">One month</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

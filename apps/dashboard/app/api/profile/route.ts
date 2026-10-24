@@ -304,6 +304,27 @@ export async function DELETE(req: Request) {
     const { user, response } = await requireAuth(req)
     if (response) return response
 
+    // Deleting an account must be confirmed with the password, so a leaked
+    // API key or upload token can't wipe it
+    const { password } = (await req.json().catch(() => ({}))) as {
+      password?: unknown
+    }
+    const account = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { password: true },
+    })
+    if (
+      typeof password !== 'string' ||
+      !password ||
+      !account?.password ||
+      !(await compare(password, account.password))
+    ) {
+      return apiError(
+        'Enter your password to delete your account',
+        HTTP_STATUS.FORBIDDEN
+      )
+    }
+
     const userData = await prisma.user.findUnique({
       where: { id: user.id },
       include: {

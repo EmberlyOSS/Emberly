@@ -36,15 +36,15 @@ With Docker Compose, `DATABASE_URL` and `REDIS_URL` are set for you. Set `POSTGR
 |----------|---------|-------------|
 | `EMBERLY_LICENSE_KEY` | — | Your license key. Optional: you can also paste it in **Admin → Settings → License & branding**. See [License & Branding](/self-hosting/licensing). |
 | `EMBERLY_LICENSE_CHECKIN` | `true` | Set to `false` on servers that can't reach licenses.embrly.ca |
-| `EMBERLY_RUN_EVENT_WORKER` | `true` in Compose | Runs background jobs (OCR, malware scans, emails) in the app process. Set to `false` if you run `bun run worker` separately. |
+| `EMBERLY_RUN_EVENT_WORKER` | `true` | Runs background jobs (emails, notifications, Discord alerts, OCR, malware scans) in the app process. Only set it to `false` if you run `bun run worker` as its own service. |
 | `NEXTAUTH_TRUSTED_ORIGINS` | — | Extra origins allowed to sign in, comma separated |
 | `NEXTAUTH_COOKIE_DOMAIN` | — | Share the session across subdomains, e.g. `.example.com` |
 | `EMBERLY_SKIP_MIGRATIONS` | `false` | Docker only: skip running migrations when the container starts |
 | `EMBERLY_PORT` | `3000` | Docker Compose only: the host port |
 | `EMBERLY_IMAGE` | `ghcr.io/emberlyoss/emberly:latest` | Docker Compose only: the image to run |
 
-<Callout type="warn">
-  Outside Docker Compose, the worker is off in production unless `EMBERLY_RUN_EVENT_WORKER=true`. Without it uploads work, but OCR, scans and emails never run.
+<Callout type="info">
+  Background jobs run inside the app, so a single process is all you need. If you set `EMBERLY_RUN_EVENT_WORKER=false`, something else must run `bun run worker`, or emails and alerts are queued but never sent. **Admin → Overview** warns you when no worker is running.
 </Callout>
 
 ---
@@ -70,6 +70,8 @@ Leave these empty to store uploads on local disk. Setting `STORAGE_PROVIDER=s3` 
 ## Email
 
 Used for verification, password resets and notifications. Settings in **Admin → Settings → Integrations** take priority over these.
+
+Set up either Resend or SMTP; Emberly uses whichever one is configured. If both are, it uses the provider chosen in **Admin → Settings → Integrations → Email**. **Admin → Overview** shows which one is in use.
 
 | Variable | Description |
 |----------|-------------|
@@ -117,8 +119,6 @@ APP_URL="https://files.example.com"
 AUTH_SECRET="generated-secret"
 DATABASE_URL="postgresql://emberly:password@localhost:5432/emberly"
 REDIS_URL="redis://localhost:6379"
-
-EMBERLY_RUN_EVENT_WORKER="true"
 
 EMAIL_FROM="Emberly <noreply@example.com>"
 RESEND_API_KEY="re_..."

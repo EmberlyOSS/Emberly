@@ -40,7 +40,12 @@ import {
 } from '@/lib/emails'
 import { loggers } from '@/lib/logger'
 import { emit } from '../bullmq/queue'
-import { shouldSendEmail } from '../utils/email-preferences'
+import { createNotification } from '@/lib/notifications'
+import {
+  getPreferenceCategory,
+  shouldSendEmail,
+} from '../utils/email-preferences'
+import { prisma } from '@emberly/db'
 import type { HandlerMap } from '../bullmq/types'
 
 const logger = loggers.events.getChildLogger('email-handler')
@@ -98,8 +103,7 @@ async function sendEmail(options: {
       changes.push(...(variables.changes as string[]))
     }
 
-    const baseUrl =
-      appUrl()
+    const baseUrl = appUrl()
     const result = await sendTemplateEmail({
       to,
       subject,
@@ -463,10 +467,7 @@ async function sendEmail(options: {
       template: DeletionRequestedEmail,
       props: {
         scheduledAt: String(variables.scheduledAt || ''),
-        cancelUrl: String(
-          variables.cancelUrl ||
-            `${appUrl()}/me`
-        ),
+        cancelUrl: String(variables.cancelUrl || `${appUrl()}/me`),
       },
       skipTracking: true,
     })
@@ -584,8 +585,7 @@ async function sendEmail(options: {
             ? variables.nextRetryAt
             : undefined,
         updatePaymentUrl: String(
-          variables.updatePaymentUrl ||
-            `${appUrl()}/dashboard/billing`
+          variables.updatePaymentUrl || `${appUrl()}/dashboard/billing`
         ),
       },
       skipTracking: true,
@@ -624,8 +624,7 @@ async function sendEmail(options: {
             ? variables.applicationType
             : undefined,
         applicationUrl: String(
-          variables.applicationUrl ||
-            `${appUrl()}/dashboard`
+          variables.applicationUrl || `${appUrl()}/dashboard`
         ),
         replyContent:
           typeof variables.replyContent === 'string'
@@ -653,8 +652,7 @@ async function sendEmail(options: {
             : undefined,
         status: (variables.status as ApplicationStatusType) || 'received',
         applicationUrl: String(
-          variables.applicationUrl ||
-            `${appUrl()}/dashboard`
+          variables.applicationUrl || `${appUrl()}/dashboard`
         ),
         reviewNotes:
           typeof variables.reviewNotes === 'string'
@@ -722,8 +720,51 @@ async function sendEmail(options: {
   return { messageId: result.id || `email-${Date.now()}` }
 }
 
+// Emails that carry a code or link, or go to an account that's being removed,
+// aren't worth keeping in the in-app list
+const NOT_NOTIFIED_EVENTS = new Set<string>([
+  'auth.password-reset-requested',
+  'account.created',
+  'account.email-verified',
+  'account.email-verification-requested',
+  'account.deleted',
+])
+
+// Emails greet their recipient by these variables. Prefer the recipient's
+// display name over whatever name (usually the username) the event passed.
+const GREETING_KEYS = ['userName', 'recipientName', 'name'] as const
+
+async function withGreetingName(
+  userId: string | undefined,
+  variables: Record<string, unknown> = {}
+) {
+  if (!userId) return variables
+  if (!GREETING_KEYS.some((key) => key in variables)) return variables
+  const user = await prisma.user
+    .findUnique({ where: { id: userId }, select: { fullName: true } })
+    .catch(() => null)
+  const first = user?.fullName?.trim().split(/\s+/)[0]
+  if (!first) return variables
+  const next = { ...variables }
+  for (const key of GREETING_KEYS) if (key in next) next[key] = first
+  return next
+}
+
 export const emailHandlers: HandlerMap = {
   'email.send': [
+    // Listed first and separate from sending, so a failed send that's retried
+    // doesn't add the notification again
+    async (payload: EventPayload<'email.send'>) => {
+      if (!payload.userId || !payload.sourceEvent) return
+      if (NOT_NOTIFIED_EVENTS.has(payload.sourceEvent)) return
+      const category = getPreferenceCategory(payload.sourceEvent as EventType)
+      if (!category) return
+      await createNotification({
+        userId: payload.userId,
+        category,
+        title: payload.subject,
+      })
+    },
     async (payload: EventPayload<'email.send'>, job: Job) => {
       if (payload.sourceEvent && payload.userId) {
         const { shouldSend, reason } = await shouldSendEmail(
@@ -753,7 +794,7 @@ export const emailHandlers: HandlerMap = {
           to: payload.to,
           subject: payload.subject,
           template: payload.template,
-          variables: payload.variables,
+          variables: await withGreetingName(payload.userId, payload.variables),
         })
 
         await emit('email.sent', {

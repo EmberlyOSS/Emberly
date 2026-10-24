@@ -10,7 +10,6 @@ const sectionColors: Record<string, string> = {
   api: 'var(--api-color)',
   security: 'var(--security-color)',
   'self-hosting': 'var(--self-hosting-color)',
-  staff: 'var(--staff-color)',
 }
 
 const docsOptions: DocsLayoutProps = {

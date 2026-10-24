@@ -17,6 +17,7 @@ import {
 import { getSquadFromBearerToken, requireAuth } from '@/lib/auth/api-auth'
 import { getConfig } from '@/lib/config'
 import { prisma } from '@emberly/db'
+import { defaultUploadDomain } from '@/lib/domain/default'
 import {
   getFileExpirationInfoBatch,
   scheduleFileExpiration,
@@ -351,9 +352,11 @@ export async function POST(req: Request) {
     )
 
     const sanitizeHost = (host: string) => trimTrailingSlashes(urlForHost(host))
-    const preferredHost = user.preferredUploadDomain
-      ? sanitizeHost(user.preferredUploadDomain)
-      : null
+    const defaultDomain = await defaultUploadDomain(
+      user.id,
+      user.preferredUploadDomain
+    ).catch(() => null)
+    const preferredHost = defaultDomain ? sanitizeHost(defaultDomain) : null
 
     // Start with preferred host or default fullUrl
     let finalFullUrl = preferredHost ?? fullUrl
@@ -391,7 +394,7 @@ export async function POST(req: Request) {
 
         if (requestHost) {
           // strip port if present
-          requestHost = requestHost.replace(/:\\d+$/, '')
+          requestHost = requestHost.replace(/:\d+$/, '')
           if (requestHost !== '') {
             const hostRecord = await prisma.customDomain.findFirst({
               where: { domain: requestHost, userId: user.id, verified: true },

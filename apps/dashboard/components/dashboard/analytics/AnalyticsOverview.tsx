@@ -83,9 +83,6 @@ function StatCard({
               <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
             )}
           </div>
-          <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
-            <Icon className="h-5 w-5" />
-          </div>
         </div>
       </div>
     </GlassCard>
@@ -381,9 +378,6 @@ export default function AnalyticsOverview() {
                     {planInfo?.planName ?? 'Spark'}
                   </Badge>
                 )}
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Shield className="h-4 w-4 text-primary" />
-                </div>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
@@ -481,9 +475,6 @@ export default function AnalyticsOverview() {
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Files &amp; volume uploaded per day (last 14 days)
                 </p>
-              </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Upload className="h-4 w-4 text-primary" />
               </div>
             </div>
             <div className="h-[200px] sm:h-[250px]">
@@ -587,9 +578,6 @@ export default function AnalyticsOverview() {
                   Usage breakdown
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <HardDrive className="h-4 w-4 text-blue-500" />
-              </div>
             </div>
             <div className="text-center mb-4">
               <p className="text-3xl sm:text-4xl font-bold">
@@ -643,9 +631,6 @@ export default function AnalyticsOverview() {
                   Most viewed files
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <BarChart3 className="h-4 w-4 text-green-500" />
-              </div>
             </div>
             {!data.allowed?.topFiles ? (
               <div className="h-[200px] relative">
@@ -698,9 +683,6 @@ export default function AnalyticsOverview() {
                   Most clicked short URLs
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <Link2 className="h-4 w-4 text-purple-500" />
-              </div>
             </div>
             {!data.allowed?.topUrls ? (
               <div className="h-[200px] relative">
@@ -751,9 +733,6 @@ export default function AnalyticsOverview() {
                   Latest files
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-orange-500/10">
-                <Clock className="h-4 w-4 text-orange-500" />
-              </div>
             </div>
             <div className="space-y-3 max-h-[200px] overflow-y-auto scrollbar-none">
               {(data.recentUploads || []).length > 0 ? (
@@ -794,9 +773,6 @@ export default function AnalyticsOverview() {
                   Connected domains
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Globe className="h-4 w-4 text-primary" />
-              </div>
             </div>
             <div className="flex items-center justify-center py-6">
               <div className="text-center">
@@ -825,9 +801,6 @@ export default function AnalyticsOverview() {
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Files using the most storage
                 </p>
-              </div>
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <HardDrive className="h-4 w-4 text-red-500" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -862,9 +835,6 @@ export default function AnalyticsOverview() {
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Short URLs created per day (last 30 days)
                 </p>
-              </div>
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <TrendingUp className="h-4 w-4 text-purple-500" />
               </div>
             </div>
             {!data.allowed?.topUrls ? (
@@ -951,9 +921,6 @@ export default function AnalyticsOverview() {
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Top files by views &amp; downloads
                 </p>
-              </div>
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <BarChart3 className="h-4 w-4 text-green-500" />
               </div>
             </div>
             {!data.allowed?.exportCSV ? (

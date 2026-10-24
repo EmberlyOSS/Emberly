@@ -13,12 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 import { getCallbackUrl } from './callback-url'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TwoFactorForm } from './two-factor-form'
 
 interface LoginFormProps {
@@ -52,6 +47,7 @@ export function LoginForm({
 
     try {
       const result = await signIn('credentials', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         emailOrUsername,
         password,
         redirect: false,

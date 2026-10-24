@@ -52,7 +52,6 @@ const IMAGE_MIME_TYPES = new Set([
   'image/heif',
 ])
 
-// Convert arrays to Sets for O(1) lookup instead of O(n)
 const VIDEO_MIME_TYPES = new Set(VIDEO_FILE_TYPES)
 const AUDIO_MIME_TYPES = new Set(AUDIO_FILE_TYPES)
 const TEXT_MIME_TYPES = new Set(TEXT_FILE_TYPES)

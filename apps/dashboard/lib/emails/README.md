@@ -1,6 +1,6 @@
 # Email System
 
-Emberly uses a sophisticated, preference aware email system built on top of the event infrastructure. 
+Emberly uses a sophisticated, preference aware email system built on top of the event infrastructure.
 
 > All emails are sent through [Resend](https://resend.com/) and respect user email notification preferences.
 
@@ -67,9 +67,9 @@ events.on('user.perk-gained', 'send-notification', async (payload) => {
     to: payload.email,
     template: 'perk-gained',
     subject: `🎉 You've unlocked: ${payload.perkName}`,
-    variables: { /* ... */ },
+    variables: {/* ... */},
     userId: payload.userId,
-    sourceEvent: 'user.perk-gained',  // ⚠️ CRITICAL for preference checking
+    sourceEvent: 'user.perk-gained', // ⚠️ CRITICAL for preference checking
   })
 })
 ```
@@ -82,7 +82,7 @@ The email handler checks user preferences before sending:
 // In email.handler.ts
 const { shouldSend, reason } = await shouldSendEmail(
   payload.userId,
-  payload.sourceEvent as EventType  // Uses the sourceEvent for lookup
+  payload.sourceEvent as EventType // Uses the sourceEvent for lookup
 )
 
 if (!shouldSend) {
@@ -91,43 +91,41 @@ if (!shouldSend) {
 }
 
 // Only if preference is enabled, send the email
-await sendEmail({ /* ... */ })
+await sendEmail({/* ... */})
 ```
 
 ## Email Templates
 
-All email templates use `@react-email/*` components for professional, responsive designs:
+Every template is built from the shared components in `components/index.tsx`, so all emails share one layout: the instance's logo and name, a white card, and a footer explaining why the reader got the email with a link to their notification settings.
 
-- **BasicEmail** - Generic fallback for custom email content
-- **WelcomeEmail** - Welcome email for new users
-- **VerificationCodeEmail** - Email verification code delivery
-- **VerifyEmailEmail** - Email verification confirmation link
-- **PasswordResetEmail** - Secure password reset links
-- **MagicLinkEmail** - Passwordless sign-in links
-- **AccountChangeEmail** - Account modification notifications
-- **NewLoginEmail** - New device login alerts
-- **AdminBroadcastEmail** - Admin announcements
-- **PerkGainedEmail** - Achievement/perk notifications
-- **QuotaReachedEmail** - Storage quota warnings
-- **StorageAssignedEmail** - Storage allocation notifications
+| Component                                              | Use it for                                                                                     |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `EmailLayout`                                          | The page wrapper. Takes `preview` (inbox preview text) and an optional `reason` for the footer |
+| `EmailHeading`, `EmailText`                            | The title and paragraphs (`muted` and `small` for secondary text)                              |
+| `EmailButton`, `EmailLinkFallback`                     | The main action, and a copyable link under it for sign-in and reset links                      |
+| `EmailDetails`                                         | Label and value rows, such as device and location, or amount and invoice                       |
+| `EmailCallout`                                         | A tinted box with an `info`, `success`, `warning` or `danger` tone                             |
+| `EmailCode`, `EmailQuote`, `EmailList`, `EmailDivider` | One-time codes, quoted replies, bullet lists and separators                                    |
 
-- BasicEmail
-- AccountChangeEmail
-- AdminBroadcastEmail
-- VerifyEmailEmail
-- PasswordResetEmail
-- MagicLinkEmail
-- etc.
+`useEmailBrand()` returns the instance's `name`, `siteUrl`, `logoUrl` and `manageUrl`. Use it for any link or product name, never a hard-coded `embrly.ca`, so self-hosted instances get their own branding. `formatEmailDate()` and `formatEmailMoney()` format dates (in UTC) and amounts in cents.
+
+`sendEmail` supplies the brand and builds the plain-text version from the same template automatically.
 
 ## Adding a New Email Template
 
 ### 1. Create the Template
 
-```typescript
-// packages/lib/emails/templates/my-template.tsx
+```tsx
+// lib/emails/templates/my-template.tsx
 import React from 'react'
-import { Html, Body, Container, Section, Text, Button } from '@react-email/components'
-import { Tailwind } from '@react-email/tailwind'
+
+import {
+  EmailButton,
+  EmailHeading,
+  EmailLayout,
+  EmailText,
+  useEmailBrand,
+} from '../components'
 
 interface MyTemplateProps {
   name: string
@@ -135,16 +133,16 @@ interface MyTemplateProps {
 }
 
 export function MyTemplate({ name, actionUrl }: MyTemplateProps) {
+  const brand = useEmailBrand()
   return (
-    <Html>
-      <Tailwind>
-        <Body className="font-sans bg-white">
-          <Container className="mx-auto max-w-2xl">
-            {/* Your email content */}
-          </Container>
-        </Body>
-      </Tailwind>
-    </Html>
+    <EmailLayout
+      preview={`Something happened on your ${brand.name} account`}
+      reason="We email you when something happens on your account."
+    >
+      <EmailHeading>Hi {name}</EmailHeading>
+      <EmailText>Here's what happened.</EmailText>
+      <EmailButton href={actionUrl}>Take a look</EmailButton>
+    </EmailLayout>
   )
 }
 ```
@@ -152,7 +150,7 @@ export function MyTemplate({ name, actionUrl }: MyTemplateProps) {
 ### 2. Export from Index
 
 ```typescript
-// packages/lib/emails/index.ts
+// lib/emails/index.ts
 export { MyTemplate } from './templates/my-template'
 ```
 
@@ -165,9 +163,9 @@ events.on('my.event', 'send-email', async (payload) => {
     to: payload.email,
     template: 'my-template',
     subject: 'Your template subject',
-    variables: { /* ... */ },
+    variables: {/* ... */},
     userId: payload.userId,
-    sourceEvent: 'my.event',  // ⚠️ REQUIRED for preference checking
+    sourceEvent: 'my.event', // ⚠️ REQUIRED for preference checking
   })
 })
 ```
@@ -177,21 +175,21 @@ events.on('my.event', 'send-email', async (payload) => {
 ```typescript
 // packages/lib/events/utils/email-preferences.ts
 const EVENT_TO_PREFERENCE_MAP = {
-  'my.event': 'account',  // or 'security', 'billing', etc.
+  'my.event': 'account', // or 'security', 'billing', etc.
   // ... rest of mappings
 }
 ```
 
 ## Critical Preference Categories for Events
 
-| Event Type | Category | Skippable? |
-|---|---|---|
-| auth.password-reset-requested | security | ❌ No - critical |
-| auth.2fa-enabled | security | ✅ Yes |
-| user.perk-gained | productUpdates | ✅ Yes |
-| user.quota-reached | account | ✅ Yes |
-| user.storage-assigned | productUpdates | ✅ Yes |
-| billing.subscription-created | billing | ✅ Yes |
+| Event Type                    | Category       | Skippable?       |
+| ----------------------------- | -------------- | ---------------- |
+| auth.password-reset-requested | security       | ❌ No - critical |
+| auth.2fa-enabled              | security       | ✅ Yes           |
+| user.perk-gained              | productUpdates | ✅ Yes           |
+| user.quota-reached            | account        | ✅ Yes           |
+| user.storage-assigned         | productUpdates | ✅ Yes           |
+| billing.subscription-created  | billing        | ✅ Yes           |
 
 ## Always-Send Events
 
@@ -211,14 +209,14 @@ Add new critical emails to `ALWAYS_SEND_EVENTS` array in `email-preferences.ts`.
 - ✅ Include user ID and email in event payloads
 - ✅ Use professional react-email templates for new emails
 - ✅ Test email rendering in Resend dashboard
-- ✅ Use Tailwind CSS for styling (react-email's Tailwind integration)
+- ✅ Build templates from the shared components in `components/index.tsx`
 
 ### ❌ DON'T
 
 - ❌ Forget to map events in `EVENT_TO_PREFERENCE_MAP`
 - ❌ Send emails without checking preferences (sourceEvent is how it works)
 - ❌ Include unsubscribe URLs (handled at the preference level)
-- ❌ Mix react-email and old custom components in same template
+- ❌ Hard-code `embrly.ca` or "Emberly" in a template (use `useEmailBrand()`)
 - ❌ Send critical emails without user preference checks
 
 ## Testing Emails
@@ -237,7 +235,7 @@ const user = await prisma.user.update({
   where: { id: userId },
   data: {
     emailPreferences: {
-      productUpdates: false,  // Disable perk notifications
+      productUpdates: false, // Disable perk notifications
     },
   },
 })
@@ -265,9 +263,9 @@ const user = await prisma.user.update({
 
 ### Email template rendering issues?
 
-1. Use react-email components, not standard HTML
-2. Test with `Tailwind` wrapper for styling
-3. Check responsive behavior on mobile (react-email responsiveness)
+1. Build from the shared components, which use inline styles that email clients support
+2. Check the plain-text version too, since some clients only show that
+3. Check how it looks at phone width
 4. Validate HTML output in Resend preview
 
 ## Resources

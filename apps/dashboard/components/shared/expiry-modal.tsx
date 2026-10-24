@@ -115,7 +115,7 @@ export function ExpiryModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          { }
+          {}
           <div className="space-y-2">
             <Label className="text-sm font-medium">When file expires</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -126,7 +126,7 @@ export function ExpiryModal({
                 onClick={() => setAction(ExpiryAction.DELETE)}
                 className={cn(
                   action === ExpiryAction.DELETE &&
-                  'bg-primary/10 border-primary'
+                    'bg-primary/10 border-primary'
                 )}
               >
                 Delete file
@@ -138,7 +138,7 @@ export function ExpiryModal({
                 onClick={() => setAction(ExpiryAction.SET_PRIVATE)}
                 className={cn(
                   action === ExpiryAction.SET_PRIVATE &&
-                  'bg-primary/10 border-primary'
+                    'bg-primary/10 border-primary'
                 )}
               >
                 Set to private
@@ -146,7 +146,7 @@ export function ExpiryModal({
             </div>
           </div>
 
-          { }
+          {}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Quick Options</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -157,12 +157,12 @@ export function ExpiryModal({
                 onClick={() => setPresetExpiry(1, 'hours')}
                 className={cn(
                   expiresAt &&
-                  Math.abs(
-                    expiresAt.getTime() -
-                    new Date(Date.now() + 60 * 60 * 1000).getTime()
-                  ) <
-                  60 * 1000 &&
-                  'bg-primary/10 border-primary'
+                    Math.abs(
+                      expiresAt.getTime() -
+                        new Date(Date.now() + 60 * 60 * 1000).getTime()
+                    ) <
+                      60 * 1000 &&
+                    'bg-primary/10 border-primary'
                 )}
               >
                 1 Hour
@@ -174,10 +174,10 @@ export function ExpiryModal({
                 onClick={() => setPresetExpiry(1, 'days')}
                 className={cn(
                   expiresAt &&
-                  expiresAt.getDate() ===
-                  new Date(Date.now() + 24 * 60 * 60 * 1000).getDate() &&
-                  expiresAt.getHours() === 23 &&
-                  'bg-primary/10 border-primary'
+                    expiresAt.getDate() ===
+                      new Date(Date.now() + 24 * 60 * 60 * 1000).getDate() &&
+                    expiresAt.getHours() === 23 &&
+                    'bg-primary/10 border-primary'
                 )}
               >
                 1 Day
@@ -189,12 +189,12 @@ export function ExpiryModal({
                 onClick={() => setPresetExpiry(1, 'weeks')}
                 className={cn(
                   expiresAt &&
-                  Math.abs(
-                    expiresAt.getTime() -
-                    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).getTime()
-                  ) <
-                  24 * 60 * 60 * 1000 &&
-                  'bg-primary/10 border-primary'
+                    Math.abs(
+                      expiresAt.getTime() -
+                        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).getTime()
+                    ) <
+                      24 * 60 * 60 * 1000 &&
+                    'bg-primary/10 border-primary'
                 )}
               >
                 1 Week
@@ -206,11 +206,11 @@ export function ExpiryModal({
                 onClick={() => setPresetExpiry(1, 'months')}
                 className={cn(
                   expiresAt &&
-                  expiresAt.getMonth() ===
-                  new Date(
-                    Date.now() + 30 * 24 * 60 * 60 * 1000
-                  ).getMonth() &&
-                  'bg-primary/10 border-primary'
+                    expiresAt.getMonth() ===
+                      new Date(
+                        Date.now() + 30 * 24 * 60 * 60 * 1000
+                      ).getMonth() &&
+                    'bg-primary/10 border-primary'
                 )}
               >
                 1 Month
@@ -218,7 +218,7 @@ export function ExpiryModal({
             </div>
           </div>
 
-          { }
+          {}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Custom Date & Time</Label>
             <Popover modal={true}>
@@ -244,7 +244,7 @@ export function ExpiryModal({
                 sideOffset={4}
               >
                 <div className="flex">
-                  { }
+                  {}
                   <div className="p-3">
                     <Calendar
                       mode="single"
@@ -277,7 +277,7 @@ export function ExpiryModal({
                     />
                   </div>
 
-                  { }
+                  {}
                   {expiresAt && (
                     <div className="border-l p-4 space-y-4 min-w-[200px]">
                       <div className="flex items-center justify-between">
@@ -292,7 +292,7 @@ export function ExpiryModal({
                         </Button>
                       </div>
 
-                      { }
+                      {}
                       <div className="text-center">
                         <div className="font-mono text-2xl font-medium">
                           {String(expiresAt.getHours()).padStart(2, '0')}:
@@ -303,7 +303,7 @@ export function ExpiryModal({
                         </div>
                       </div>
 
-                      { }
+                      {}
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground">
                           Add time
@@ -364,7 +364,7 @@ export function ExpiryModal({
                         </div>
                       </div>
 
-                      { }
+                      {}
                       <div className="space-y-2">
                         <Label
                           htmlFor="manual-time"
@@ -412,20 +412,20 @@ export function ExpiryModal({
                           className="text-center font-mono"
                           min={
                             expiresAt &&
-                              expiresAt.toDateString() ===
+                            expiresAt.toDateString() ===
                               new Date().toDateString()
                               ? new Date(Date.now() + 5 * 60 * 1000)
-                                .toTimeString()
-                                .slice(0, 5)
+                                  .toTimeString()
+                                  .slice(0, 5)
                               : undefined
                           }
                         />
                       </div>
 
-                      { }
+                      {}
                       {expiresAt &&
                         expiresAt.toDateString() ===
-                        new Date().toDateString() &&
+                          new Date().toDateString() &&
                         expiresAt <= new Date() && (
                           <div className="text-xs text-red-500 bg-red-50 dark:bg-red-950/20 p-2 rounded">
                             Time must be at least 5 minutes from now
@@ -438,7 +438,7 @@ export function ExpiryModal({
             </Popover>
           </div>
 
-          { }
+          {}
           {expiresAt && (
             <Button
               type="button"
@@ -450,7 +450,7 @@ export function ExpiryModal({
             </Button>
           )}
 
-          { }
+          {}
           {expiresAt && (
             <div className="rounded-md bg-orange-50 dark:bg-orange-950/20 p-3 border border-orange-200 dark:border-orange-800/50">
               <div className="flex items-center gap-2">
@@ -470,7 +470,7 @@ export function ExpiryModal({
           )}
         </div>
 
-        <DialogFooter className="mt-6">
+        <DialogFooter className="mt-2">
           <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
             Cancel
           </Button>

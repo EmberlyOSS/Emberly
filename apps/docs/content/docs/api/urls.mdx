@@ -1,162 +1,103 @@
 ---
-title: URL Shortener API
-description: Create and manage shortened URLs via the Emberly REST API.
+title: Short Links API
+description: Create, list and delete short links.
 ---
 
-Emberly includes a URL shortener that generates 6-character short codes at `embrly.ca/<code>`. All URL endpoints require a **bearer token** (your upload token).
+Short links live at `/u/<code>` on your instance, for example `https://embrly.ca/u/aB3dE7`, or on one of your verified [custom domains](/user-guide/custom-domains). All endpoints need [authentication](/api#authentication).
 
-## Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/urls` | Create a shortened URL |
-| `GET` | `/api/urls` | List your shortened URLs |
-| `DELETE` | `/api/urls/[id]` | Delete a shortened URL |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/urls` | Create a short link |
+| `GET` | `/api/urls` | List your short links |
+| `DELETE` | `/api/urls/{id}` | Delete a short link |
 
 ---
 
-## Create a Shortened URL
+## Create a Short Link
 
 ### `POST /api/urls`
 
-**Auth:** Bearer token  
-**Content-Type:** `application/json`
-
-**Request Body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `url` | string | Yes | The full URL to shorten (must be a valid HTTPS/HTTP URL) |
-
-**Request:**
 ```json
-{ "url": "https://example.com/very/long/path?query=value" }
+{ "url": "https://example.com/a/very/long/path?with=query", "domain": "files.example.com" }
 ```
 
-**Response (201):**
+| Field | Description |
+|-------|-------------|
+| `url` | The link to shorten. It must be an `http` or `https` address. Links to private or internal addresses, such as `localhost` or `192.168.x.x`, are refused. |
+| `domain` | Optional. One of your verified custom domains, to put the short link on. Send `null` for the main site. Leave it out to use your preferred upload domain if it's a verified custom domain, then your primary domain, then the main site. Any other domain returns `400`. |
+
+```bash
+curl https://embrly.ca/api/urls \
+  -H "Authorization: Bearer ebk_..." \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/long/url"}'
+```
+
+**Response:**
+
 ```json
 {
   "success": true,
   "data": {
-    "id": "cm8xdef456",
-    "shortCode": "abc123",
-    "shortUrl": "https://embrly.ca/abc123",
-    "targetUrl": "https://example.com/very/long/path?query=value",
+    "id": "clx3f8a...",
+    "shortCode": "aB3dE7",
+    "targetUrl": "https://example.com/long/url",
+    "domain": null,
+    "url": "https://embrly.ca/u/aB3dE7",
     "clicks": 0,
-    "createdAt": "2026-04-12T10:00:00Z"
+    "createdAt": "2026-10-24T10:00:00.000Z",
+    "userId": "clx1a2b..."
   }
 }
 ```
 
-**Errors:**
-
-| Status | Meaning |
-|--------|---------|
-| `400` | Invalid or missing URL |
-| `401` | Missing or invalid bearer token |
-| `429` | Rate limit exceeded |
-
-**cURL:**
-```bash
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com/long/url"}' \
-  https://embrly.ca/api/urls
-```
-
-**JavaScript:**
-```javascript
-const res = await fetch("https://embrly.ca/api/urls", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer YOUR_TOKEN",
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ url: "https://example.com/long/url" }),
-});
-
-const { data } = await res.json();
-console.log(data.shortUrl); // "https://embrly.ca/abc123"
-```
+`url` is the full short link, on `domain` when one is set.
 
 ---
 
-## List Your URLs
+## List Your Short Links
 
 ### `GET /api/urls`
 
-Returns a paginated list of all shortened URLs you have created.
+Returns all your short links, newest first, along with the verified custom domains you can use (`domains`) and the one used when `domain` is left out (`defaultDomain`, or `null` for the main site). If a link's domain has since been removed, its `url` uses the main site.
 
-**Auth:** Bearer token
-
-**Query Parameters:**
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `page` | `1` | Page number |
-| `limit` | `20` | Results per page |
-
-**Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "cm8xdef456",
-      "shortCode": "abc123",
-      "shortUrl": "https://embrly.ca/abc123",
-      "targetUrl": "https://example.com/long/url",
-      "clicks": 14,
-      "createdAt": "2026-04-12T10:00:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 42,
-    "totalPages": 3
+  "data": {
+    "urls": [
+      {
+        "id": "clx3f8a...",
+        "shortCode": "aB3dE7",
+        "targetUrl": "https://example.com/long/url",
+        "domain": "files.example.com",
+        "url": "https://files.example.com/u/aB3dE7",
+        "clicks": 14,
+        "createdAt": "2026-10-24T10:00:00.000Z",
+        "userId": "clx1a2b..."
+      }
+    ],
+    "domains": ["files.example.com"],
+    "defaultDomain": "files.example.com"
   }
 }
 ```
 
 ---
 
-## Delete a URL
+## Delete a Short Link
 
-### `DELETE /api/urls/[id]`
+### `DELETE /api/urls/{id}`
 
-Permanently delete a shortened URL. The short code immediately stops redirecting.
-
-**Auth:** Bearer token (owner only)
-
-**Response (200):**
-```json
-{ "success": true }
-```
-
-**Errors:**
-
-| Status | Meaning |
-|--------|---------|
-| `401` | Not authenticated |
-| `403` | Not the owner of this URL |
-| `404` | URL not found |
+Returns `204 No Content`. The link stops working straight away. Returns `403` if the link isn't yours.
 
 ---
 
-## How Redirects Work
+## Following a Link
 
-When someone visits `https://embrly.ca/<shortCode>`, the server performs a `301` permanent redirect to the original URL. No auth is required to follow a short link.
-
-<Callout type="info">
-  Short codes are 6 characters (nanoid). They are unique globally — two users cannot have the same short code, even if pointing to the same destination URL.
-</Callout>
-
----
+Visiting `/u/<code>` on the main site or any custom domain redirects to the target and counts a click. No account is needed. A link removed by moderators returns `451`.
 
 ## Related
 
-- [User Guide: URL Shortener](/user-guide/url-shortener)
-- [Analytics API](/api/analytics) — track click counts on your URLs
-- [Files API](/api/files) — upload files alongside short links
+- [Short Links guide](/user-guide/url-shortener)
+- [Analytics API](/api/analytics), for click counts across your links

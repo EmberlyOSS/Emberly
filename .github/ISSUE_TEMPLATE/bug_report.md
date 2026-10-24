@@ -31,12 +31,15 @@ assignees: ''
 
 <!-- If applicable, add screenshots to help explain your problem -->
 
-## 🌍 Environment
+## Debug Info
 
-<!-- Please complete the following information -->
+<!--
+If you run your own instance and can sign in as an admin, open Admin → Overview,
+click "Copy debug info" in System health, and paste it here. It contains no keys
+or passwords. Otherwise fill in what you can below.
+-->
 
-- **OS**: [e.g. Windows 10, macOS 12.0, Ubuntu 20.04]
-- **Browser**: [e.g. Chrome 96, Firefox 95, Safari 15]
-- **Emberly Version**: [e.g. 1.4.2]
-- **Deployment Method**: [e.g. Docker, Railway, Manual]
-- **Storage Method**: [e.g. S3, local storage]
+- **Emberly version**: [e.g. 3.1.0]
+- **Deployment**: [e.g. Docker, Railway, manual]
+- **Storage**: [e.g. S3, local]
+- **Browser and OS**: [e.g. Chrome 130 on Windows 11]

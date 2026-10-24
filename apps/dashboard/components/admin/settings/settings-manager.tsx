@@ -75,6 +75,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { FilterTabs } from '@/components/layout/page-kit'
 import { cn } from '@/lib/utils'
 
 import type { EmberlyConfig } from '@/lib/config'
@@ -126,23 +127,15 @@ function SettingsSection({
 }) {
   return (
     <GlassCard className={className}>
-      <div className="p-6 space-y-6">
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{title}</h3>
-              {badge}
-            </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {description}
-            </p>
-          </div>
+      <div className="border-b border-border/50 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold">{title}</h3>
+          {badge}
         </div>
-        <div className="space-y-5">{children}</div>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
+      <div className="space-y-5 p-6">{children}</div>
     </GlassCard>
   )
 }
@@ -538,6 +531,21 @@ export function SettingsManager() {
       { loading: boolean; ok?: boolean; message?: string; detail?: string }
     >
   >({})
+  const [integrationView, setIntegrationView] = useState<
+    | 'email'
+    | 'discord'
+    | 'stripe'
+    | 'cloudflare'
+    | 'github'
+    | 'providers'
+    | 'system'
+  >('email')
+  const [storageView, setStorageView] = useState<
+    'general' | 'buckets' | 'pools'
+  >('general')
+  const [poolProvider, setPoolProvider] = useState<'vultr' | 'linode' | 'ovh'>(
+    'vultr'
+  )
   const [s3TestState, setS3TestState] = useState<{
     loading: boolean
     ok?: boolean
@@ -650,7 +658,10 @@ export function SettingsManager() {
         body: JSON.stringify(workingConfig),
       })
 
-      if (!response.ok) throw new Error()
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.error || "Settings weren't saved")
+      }
 
       setSavedConfig(JSON.parse(JSON.stringify(workingConfig)))
 
@@ -661,8 +672,11 @@ export function SettingsManager() {
     } catch (error) {
       console.error('Failed to update settings:', error)
       toast({
-        title: 'Failed to update settings',
-        description: 'Please try again',
+        title: "Settings weren't saved",
+        description:
+          error instanceof Error && error.message
+            ? error.message
+            : 'Please try again',
         variant: 'destructive',
       })
     } finally {
@@ -1126,8 +1140,8 @@ export function SettingsManager() {
           {/* Instance Information */}
           <SettingsSection
             icon={InfoIcon}
-            title="Instance Information"
-            description="View and manage your Emberly instance details"
+            title="Instance"
+            description="The version you're running and whether there's a newer one."
             badge={
               updateInfo?.hasUpdate && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -1138,7 +1152,7 @@ export function SettingsManager() {
             }
           >
             <SettingRow
-              label="Current Version"
+              label="Version"
               description={`Emberly v${pkg.version}${updateInfo ? (updateInfo.hasUpdate ? ` → ${updateInfo.latestVersion}` : ' (Latest)') : ''}`}
             >
               <div className="flex items-center gap-2">
@@ -1151,7 +1165,7 @@ export function SettingsManager() {
                       className="flex items-center gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      View Release
+                      What's new
                     </a>
                   </Button>
                 )}
@@ -1164,53 +1178,57 @@ export function SettingsManager() {
                   {isCheckingUpdate ? (
                     <>
                       <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                      Checking...
+                      Checking…
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Check Updates
+                      Check for updates
                     </>
                   )}
                 </Button>
               </div>
             </SettingRow>
 
-            <div className="flex items-center gap-2 pt-2">
-              <Button variant="outline" size="sm" asChild className="h-9">
-                <a
-                  href="https://github.com/EmberlyOSS/Emberly"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Github className="mr-2 h-4 w-4" />
-                  GitHub
-                </a>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="h-9">
-                <a
-                  href="https://github.com/sponsors/EmberlyOSS"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Heart className="mr-2 h-4 w-4 text-red-500" />
-                  Sponsor
-                </a>
-              </Button>
-            </div>
+            <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <a
+                href="https://github.com/EmberlyOSS/Emberly"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 hover:text-foreground"
+              >
+                <Github className="h-4 w-4" />
+                Source on GitHub
+              </a>
+              <a
+                href="https://github.com/sponsors/EmberlyOSS"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 hover:text-foreground"
+              >
+                <Heart className="h-4 w-4 text-red-500" />
+                Sponsor the project
+              </a>
+            </p>
           </SettingsSection>
 
           {/* License & branding */}
           <SettingsSection
             icon={KeyRound}
-            title="License & branding"
-            description="Your license, logo, name and footer. The logo and removing the Emberly credit need a license."
+            title="License"
+            description="Unlocks your own logo, white-labelling and cloud features."
           >
             <LicensePanel />
+          </SettingsSection>
 
+          <SettingsSection
+            icon={Sparkles}
+            title="Branding"
+            description="Your instance's name, description and footer."
+          >
             <div className="space-y-2 pl-0.5">
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Site Name</Label>
+                <Label className="text-sm font-medium">Site name</Label>
                 {isFieldChanged('general', ['siteName']) && <ChangeIndicator />}
               </div>
               <Input
@@ -1227,13 +1245,13 @@ export function SettingsManager() {
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Shown in the browser tab, page titles, and social share cards
+                Shown in the browser tab, page titles, emails and link previews.
               </p>
             </div>
 
             <div className="space-y-2 pl-0.5">
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Meta Description</Label>
+                <Label className="text-sm font-medium">Description</Label>
                 {isFieldChanged('general', ['metaDescription']) && (
                   <ChangeIndicator />
                 )}
@@ -1245,7 +1263,7 @@ export function SettingsManager() {
                     metaDescription: e.target.value,
                   })
                 }
-                placeholder="A short description of your instance for search engines and social previews"
+                placeholder="One or two sentences for search engines and link previews"
                 className={cn(
                   'max-w-lg',
                   getFieldClasses('general', ['metaDescription'])
@@ -1300,12 +1318,12 @@ export function SettingsManager() {
           {/* User Management */}
           <SettingsSection
             icon={Users}
-            title="User Management"
-            description="Configure user registration and quota settings"
+            title="Sign-ups"
+            description="Whether new people can create an account."
           >
             <SettingRow
-              label="Allow Registrations"
-              description="Enable or disable new user registrations"
+              label="Allow new sign-ups"
+              description="When off, only existing users can sign in."
               changed={isFieldChanged('general', ['registrations', 'enabled'])}
             >
               <Switch
@@ -1327,7 +1345,9 @@ export function SettingsManager() {
 
             {!workingConfig.settings.general.registrations.enabled && (
               <div className="space-y-2 pl-0.5">
-                <Label className="text-sm font-medium">Disabled Message</Label>
+                <Label className="text-sm font-medium">
+                  Message on the sign-up page
+                </Label>
                 <Input
                   placeholder="Registrations are currently disabled"
                   value={
@@ -1351,7 +1371,7 @@ export function SettingsManager() {
                   )}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Shown to users when registrations are disabled
+                  Shown instead of the sign-up form.
                 </p>
               </div>
             )}
@@ -1361,11 +1381,11 @@ export function SettingsManager() {
             <SettingsSection
               icon={CreditCard}
               title="Billing"
-              description="Control whether Emberly Cloud accepts payments"
+              description="Whether people can pay for plans and storage."
             >
               <SettingRow
-                label="Accept Payments"
-                description="Turn off to make Emberly fully free. Checkout is disabled and users request storage or domain increases through Applications. Existing subscribers can still manage or cancel billing."
+                label="Accept payments"
+                description="When off, everything is free: checkout is hidden and people ask for more storage or domains through Applications. Existing subscribers can still manage or cancel."
                 changed={isFieldChanged('general', ['billing', 'enabled'])}
               >
                 <Switch
@@ -1388,510 +1408,524 @@ export function SettingsManager() {
 
         {/* Storage Tab */}
         <TabsContent value="storage" className="space-y-5 mt-0">
-          {/* User Quotas */}
-          <SettingsSection
-            icon={Users}
-            title="User Quotas"
-            description="Configure storage limits per user"
-          >
-            <SettingRow
-              label="User Quotas"
-              description="Enable storage limits per user"
-              changed={isFieldChanged('general', [
-                'storage',
-                'quotas',
-                'enabled',
-              ])}
-            >
-              <Switch
-                checked={workingConfig.settings.general.storage.quotas.enabled}
-                onCheckedChange={(checked) =>
-                  handleSettingChange('general', {
-                    storage: {
-                      ...workingConfig.settings.general.storage,
-                      quotas: {
-                        ...workingConfig.settings.general.storage.quotas,
-                        enabled: checked,
-                      },
-                    },
-                  })
-                }
-                className={getFieldClasses('general', [
-                  'storage',
-                  'quotas',
-                  'enabled',
-                ])}
-              />
-            </SettingRow>
+          {cloudEnabled && (
+            <FilterTabs
+              value={storageView}
+              onChange={setStorageView}
+              label="Storage section"
+              options={[
+                { value: 'general', label: 'General' },
+                { value: 'buckets', label: 'Buckets' },
+                { value: 'pools', label: 'Provider pools' },
+              ]}
+            />
+          )}
 
-            <div className="space-y-2 pl-0.5">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">
-                  Default Storage Quota
-                </Label>
-                {isFieldChanged('general', [
-                  'storage',
-                  'quotas',
-                  'default',
-                  'value',
-                ]) && <ChangeIndicator />}
-              </div>
-              <div className="flex items-center gap-2 max-w-xs">
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={
-                    workingConfig.settings.general.storage.quotas.default.value
-                  }
-                  onChange={(e) => handleStorageQuotaChange(e.target.value)}
-                  placeholder="500"
-                  className={cn(
-                    'flex-1',
-                    getFieldClasses('general', [
-                      'storage',
-                      'quotas',
-                      'default',
-                      'value',
-                    ])
-                  )}
-                />
-                <Select
-                  value={
-                    workingConfig.settings.general.storage.quotas.default.unit
-                  }
-                  onValueChange={(value) =>
-                    handleSettingChange('general', {
-                      storage: {
-                        ...workingConfig.settings.general.storage,
-                        quotas: {
-                          ...workingConfig.settings.general.storage.quotas,
-                          default: {
-                            ...workingConfig.settings.general.storage.quotas
-                              .default,
-                            unit: value as 'MB' | 'GB',
-                          },
-                        },
-                      },
-                    })
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      'w-20',
-                      getFieldClasses('general', [
-                        'storage',
-                        'quotas',
-                        'default',
-                        'unit',
-                      ])
-                    )}
-                  >
-                    <SelectValue placeholder="Unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MB">MB</SelectItem>
-                    <SelectItem value="GB">GB</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </SettingsSection>
-
-          {/* Storage Provider */}
-          <SettingsSection
-            icon={HardDrive}
-            title="Storage Settings"
-            description="Configure storage provider and file upload limits"
-          >
-            <SettingRow
-              label="Background OCR Processing"
-              description="Enable OCR to search text in uploaded images"
-              changed={isFieldChanged('general', ['ocr', 'enabled'])}
-            >
-              <Switch
-                checked={workingConfig.settings.general.ocr.enabled}
-                onCheckedChange={(checked) =>
-                  handleSettingChange('general', {
-                    ocr: { enabled: checked },
-                  })
-                }
-                className={getFieldClasses('general', ['ocr', 'enabled'])}
-              />
-            </SettingRow>
-
-            {storageFromEnv ? (
-              <p className="rounded-lg border border-border/70 bg-secondary/30 p-3 text-sm text-muted-foreground">
-                Storage is set by the <code>STORAGE_PROVIDER</code> and{' '}
-                <code>S3_*</code> environment variables on this server. Change
-                them there and restart to switch storage.
-              </p>
-            ) : (
-              <>
+          {(!cloudEnabled || storageView === 'general') && (
+            <>
+              <SettingsSection
+                icon={Upload}
+                title="Uploads"
+                description="Limits and processing for every upload."
+              >
                 <div className="space-y-2 pl-0.5">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm font-medium">
-                      Storage Provider
+                      Maximum Upload Size
                     </Label>
-                    {isFieldChanged('general', ['storage', 'provider']) && (
-                      <ChangeIndicator />
-                    )}
-                  </div>
-                  <Select
-                    value={workingConfig.settings.general.storage.provider}
-                    onValueChange={(value) =>
-                      handleSettingChange('general', {
-                        storage: {
-                          ...workingConfig.settings.general.storage,
-                          provider: value as 'local' | 's3',
-                        },
-                      })
-                    }
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        'max-w-xs',
-                        getFieldClasses('general', ['storage', 'provider'])
-                      )}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="local">
-                        <div className="flex items-center gap-2">
-                          <HardDrive className="h-4 w-4" />
-                          Local Storage
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="s3">
-                        <div className="flex items-center gap-2">
-                          <Cloud className="h-4 w-4" />
-                          S3 Storage
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {workingConfig.settings.general.storage.provider === 's3' && (
-                  <GlassCard className="mt-4" gradient={false}>
-                    <div className="p-4 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Cloud className="h-4 w-4" />
-                        S3 Configuration
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="text-sm">Bucket Name</Label>
-                          <Input
-                            value={
-                              workingConfig.settings.general.storage.s3.bucket
-                            }
-                            onChange={(e) =>
-                              handleSettingChange('general', {
-                                storage: {
-                                  ...workingConfig.settings.general.storage,
-                                  s3: {
-                                    ...workingConfig.settings.general.storage
-                                      .s3,
-                                    bucket: e.target.value,
-                                  },
-                                },
-                              })
-                            }
-                            placeholder="my-bucket"
-                            className={getFieldClasses('general', [
-                              'storage',
-                              's3',
-                              'bucket',
-                            ])}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm">Region</Label>
-                          <Input
-                            value={
-                              workingConfig.settings.general.storage.s3.region
-                            }
-                            onChange={(e) =>
-                              handleSettingChange('general', {
-                                storage: {
-                                  ...workingConfig.settings.general.storage,
-                                  s3: {
-                                    ...workingConfig.settings.general.storage
-                                      .s3,
-                                    region: e.target.value,
-                                  },
-                                },
-                              })
-                            }
-                            placeholder="us-east-1"
-                            className={getFieldClasses('general', [
-                              'storage',
-                              's3',
-                              'region',
-                            ])}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm">Access Key ID</Label>
-                          <Input
-                            type="password"
-                            value={
-                              workingConfig.settings.general.storage.s3
-                                .accessKeyId
-                            }
-                            onChange={(e) =>
-                              handleSettingChange('general', {
-                                storage: {
-                                  ...workingConfig.settings.general.storage,
-                                  s3: {
-                                    ...workingConfig.settings.general.storage
-                                      .s3,
-                                    accessKeyId: e.target.value,
-                                  },
-                                },
-                              })
-                            }
-                            placeholder="AKIAXXXXXXXXXXXXXXXX"
-                            className={getFieldClasses('general', [
-                              'storage',
-                              's3',
-                              'accessKeyId',
-                            ])}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm">Secret Access Key</Label>
-                          <Input
-                            type="password"
-                            value={
-                              workingConfig.settings.general.storage.s3
-                                .secretAccessKey
-                            }
-                            onChange={(e) =>
-                              handleSettingChange('general', {
-                                storage: {
-                                  ...workingConfig.settings.general.storage,
-                                  s3: {
-                                    ...workingConfig.settings.general.storage
-                                      .s3,
-                                    secretAccessKey: e.target.value,
-                                  },
-                                },
-                              })
-                            }
-                            placeholder="••••••••••••••••••••"
-                            className={getFieldClasses('general', [
-                              'storage',
-                              's3',
-                              'secretAccessKey',
-                            ])}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">
-                          Custom Endpoint (Optional)
-                        </Label>
-                        <Input
-                          value={
-                            workingConfig.settings.general.storage.s3
-                              .endpoint || ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('general', {
-                              storage: {
-                                ...workingConfig.settings.general.storage,
-                                s3: {
-                                  ...workingConfig.settings.general.storage.s3,
-                                  endpoint: e.target.value,
-                                },
-                              },
-                            })
-                          }
-                          placeholder="https://s3.custom-domain.com"
-                          className={getFieldClasses('general', [
-                            'storage',
-                            's3',
-                            'endpoint',
-                          ])}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          For S3-compatible services like MinIO or DigitalOcean
-                          Spaces
-                        </p>
-                      </div>
-
-                      <SettingRow
-                        label="Force Path Style"
-                        description="Enable for S3-compatible services requiring path-style URLs"
-                        changed={isFieldChanged('general', [
-                          'storage',
-                          's3',
-                          'forcePathStyle',
-                        ])}
-                      >
-                        <Switch
-                          checked={
-                            workingConfig.settings.general.storage.s3
-                              .forcePathStyle
-                          }
-                          onCheckedChange={(checked) =>
-                            handleSettingChange('general', {
-                              storage: {
-                                ...workingConfig.settings.general.storage,
-                                s3: {
-                                  ...workingConfig.settings.general.storage.s3,
-                                  forcePathStyle: checked,
-                                },
-                              },
-                            })
-                          }
-                          className={getFieldClasses('general', [
-                            'storage',
-                            's3',
-                            'forcePathStyle',
-                          ])}
-                        />
-                      </SettingRow>
-
-                      <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                        <div>
-                          {s3TestState && !s3TestState.loading && (
-                            <span
-                              className={`text-xs flex items-center gap-1.5 ${s3TestState.ok ? 'text-green-500' : 'text-destructive'}`}
-                            >
-                              {s3TestState.ok ? (
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                              ) : (
-                                <AlertCircle className="h-3.5 w-3.5" />
-                              )}
-                              {s3TestState.message}
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 shrink-0"
-                          disabled={s3TestState?.loading}
-                          onClick={handleS3Test}
-                        >
-                          {s3TestState?.loading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          )}
-                          Test Connection
-                        </Button>
-                      </div>
-                    </div>
-                  </GlassCard>
-                )}
-              </>
-            )}
-
-            <div className="space-y-2 pl-0.5">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">
-                  Maximum Upload Size
-                </Label>
-                {isFieldChanged('general', [
-                  'storage',
-                  'maxUploadSize',
-                  'value',
-                ]) && <ChangeIndicator />}
-              </div>
-              <div className="flex items-center gap-2 max-w-xs">
-                <Input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={
-                    workingConfig.settings.general.storage.maxUploadSize.value
-                  }
-                  onChange={(e) => handleMaxUploadSizeChange(e.target.value)}
-                  placeholder="10"
-                  className={cn(
-                    'flex-1',
-                    getFieldClasses('general', [
+                    {isFieldChanged('general', [
                       'storage',
                       'maxUploadSize',
                       'value',
-                    ])
-                  )}
-                />
-                <Select
-                  value={
-                    workingConfig.settings.general.storage.maxUploadSize.unit
-                  }
-                  onValueChange={(value) =>
-                    handleSettingChange('general', {
-                      storage: {
-                        ...workingConfig.settings.general.storage,
-                        maxUploadSize: {
-                          ...workingConfig.settings.general.storage
-                            .maxUploadSize,
-                          unit: value as 'MB' | 'GB',
-                        },
-                      },
-                    })
-                  }
+                    ]) && <ChangeIndicator />}
+                  </div>
+                  <div className="flex items-center gap-2 max-w-xs">
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={
+                        workingConfig.settings.general.storage.maxUploadSize
+                          .value
+                      }
+                      onChange={(e) =>
+                        handleMaxUploadSizeChange(e.target.value)
+                      }
+                      placeholder="10"
+                      className={cn(
+                        'flex-1',
+                        getFieldClasses('general', [
+                          'storage',
+                          'maxUploadSize',
+                          'value',
+                        ])
+                      )}
+                    />
+                    <Select
+                      value={
+                        workingConfig.settings.general.storage.maxUploadSize
+                          .unit
+                      }
+                      onValueChange={(value) =>
+                        handleSettingChange('general', {
+                          storage: {
+                            ...workingConfig.settings.general.storage,
+                            maxUploadSize: {
+                              ...workingConfig.settings.general.storage
+                                .maxUploadSize,
+                              unit: value as 'MB' | 'GB',
+                            },
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          'w-20',
+                          getFieldClasses('general', [
+                            'storage',
+                            'maxUploadSize',
+                            'unit',
+                          ])
+                        )}
+                      >
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MB">MB</SelectItem>
+                        <SelectItem value="GB">GB</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <SettingRow
+                  label="Background OCR Processing"
+                  description="Enable OCR to search text in uploaded images"
+                  changed={isFieldChanged('general', ['ocr', 'enabled'])}
                 >
-                  <SelectTrigger
-                    className={cn(
-                      'w-20',
-                      getFieldClasses('general', [
+                  <Switch
+                    checked={workingConfig.settings.general.ocr.enabled}
+                    onCheckedChange={(checked) =>
+                      handleSettingChange('general', {
+                        ocr: { enabled: checked },
+                      })
+                    }
+                    className={getFieldClasses('general', ['ocr', 'enabled'])}
+                  />
+                </SettingRow>
+              </SettingsSection>
+
+              {/* User Quotas */}
+              <SettingsSection
+                icon={Users}
+                title="Quotas"
+                description="Limit how much each user can store. Plans and perks can raise it."
+              >
+                <SettingRow
+                  label="Limit storage per user"
+                  description="Users can't upload once they reach their limit."
+                  changed={isFieldChanged('general', [
+                    'storage',
+                    'quotas',
+                    'enabled',
+                  ])}
+                >
+                  <Switch
+                    checked={
+                      workingConfig.settings.general.storage.quotas.enabled
+                    }
+                    onCheckedChange={(checked) =>
+                      handleSettingChange('general', {
+                        storage: {
+                          ...workingConfig.settings.general.storage,
+                          quotas: {
+                            ...workingConfig.settings.general.storage.quotas,
+                            enabled: checked,
+                          },
+                        },
+                      })
+                    }
+                    className={getFieldClasses('general', [
+                      'storage',
+                      'quotas',
+                      'enabled',
+                    ])}
+                  />
+                </SettingRow>
+
+                {workingConfig.settings.general.storage.quotas.enabled && (
+                  <div className="space-y-2 pl-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">
+                        Default Storage Quota
+                      </Label>
+                      {isFieldChanged('general', [
                         'storage',
-                        'maxUploadSize',
-                        'unit',
-                      ])
+                        'quotas',
+                        'default',
+                        'value',
+                      ]) && <ChangeIndicator />}
+                    </div>
+                    <div className="flex items-center gap-2 max-w-xs">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={
+                          workingConfig.settings.general.storage.quotas.default
+                            .value
+                        }
+                        onChange={(e) =>
+                          handleStorageQuotaChange(e.target.value)
+                        }
+                        placeholder="500"
+                        className={cn(
+                          'flex-1',
+                          getFieldClasses('general', [
+                            'storage',
+                            'quotas',
+                            'default',
+                            'value',
+                          ])
+                        )}
+                      />
+                      <Select
+                        value={
+                          workingConfig.settings.general.storage.quotas.default
+                            .unit
+                        }
+                        onValueChange={(value) =>
+                          handleSettingChange('general', {
+                            storage: {
+                              ...workingConfig.settings.general.storage,
+                              quotas: {
+                                ...workingConfig.settings.general.storage
+                                  .quotas,
+                                default: {
+                                  ...workingConfig.settings.general.storage
+                                    .quotas.default,
+                                  unit: value as 'MB' | 'GB',
+                                },
+                              },
+                            },
+                          })
+                        }
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            'w-20',
+                            getFieldClasses('general', [
+                              'storage',
+                              'quotas',
+                              'default',
+                              'unit',
+                            ])
+                          )}
+                        >
+                          <SelectValue placeholder="Unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MB">MB</SelectItem>
+                          <SelectItem value="GB">GB</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </SettingsSection>
+
+              {/* Storage Provider */}
+              <SettingsSection
+                icon={HardDrive}
+                title="Default storage"
+                description="Where uploads go unless a user or squad has their own bucket."
+              >
+                {storageFromEnv ? (
+                  <p className="rounded-lg border border-border/70 bg-secondary/30 p-3 text-sm text-muted-foreground">
+                    Storage is set by the <code>STORAGE_PROVIDER</code> and{' '}
+                    <code>S3_*</code> environment variables on this server.
+                    Change them there and restart to switch storage.
+                  </p>
+                ) : (
+                  <>
+                    <div className="space-y-2 pl-0.5">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">
+                          Storage Provider
+                        </Label>
+                        {isFieldChanged('general', ['storage', 'provider']) && (
+                          <ChangeIndicator />
+                        )}
+                      </div>
+                      <Select
+                        value={workingConfig.settings.general.storage.provider}
+                        onValueChange={(value) =>
+                          handleSettingChange('general', {
+                            storage: {
+                              ...workingConfig.settings.general.storage,
+                              provider: value as 'local' | 's3',
+                            },
+                          })
+                        }
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            'max-w-xs',
+                            getFieldClasses('general', ['storage', 'provider'])
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="local">
+                            <div className="flex items-center gap-2">
+                              <HardDrive className="h-4 w-4" />
+                              Local Storage
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="s3">
+                            <div className="flex items-center gap-2">
+                              <Cloud className="h-4 w-4" />
+                              S3 Storage
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {workingConfig.settings.general.storage.provider ===
+                      's3' && (
+                      <GlassCard className="mt-4" gradient={false}>
+                        <div className="p-4 space-y-4">
+                          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Cloud className="h-4 w-4" />
+                            S3 Configuration
+                          </div>
+
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-sm">Bucket Name</Label>
+                              <Input
+                                value={
+                                  workingConfig.settings.general.storage.s3
+                                    .bucket
+                                }
+                                onChange={(e) =>
+                                  handleSettingChange('general', {
+                                    storage: {
+                                      ...workingConfig.settings.general.storage,
+                                      s3: {
+                                        ...workingConfig.settings.general
+                                          .storage.s3,
+                                        bucket: e.target.value,
+                                      },
+                                    },
+                                  })
+                                }
+                                placeholder="my-bucket"
+                                className={getFieldClasses('general', [
+                                  'storage',
+                                  's3',
+                                  'bucket',
+                                ])}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm">Region</Label>
+                              <Input
+                                value={
+                                  workingConfig.settings.general.storage.s3
+                                    .region
+                                }
+                                onChange={(e) =>
+                                  handleSettingChange('general', {
+                                    storage: {
+                                      ...workingConfig.settings.general.storage,
+                                      s3: {
+                                        ...workingConfig.settings.general
+                                          .storage.s3,
+                                        region: e.target.value,
+                                      },
+                                    },
+                                  })
+                                }
+                                placeholder="us-east-1"
+                                className={getFieldClasses('general', [
+                                  'storage',
+                                  's3',
+                                  'region',
+                                ])}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm">Access Key ID</Label>
+                              <Input
+                                type="password"
+                                value={
+                                  workingConfig.settings.general.storage.s3
+                                    .accessKeyId
+                                }
+                                onChange={(e) =>
+                                  handleSettingChange('general', {
+                                    storage: {
+                                      ...workingConfig.settings.general.storage,
+                                      s3: {
+                                        ...workingConfig.settings.general
+                                          .storage.s3,
+                                        accessKeyId: e.target.value,
+                                      },
+                                    },
+                                  })
+                                }
+                                placeholder="AKIAXXXXXXXXXXXXXXXX"
+                                className={getFieldClasses('general', [
+                                  'storage',
+                                  's3',
+                                  'accessKeyId',
+                                ])}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm">
+                                Secret Access Key
+                              </Label>
+                              <Input
+                                type="password"
+                                value={
+                                  workingConfig.settings.general.storage.s3
+                                    .secretAccessKey
+                                }
+                                onChange={(e) =>
+                                  handleSettingChange('general', {
+                                    storage: {
+                                      ...workingConfig.settings.general.storage,
+                                      s3: {
+                                        ...workingConfig.settings.general
+                                          .storage.s3,
+                                        secretAccessKey: e.target.value,
+                                      },
+                                    },
+                                  })
+                                }
+                                placeholder="••••••••••••••••••••"
+                                className={getFieldClasses('general', [
+                                  'storage',
+                                  's3',
+                                  'secretAccessKey',
+                                ])}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm">
+                              Custom Endpoint (Optional)
+                            </Label>
+                            <Input
+                              value={
+                                workingConfig.settings.general.storage.s3
+                                  .endpoint || ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('general', {
+                                  storage: {
+                                    ...workingConfig.settings.general.storage,
+                                    s3: {
+                                      ...workingConfig.settings.general.storage
+                                        .s3,
+                                      endpoint: e.target.value,
+                                    },
+                                  },
+                                })
+                              }
+                              placeholder="https://s3.custom-domain.com"
+                              className={getFieldClasses('general', [
+                                'storage',
+                                's3',
+                                'endpoint',
+                              ])}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              For S3-compatible services like MinIO or
+                              DigitalOcean Spaces
+                            </p>
+                          </div>
+
+                          <SettingRow
+                            label="Force Path Style"
+                            description="Enable for S3-compatible services requiring path-style URLs"
+                            changed={isFieldChanged('general', [
+                              'storage',
+                              's3',
+                              'forcePathStyle',
+                            ])}
+                          >
+                            <Switch
+                              checked={
+                                workingConfig.settings.general.storage.s3
+                                  .forcePathStyle
+                              }
+                              onCheckedChange={(checked) =>
+                                handleSettingChange('general', {
+                                  storage: {
+                                    ...workingConfig.settings.general.storage,
+                                    s3: {
+                                      ...workingConfig.settings.general.storage
+                                        .s3,
+                                      forcePathStyle: checked,
+                                    },
+                                  },
+                                })
+                              }
+                              className={getFieldClasses('general', [
+                                'storage',
+                                's3',
+                                'forcePathStyle',
+                              ])}
+                            />
+                          </SettingRow>
+
+                          <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                            <div>
+                              {s3TestState && !s3TestState.loading && (
+                                <span
+                                  className={`text-xs flex items-center gap-1.5 ${s3TestState.ok ? 'text-green-500' : 'text-destructive'}`}
+                                >
+                                  {s3TestState.ok ? (
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <AlertCircle className="h-3.5 w-3.5" />
+                                  )}
+                                  {s3TestState.message}
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 shrink-0"
+                              disabled={s3TestState?.loading}
+                              onClick={handleS3Test}
+                            >
+                              {s3TestState?.loading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              )}
+                              Test Connection
+                            </Button>
+                          </div>
+                        </div>
+                      </GlassCard>
                     )}
-                  >
-                    <SelectValue placeholder="Unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MB">MB</SelectItem>
-                    <SelectItem value="GB">GB</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </SettingsSection>
+                  </>
+                )}
+              </SettingsSection>
+            </>
+          )}
 
-          {cloudEnabled && (
+          {cloudEnabled && storageView === 'buckets' && (
             <>
-              {/* Vultr Object Storage Pools */}
-              <SettingsSection
-                icon={Cloud}
-                title="Vultr Object Storage"
-                description="Regional pooled instances. Active instances enable that region on the pricing page so users can purchase storage."
-              >
-                <VultrInstanceManager />
-              </SettingsSection>
-
-              {/* Linode Object Storage Pools */}
-              <SettingsSection
-                icon={Cloud}
-                title="Linode Object Storage"
-                description="Linode cluster-backed storage pools. Each pool creates an access key for a cluster region available on the pricing page."
-              >
-                <LinodePoolManager />
-              </SettingsSection>
-
-              {/* OVHcloud Object Storage Pools */}
-              <SettingsSection
-                icon={Cloud}
-                title="OVHcloud Object Storage"
-                description="OVHcloud Public Cloud storage pools. Each pool generates S3-compatible credentials for a project and region."
-              >
-                <OVHCloudPoolManager />
-              </SettingsSection>
-
-              {/* Additional Storage Buckets */}
               <SettingsSection
                 icon={Database}
                 title="Additional Storage Buckets"
@@ -1900,7 +1934,6 @@ export function SettingsManager() {
                 <StorageBucketManager />
               </SettingsSection>
 
-              {/* User Bucket Assignment */}
               <SettingsSection
                 icon={Users}
                 title="User Bucket Assignment"
@@ -1910,6 +1943,48 @@ export function SettingsManager() {
               </SettingsSection>
             </>
           )}
+
+          {cloudEnabled && storageView === 'pools' && (
+            <>
+              <FilterTabs
+                value={poolProvider}
+                onChange={setPoolProvider}
+                label="Provider"
+                options={[
+                  { value: 'vultr', label: 'Vultr' },
+                  { value: 'linode', label: 'Linode' },
+                  { value: 'ovh', label: 'OVHcloud' },
+                ]}
+              />
+              {poolProvider === 'vultr' && (
+                <SettingsSection
+                  icon={Cloud}
+                  title="Vultr Object Storage"
+                  description="Regional pooled instances. Active instances enable that region on the pricing page so users can purchase storage."
+                >
+                  <VultrInstanceManager />
+                </SettingsSection>
+              )}
+              {poolProvider === 'linode' && (
+                <SettingsSection
+                  icon={Cloud}
+                  title="Linode Object Storage"
+                  description="Linode cluster-backed storage pools. Each pool creates an access key for a cluster region available on the pricing page."
+                >
+                  <LinodePoolManager />
+                </SettingsSection>
+              )}
+              {poolProvider === 'ovh' && (
+                <SettingsSection
+                  icon={Cloud}
+                  title="OVHcloud Object Storage"
+                  description="OVHcloud Public Cloud storage pools. Each pool generates S3-compatible credentials for a project and region."
+                >
+                  <OVHCloudPoolManager />
+                </SettingsSection>
+              )}
+            </>
+          )}
         </TabsContent>
 
         {/* Appearance Tab */}
@@ -1917,8 +1992,8 @@ export function SettingsManager() {
           {/* Theme Colors */}
           <SettingsSection
             icon={Palette}
-            title="Theme & Colors"
-            description="Customize the visual appearance of your Emberly instance"
+            title="Default theme"
+            description="What everyone sees unless they choose their own theme in their profile."
             badge={
               appearanceHasChanges && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -1937,7 +2012,7 @@ export function SettingsManager() {
           <SettingsSection
             icon={Image}
             title="Favicon"
-            description="Upload a custom favicon for your instance"
+            description="The small icon in browser tabs and bookmarks."
             badge={
               hasFaviconChanged() && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
@@ -2037,7 +2112,7 @@ export function SettingsManager() {
           <SettingsSection
             icon={Code}
             title="Custom CSS"
-            description="Add custom CSS styles to your instance"
+            description="Extra styles added to every page. Broken CSS can make the site hard to use, so test changes carefully."
             badge={
               isFieldChanged('advanced', ['customCSS']) && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -2084,8 +2159,8 @@ export function SettingsManager() {
           {/* Custom HTML */}
           <SettingsSection
             icon={FileCode}
-            title="HTML Head Content"
-            description="Add custom HTML to the head section of every page"
+            title="Custom head HTML"
+            description="Added to the <head> of every page, e.g. analytics or verification tags. Only add code you trust."
             badge={
               isFieldChanged('advanced', ['customHead']) && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -2132,130 +2207,599 @@ export function SettingsManager() {
 
         {/* Integrations Tab */}
         <TabsContent value="integrations" className="space-y-5 mt-0">
-          <SystemApiKeySection />
+          <FilterTabs
+            value={integrationView}
+            onChange={setIntegrationView}
+            label="Integration"
+            options={[
+              { value: 'email', label: 'Email' },
+              { value: 'discord', label: 'Discord' },
+              ...(cloudEnabled
+                ? ([
+                    { value: 'stripe', label: 'Stripe' },
+                    { value: 'cloudflare', label: 'Cloudflare' },
+                    { value: 'github', label: 'GitHub' },
+                    { value: 'providers', label: 'Storage providers' },
+                  ] as const)
+                : []),
+              { value: 'system', label: 'System API key' },
+            ]}
+          />
 
-          {/* Stripe */}
-          {cloudEnabled && (
-            <SettingsSection
-              icon={CreditCard}
-              title="Stripe"
-              description="Payment processing. Overrides the STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET env vars."
-              badge={
-                isFieldChanged('integrations', ['stripe']) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                    Modified
-                  </span>
-                )
-              }
-            >
-              <SettingRow
-                label="Secret Key"
-                description="Stripe secret key (sk_live_... or sk_test_...)"
-              >
-                <Input
-                  type="password"
-                  placeholder="sk_live_..."
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.stripe?.secretKey ??
-                    ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      stripe: {
-                        ...workingConfig?.settings.integrations?.stripe,
-                        secretKey: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <SettingRow
-                label="Webhook Secret"
-                description="Signing secret for Stripe webhook events"
-              >
-                <Input
-                  type="password"
-                  placeholder="whsec_..."
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.stripe
-                      ?.webhookSecret ?? ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      stripe: {
-                        ...workingConfig?.settings.integrations?.stripe,
-                        webhookSecret: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                <div>
-                  {intTestStates['stripe'] &&
-                    !intTestStates['stripe'].loading && (
-                      <span
-                        className={`text-xs flex items-center gap-1.5 ${intTestStates['stripe'].ok ? 'text-green-500' : 'text-destructive'}`}
+          {integrationView === 'email' && (
+            <>
+              {/* Resend / SMTP */}
+              {(() => {
+                const emailProvider =
+                  ((
+                    workingConfig?.settings.integrations as Record<
+                      string,
+                      unknown
+                    >
+                  )?.emailProvider as string) ?? 'resend'
+                return (
+                  <>
+                    <SettingsSection
+                      icon={Zap}
+                      title="Email"
+                      description="Transactional email delivery provider and credentials."
+                      badge={
+                        isFieldChanged('integrations', [
+                          'resend',
+                          'smtp',
+                          'emailProvider',
+                        ]) && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                            Modified
+                          </span>
+                        )
+                      }
+                    >
+                      <SettingRow
+                        label="Email Provider"
+                        description="Choose the email delivery provider"
                       >
-                        {intTestStates['stripe'].ok ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <AlertCircle className="h-3.5 w-3.5" />
-                        )}
-                        {intTestStates['stripe'].message}
-                      </span>
-                    )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 shrink-0"
-                  disabled={intTestStates['stripe']?.loading}
-                  onClick={() =>
-                    handleIntegrationTest('stripe', {
-                      secretKey:
-                        workingConfig?.settings.integrations?.stripe
-                          ?.secretKey ?? '',
-                    })
-                  }
-                >
-                  {intTestStates['stripe']?.loading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Test Connection
-                </Button>
-              </div>
-              <StripeSetupPanel
-                secretKey={
-                  isFieldChanged('integrations', ['stripe'])
-                    ? workingConfig?.settings.integrations?.stripe?.secretKey
-                    : undefined
-                }
-              />
-            </SettingsSection>
+                        <Select
+                          value={emailProvider}
+                          onValueChange={(value) =>
+                            handleSettingChange('integrations', {
+                              emailProvider: value as 'resend' | 'smtp',
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-48 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="resend">Resend</SelectItem>
+                            <SelectItem value="smtp">SMTP</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </SettingRow>
+
+                      {emailProvider === 'resend' && (
+                        <>
+                          <SettingRow
+                            label="API Key"
+                            description="Resend API key"
+                          >
+                            <Input
+                              type="password"
+                              placeholder="re_..."
+                              className="w-80 font-mono text-sm"
+                              value={
+                                workingConfig?.settings.integrations?.resend
+                                  ?.apiKey ?? ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  resend: {
+                                    ...workingConfig?.settings.integrations
+                                      ?.resend,
+                                    apiKey: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <SettingRow
+                            label="From Address"
+                            description="Sender address for outgoing emails"
+                          >
+                            <Input
+                              placeholder="Emberly <noreply@embrly.ca>"
+                              className="w-80 text-sm"
+                              value={
+                                workingConfig?.settings.integrations?.resend
+                                  ?.emailFrom ?? ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  resend: {
+                                    ...workingConfig?.settings.integrations
+                                      ?.resend,
+                                    emailFrom: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                            <div>
+                              {intTestStates['resend'] &&
+                                !intTestStates['resend'].loading && (
+                                  <span
+                                    className={`text-xs flex items-center gap-1.5 ${intTestStates['resend'].ok ? 'text-green-500' : 'text-destructive'}`}
+                                  >
+                                    {intTestStates['resend'].ok ? (
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <AlertCircle className="h-3.5 w-3.5" />
+                                    )}
+                                    {intTestStates['resend'].message}
+                                  </span>
+                                )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 shrink-0"
+                              disabled={intTestStates['resend']?.loading}
+                              onClick={() =>
+                                handleIntegrationTest('resend', {
+                                  apiKey:
+                                    workingConfig?.settings.integrations?.resend
+                                      ?.apiKey ?? '',
+                                })
+                              }
+                            >
+                              {intTestStates['resend']?.loading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              )}
+                              Test Connection
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {emailProvider === 'smtp' && (
+                        <>
+                          <SettingRow
+                            label="Host"
+                            description="SMTP server hostname"
+                          >
+                            <Input
+                              placeholder="smtp.example.com"
+                              className="w-80 font-mono text-sm"
+                              value={
+                                ((
+                                  (
+                                    workingConfig?.settings
+                                      .integrations as Record<string, unknown>
+                                  )?.smtp as Record<string, unknown>
+                                )?.host as string) ?? ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  smtp: {
+                                    ...(((
+                                      workingConfig?.settings
+                                        .integrations as Record<string, unknown>
+                                    )?.smtp as Record<string, unknown>) ?? {}),
+                                    host: e.target.value,
+                                  } as EmberlyConfig['settings']['integrations']['smtp'],
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <SettingRow
+                            label="Port"
+                            description="SMTP server port (25, 465, 587, or 2587)"
+                          >
+                            <Input
+                              type="number"
+                              placeholder="587"
+                              className="w-32 font-mono text-sm"
+                              value={
+                                ((
+                                  (
+                                    workingConfig?.settings
+                                      .integrations as Record<string, unknown>
+                                  )?.smtp as Record<string, unknown>
+                                )?.port as number) ?? 587
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  smtp: {
+                                    ...(((
+                                      workingConfig?.settings
+                                        .integrations as Record<string, unknown>
+                                    )?.smtp as Record<string, unknown>) ?? {}),
+                                    port: Number(e.target.value),
+                                  } as EmberlyConfig['settings']['integrations']['smtp'],
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <SettingRow
+                            label="Secure (TLS)"
+                            description="Use TLS — enable for port 465, disable for STARTTLS"
+                          >
+                            <Switch
+                              checked={
+                                ((
+                                  (
+                                    workingConfig?.settings
+                                      .integrations as Record<string, unknown>
+                                  )?.smtp as Record<string, unknown>
+                                )?.secure as boolean) ?? false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleSettingChange('integrations', {
+                                  smtp: {
+                                    ...(((
+                                      workingConfig?.settings
+                                        .integrations as Record<string, unknown>
+                                    )?.smtp as Record<string, unknown>) ?? {}),
+                                    secure: checked,
+                                  } as EmberlyConfig['settings']['integrations']['smtp'],
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <SettingRow
+                            label="Username"
+                            description="SMTP authentication username"
+                          >
+                            <Input
+                              placeholder="user@example.com"
+                              className="w-80 text-sm"
+                              value={
+                                ((
+                                  (
+                                    workingConfig?.settings
+                                      .integrations as Record<string, unknown>
+                                  )?.smtp as Record<string, unknown>
+                                )?.user as string) ?? ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  smtp: {
+                                    ...(((
+                                      workingConfig?.settings
+                                        .integrations as Record<string, unknown>
+                                    )?.smtp as Record<string, unknown>) ?? {}),
+                                    user: e.target.value,
+                                  } as EmberlyConfig['settings']['integrations']['smtp'],
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <SettingRow
+                            label="Password"
+                            description="SMTP authentication password"
+                          >
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              className="w-80 font-mono text-sm"
+                              value={
+                                ((
+                                  (
+                                    workingConfig?.settings
+                                      .integrations as Record<string, unknown>
+                                  )?.smtp as Record<string, unknown>
+                                )?.password as string) ?? ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  smtp: {
+                                    ...(((
+                                      workingConfig?.settings
+                                        .integrations as Record<string, unknown>
+                                    )?.smtp as Record<string, unknown>) ?? {}),
+                                    password: e.target.value,
+                                  } as EmberlyConfig['settings']['integrations']['smtp'],
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <SettingRow
+                            label="From Address"
+                            description="Sender address (overrides EMAIL_FROM env var)"
+                          >
+                            <Input
+                              placeholder="Emberly <noreply@embrly.ca>"
+                              className="w-80 text-sm"
+                              value={
+                                ((
+                                  (
+                                    workingConfig?.settings
+                                      .integrations as Record<string, unknown>
+                                  )?.smtp as Record<string, unknown>
+                                )?.from as string) ?? ''
+                              }
+                              onChange={(e) =>
+                                handleSettingChange('integrations', {
+                                  smtp: {
+                                    ...(((
+                                      workingConfig?.settings
+                                        .integrations as Record<string, unknown>
+                                    )?.smtp as Record<string, unknown>) ?? {}),
+                                    from: e.target.value,
+                                  } as EmberlyConfig['settings']['integrations']['smtp'],
+                                })
+                              }
+                            />
+                          </SettingRow>
+                          <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                            <div>
+                              {intTestStates['smtp'] &&
+                                !intTestStates['smtp'].loading && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span
+                                      className={`text-xs flex items-center gap-1.5 ${intTestStates['smtp'].ok ? 'text-green-500' : 'text-destructive'}`}
+                                    >
+                                      {intTestStates['smtp'].ok ? (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                      )}
+                                      {intTestStates['smtp'].message}
+                                    </span>
+                                    {intTestStates['smtp'].detail && (
+                                      <span className="text-xs text-muted-foreground font-mono break-all">
+                                        {intTestStates['smtp'].detail}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 shrink-0"
+                              disabled={intTestStates['smtp']?.loading}
+                              onClick={() =>
+                                handleIntegrationTest('smtp', {
+                                  host:
+                                    ((
+                                      (
+                                        workingConfig?.settings
+                                          .integrations as Record<
+                                          string,
+                                          unknown
+                                        >
+                                      )?.smtp as Record<string, unknown>
+                                    )?.host as string) ?? '',
+                                  port: String(
+                                    ((
+                                      (
+                                        workingConfig?.settings
+                                          .integrations as Record<
+                                          string,
+                                          unknown
+                                        >
+                                      )?.smtp as Record<string, unknown>
+                                    )?.port as number) ?? 587
+                                  ),
+                                  secure: String(
+                                    ((
+                                      (
+                                        workingConfig?.settings
+                                          .integrations as Record<
+                                          string,
+                                          unknown
+                                        >
+                                      )?.smtp as Record<string, unknown>
+                                    )?.secure as boolean) ?? false
+                                  ),
+                                  user:
+                                    ((
+                                      (
+                                        workingConfig?.settings
+                                          .integrations as Record<
+                                          string,
+                                          unknown
+                                        >
+                                      )?.smtp as Record<string, unknown>
+                                    )?.user as string) ?? '',
+                                  password:
+                                    ((
+                                      (
+                                        workingConfig?.settings
+                                          .integrations as Record<
+                                          string,
+                                          unknown
+                                        >
+                                      )?.smtp as Record<string, unknown>
+                                    )?.password as string) ?? '',
+                                })
+                              }
+                            >
+                              {intTestStates['smtp']?.loading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              )}
+                              Test Connection
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </SettingsSection>
+                  </>
+                )
+              })()}
+            </>
           )}
 
-          {/* Resend / SMTP */}
-          {(() => {
-            const emailProvider =
-              ((workingConfig?.settings.integrations as Record<string, unknown>)
-                ?.emailProvider as string) ?? 'resend'
-            return (
-              <>
+          {integrationView === 'discord' && (
+            <>
+              {/* Discord */}
+              <SettingsSection
+                icon={Shield}
+                title="Discord"
+                description={
+                  cloudEnabled
+                    ? 'Alerts, webhooks, and supporter perks. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID, and DISCORD_SUPPORTER_ROLE env vars.'
+                    : 'Alerts and webhooks for admin notifications. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, and DISCORD_SERVER_ID env vars.'
+                }
+                badge={
+                  isFieldChanged('integrations', ['discord']) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      Modified
+                    </span>
+                  )
+                }
+              >
+                <SettingRow
+                  label="Admin Webhook URL"
+                  description="Webhook for admin alerts and notifications"
+                >
+                  <Input
+                    type="password"
+                    placeholder="https://discord.com/api/webhooks/..."
+                    className="w-80 font-mono text-sm"
+                    value={
+                      workingConfig?.settings.integrations?.discord
+                        ?.webhookUrl ?? ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        discord: {
+                          ...workingConfig?.settings.integrations?.discord,
+                          webhookUrl: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Bot Token"
+                  description="Token for your Discord bot"
+                >
+                  <Input
+                    type="password"
+                    placeholder="Bot token"
+                    className="w-80 font-mono text-sm"
+                    value={
+                      workingConfig?.settings.integrations?.discord?.botToken ??
+                      ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        discord: {
+                          ...workingConfig?.settings.integrations?.discord,
+                          botToken: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Server ID"
+                  description="Discord server (guild) ID"
+                >
+                  <Input
+                    placeholder="Server ID"
+                    className="w-80 font-mono text-sm"
+                    value={
+                      workingConfig?.settings.integrations?.discord?.serverId ??
+                      ''
+                    }
+                    onChange={(e) =>
+                      handleSettingChange('integrations', {
+                        discord: {
+                          ...workingConfig?.settings.integrations?.discord,
+                          serverId: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </SettingRow>
+                {cloudEnabled && (
+                  <SettingRow
+                    label="Supporter Role ID"
+                    description="Role ID granted to active supporters"
+                  >
+                    <Input
+                      placeholder="Role ID"
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.discord
+                          ?.supporterRole ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          discord: {
+                            ...workingConfig?.settings.integrations?.discord,
+                            supporterRole: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                )}
+                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                  <div>
+                    {intTestStates['discord'] &&
+                      !intTestStates['discord'].loading && (
+                        <span
+                          className={`text-xs flex items-center gap-1.5 ${intTestStates['discord'].ok ? 'text-green-500' : 'text-destructive'}`}
+                        >
+                          {intTestStates['discord'].ok ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          )}
+                          {intTestStates['discord'].message}
+                        </span>
+                      )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 shrink-0"
+                    disabled={intTestStates['discord']?.loading}
+                    onClick={() =>
+                      handleIntegrationTest('discord', {
+                        webhookUrl:
+                          workingConfig?.settings.integrations?.discord
+                            ?.webhookUrl ?? '',
+                        botToken:
+                          workingConfig?.settings.integrations?.discord
+                            ?.botToken ?? '',
+                        serverId:
+                          workingConfig?.settings.integrations?.discord
+                            ?.serverId ?? '',
+                      })
+                    }
+                  >
+                    {intTestStates['discord']?.loading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Test Connection
+                  </Button>
+                </div>
+              </SettingsSection>
+            </>
+          )}
+
+          {integrationView === 'stripe' && (
+            <>
+              {/* Stripe */}
+              {cloudEnabled && (
                 <SettingsSection
-                  icon={Zap}
-                  title="Email"
-                  description="Transactional email delivery provider and credentials."
+                  icon={CreditCard}
+                  title="Stripe"
+                  description="Payment processing. Overrides the STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET env vars."
                   badge={
-                    isFieldChanged('integrations', [
-                      'resend',
-                      'smtp',
-                      'emailProvider',
-                    ]) && (
+                    isFieldChanged('integrations', ['stripe']) && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                         Modified
                       </span>
@@ -2263,1051 +2807,650 @@ export function SettingsManager() {
                   }
                 >
                   <SettingRow
-                    label="Email Provider"
-                    description="Choose the email delivery provider"
+                    label="Secret Key"
+                    description="Stripe secret key (sk_live_... or sk_test_...)"
                   >
-                    <Select
-                      value={emailProvider}
-                      onValueChange={(value) =>
+                    <Input
+                      type="password"
+                      placeholder="sk_live_..."
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.stripe
+                          ?.secretKey ?? ''
+                      }
+                      onChange={(e) =>
                         handleSettingChange('integrations', {
-                          emailProvider: value as 'resend' | 'smtp',
+                          stripe: {
+                            ...workingConfig?.settings.integrations?.stripe,
+                            secretKey: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <SettingRow
+                    label="Webhook Secret"
+                    description="Signing secret for Stripe webhook events"
+                  >
+                    <Input
+                      type="password"
+                      placeholder="whsec_..."
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.stripe
+                          ?.webhookSecret ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          stripe: {
+                            ...workingConfig?.settings.integrations?.stripe,
+                            webhookSecret: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                    <div>
+                      {intTestStates['stripe'] &&
+                        !intTestStates['stripe'].loading && (
+                          <span
+                            className={`text-xs flex items-center gap-1.5 ${intTestStates['stripe'].ok ? 'text-green-500' : 'text-destructive'}`}
+                          >
+                            {intTestStates['stripe'].ok ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              <AlertCircle className="h-3.5 w-3.5" />
+                            )}
+                            {intTestStates['stripe'].message}
+                          </span>
+                        )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 shrink-0"
+                      disabled={intTestStates['stripe']?.loading}
+                      onClick={() =>
+                        handleIntegrationTest('stripe', {
+                          secretKey:
+                            workingConfig?.settings.integrations?.stripe
+                              ?.secretKey ?? '',
                         })
                       }
                     >
-                      <SelectTrigger className="w-48 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="resend">Resend</SelectItem>
-                        <SelectItem value="smtp">SMTP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </SettingRow>
-
-                  {emailProvider === 'resend' && (
-                    <>
-                      <SettingRow label="API Key" description="Resend API key">
-                        <Input
-                          type="password"
-                          placeholder="re_..."
-                          className="w-80 font-mono text-sm"
-                          value={
-                            workingConfig?.settings.integrations?.resend
-                              ?.apiKey ?? ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              resend: {
-                                ...workingConfig?.settings.integrations?.resend,
-                                apiKey: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <SettingRow
-                        label="From Address"
-                        description="Sender address for outgoing emails"
-                      >
-                        <Input
-                          placeholder="Emberly <noreply@embrly.ca>"
-                          className="w-80 text-sm"
-                          value={
-                            workingConfig?.settings.integrations?.resend
-                              ?.emailFrom ?? ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              resend: {
-                                ...workingConfig?.settings.integrations?.resend,
-                                emailFrom: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                        <div>
-                          {intTestStates['resend'] &&
-                            !intTestStates['resend'].loading && (
-                              <span
-                                className={`text-xs flex items-center gap-1.5 ${intTestStates['resend'].ok ? 'text-green-500' : 'text-destructive'}`}
-                              >
-                                {intTestStates['resend'].ok ? (
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                ) : (
-                                  <AlertCircle className="h-3.5 w-3.5" />
-                                )}
-                                {intTestStates['resend'].message}
-                              </span>
-                            )}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 shrink-0"
-                          disabled={intTestStates['resend']?.loading}
-                          onClick={() =>
-                            handleIntegrationTest('resend', {
-                              apiKey:
-                                workingConfig?.settings.integrations?.resend
-                                  ?.apiKey ?? '',
-                            })
-                          }
-                        >
-                          {intTestStates['resend']?.loading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          )}
-                          Test Connection
-                        </Button>
-                      </div>
-                    </>
-                  )}
-
-                  {emailProvider === 'smtp' && (
-                    <>
-                      <SettingRow
-                        label="Host"
-                        description="SMTP server hostname"
-                      >
-                        <Input
-                          placeholder="smtp.example.com"
-                          className="w-80 font-mono text-sm"
-                          value={
-                            ((
-                              (
-                                workingConfig?.settings.integrations as Record<
-                                  string,
-                                  unknown
-                                >
-                              )?.smtp as Record<string, unknown>
-                            )?.host as string) ?? ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              smtp: {
-                                ...(((
-                                  workingConfig?.settings
-                                    .integrations as Record<string, unknown>
-                                )?.smtp as Record<string, unknown>) ?? {}),
-                                host: e.target.value,
-                              } as EmberlyConfig['settings']['integrations']['smtp'],
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <SettingRow
-                        label="Port"
-                        description="SMTP server port (25, 465, 587, or 2587)"
-                      >
-                        <Input
-                          type="number"
-                          placeholder="587"
-                          className="w-32 font-mono text-sm"
-                          value={
-                            ((
-                              (
-                                workingConfig?.settings.integrations as Record<
-                                  string,
-                                  unknown
-                                >
-                              )?.smtp as Record<string, unknown>
-                            )?.port as number) ?? 587
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              smtp: {
-                                ...(((
-                                  workingConfig?.settings
-                                    .integrations as Record<string, unknown>
-                                )?.smtp as Record<string, unknown>) ?? {}),
-                                port: Number(e.target.value),
-                              } as EmberlyConfig['settings']['integrations']['smtp'],
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <SettingRow
-                        label="Secure (TLS)"
-                        description="Use TLS — enable for port 465, disable for STARTTLS"
-                      >
-                        <Switch
-                          checked={
-                            ((
-                              (
-                                workingConfig?.settings.integrations as Record<
-                                  string,
-                                  unknown
-                                >
-                              )?.smtp as Record<string, unknown>
-                            )?.secure as boolean) ?? false
-                          }
-                          onCheckedChange={(checked) =>
-                            handleSettingChange('integrations', {
-                              smtp: {
-                                ...(((
-                                  workingConfig?.settings
-                                    .integrations as Record<string, unknown>
-                                )?.smtp as Record<string, unknown>) ?? {}),
-                                secure: checked,
-                              } as EmberlyConfig['settings']['integrations']['smtp'],
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <SettingRow
-                        label="Username"
-                        description="SMTP authentication username"
-                      >
-                        <Input
-                          placeholder="user@example.com"
-                          className="w-80 text-sm"
-                          value={
-                            ((
-                              (
-                                workingConfig?.settings.integrations as Record<
-                                  string,
-                                  unknown
-                                >
-                              )?.smtp as Record<string, unknown>
-                            )?.user as string) ?? ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              smtp: {
-                                ...(((
-                                  workingConfig?.settings
-                                    .integrations as Record<string, unknown>
-                                )?.smtp as Record<string, unknown>) ?? {}),
-                                user: e.target.value,
-                              } as EmberlyConfig['settings']['integrations']['smtp'],
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <SettingRow
-                        label="Password"
-                        description="SMTP authentication password"
-                      >
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          className="w-80 font-mono text-sm"
-                          value={
-                            ((
-                              (
-                                workingConfig?.settings.integrations as Record<
-                                  string,
-                                  unknown
-                                >
-                              )?.smtp as Record<string, unknown>
-                            )?.password as string) ?? ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              smtp: {
-                                ...(((
-                                  workingConfig?.settings
-                                    .integrations as Record<string, unknown>
-                                )?.smtp as Record<string, unknown>) ?? {}),
-                                password: e.target.value,
-                              } as EmberlyConfig['settings']['integrations']['smtp'],
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <SettingRow
-                        label="From Address"
-                        description="Sender address (overrides EMAIL_FROM env var)"
-                      >
-                        <Input
-                          placeholder="Emberly <noreply@embrly.ca>"
-                          className="w-80 text-sm"
-                          value={
-                            ((
-                              (
-                                workingConfig?.settings.integrations as Record<
-                                  string,
-                                  unknown
-                                >
-                              )?.smtp as Record<string, unknown>
-                            )?.from as string) ?? ''
-                          }
-                          onChange={(e) =>
-                            handleSettingChange('integrations', {
-                              smtp: {
-                                ...(((
-                                  workingConfig?.settings
-                                    .integrations as Record<string, unknown>
-                                )?.smtp as Record<string, unknown>) ?? {}),
-                                from: e.target.value,
-                              } as EmberlyConfig['settings']['integrations']['smtp'],
-                            })
-                          }
-                        />
-                      </SettingRow>
-                      <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                        <div>
-                          {intTestStates['smtp'] &&
-                            !intTestStates['smtp'].loading && (
-                              <div className="flex flex-col gap-0.5">
-                                <span
-                                  className={`text-xs flex items-center gap-1.5 ${intTestStates['smtp'].ok ? 'text-green-500' : 'text-destructive'}`}
-                                >
-                                  {intTestStates['smtp'].ok ? (
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <AlertCircle className="h-3.5 w-3.5" />
-                                  )}
-                                  {intTestStates['smtp'].message}
-                                </span>
-                                {intTestStates['smtp'].detail && (
-                                  <span className="text-xs text-muted-foreground font-mono break-all">
-                                    {intTestStates['smtp'].detail}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 shrink-0"
-                          disabled={intTestStates['smtp']?.loading}
-                          onClick={() =>
-                            handleIntegrationTest('smtp', {
-                              host:
-                                ((
-                                  (
-                                    workingConfig?.settings
-                                      .integrations as Record<string, unknown>
-                                  )?.smtp as Record<string, unknown>
-                                )?.host as string) ?? '',
-                              port: String(
-                                ((
-                                  (
-                                    workingConfig?.settings
-                                      .integrations as Record<string, unknown>
-                                  )?.smtp as Record<string, unknown>
-                                )?.port as number) ?? 587
-                              ),
-                              secure: String(
-                                ((
-                                  (
-                                    workingConfig?.settings
-                                      .integrations as Record<string, unknown>
-                                  )?.smtp as Record<string, unknown>
-                                )?.secure as boolean) ?? false
-                              ),
-                              user:
-                                ((
-                                  (
-                                    workingConfig?.settings
-                                      .integrations as Record<string, unknown>
-                                  )?.smtp as Record<string, unknown>
-                                )?.user as string) ?? '',
-                              password:
-                                ((
-                                  (
-                                    workingConfig?.settings
-                                      .integrations as Record<string, unknown>
-                                  )?.smtp as Record<string, unknown>
-                                )?.password as string) ?? '',
-                            })
-                          }
-                        >
-                          {intTestStates['smtp']?.loading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          )}
-                          Test Connection
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </SettingsSection>
-              </>
-            )
-          })()}
-
-          {/* Cloudflare */}
-          {cloudEnabled && (
-            <SettingsSection
-              icon={Cloud}
-              title="Cloudflare"
-              description="CDN, DNS, and storage. Overrides CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_ZONE_ID env vars."
-              badge={
-                isFieldChanged('integrations', ['cloudflare']) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                    Modified
-                  </span>
-                )
-              }
-            >
-              <SettingRow
-                label="API Token"
-                description="Cloudflare API token with required permissions"
-              >
-                <Input
-                  type="password"
-                  placeholder="API token"
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.cloudflare
-                      ?.apiToken ?? ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      cloudflare: {
-                        ...workingConfig?.settings.integrations?.cloudflare,
-                        apiToken: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <SettingRow
-                label="Account ID"
-                description="Your Cloudflare account ID"
-              >
-                <Input
-                  placeholder="Account ID"
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.cloudflare
-                      ?.accountId ?? ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      cloudflare: {
-                        ...workingConfig?.settings.integrations?.cloudflare,
-                        accountId: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <SettingRow
-                label="Zone ID"
-                description="Cloudflare zone ID for your domain"
-              >
-                <Input
-                  placeholder="Zone ID"
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.cloudflare?.zoneId ??
-                    ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      cloudflare: {
-                        ...workingConfig?.settings.integrations?.cloudflare,
-                        zoneId: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                <div>
-                  {intTestStates['cloudflare'] &&
-                    !intTestStates['cloudflare'].loading && (
-                      <span
-                        className={`text-xs flex items-center gap-1.5 ${intTestStates['cloudflare'].ok ? 'text-green-500' : 'text-destructive'}`}
-                      >
-                        {intTestStates['cloudflare'].ok ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <AlertCircle className="h-3.5 w-3.5" />
-                        )}
-                        {intTestStates['cloudflare'].message}
-                      </span>
-                    )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 shrink-0"
-                  disabled={intTestStates['cloudflare']?.loading}
-                  onClick={() =>
-                    handleIntegrationTest('cloudflare', {
-                      apiToken:
-                        workingConfig?.settings.integrations?.cloudflare
-                          ?.apiToken ?? '',
-                      accountId:
-                        workingConfig?.settings.integrations?.cloudflare
-                          ?.accountId ?? '',
-                    })
-                  }
-                >
-                  {intTestStates['cloudflare']?.loading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Test Connection
-                </Button>
-              </div>
-            </SettingsSection>
-          )}
-
-          {/* Discord */}
-          <SettingsSection
-            icon={Shield}
-            title="Discord"
-            description={
-              cloudEnabled
-                ? 'Alerts, webhooks, and supporter perks. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID, and DISCORD_SUPPORTER_ROLE env vars.'
-                : 'Alerts and webhooks for admin notifications. Overrides DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN, and DISCORD_SERVER_ID env vars.'
-            }
-            badge={
-              isFieldChanged('integrations', ['discord']) && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Modified
-                </span>
-              )
-            }
-          >
-            <SettingRow
-              label="Admin Webhook URL"
-              description="Webhook for admin alerts and notifications"
-            >
-              <Input
-                type="password"
-                placeholder="https://discord.com/api/webhooks/..."
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.discord?.webhookUrl ??
-                  ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    discord: {
-                      ...workingConfig?.settings.integrations?.discord,
-                      webhookUrl: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Bot Token"
-              description="Token for your Discord bot"
-            >
-              <Input
-                type="password"
-                placeholder="Bot token"
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.discord?.botToken ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    discord: {
-                      ...workingConfig?.settings.integrations?.discord,
-                      botToken: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label="Server ID"
-              description="Discord server (guild) ID"
-            >
-              <Input
-                placeholder="Server ID"
-                className="w-80 font-mono text-sm"
-                value={
-                  workingConfig?.settings.integrations?.discord?.serverId ?? ''
-                }
-                onChange={(e) =>
-                  handleSettingChange('integrations', {
-                    discord: {
-                      ...workingConfig?.settings.integrations?.discord,
-                      serverId: e.target.value,
-                    },
-                  })
-                }
-              />
-            </SettingRow>
-            {cloudEnabled && (
-              <SettingRow
-                label="Supporter Role ID"
-                description="Role ID granted to active supporters"
-              >
-                <Input
-                  placeholder="Role ID"
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.discord
-                      ?.supporterRole ?? ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      discord: {
-                        ...workingConfig?.settings.integrations?.discord,
-                        supporterRole: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-            )}
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-              <div>
-                {intTestStates['discord'] &&
-                  !intTestStates['discord'].loading && (
-                    <span
-                      className={`text-xs flex items-center gap-1.5 ${intTestStates['discord'].ok ? 'text-green-500' : 'text-destructive'}`}
-                    >
-                      {intTestStates['discord'].ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      {intTestStates['stripe']?.loading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <AlertCircle className="h-3.5 w-3.5" />
+                        <RefreshCw className="h-3.5 w-3.5" />
                       )}
-                      {intTestStates['discord'].message}
-                    </span>
-                  )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 shrink-0"
-                disabled={intTestStates['discord']?.loading}
-                onClick={() =>
-                  handleIntegrationTest('discord', {
-                    webhookUrl:
-                      workingConfig?.settings.integrations?.discord
-                        ?.webhookUrl ?? '',
-                    botToken:
-                      workingConfig?.settings.integrations?.discord?.botToken ??
-                      '',
-                    serverId:
-                      workingConfig?.settings.integrations?.discord?.serverId ??
-                      '',
-                  })
-                }
-              >
-                {intTestStates['discord']?.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Test Connection
-              </Button>
-            </div>
-          </SettingsSection>
-
-          {/* GitHub */}
-          {cloudEnabled && (
-            <SettingsSection
-              icon={Github}
-              title="GitHub"
-              description="Organization data for contributors and changelogs. Overrides GITHUB_ORG and GITHUB_PAT env vars."
-              badge={
-                isFieldChanged('integrations', ['github']) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                    Modified
-                  </span>
-                )
-              }
-            >
-              <SettingRow
-                label="Organization"
-                description="GitHub organization name"
-              >
-                <Input
-                  placeholder="EmberlyOSS"
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.github?.org ?? ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      github: {
-                        ...workingConfig?.settings.integrations?.github,
-                        org: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <SettingRow
-                label="Personal Access Token"
-                description="PAT for authenticated API requests"
-              >
-                <Input
-                  type="password"
-                  placeholder="ghp_..."
-                  className="w-80 font-mono text-sm"
-                  value={
-                    workingConfig?.settings.integrations?.github?.pat ?? ''
-                  }
-                  onChange={(e) =>
-                    handleSettingChange('integrations', {
-                      github: {
-                        ...workingConfig?.settings.integrations?.github,
-                        pat: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </SettingRow>
-              <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                <div>
-                  {intTestStates['github'] &&
-                    !intTestStates['github'].loading && (
-                      <span
-                        className={`text-xs flex items-center gap-1.5 ${intTestStates['github'].ok ? 'text-green-500' : 'text-destructive'}`}
-                      >
-                        {intTestStates['github'].ok ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <AlertCircle className="h-3.5 w-3.5" />
-                        )}
-                        {intTestStates['github'].message}
-                      </span>
-                    )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 shrink-0"
-                  disabled={intTestStates['github']?.loading}
-                  onClick={() =>
-                    handleIntegrationTest('github', {
-                      pat:
-                        workingConfig?.settings.integrations?.github?.pat ?? '',
-                      org:
-                        workingConfig?.settings.integrations?.github?.org ?? '',
-                    })
-                  }
-                >
-                  {intTestStates['github']?.loading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Test Connection
-                </Button>
-              </div>
-            </SettingsSection>
+                      Test Connection
+                    </Button>
+                  </div>
+                  <StripeSetupPanel
+                    secretKey={
+                      isFieldChanged('integrations', ['stripe'])
+                        ? workingConfig?.settings.integrations?.stripe
+                            ?.secretKey
+                        : undefined
+                    }
+                  />
+                </SettingsSection>
+              )}
+            </>
           )}
 
-          {/* Vultr */}
-          {cloudEnabled && (
+          {integrationView === 'cloudflare' && (
             <>
-              <SettingsSection
-                icon={Server}
-                title="Vultr"
-                description="Object Storage API for automated bucket provisioning. Overrides the VULTR_API_KEY env var."
-                badge={
-                  isFieldChanged('integrations', ['vultr']) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      Modified
-                    </span>
-                  )
-                }
-              >
-                <SettingRow
-                  label="API Key"
-                  description="Vultr API key from the Vultr customer portal"
+              {/* Cloudflare */}
+              {cloudEnabled && (
+                <SettingsSection
+                  icon={Cloud}
+                  title="Cloudflare"
+                  description="CDN, DNS, and storage. Overrides CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_ZONE_ID env vars."
+                  badge={
+                    isFieldChanged('integrations', ['cloudflare']) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                        Modified
+                      </span>
+                    )
+                  }
                 >
-                  <Input
-                    type="password"
-                    placeholder="API key"
-                    className="w-80 font-mono text-sm"
-                    value={
-                      (workingConfig?.settings.integrations as any)?.vultr
-                        ?.apiKey ?? ''
-                    }
-                    onChange={(e) =>
-                      handleSettingChange('integrations', {
-                        vultr: {
-                          ...(workingConfig?.settings.integrations as any)
-                            ?.vultr,
-                          apiKey: e.target.value,
-                        },
-                      } as any)
-                    }
-                  />
-                </SettingRow>
-                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                  <div>
-                    {intTestStates['vultr'] &&
-                      !intTestStates['vultr'].loading && (
-                        <span
-                          className={`text-xs flex items-center gap-1.5 ${intTestStates['vultr'].ok ? 'text-green-500' : 'text-destructive'}`}
-                        >
-                          {intTestStates['vultr'].ok ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : (
-                            <AlertCircle className="h-3.5 w-3.5" />
-                          )}
-                          {intTestStates['vultr'].message}
-                        </span>
+                  <SettingRow
+                    label="API Token"
+                    description="Cloudflare API token with required permissions"
+                  >
+                    <Input
+                      type="password"
+                      placeholder="API token"
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.cloudflare
+                          ?.apiToken ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          cloudflare: {
+                            ...workingConfig?.settings.integrations?.cloudflare,
+                            apiToken: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <SettingRow
+                    label="Account ID"
+                    description="Your Cloudflare account ID"
+                  >
+                    <Input
+                      placeholder="Account ID"
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.cloudflare
+                          ?.accountId ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          cloudflare: {
+                            ...workingConfig?.settings.integrations?.cloudflare,
+                            accountId: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <SettingRow
+                    label="Zone ID"
+                    description="Cloudflare zone ID for your domain"
+                  >
+                    <Input
+                      placeholder="Zone ID"
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.cloudflare
+                          ?.zoneId ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          cloudflare: {
+                            ...workingConfig?.settings.integrations?.cloudflare,
+                            zoneId: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                    <div>
+                      {intTestStates['cloudflare'] &&
+                        !intTestStates['cloudflare'].loading && (
+                          <span
+                            className={`text-xs flex items-center gap-1.5 ${intTestStates['cloudflare'].ok ? 'text-green-500' : 'text-destructive'}`}
+                          >
+                            {intTestStates['cloudflare'].ok ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              <AlertCircle className="h-3.5 w-3.5" />
+                            )}
+                            {intTestStates['cloudflare'].message}
+                          </span>
+                        )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 shrink-0"
+                      disabled={intTestStates['cloudflare']?.loading}
+                      onClick={() =>
+                        handleIntegrationTest('cloudflare', {
+                          apiToken:
+                            workingConfig?.settings.integrations?.cloudflare
+                              ?.apiToken ?? '',
+                          accountId:
+                            workingConfig?.settings.integrations?.cloudflare
+                              ?.accountId ?? '',
+                        })
+                      }
+                    >
+                      {intTestStates['cloudflare']?.loading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
                       )}
+                      Test Connection
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 shrink-0"
-                    disabled={intTestStates['vultr']?.loading}
-                    onClick={() =>
-                      handleIntegrationTest('vultr', {
-                        apiKey:
+                </SettingsSection>
+              )}
+            </>
+          )}
+
+          {integrationView === 'github' && (
+            <>
+              {/* GitHub */}
+              {cloudEnabled && (
+                <SettingsSection
+                  icon={Github}
+                  title="GitHub"
+                  description="Organization data for contributors and changelogs. Overrides GITHUB_ORG and GITHUB_PAT env vars."
+                  badge={
+                    isFieldChanged('integrations', ['github']) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                        Modified
+                      </span>
+                    )
+                  }
+                >
+                  <SettingRow
+                    label="Organization"
+                    description="GitHub organization name"
+                  >
+                    <Input
+                      placeholder="EmberlyOSS"
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.github?.org ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          github: {
+                            ...workingConfig?.settings.integrations?.github,
+                            org: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <SettingRow
+                    label="Personal Access Token"
+                    description="PAT for authenticated API requests"
+                  >
+                    <Input
+                      type="password"
+                      placeholder="ghp_..."
+                      className="w-80 font-mono text-sm"
+                      value={
+                        workingConfig?.settings.integrations?.github?.pat ?? ''
+                      }
+                      onChange={(e) =>
+                        handleSettingChange('integrations', {
+                          github: {
+                            ...workingConfig?.settings.integrations?.github,
+                            pat: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </SettingRow>
+                  <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                    <div>
+                      {intTestStates['github'] &&
+                        !intTestStates['github'].loading && (
+                          <span
+                            className={`text-xs flex items-center gap-1.5 ${intTestStates['github'].ok ? 'text-green-500' : 'text-destructive'}`}
+                          >
+                            {intTestStates['github'].ok ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              <AlertCircle className="h-3.5 w-3.5" />
+                            )}
+                            {intTestStates['github'].message}
+                          </span>
+                        )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 shrink-0"
+                      disabled={intTestStates['github']?.loading}
+                      onClick={() =>
+                        handleIntegrationTest('github', {
+                          pat:
+                            workingConfig?.settings.integrations?.github?.pat ??
+                            '',
+                          org:
+                            workingConfig?.settings.integrations?.github?.org ??
+                            '',
+                        })
+                      }
+                    >
+                      {intTestStates['github']?.loading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                      Test Connection
+                    </Button>
+                  </div>
+                </SettingsSection>
+              )}
+            </>
+          )}
+
+          {integrationView === 'providers' && (
+            <>
+              {/* Vultr */}
+              {cloudEnabled && (
+                <>
+                  <SettingsSection
+                    icon={Server}
+                    title="Vultr"
+                    description="Object Storage API for automated bucket provisioning. Overrides the VULTR_API_KEY env var."
+                    badge={
+                      isFieldChanged('integrations', ['vultr']) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                          Modified
+                        </span>
+                      )
+                    }
+                  >
+                    <SettingRow
+                      label="API Key"
+                      description="Vultr API key from the Vultr customer portal"
+                    >
+                      <Input
+                        type="password"
+                        placeholder="API key"
+                        className="w-80 font-mono text-sm"
+                        value={
                           (workingConfig?.settings.integrations as any)?.vultr
-                            ?.apiKey ?? '',
-                      })
+                            ?.apiKey ?? ''
+                        }
+                        onChange={(e) =>
+                          handleSettingChange('integrations', {
+                            vultr: {
+                              ...(workingConfig?.settings.integrations as any)
+                                ?.vultr,
+                              apiKey: e.target.value,
+                            },
+                          } as any)
+                        }
+                      />
+                    </SettingRow>
+                    <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                      <div>
+                        {intTestStates['vultr'] &&
+                          !intTestStates['vultr'].loading && (
+                            <span
+                              className={`text-xs flex items-center gap-1.5 ${intTestStates['vultr'].ok ? 'text-green-500' : 'text-destructive'}`}
+                            >
+                              {intTestStates['vultr'].ok ? (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              )}
+                              {intTestStates['vultr'].message}
+                            </span>
+                          )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 shrink-0"
+                        disabled={intTestStates['vultr']?.loading}
+                        onClick={() =>
+                          handleIntegrationTest('vultr', {
+                            apiKey:
+                              (workingConfig?.settings.integrations as any)
+                                ?.vultr?.apiKey ?? '',
+                          })
+                        }
+                      >
+                        {intTestStates['vultr']?.loading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                        Test Connection
+                      </Button>
+                    </div>
+                  </SettingsSection>
+
+                  {/* Linode */}
+                  <SettingsSection
+                    icon={Server}
+                    title="Linode"
+                    description="Linode Object Storage API for automated pool provisioning. Overrides the LINODE_API_KEY env var."
+                    badge={
+                      isFieldChanged('integrations', ['linode']) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                          Modified
+                        </span>
+                      )
                     }
                   >
-                    {intTestStates['vultr']?.loading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
-                    Test Connection
-                  </Button>
-                </div>
-              </SettingsSection>
-
-              {/* Linode */}
-              <SettingsSection
-                icon={Server}
-                title="Linode"
-                description="Linode Object Storage API for automated pool provisioning. Overrides the LINODE_API_KEY env var."
-                badge={
-                  isFieldChanged('integrations', ['linode']) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      Modified
-                    </span>
-                  )
-                }
-              >
-                <SettingRow
-                  label="API Key"
-                  description="Linode personal access token with Object Storage read/write scope"
-                >
-                  <Input
-                    type="password"
-                    placeholder="API key"
-                    className="w-80 font-mono text-sm"
-                    value={
-                      (workingConfig?.settings.integrations as any)?.linode
-                        ?.apiKey ?? ''
-                    }
-                    onChange={(e) =>
-                      handleSettingChange('integrations', {
-                        linode: {
-                          ...(workingConfig?.settings.integrations as any)
-                            ?.linode,
-                          apiKey: e.target.value,
-                        },
-                      } as any)
-                    }
-                  />
-                </SettingRow>
-                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                  <div>
-                    {intTestStates['linode'] &&
-                      !intTestStates['linode'].loading && (
-                        <span
-                          className={`text-xs flex items-center gap-1.5 ${intTestStates['linode'].ok ? 'text-green-500' : 'text-destructive'}`}
-                        >
-                          {intTestStates['linode'].ok ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : (
-                            <AlertCircle className="h-3.5 w-3.5" />
-                          )}
-                          {intTestStates['linode'].message}
-                        </span>
-                      )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 shrink-0"
-                    disabled={intTestStates['linode']?.loading}
-                    onClick={() =>
-                      handleIntegrationTest('linode', {
-                        apiKey:
+                    <SettingRow
+                      label="API Key"
+                      description="Linode personal access token with Object Storage read/write scope"
+                    >
+                      <Input
+                        type="password"
+                        placeholder="API key"
+                        className="w-80 font-mono text-sm"
+                        value={
                           (workingConfig?.settings.integrations as any)?.linode
-                            ?.apiKey ?? '',
-                      })
-                    }
-                  >
-                    {intTestStates['linode']?.loading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
-                    Test Connection
-                  </Button>
-                </div>
-              </SettingsSection>
-
-              {/* OVHcloud */}
-              <SettingsSection
-                icon={Server}
-                title="OVHcloud"
-                description="OVHcloud Public Cloud API for automated S3 credential provisioning. Overrides OVH_APP_KEY, OVH_APP_SECRET, OVH_CONSUMER_KEY, and OVH_ENDPOINT env vars."
-                badge={
-                  isFieldChanged('integrations', ['ovhcloud']) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      Modified
-                    </span>
-                  )
-                }
-              >
-                <SettingRow
-                  label="Application Key"
-                  description="OVH application key (appKey)"
-                >
-                  <Input
-                    type="password"
-                    placeholder="Application key"
-                    className="w-80 font-mono text-sm"
-                    value={
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.appKey ?? ''
-                    }
-                    onChange={(e) =>
-                      handleSettingChange('integrations', {
-                        ovhcloud: {
-                          ...(workingConfig?.settings.integrations as any)
-                            ?.ovhcloud,
-                          appKey: e.target.value,
-                        },
-                      } as any)
-                    }
-                  />
-                </SettingRow>
-                <SettingRow
-                  label="Application Secret"
-                  description="OVH application secret (appSecret)"
-                >
-                  <Input
-                    type="password"
-                    placeholder="Application secret"
-                    className="w-80 font-mono text-sm"
-                    value={
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.appSecret ?? ''
-                    }
-                    onChange={(e) =>
-                      handleSettingChange('integrations', {
-                        ovhcloud: {
-                          ...(workingConfig?.settings.integrations as any)
-                            ?.ovhcloud,
-                          appSecret: e.target.value,
-                        },
-                      } as any)
-                    }
-                  />
-                </SettingRow>
-                <SettingRow
-                  label="Consumer Key"
-                  description="OVH consumer key (consumerKey) — obtained via /auth/credential"
-                >
-                  <Input
-                    type="password"
-                    placeholder="Consumer key"
-                    className="w-80 font-mono text-sm"
-                    value={
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.consumerKey ?? ''
-                    }
-                    onChange={(e) =>
-                      handleSettingChange('integrations', {
-                        ovhcloud: {
-                          ...(workingConfig?.settings.integrations as any)
-                            ?.ovhcloud,
-                          consumerKey: e.target.value,
-                        },
-                      } as any)
-                    }
-                  />
-                </SettingRow>
-                <SettingRow
-                  label="Endpoint"
-                  description="OVH API endpoint region"
-                >
-                  <Select
-                    value={
-                      (workingConfig?.settings.integrations as any)?.ovhcloud
-                        ?.endpoint ?? 'ovh-eu'
-                    }
-                    onValueChange={(v) =>
-                      handleSettingChange('integrations', {
-                        ovhcloud: {
-                          ...(workingConfig?.settings.integrations as any)
-                            ?.ovhcloud,
-                          endpoint: v,
-                        },
-                      } as any)
-                    }
-                  >
-                    <SelectTrigger className="w-48 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ovh-eu">Europe (ovh-eu)</SelectItem>
-                      <SelectItem value="ovh-ca">Canada (ovh-ca)</SelectItem>
-                      <SelectItem value="ovh-us">US (ovh-us)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </SettingRow>
-                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                  <div>
-                    {intTestStates['ovhcloud'] &&
-                      !intTestStates['ovhcloud'].loading && (
-                        <span
-                          className={`text-xs flex items-center gap-1.5 ${intTestStates['ovhcloud'].ok ? 'text-green-500' : 'text-destructive'}`}
-                        >
-                          {intTestStates['ovhcloud'].ok ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : (
-                            <AlertCircle className="h-3.5 w-3.5" />
+                            ?.apiKey ?? ''
+                        }
+                        onChange={(e) =>
+                          handleSettingChange('integrations', {
+                            linode: {
+                              ...(workingConfig?.settings.integrations as any)
+                                ?.linode,
+                              apiKey: e.target.value,
+                            },
+                          } as any)
+                        }
+                      />
+                    </SettingRow>
+                    <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                      <div>
+                        {intTestStates['linode'] &&
+                          !intTestStates['linode'].loading && (
+                            <span
+                              className={`text-xs flex items-center gap-1.5 ${intTestStates['linode'].ok ? 'text-green-500' : 'text-destructive'}`}
+                            >
+                              {intTestStates['linode'].ok ? (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              )}
+                              {intTestStates['linode'].message}
+                            </span>
                           )}
-                          {intTestStates['ovhcloud'].message}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 shrink-0"
+                        disabled={intTestStates['linode']?.loading}
+                        onClick={() =>
+                          handleIntegrationTest('linode', {
+                            apiKey:
+                              (workingConfig?.settings.integrations as any)
+                                ?.linode?.apiKey ?? '',
+                          })
+                        }
+                      >
+                        {intTestStates['linode']?.loading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                        Test Connection
+                      </Button>
+                    </div>
+                  </SettingsSection>
+
+                  {/* OVHcloud */}
+                  <SettingsSection
+                    icon={Server}
+                    title="OVHcloud"
+                    description="OVHcloud Public Cloud API for automated S3 credential provisioning. Overrides OVH_APP_KEY, OVH_APP_SECRET, OVH_CONSUMER_KEY, and OVH_ENDPOINT env vars."
+                    badge={
+                      isFieldChanged('integrations', ['ovhcloud']) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                          Modified
                         </span>
-                      )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 shrink-0"
-                    disabled={intTestStates['ovhcloud']?.loading}
-                    onClick={() =>
-                      handleIntegrationTest('ovhcloud', {
-                        appKey:
-                          (workingConfig?.settings.integrations as any)
-                            ?.ovhcloud?.appKey ?? '',
-                        appSecret:
-                          (workingConfig?.settings.integrations as any)
-                            ?.ovhcloud?.appSecret ?? '',
-                        consumerKey:
-                          (workingConfig?.settings.integrations as any)
-                            ?.ovhcloud?.consumerKey ?? '',
-                        endpoint:
-                          (workingConfig?.settings.integrations as any)
-                            ?.ovhcloud?.endpoint ?? 'ovh-eu',
-                      })
+                      )
                     }
                   >
-                    {intTestStates['ovhcloud']?.loading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
-                    Test Connection
-                  </Button>
-                </div>
-              </SettingsSection>
+                    <SettingRow
+                      label="Application Key"
+                      description="OVH application key (appKey)"
+                    >
+                      <Input
+                        type="password"
+                        placeholder="Application key"
+                        className="w-80 font-mono text-sm"
+                        value={
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.appKey ?? ''
+                        }
+                        onChange={(e) =>
+                          handleSettingChange('integrations', {
+                            ovhcloud: {
+                              ...(workingConfig?.settings.integrations as any)
+                                ?.ovhcloud,
+                              appKey: e.target.value,
+                            },
+                          } as any)
+                        }
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Application Secret"
+                      description="OVH application secret (appSecret)"
+                    >
+                      <Input
+                        type="password"
+                        placeholder="Application secret"
+                        className="w-80 font-mono text-sm"
+                        value={
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.appSecret ?? ''
+                        }
+                        onChange={(e) =>
+                          handleSettingChange('integrations', {
+                            ovhcloud: {
+                              ...(workingConfig?.settings.integrations as any)
+                                ?.ovhcloud,
+                              appSecret: e.target.value,
+                            },
+                          } as any)
+                        }
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Consumer Key"
+                      description="OVH consumer key (consumerKey) — obtained via /auth/credential"
+                    >
+                      <Input
+                        type="password"
+                        placeholder="Consumer key"
+                        className="w-80 font-mono text-sm"
+                        value={
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.consumerKey ?? ''
+                        }
+                        onChange={(e) =>
+                          handleSettingChange('integrations', {
+                            ovhcloud: {
+                              ...(workingConfig?.settings.integrations as any)
+                                ?.ovhcloud,
+                              consumerKey: e.target.value,
+                            },
+                          } as any)
+                        }
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Endpoint"
+                      description="OVH API endpoint region"
+                    >
+                      <Select
+                        value={
+                          (workingConfig?.settings.integrations as any)
+                            ?.ovhcloud?.endpoint ?? 'ovh-eu'
+                        }
+                        onValueChange={(v) =>
+                          handleSettingChange('integrations', {
+                            ovhcloud: {
+                              ...(workingConfig?.settings.integrations as any)
+                                ?.ovhcloud,
+                              endpoint: v,
+                            },
+                          } as any)
+                        }
+                      >
+                        <SelectTrigger className="w-48 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ovh-eu">
+                            Europe (ovh-eu)
+                          </SelectItem>
+                          <SelectItem value="ovh-ca">
+                            Canada (ovh-ca)
+                          </SelectItem>
+                          <SelectItem value="ovh-us">US (ovh-us)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </SettingRow>
+                    <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                      <div>
+                        {intTestStates['ovhcloud'] &&
+                          !intTestStates['ovhcloud'].loading && (
+                            <span
+                              className={`text-xs flex items-center gap-1.5 ${intTestStates['ovhcloud'].ok ? 'text-green-500' : 'text-destructive'}`}
+                            >
+                              {intTestStates['ovhcloud'].ok ? (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              )}
+                              {intTestStates['ovhcloud'].message}
+                            </span>
+                          )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 shrink-0"
+                        disabled={intTestStates['ovhcloud']?.loading}
+                        onClick={() =>
+                          handleIntegrationTest('ovhcloud', {
+                            appKey:
+                              (workingConfig?.settings.integrations as any)
+                                ?.ovhcloud?.appKey ?? '',
+                            appSecret:
+                              (workingConfig?.settings.integrations as any)
+                                ?.ovhcloud?.appSecret ?? '',
+                            consumerKey:
+                              (workingConfig?.settings.integrations as any)
+                                ?.ovhcloud?.consumerKey ?? '',
+                            endpoint:
+                              (workingConfig?.settings.integrations as any)
+                                ?.ovhcloud?.endpoint ?? 'ovh-eu',
+                          })
+                        }
+                      >
+                        {intTestStates['ovhcloud']?.loading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                        Test Connection
+                      </Button>
+                    </div>
+                  </SettingsSection>
+                </>
+              )}
+            </>
+          )}
+
+          {integrationView === 'system' && (
+            <>
+              <SystemApiKeySection />
             </>
           )}
         </TabsContent>

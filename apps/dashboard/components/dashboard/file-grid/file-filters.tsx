@@ -1,24 +1,11 @@
-import React, { memo, useState, useRef, useCallback } from 'react'
+import React, { memo, useCallback, useRef, useState } from 'react'
 
 import { SortOption } from '@/types/components/file'
 import { format } from 'date-fns'
 import {
-  ArrowDown,
-  ArrowUp,
+  ArrowDownUp,
   Calendar as CalendarIcon,
-  Check,
-  Clock,
-  Download,
-  Eye,
-  FileText,
-  Filter,
-  Globe,
-  HardDrive,
-  Image,
-  Key,
-  Lock,
-  Music,
-  Video,
+  ChevronDown,
 } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
 
@@ -26,9 +13,11 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -52,136 +41,48 @@ interface FileFiltersProps {
   onVisibilityChange: (visibility: string[]) => void
 }
 
-type SortCategory = 'date' | 'size' | 'views' | 'downloads'
-type SortDirection = 'desc' | 'asc'
+export const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'largest', label: 'Largest' },
+  { value: 'smallest', label: 'Smallest' },
+  { value: 'most-viewed', label: 'Most viewed' },
+  { value: 'least-viewed', label: 'Least viewed' },
+  { value: 'most-downloaded', label: 'Most downloaded' },
+  { value: 'least-downloaded', label: 'Least downloaded' },
+]
 
-const getSortInfo = (
-  sortBy: SortOption
-): {
-  category: SortCategory
-  direction: SortDirection
-  label: string
-  icon: React.ElementType
-} => {
-  switch (sortBy) {
-    case 'newest':
-      return { category: 'date', direction: 'desc', label: 'Date', icon: Clock }
-    case 'oldest':
-      return { category: 'date', direction: 'asc', label: 'Date', icon: Clock }
-    case 'largest':
-      return {
-        category: 'size',
-        direction: 'desc',
-        label: 'Size',
-        icon: HardDrive,
-      }
-    case 'smallest':
-      return {
-        category: 'size',
-        direction: 'asc',
-        label: 'Size',
-        icon: HardDrive,
-      }
-    case 'most-viewed':
-      return { category: 'views', direction: 'desc', label: 'Views', icon: Eye }
-    case 'least-viewed':
-      return { category: 'views', direction: 'asc', label: 'Views', icon: Eye }
-    case 'most-downloaded':
-      return {
-        category: 'downloads',
-        direction: 'desc',
-        label: 'Downloads',
-        icon: Download,
-      }
-    case 'least-downloaded':
-      return {
-        category: 'downloads',
-        direction: 'asc',
-        label: 'Downloads',
-        icon: Download,
-      }
-    default:
-      return { category: 'date', direction: 'desc', label: 'Date', icon: Clock }
-  }
-}
+export const VISIBILITY_OPTIONS = [
+  { value: 'public', label: 'Public' },
+  { value: 'private', label: 'Private' },
+  { value: 'hasPassword', label: 'Password protected' },
+]
 
-const getSortOptionFromCategory = (
-  category: SortCategory,
-  direction: SortDirection
-): SortOption => {
-  switch (category) {
-    case 'date':
-      return direction === 'desc' ? 'newest' : 'oldest'
-    case 'size':
-      return direction === 'desc' ? 'largest' : 'smallest'
-    case 'views':
-      return direction === 'desc' ? 'most-viewed' : 'least-viewed'
-    case 'downloads':
-      return direction === 'desc' ? 'most-downloaded' : 'least-downloaded'
-  }
-}
+const TYPE_GROUPS = ['Images', 'Videos', 'Audio', 'Documents', 'Other']
 
-const getFileTypeIcon = (type: string): React.ElementType => {
-  const lowerType = type.toLowerCase()
-
-  if (
-    [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-    ].includes(lowerType)
-  ) {
-    return Image
-  }
-
-  if (['video/mp4', 'video/webm', 'video/mpeg'].includes(lowerType)) {
-    return Video
-  }
-
-  if (['audio/mpeg', 'audio/wav', 'audio/ogg'].includes(lowerType)) {
-    return Music
-  }
-
-  if (
-    [
-      'application/pdf',
-      'text/plain',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ].includes(lowerType)
-  ) {
-    return FileText
-  }
-
-  return FileText
-}
-
-const getFileTypeCategory = (type: string): string => {
-  const lowerType = type.toLowerCase()
-
-  if (lowerType.startsWith('image/')) return 'Images'
-  if (lowerType.startsWith('video/')) return 'Videos'
-  if (lowerType.startsWith('audio/')) return 'Audio'
-  if (
-    lowerType.includes('pdf') ||
-    lowerType.includes('document') ||
-    lowerType.startsWith('text/')
-  )
+function typeGroup(type: string) {
+  const t = type.toLowerCase()
+  if (t.startsWith('image/')) return 'Images'
+  if (t.startsWith('video/')) return 'Videos'
+  if (t.startsWith('audio/')) return 'Audio'
+  if (t.includes('pdf') || t.includes('document') || t.startsWith('text/'))
     return 'Documents'
-
   return 'Other'
 }
 
+export function formatDateRange(date: DateRange | undefined) {
+  if (!date?.from) return null
+  return date.to
+    ? `${format(date.from, 'MMM d')} – ${format(date.to, 'MMM d')}`
+    : `From ${format(date.from, 'MMM d')}`
+}
+
 /**
- * Delays opening by one animation frame so that a touch-scroll's `pointercancel`
- * can fire and cancel the pending open before the dropdown appears.
- * On mouse input the open is immediate (no rAF delay).
+ * On touch, opening waits a frame so a scroll that starts on a trigger
+ * cancels the open instead of popping a menu mid-scroll.
  */
 function useScrollSafeOpen() {
   const [open, setOpen] = useState(false)
-  const pendingRef = useRef(false)
   const rafRef = useRef<number | undefined>(undefined)
   const isTouchRef = useRef(false)
 
@@ -190,29 +91,18 @@ function useScrollSafeOpen() {
       cancelAnimationFrame(rafRef.current)
       rafRef.current = undefined
     }
-    pendingRef.current = false
   }, [])
 
   const onOpenChange = useCallback(
-    (newOpen: boolean) => {
-      if (newOpen) {
-        if (!isTouchRef.current) {
-          // Mouse / keyboard: open immediately
+    (next: boolean) => {
+      cancelPending()
+      if (next && isTouchRef.current) {
+        rafRef.current = requestAnimationFrame(() => {
           setOpen(true)
-        } else {
-          // Touch: wait one frame so pointercancel (scroll start) can cancel
-          pendingRef.current = true
-          rafRef.current = requestAnimationFrame(() => {
-            if (pendingRef.current) {
-              setOpen(true)
-              pendingRef.current = false
-            }
-            rafRef.current = undefined
-          })
-        }
+          rafRef.current = undefined
+        })
       } else {
-        cancelPending()
-        setOpen(false)
+        setOpen(next)
       }
     },
     [cancelPending]
@@ -222,11 +112,22 @@ function useScrollSafeOpen() {
     onPointerDown: (e: React.PointerEvent) => {
       isTouchRef.current = e.pointerType === 'touch'
     },
-    // If the browser cancels the pointer sequence (scroll took over), abort the pending open
     onPointerCancel: cancelPending,
   }
 
   return { open, onOpenChange, triggerProps }
+}
+
+const triggerClass =
+  'h-9 gap-1.5 border-border/60 bg-background/50 font-normal hover:bg-muted/50'
+
+function Count({ n }: { n: number }) {
+  if (!n) return null
+  return (
+    <span className="rounded-full bg-primary/15 px-1.5 text-xs font-medium tabular-nums text-primary">
+      {n}
+    </span>
+  )
 }
 
 export const FileFilters = memo(function FileFilters({
@@ -242,336 +143,121 @@ export const FileFilters = memo(function FileFilters({
 }: FileFiltersProps) {
   const sortMenu = useScrollSafeOpen()
   const visibilityMenu = useScrollSafeOpen()
-  const fileTypeMenu = useScrollSafeOpen()
+  const typeMenu = useScrollSafeOpen()
   const dateMenu = useScrollSafeOpen()
 
-  const { category, direction, label } = getSortInfo(sortBy)
-  const SortIcon = direction === 'desc' ? ArrowDown : ArrowUp
+  const toggle = (list: string[], value: string) =>
+    list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
 
-  const handleSortSelect = (
-    newCategory: SortCategory,
-    newDirection: SortDirection
-  ) => {
-    const newSortOption = getSortOptionFromCategory(newCategory, newDirection)
-    onSortChange(newSortOption)
-  }
+  const grouped = TYPE_GROUPS.map((group) => ({
+    group,
+    types: fileTypes.filter((t) => typeGroup(t) === group),
+  })).filter((g) => g.types.length > 0)
 
-  const fileTypesByCategory = fileTypes.reduce(
-    (acc, type) => {
-      const category = getFileTypeCategory(type)
-      if (!acc[category]) acc[category] = []
-      acc[category].push(type)
-      return acc
-    },
-    {} as Record<string, string[]>
-  )
+  const sortLabel =
+    SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Newest'
+  const dateLabel = formatDateRange(date)
 
   return (
-    <div className="flex flex-wrap gap-2 w-full">
+    <div className="flex flex-wrap items-center gap-2">
       <DropdownMenu open={sortMenu.open} onOpenChange={sortMenu.onOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200"
+            className={triggerClass}
             {...sortMenu.triggerProps}
           >
-            <span>{label}</span>
-            <SortIcon className="ml-2 h-4 w-4" />
+            <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
+            {sortLabel}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-background/90 backdrop-blur-lg border-border/50">
+        <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-          { }
-          <div className="px-2 py-1.5">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Date
-              </div>
-            </div>
-            <div className="flex gap-1 mt-2">
-              <Button
-                variant={
-                  category === 'date' && direction === 'desc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('date', 'desc')}
-              >
-                Newest
-              </Button>
-              <Button
-                variant={
-                  category === 'date' && direction === 'asc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('date', 'asc')}
-              >
-                Oldest
-              </Button>
-            </div>
-          </div>
-          <DropdownMenuSeparator />
-          { }
-          <div className="px-2 py-1.5">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <HardDrive className="h-4 w-4" />
-                Size
-              </div>
-            </div>
-            <div className="flex gap-1 mt-2">
-              <Button
-                variant={
-                  category === 'size' && direction === 'desc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('size', 'desc')}
-              >
-                Largest
-              </Button>
-              <Button
-                variant={
-                  category === 'size' && direction === 'asc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('size', 'asc')}
-              >
-                Smallest
-              </Button>
-            </div>
-          </div>
-          <DropdownMenuSeparator />
-          { }
-          <div className="px-2 py-1.5">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Views
-              </div>
-            </div>
-            <div className="flex gap-1 mt-2">
-              <Button
-                variant={
-                  category === 'views' && direction === 'desc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('views', 'desc')}
-              >
-                Most
-              </Button>
-              <Button
-                variant={
-                  category === 'views' && direction === 'asc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('views', 'asc')}
-              >
-                Least
-              </Button>
-            </div>
-          </div>
-          <DropdownMenuSeparator />
-          { }
-          <div className="px-2 py-1.5">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Downloads
-              </div>
-            </div>
-            <div className="flex gap-1 mt-2">
-              <Button
-                variant={
-                  category === 'downloads' && direction === 'desc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('downloads', 'desc')}
-              >
-                Most
-              </Button>
-              <Button
-                variant={
-                  category === 'downloads' && direction === 'asc'
-                    ? 'default'
-                    : 'outline'
-                }
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={() => handleSortSelect('downloads', 'asc')}
-              >
-                Least
-              </Button>
-            </div>
-          </div>
+          <DropdownMenuRadioGroup
+            value={sortBy}
+            onValueChange={(v) => onSortChange(v as SortOption)}
+          >
+            {SORT_OPTIONS.map((option, i) => (
+              <React.Fragment key={option.value}>
+                {i > 0 && i % 2 === 0 && <DropdownMenuSeparator />}
+                <DropdownMenuRadioItem value={option.value}>
+                  {option.label}
+                </DropdownMenuRadioItem>
+              </React.Fragment>
+            ))}
+          </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DropdownMenu open={visibilityMenu.open} onOpenChange={visibilityMenu.onOpenChange}>
+      <DropdownMenu
+        open={visibilityMenu.open}
+        onOpenChange={visibilityMenu.onOpenChange}
+      >
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200"
+            className={triggerClass}
             {...visibilityMenu.triggerProps}
           >
-            <span>Visibility</span>
-            {visibility.length > 0 ? (
-              <span className="ml-2 rounded-full bg-primary w-5 h-5 flex items-center justify-center text-[10px] font-medium text-primary-foreground">
-                {visibility.length}
-              </span>
-            ) : (
-              <Eye className="ml-2 h-4 w-4" />
-            )}
+            Visibility
+            <Count n={visibility.length} />
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-background/90 backdrop-blur-lg border-border/50">
-          <DropdownMenuLabel>Filter by visibility</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => {
-              const newVisibility = visibility.includes('public')
-                ? visibility.filter((v) => v !== 'public')
-                : [...visibility, 'public']
-              onVisibilityChange(newVisibility)
-            }}
-            onSelect={(e) => e.preventDefault()}
-            className={cn(
-              'flex items-center justify-between',
-              visibility.includes('public') && 'bg-accent'
-            )}
-          >
-            <div className="flex items-center">
-              <Globe className="mr-2 h-4 w-4 opacity-70" />
-              Public Files
-            </div>
-            {visibility.includes('public') && (
-              <Check className="ml-auto h-4 w-4" />
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              const newVisibility = visibility.includes('private')
-                ? visibility.filter((v) => v !== 'private')
-                : [...visibility, 'private']
-              onVisibilityChange(newVisibility)
-            }}
-            onSelect={(e) => e.preventDefault()}
-            className={cn(
-              'flex items-center justify-between',
-              visibility.includes('private') && 'bg-accent'
-            )}
-          >
-            <div className="flex items-center">
-              <Lock className="mr-2 h-4 w-4 opacity-70" />
-              Private Files
-            </div>
-            {visibility.includes('private') && (
-              <Check className="ml-auto h-4 w-4" />
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              const newVisibility = visibility.includes('hasPassword')
-                ? visibility.filter((v) => v !== 'hasPassword')
-                : [...visibility, 'hasPassword']
-              onVisibilityChange(newVisibility)
-            }}
-            onSelect={(e) => e.preventDefault()}
-            className={cn(
-              'flex items-center justify-between',
-              visibility.includes('hasPassword') && 'bg-accent'
-            )}
-          >
-            <div className="flex items-center">
-              <Key className="mr-2 h-4 w-4 opacity-70" />
-              Password Protected
-            </div>
-            {visibility.includes('hasPassword') && (
-              <Check className="ml-auto h-4 w-4" />
-            )}
-          </DropdownMenuItem>
+        <DropdownMenuContent align="end" className="w-52">
+          {VISIBILITY_OPTIONS.map((option) => (
+            <DropdownMenuCheckboxItem
+              key={option.value}
+              checked={visibility.includes(option.value)}
+              onCheckedChange={() =>
+                onVisibilityChange(toggle(visibility, option.value))
+              }
+              onSelect={(e) => e.preventDefault()}
+            >
+              {option.label}
+            </DropdownMenuCheckboxItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DropdownMenu open={fileTypeMenu.open} onOpenChange={fileTypeMenu.onOpenChange}>
+      <DropdownMenu open={typeMenu.open} onOpenChange={typeMenu.onOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="w-full sm:w-auto sm:min-w-[140px] flex items-center justify-between bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200"
-            {...fileTypeMenu.triggerProps}
+            className={triggerClass}
+            disabled={fileTypes.length === 0}
+            {...typeMenu.triggerProps}
           >
-            <span>File Type</span>
-            {selectedTypes.length > 0 ? (
-              <span className="ml-2 rounded-full bg-primary w-5 h-5 flex items-center justify-center text-[10px] font-medium text-primary-foreground">
-                {selectedTypes.length}
-              </span>
-            ) : (
-              <Filter className="ml-2 h-4 w-4" />
-            )}
+            Type
+            <Count n={selectedTypes.length} />
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-64 max-h-[400px] overflow-y-auto bg-background/90 backdrop-blur-lg border-border/50"
+          className="max-h-[22rem] w-64 overflow-y-auto"
         >
-          <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
-          {Object.entries(fileTypesByCategory).map(
-            ([categoryName, types], categoryIndex) => (
-              <React.Fragment key={categoryName}>
-                {categoryIndex > 0 && <DropdownMenuSeparator />}
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  {categoryName}
-                </div>
-                {types.map((type) => {
-                  const TypeIcon = getFileTypeIcon(type)
-                  return (
-                    <DropdownMenuItem
-                      key={type}
-                      onClick={() => {
-                        onTypesChange(
-                          selectedTypes.includes(type)
-                            ? selectedTypes.filter((t) => t !== type)
-                            : [...selectedTypes, type]
-                        )
-                      }}
-                      onSelect={(e) => e.preventDefault()}
-                      className={cn(
-                        'flex items-center justify-between',
-                        selectedTypes.includes(type) && 'bg-accent'
-                      )}
-                    >
-                      <div className="flex items-center">
-                        <TypeIcon className="mr-2 h-4 w-4 opacity-70" />
-                        {type}
-                      </div>
-                      {selectedTypes.includes(type) && (
-                        <Check className="ml-auto h-4 w-4" />
-                      )}
-                    </DropdownMenuItem>
-                  )
-                })}
-              </React.Fragment>
-            )
-          )}
+          {grouped.map(({ group, types }, i) => (
+            <React.Fragment key={group}>
+              {i > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+                {group}
+              </DropdownMenuLabel>
+              {types.map((type) => (
+                <DropdownMenuCheckboxItem
+                  key={type}
+                  checked={selectedTypes.includes(type)}
+                  onCheckedChange={() =>
+                    onTypesChange(toggle(selectedTypes, type))
+                  }
+                  onSelect={(e) => e.preventDefault()}
+                  className="font-mono text-xs"
+                >
+                  {type}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </React.Fragment>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -579,27 +265,14 @@ export const FileFilters = memo(function FileFilters({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn(
-              'w-full sm:w-auto sm:min-w-[140px] justify-start text-left font-normal bg-background/80 backdrop-blur-lg border-border/50 hover:bg-muted/50 hover:border-border/50 transition-all duration-200',
-              !date && 'text-muted-foreground'
-            )}
+            className={cn(triggerClass, dateLabel && 'text-foreground')}
             {...dateMenu.triggerProps}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date?.from ? (
-              date.to ? (
-                <>
-                  {format(date.from, 'LLL dd')} - {format(date.to, 'LLL dd')}
-                </>
-              ) : (
-                format(date.from, 'LLL dd')
-              )
-            ) : (
-              <span>Date range</span>
-            )}
+            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            {dateLabel ?? 'Any date'}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 bg-background/90 backdrop-blur-lg border-border/50" align="end">
+        <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             initialFocus
             mode="range"
@@ -608,6 +281,17 @@ export const FileFilters = memo(function FileFilters({
             onSelect={onDateChange}
             numberOfMonths={2}
           />
+          {date?.from && (
+            <div className="flex justify-end border-t border-border/50 p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDateChange(undefined)}
+              >
+                Clear dates
+              </Button>
+            </div>
+          )}
         </PopoverContent>
       </Popover>
     </div>

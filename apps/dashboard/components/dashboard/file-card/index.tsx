@@ -18,6 +18,7 @@ import {
   KeyRound,
   Link as LinkIcon,
   Lock,
+  MoreHorizontal,
   ScanText,
   Share2,
   Timer,
@@ -32,11 +33,7 @@ import { getFileIcon } from '@/components/dashboard/file-card/utils'
 import { ExpiryModal } from '@/components/shared/expiry-modal'
 import { Icons } from '@/components/shared/icons'
 import { OcrDialog } from '@/components/shared/ocr-dialog'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -46,6 +43,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -55,10 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/components/ui/radio-group'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Tooltip,
   TooltipContent,
@@ -370,15 +371,11 @@ export function FileCard({
   const isImage = file.mimeType.startsWith('image/')
 
   return (
-    <Card className="group relative overflow-hidden bg-background/80 backdrop-blur-lg border-border/50 shadow-sm hover:shadow-md hover:bg-background/90 hover:border-border/50 transition-all duration-300">
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-muted/10 via-transparent to-transparent pointer-events-none" />
-
-      {/* Thumbnail section */}
+    <Card className="group relative overflow-hidden border-border/50 bg-background/80 shadow-sm transition-colors hover:border-border">
       <div className="relative">
-        <Link href={sanitizeUrl(file.urlPath)} className="block">
+        <Link href={sanitizeUrl(file.urlPath)} className="block" tabIndex={-1}>
           {isImage ? (
-            <div className="relative aspect-square">
+            <div className="relative aspect-square bg-muted/30">
               <Image
                 src={`/api/files/${file.id}/thumbnail`}
                 alt={file.name}
@@ -389,190 +386,29 @@ export function FileCard({
                 loading="lazy"
               />
               {isLoadingOcr && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <div className="flex flex-col items-center gap-2">
                     <Icons.spinner className="h-8 w-8 animate-spin text-white" />
-                    <span className="text-sm text-white font-medium">
-                      Processing OCR...
+                    <span className="text-sm font-medium text-white">
+                      Reading text…
                     </span>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="relative aspect-square bg-muted/30 flex items-center justify-center">
-              {getFileIcon(file.mimeType, 'h-16 w-16 text-muted-foreground')}
+            <div className="relative flex aspect-square items-center justify-center bg-muted/30">
+              {getFileIcon(file.mimeType, 'h-14 w-14 text-muted-foreground')}
             </div>
           )}
         </Link>
 
-        {/* Action overlay */}
-        <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20 opacity-0 ${!isLoadingOcr && 'group-hover:opacity-100'} transition-all duration-300 flex flex-col items-center justify-center gap-3`}
-        >
-          {/* View button */}
-          <Button
-            variant="secondary"
-            className="bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-            size="sm"
-            asChild
-          >
-            <Link href={sanitizeUrl(file.urlPath)}>View</Link>
-          </Button>
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap justify-center gap-1 px-2">
-            <TooltipProvider delayDuration={150}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={handleCopyLink}
-                    aria-label="Copy link"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Copy link</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    asChild
-                    aria-label={`Download ${file.name}`}
-                  >
-                    <a
-                      href={`/api/files/${file.id}/download`}
-                      download={file.name}
-                    >
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Download</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={() => setIsVisibilityDialogOpen(true)}
-                    aria-label="Change visibility"
-                  >
-                    <EyeOff className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Change visibility</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={() => setIsPasswordDialogOpen(true)}
-                    aria-label="Password protect"
-                  >
-                    <KeyRound className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Password protect</TooltipContent>
-              </Tooltip>
-              {isImage && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                      onClick={handleFetchOcr}
-                      disabled={isLoadingOcr}
-                      aria-label="Extract text (OCR)"
-                    >
-                      <ScanText className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Extract text (OCR)</TooltipContent>
-                </Tooltip>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={() => setIsExpiryModalOpen(true)}
-                    aria-label="Manage expiration"
-                  >
-                    <Timer className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Manage expiration</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={() => setIsEmbedPreviewOpen(true)}
-                    aria-label="Embed preview"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Embed preview</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={handleOpenShareDialog}
-                    aria-label="Share file"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Share</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/15 hover:bg-white/25 backdrop-blur-md border-border/50 text-white"
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    aria-label="Delete file"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-
-        {/* Visibility badge */}
-        <div className="absolute bottom-2 left-2">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 text-xs backdrop-blur-md border border-border/50">
+        {(file.password || file.visibility !== 'PUBLIC') && (
+          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border/50 bg-background/80 px-2 py-1 text-xs backdrop-blur-md">
             {file.password ? (
               <>
                 <KeyRound className="h-3 w-3" />
                 Protected
-              </>
-            ) : file.visibility === 'PUBLIC' ? (
-              <>
-                <Globe className="h-3 w-3" />
-                Public
               </>
             ) : (
               <>
@@ -581,101 +417,116 @@ export function FileCard({
               </>
             )}
           </div>
-        </div>
-
-        {/* Expiry badge */}
-        {file.expiresAt && (
-          <div className="absolute top-2 right-2">
-            <TooltipProvider delayDuration={150}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-md text-xs border ${
-                      isBefore(
-                        new Date(file.expiresAt),
-                        new Date(Date.now() + 24 * 60 * 60 * 1000)
-                      )
-                        ? 'bg-red-500/80 border-red-400/50 text-white'
-                        : isBefore(
-                              new Date(file.expiresAt),
-                              new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                            )
-                          ? 'bg-orange-500/80 border-orange-400/50 text-white'
-                          : 'bg-amber-500/80 border-amber-400/50 text-white'
-                    }`}
-                  >
-                    <Timer className="h-3 w-3" />
-                    {formatDistanceToNow(new Date(file.expiresAt), {
-                      addSuffix: true,
-                    })}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="end" sideOffset={8}>
-                  <div className="text-center">
-                    <p className="font-medium">Auto-delete scheduled</p>
-                    <p>{format(new Date(file.expiresAt), 'PPP p')}</p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
         )}
 
-        {/* Timestamp badge */}
-        <div className="absolute bottom-2 right-2">
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 text-xs backdrop-blur-md border border-border/50">
-                  <Clock className="h-3 w-3" />
-                  {getRelativeTime(new Date(file.uploadedAt))}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="end" sideOffset={8}>
-                {new Date(file.uploadedAt).toLocaleDateString(undefined, {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        {file.expiresAt && (
+          <div
+            title={`Deleted ${format(new Date(file.expiresAt), 'PPP p')}`}
+            className={`absolute right-2 top-2 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-white ${
+              isBefore(
+                new Date(file.expiresAt),
+                new Date(Date.now() + 24 * 60 * 60 * 1000)
+              )
+                ? 'bg-red-500/85'
+                : 'bg-amber-500/85'
+            }`}
+          >
+            <Timer className="h-3 w-3" />
+            {formatDistanceToNow(new Date(file.expiresAt), { addSuffix: true })}
+          </div>
+        )}
       </div>
 
-      {/* File info section */}
-      <div className="p-3 relative border-t border-border/20">
-        <div className="flex items-center justify-between gap-2">
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href={sanitizeUrl(file.urlPath)}
-                  className="font-medium hover:text-primary truncate block text-sm transition-colors"
-                >
-                  {file.name}
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="start">
-                {file.name}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {formatFileSize(file.size)}
-          </span>
+      <div className="flex items-center gap-1 border-t border-border/40 py-2 pl-3 pr-1.5">
+        <div className="min-w-0 flex-1">
+          <Link
+            href={sanitizeUrl(file.urlPath)}
+            title={file.name}
+            className="block truncate text-sm font-medium transition-colors hover:text-primary"
+          >
+            {file.name}
+          </Link>
+          <p
+            className="truncate text-xs text-muted-foreground"
+            title={new Date(file.uploadedAt).toLocaleString()}
+          >
+            {formatFileSize(file.size)} ·{' '}
+            {getRelativeTime(new Date(file.uploadedAt))} · {file.views}{' '}
+            {file.views === 1 ? 'view' : 'views'}
+          </p>
         </div>
-        <div className="mt-1.5 flex items-center space-x-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Eye className="h-3 w-3" />
-            <span>{file.views}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Download className="h-3 w-3" />
-            <span>{file.downloads}</span>
-          </div>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={handleCopyLink}
+          aria-label="Copy link"
+          title="Copy link"
+        >
+          <LinkIcon className="h-4 w-4" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label={`Actions for ${file.name}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem asChild>
+              <a href={`/api/files/${file.id}/download`} download={file.name}>
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleOpenShareDialog}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsEmbedPreviewOpen(true)}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Preview embed
+            </DropdownMenuItem>
+            {isImage && (
+              <DropdownMenuItem
+                onClick={handleFetchOcr}
+                disabled={isLoadingOcr}
+              >
+                <ScanText className="mr-2 h-4 w-4" />
+                Extract text
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setIsVisibilityDialogOpen(true)}>
+              {file.visibility === 'PUBLIC' ? (
+                <Globe className="mr-2 h-4 w-4" />
+              ) : (
+                <Lock className="mr-2 h-4 w-4" />
+              )}
+              Visibility
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              {file.password ? 'Change password' : 'Add password'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsExpiryModalOpen(true)}>
+              <Timer className="mr-2 h-4 w-4" />
+              {file.expiresAt ? 'Change expiry' : 'Set expiry'}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {}

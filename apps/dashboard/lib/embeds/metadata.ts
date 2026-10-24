@@ -13,10 +13,6 @@ import {
   previewSize,
 } from './preview-rules'
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface BuildMetadataOptions {
   baseUrl: string
   fileUrlPath: string
@@ -38,11 +34,6 @@ export interface EmbedImage {
   height?: number
 }
 
-/**
- * The image an embed shows for an image file: its small preview when one can
- * be made, otherwise the original. Dimensions are included when known so
- * Discord can lay the embed out without downloading the image first.
- */
 export function embedImageFor(options: {
   baseUrl: string
   fileUrlPath: string
@@ -72,25 +63,6 @@ export function embedImageFor(options: {
   }
 }
 
-// ============================================================================
-// Main Metadata Builders
-// ============================================================================
-
-/**
- * Build rich metadata for file embeds with proper strategy per file type.
- *
- * Strategy per type:
- * - Images  → og:image = the image's small preview (or the original for GIFs)
- * - Videos  → og:video = raw URL for inline playback (Discord/Telegram/Slack);
- *              og:image = opengraph-image URL as poster thumbnail;
- *              twitter:player = /player iframe for Twitter
- * - Audio   → og:audio = raw URL; og:image = opengraph-image URL
- * - Other   → og:image = opengraph-image branded card
- *
- * Twitter `player` card requires a dedicated HTML iframe page at /player and
- * HTTPS with a whitelisted domain. For development/unwhitelisted domains it
- * silently degrades — Twitter will fall back to summary_large_image.
- */
 export async function buildRichMetadata({
   baseUrl,
   fileUrlPath,
@@ -131,9 +103,6 @@ export async function buildRichMetadata({
   let openGraphImages: any[] | undefined
   let openGraphVideos: any[] | undefined
   let openGraphAudio: any[] | undefined
-  // twitter:player card requires an HTML iframe page + domain whitelisting by Twitter.
-  // We point to /player which is a minimal iframe-compatible video page.
-  // On unwhitelisted domains Twitter silently degrades to summary_large_image.
   let twitterCard: string = 'summary_large_image'
   let twitterPlayer:
     | { playerUrl: string; streamUrl: string; width: number; height: number }
@@ -141,8 +110,6 @@ export async function buildRichMetadata({
 
   if (classification.isVideo) {
     ogType = 'video.other'
-    // og:video for Discord/Telegram/Slack inline playback.
-    // Do NOT also set other['og:video'] — that creates duplicate tags that confuse crawlers.
     openGraphVideos = [
       {
         url: rawUrl,
@@ -152,7 +119,6 @@ export async function buildRichMetadata({
         height: 720,
       },
     ]
-    // Poster thumbnail — Discord shows this as the card thumbnail before and during playback.
     openGraphImages = [
       {
         url: ogImageUrl,
@@ -161,7 +127,6 @@ export async function buildRichMetadata({
         height: 630,
       },
     ]
-    // Twitter player card: /player is a minimal HTML iframe page with just the <video> element.
     twitterCard = 'player'
     const playerUrl = new URL(`${fileUrlPath}/player`, baseUrl).toString()
     twitterPlayer = {
@@ -194,7 +159,6 @@ export async function buildRichMetadata({
         type: mimeType || 'audio/mpeg',
       },
     ]
-    // Cover art card so platforms that don't render audio still show something meaningful.
     openGraphImages = [
       {
         url: ogImageUrl,
@@ -205,7 +169,6 @@ export async function buildRichMetadata({
     ]
     twitterCard = 'summary_large_image'
   } else {
-    // Generic file — branded preview card
     openGraphImages = [
       {
         url: ogImageUrl,
@@ -249,12 +212,6 @@ export async function buildRichMetadata({
   }
 }
 
-/**
- * Build minimal metadata for files when rich embeds are disabled or inaccessible.
- * Returns NO embed metadata - no og:image, no twitter cards, no preview cards.
- * Also adds robots: noindex to prevent crawlers from indexing or embedding this page.
- * This ensures Discord/Twitter show plain links without any embed preview.
- */
 export function buildMinimalMetadata(
   fileName: string,
   brand = 'Emberly'
@@ -276,11 +233,6 @@ export function buildMinimalMetadata(
   }
 }
 
-/**
- * Build lightweight metadata that mirrors "raw endpoint" behavior for media.
- * Used when rich embeds are disabled so platforms can still inline media
- * without branded Open Graph cards.
- */
 export function buildDirectMediaMetadata(options: {
   fileName: string
   rawUrl: string
@@ -354,9 +306,6 @@ export function buildDirectMediaMetadata(options: {
   }
 }
 
-/**
- * Get the base URL from headers or environment.
- */
 export async function getBaseUrl(): Promise<string> {
   try {
     const { headers } = await import('next/headers')
@@ -366,15 +315,10 @@ export async function getBaseUrl(): Promise<string> {
       const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
       return `${protocol}://${host}`
     }
-  } catch {
-    // headers() not available outside request context
-  }
+  } catch {}
   return appUrl()
 }
 
-/**
- * Build default site-wide metadata with OG banner fallback.
- */
 export async function buildSiteMetadata(overrides?: {
   title?: string
   description?: string
@@ -396,8 +340,6 @@ export async function buildSiteMetadata(overrides?: {
 
   return {
     metadataBase: new URL(baseUrl),
-    // Absolute, so the root layout's "%s | Emberly" template isn't applied
-    // on top and the tab doesn't read "Emberly | Emberly"
     title: { absolute: title },
     description,
     keywords: SITE_KEYWORDS,
@@ -428,11 +370,13 @@ export async function buildSiteMetadata(overrides?: {
       description,
       url: baseUrl,
       locale: 'en_US',
+      images: [SITE_IMAGE],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [{ ...SITE_IMAGE, url: '/twitter-image.png' }],
       site: '@embrlyca',
       creator: '@embrlyca',
     },
@@ -453,11 +397,17 @@ export async function buildSiteMetadata(overrides?: {
 
 const SITE_TAGLINE = 'Share Files. Build Together.'
 
+const SITE_IMAGE = {
+  url: '/opengraph-image.png',
+  width: 1200,
+  height: 630,
+  alt: 'Emberly — open-source file sharing and team collaboration',
+}
+
 const SITE_DESCRIPTION =
   'Emberly is a self-hostable platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly — with custom domains, expiring links, password protection, and squad (team) collaboration.'
 
 const SITE_KEYWORDS = [
-  // Core product
   'file sharing',
   'file upload',
   'url shortener',
@@ -466,20 +416,17 @@ const SITE_KEYWORDS = [
   'custom domain',
   'expiring links',
   'password protected files',
-  // Team / talent
   'talent discovery',
   'developer portfolio',
   'squad collaboration',
   'team file sharing',
   'nexium',
-  // Tech descriptors
   'self-hosted',
   'self hosted',
   'privacy focused',
   'developer tools',
   's3 storage',
   'cdn file hosting',
-  // Brand + alternatives
   'emberly',
   'embrly',
   'file manager',

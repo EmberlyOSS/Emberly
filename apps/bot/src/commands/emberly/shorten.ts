@@ -1,4 +1,8 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
+import {
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  SlashCommandBuilder,
+} from 'discord.js'
 import db from '../../lib/db'
 import { emberlyApi } from '../../lib/emberlyApi'
 import { ERROR_COLOR } from '../../lib/brand'
@@ -15,8 +19,13 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply()
   try {
-    const linked = await db.prisma.linkedEmberlyAccount.findUnique({ where: { discordId: interaction.user.id } })
-    if (!linked) { await interaction.editReply(notLinkedReply()); return }
+    const linked = await db.prisma.linkedEmberlyAccount.findUnique({
+      where: { discordId: interaction.user.id },
+    })
+    if (!linked) {
+      await interaction.editReply(notLinkedReply())
+      return
+    }
 
     const url = interaction.options.getString('url', true).trim()
     if (!/^https?:\/\/\S+$/i.test(url)) {
@@ -24,7 +33,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         embeds: [
           new EmbedBuilder()
             .setColor(ERROR_COLOR)
-            .setDescription("That doesn't look like a link. Include the `https://` part."),
+            .setDescription(
+              "That doesn't look like a link. Include the `https://` part."
+            ),
         ],
       })
       return
@@ -32,7 +43,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const res = await emberlyApi.shorten(linked.uploadToken, url)
     const { shortCode, targetUrl } = res.data
-    const shortUrl = links.shortUrl(shortCode)
+    const shortUrl = res.data.url ?? links.shortUrl(shortCode)
 
     const embed = new EmbedBuilder()
       .setColor(ACCENT)
@@ -41,7 +52,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         { name: 'Short URL', value: shortUrl, inline: false },
         {
           name: 'Original',
-          value: targetUrl.length > 100 ? targetUrl.slice(0, 97) + '…' : targetUrl,
+          value:
+            targetUrl.length > 100 ? targetUrl.slice(0, 97) + '…' : targetUrl,
           inline: false,
         }
       )

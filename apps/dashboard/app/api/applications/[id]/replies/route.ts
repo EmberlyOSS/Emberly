@@ -6,6 +6,7 @@ import { sendTemplateEmail, ApplicationReplyEmail } from '@/lib/emails'
 import { loggers } from '@/lib/logger'
 import { hasPermission, Permission } from '@/lib/permissions'
 import { z } from 'zod'
+import { createNotification } from '@/lib/notifications'
 
 const logger = loggers.api.getChildLogger('application-replies')
 
@@ -32,7 +33,10 @@ export async function GET(
       return apiError('Application not found', HTTP_STATUS.NOT_FOUND)
     }
 
-    const isAdmin = hasPermission(user.role as any, Permission.ACCESS_ADMIN_PANEL)
+    const isAdmin = hasPermission(
+      user.role as any,
+      Permission.ACCESS_ADMIN_PANEL
+    )
     if (!isAdmin && application.userId !== user.id) {
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
     }
@@ -79,14 +83,20 @@ export async function POST(
       return apiError('Application not found', HTTP_STATUS.NOT_FOUND)
     }
 
-    const isAdmin = hasPermission(user.role as any, Permission.ACCESS_ADMIN_PANEL)
+    const isAdmin = hasPermission(
+      user.role as any,
+      Permission.ACCESS_ADMIN_PANEL
+    )
     if (!isAdmin && application.userId !== user.id) {
       return apiError('Forbidden', HTTP_STATUS.FORBIDDEN)
     }
 
     // Only allow replies on non-withdrawn applications
     if (application.status === 'WITHDRAWN') {
-      return apiError('Cannot reply to a withdrawn application', HTTP_STATUS.BAD_REQUEST)
+      return apiError(
+        'Cannot reply to a withdrawn application',
+        HTTP_STATUS.BAD_REQUEST
+      )
     }
 
     const reply = await prisma.applicationReply.create({
@@ -121,6 +131,12 @@ export async function POST(
         where: { id: application.userId },
         select: { email: true, name: true },
       })
+      void createNotification({
+        userId: application.userId,
+        category: 'account',
+        title: `New reply on your ${applicationType} application`,
+        link: '/me?tab=applications',
+      })
       if (applicant?.email) {
         sendTemplateEmail({
           to: applicant.email,
@@ -135,7 +151,9 @@ export async function POST(
             applicationUrl: `${appBaseUrl}/applications`,
           },
         }).catch((err) =>
-          logger.warn('Failed to send reply email to applicant', { error: err?.message }),
+          logger.warn('Failed to send reply email to applicant', {
+            error: err?.message,
+          })
         )
       }
     } else {
@@ -159,7 +177,9 @@ export async function POST(
             applicationUrl: `${appBaseUrl}/admin/applications/${id}`,
           },
         }).catch((err) =>
-          logger.warn('Failed to send reply email to admin', { error: err?.message }),
+          logger.warn('Failed to send reply email to admin', {
+            error: err?.message,
+          })
         )
       }
     }

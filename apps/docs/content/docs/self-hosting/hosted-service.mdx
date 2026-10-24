@@ -1,0 +1,79 @@
+---
+title: Running a Hosted Service
+description: Turn on cloud mode to run Emberly for other people, with billing, custom domains, squads and Discovery.
+---
+
+**Cloud mode** turns on everything embrly.ca uses to run Emberly as a service: paid plans, custom domains for users, squads, Discovery, perks and managed storage.
+
+It needs a license with the **hosted service** feature, from [licenses.embrly.ca](https://licenses.embrly.ca). The Elastic License 2.0 doesn't allow offering Emberly to others as a service without one. See [License & Branding](/self-hosting/licensing).
+
+## Turn It On
+
+1. Add your license key in **Admin → Settings → License & branding**, or set `EMBERLY_LICENSE_KEY`.
+2. Set the environment variable and restart:
+
+```env
+EMBERLY_RUN_CLOUD="true"
+```
+
+Without a license that includes hosted service, `EMBERLY_RUN_CLOUD` is ignored.
+
+## Billing with Stripe
+
+1. In **Admin → Settings → Integrations → Stripe**, paste your Stripe secret key and click **Connect Stripe**.
+2. Emberly creates the webhook it needs in your Stripe account, and adds its plans and add-ons to Stripe as products.
+
+That's all the Stripe setup needed. Use a test-mode key (`sk_test_...`) first to try checkout without real payments.
+
+You can also set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` instead. In that case, create a webhook in Stripe pointing at `https://your-domain/api/payments/webhook`, with these events:
+
+```
+checkout.session.completed
+invoice.payment_succeeded
+invoice.payment_failed
+customer.subscription.updated
+customer.subscription.deleted
+charge.failed
+charge.refunded
+```
+
+### Plans and Prices
+
+Edit plans, prices and add-ons in **Admin → Products**, then sync them to Stripe. Discount codes are managed on the same page.
+
+### Running Without Payments
+
+Turn off **Accept Payments** in **Admin → Settings → General → Billing** to keep everything free. Checkout and the plans pricing page are hidden, and users ask for more storage or domains through **Profile → Applications** instead. Existing subscribers can still manage or cancel their billing.
+
+## Custom Domains
+
+Users' custom domains are set up through [Cloudflare for SaaS](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/), which handles their HTTPS certificates.
+
+1. On a Cloudflare zone you own, turn on **Custom Hostnames** and set a fallback origin pointing at your server.
+2. Create an API token with **SSL and Certificates → Edit** and **DNS → Edit** for that zone.
+3. Add the token and zone ID in **Admin → Settings → Integrations → Cloudflare**, or set them as environment variables:
+
+```env
+CLOUDFLARE_API_TOKEN="..."
+CLOUDFLARE_ZONE_ID="..."
+CNAME_TARGET="cname.your-domain.com"
+```
+
+`CNAME_TARGET` is the hostname users point their domains at.
+
+## Perks
+
+Contributor and booster perks give extra storage and domains:
+
+| Perk | Needs |
+|------|-------|
+| **GitHub contributors** | A GitHub token and your organisation, in **Integrations → GitHub**, or `GITHUB_PAT` and `GITHUB_ORG` |
+| **Discord boosters** | A bot in your server, in **Integrations → Discord**, or `DISCORD_BOT_TOKEN`, `DISCORD_SERVER_ID` and `DISCORD_SUPPORTER_ROLE` |
+
+## Managed Storage
+
+Cloud mode can give users and squads their own storage buckets, created automatically on Vultr, Linode or OVHcloud object storage. Add a provider's API keys in **Admin → Settings → Storage**. Buckets can then be assigned to users and squads from the same page.
+
+## Status Page
+
+Set `STATUS_PAGE_URL` to your status page's address to show a status badge in the site footer. The full list of cloud-mode variables is in `.env.cloud.example` in the repository.

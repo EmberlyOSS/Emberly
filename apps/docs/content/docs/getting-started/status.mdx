@@ -1,59 +1,44 @@
 ---
 title: Service Status
-description: Check the current operational status of Emberly services.
+description: Check whether embrly.ca is working, and get told when it isn't.
 ---
 
-Emberly's live status page is at **[emberlystat.us](https://emberlystat.us)**.
+The live status page for embrly.ca is **[emberlystat.us](https://emberlystat.us)**. It shows the health of uploads, the website, the API and storage, plus any ongoing incidents and planned maintenance.
 
-It shows real-time health for all Emberly services including uploads, the API, dashboard, and storage.
+## Get Notified
 
----
+Sign in on [emberlystat.us](https://emberlystat.us) and subscribe to get an email when an incident starts or is resolved, and before planned maintenance.
 
-## Status API
+## Check From Code
 
-You can also check status programmatically:
-
-```http
-GET /api/status
-```
-
-No authentication required. Returns the current status summary from [emberlystat.us](https://emberlystat.us).
-
-**Response:**
+`GET https://embrly.ca/api/status-indicator` returns the current status without needing an account. It's what the status badge in the site footer uses.
 
 ```json
 {
-  "page": {
-    "name": "Emberly Status",
-    "url": "https://emberlystat.us",
-    "status": "UP"
-  },
-  "activeIncidents": [],
-  "activeMaintenances": []
+  "configured": true,
+  "url": "https://emberlystat.us",
+  "indicator": "NONE",
+  "description": "All systems operational",
+  "maintenance": false,
+  "incident": null
 }
 ```
 
-**`page.status` values:**
+| `indicator` | Meaning |
+|-------------|---------|
+| `NONE` | Everything is working |
+| `MINOR` | Something is slow or partly down |
+| `MAJOR` | A main feature is down |
+| `CRITICAL` | Emberly is down |
+| `UNKNOWN` | The status page couldn't be reached |
 
-| Value | Meaning |
-|-------|---------|
-| `UP` | All systems operational |
-| `DOWN` | One or more services degraded |
-| `UNKNOWN` | Status page unreachable |
+`incident` holds the `name` and `url` of the latest unresolved incident. On a self-hosted instance without a status page, the response is `{ "configured": false }`; see `STATUS_PAGE_URL` to connect one.
 
-`activeIncidents` and `activeMaintenances` are arrays of open incident or maintenance objects from the Kener status page.
+For a deeper check of a server, including the database and storage, use [`GET /api/health`](/self-hosting/production#health-checks).
 
----
+## Report a Problem
 
-## Subscribing to Status Updates
+If something's broken and the status page doesn't show it yet:
 
-Visit [emberlystat.us](https://emberlystat.us) to subscribe to incident notifications via email or RSS.
-
----
-
-## Reporting an Issue
-
-If you notice a problem not reflected on the status page:
-
-- Email **support@embrly.ca**
 - Ask in the [Emberly Discord](https://discord.gg/36spBmzZVB)
+- Email [support@embrly.ca](mailto:support@embrly.ca)

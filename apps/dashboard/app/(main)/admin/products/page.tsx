@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 
 import AdminProductManager from '@/components/admin/products/ProductManager'
 import { AdminShell } from '@/components/admin/admin-shell'
-import { isCloudEnabled } from '@/lib/config/env'
+import { isBillingEnabled } from '@/lib/features'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
@@ -11,7 +11,7 @@ export const metadata = buildPageMetadata({
 })
 
 export default async function AdminProductsPage() {
-  if (!isCloudEnabled()) redirect('/admin')
+  if (!(await isBillingEnabled())) redirect('/admin')
 
   return (
     <AdminShell

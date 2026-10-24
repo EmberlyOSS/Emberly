@@ -6,7 +6,7 @@ import { ProfileDomains } from '@/components/dashboard/domains'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 
 export const metadata = buildPageMetadata({
-  title: 'Custom Domains',
+  title: 'Domains',
   description: 'Connect your own domains to serve files from branded URLs.',
 })
 
@@ -15,7 +15,7 @@ export default async function DomainsPage() {
 
   return (
     <DashboardShell
-      title="Custom Domains"
+      title="Domains"
       description="Connect your own domains to serve files from branded URLs."
     >
       <ProfileDomains />

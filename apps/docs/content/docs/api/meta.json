@@ -5,12 +5,11 @@
     "index",
     "files",
     "urls",
-    "domains",
-    "billing",
-    "analytics",
     "profile",
+    "device",
+    "analytics",
+    "domains",
     "discovery",
-    "user-reference",
-    "staff-admin-reference"
+    "admin"
   ]
 }

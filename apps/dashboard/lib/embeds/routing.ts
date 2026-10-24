@@ -64,8 +64,6 @@ async function lookup(urlPath: string) {
   return result
 }
 
-// Built from request.url, not nextUrl, which drops the trailing slash the
-// file page is served from
 function rewrite(request: NextRequest, pathname: string) {
   const url = new URL(request.url)
   if (url.pathname === pathname) return NextResponse.next()
@@ -73,17 +71,6 @@ function rewrite(request: NextRequest, pathname: string) {
   return NextResponse.rewrite(url)
 }
 
-/**
- * Decides what a file link serves. Share links work with or without a
- * trailing slash and are never redirected, since Discord drops embeds behind
- * redirects.
- *
- * - People get the file page; video players asking for media get the bytes.
- * - Link-preview bots get the file page and its embed tags when the uploader
- *   has rich embeds on. With them off, bots get the media itself: images as
- *   their fast preview, anything else as the original.
- * - /raw, /direct and /preview.webp are served by their own routes.
- */
 export async function routeFileRequest(
   request: NextRequest
 ): Promise<NextResponse | null> {

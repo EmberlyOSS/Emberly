@@ -1,107 +1,40 @@
 ---
-title: URL Shortener
-description: Create and manage short links with Emberly's built-in URL shortener.
+title: Short Links
+description: Turn long links into short ones and see how often they're clicked.
 ---
 
-Emberly includes a URL shortener that turns any long link into a short `embrly.ca/<code>` URL. Short links are created alongside your file uploads or independently, and all links appear in your dashboard.
+Emberly turns any long link into a short one like `https://embrly.ca/u/aB3dE7`.
 
----
+## Create a Short Link
 
-## Creating a Short URL
+1. Open **Dashboard → Links**.
+2. Paste the link you want to shorten.
+3. If you have verified [custom domains](/user-guide/custom-domains), choose which domain the short link should use. It starts on your preferred upload domain, or your primary domain if you haven't chosen one.
+4. Click **Shorten**. The short link is copied for you.
 
-### From the Dashboard
+Links must start with `http://` or `https://`. Links to private or internal addresses, such as `localhost`, aren't allowed.
 
-1. Go to **Dashboard → Links**
-2. Click **"Shorten URL"**
-3. Paste any valid URL into the input field
-4. Click **"Create"** — your short link is ready to copy
+Short codes are random and 6 characters long. Custom codes aren't supported.
 
-### From the API
+## Clicks
 
-Use your **upload token** (found at **Profile → Uploads → Upload Token**):
+Each short link counts its clicks, shown next to it in **Dashboard → Links**. Totals across all your links are in **Dashboard → Analytics**.
+
+## Delete a Short Link
+
+Delete it from **Dashboard → Links**. It stops working straight away, and anyone who follows it afterwards gets a "not found" page.
+
+## From Code
+
+Create, list and delete short links with the [Short Links API](/api/urls):
 
 ```bash
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+curl https://embrly.ca/api/urls \
+  -H "Authorization: Bearer ebk_..." \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com/very/long/link"}' \
-  https://embrly.ca/api/urls
+  -d '{"url": "https://example.com/a/very/long/link"}'
 ```
 
-Response:
-```json
-{
-  "success": true,
-  "data": {
-    "shortCode": "abc123",
-    "shortUrl": "https://embrly.ca/abc123",
-    "originalUrl": "https://example.com/very/long/link"
-  }
-}
-```
+## Moderation
 
----
-
-## Managing Your URLs
-
-### Viewing All URLs
-
-Go to **Dashboard → Links** to see all your shortened links with:
-- Short code and full short URL
-- Original destination URL
-- Click count
-- Creation date
-
-### Deleting a URL
-
-Click a URL in the dashboard → **Delete**. Deleting a short URL immediately stops it from redirecting — anyone visiting the link will see a 404.
-
----
-
-## How Redirects Work
-
-When someone visits `embrly.ca/<code>`, Emberly performs a redirect to the original URL. No authentication is required to follow a short link.
-
-<Callout type="info">
-  Each short code is unique — two users cannot share the same short code even if they point to the same destination.
-</Callout>
-
----
-
-## Tracking Clicks
-
-Each shortened URL tracks its total click count. View clicks in the Dashboard URL list.
-
-For deeper analytics (export, date ranges), see the **[Analytics API](/api/analytics)**.
-
----
-
-## Custom Short Codes
-
-Custom short codes (vanity URLs) are **not** currently supported. Short codes are auto-generated as 6-character alphanumeric strings.
-
----
-
-## Rate Limits
-
-URL creation is subject to the same rate limits as file uploads:
-
-| Plan | Requests/min |
-|------|-------------|
-| Spark | 60 |
-| Glow+ | Higher |
-| Enterprise | Unlimited |
-
----
-
-## API Reference
-
-Full endpoint documentation: **[URL Shortener API](/api/urls)**
-
-**Quick reference:**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/urls` | Create a short URL |
-| `GET` | `/api/urls` | List your URLs |
-| `DELETE` | `/api/urls/[id]` | Delete a URL |
+Short links that break the [rules](https://embrly.ca/legal) can be [reported](/user-guide/reporting). Links removed by moderators show a notice instead of redirecting.

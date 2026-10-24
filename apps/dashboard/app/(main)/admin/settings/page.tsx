@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
-  title: 'Platform Settings',
+  title: 'Settings',
   description: 'Configure system-wide controls, limits, and defaults.',
 })
 
@@ -27,7 +27,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <AdminShell
-      title="Platform Settings"
+      title="Settings"
       description="Configure system-wide controls, limits, and defaults."
     >
       <SettingsManager />

@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/lib/auth'
-import {
-  NO_STORE,
-  checkFileAccess,
-  fileCacheControl,
-} from '@/lib/files/access'
+import { NO_STORE, checkFileAccess, fileCacheControl } from '@/lib/files/access'
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
@@ -35,8 +31,13 @@ export async function GET(
     const { path } = await params
     const session = await getServerSession(authOptions)
     let urlPath = '/' + path.join('/')
-    // Remove trailing slash if present for database lookup
     urlPath = urlPath.replace(/\/$/, '')
+    if (urlPath.includes('\u0000')) {
+      return new Response(null, {
+        status: 404,
+        headers: { 'Cache-Control': NO_STORE },
+      })
+    }
     const url = new URL(request.url)
     const providedPassword = url.searchParams.get('password')
     const isDownloadRequest = url.searchParams.get('download') === 'true'

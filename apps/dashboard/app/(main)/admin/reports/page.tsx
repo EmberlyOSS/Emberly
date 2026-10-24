@@ -1,7 +1,17 @@
 import Link from 'next/link'
 
 import { AdminShell } from '@/components/admin/admin-shell'
-import { Badge } from '@/components/ui/badge'
+import { Flag } from 'lucide-react'
+
+import {
+  EmptyState,
+  LinkTabs,
+  Panel,
+  StatusBadge,
+  type BadgeTone,
+} from '@/components/layout/page-kit'
+import { humanize } from '@/lib/utils/humanize'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -20,11 +30,11 @@ export const metadata = buildPageMetadata({
   description: 'Review and resolve user and squad reports.',
 })
 
-const STATUS_STYLES: Record<ReportStatus, string> = {
-  PENDING: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  REVIEWING: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  RESOLVED: 'bg-green-500/20 text-green-400 border-green-500/30',
-  DISMISSED: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+const STATUS_TONES: Record<ReportStatus, BadgeTone> = {
+  PENDING: 'warning',
+  REVIEWING: 'info',
+  RESOLVED: 'success',
+  DISMISSED: 'neutral',
 }
 
 const VALID_STATUSES = [
@@ -114,208 +124,134 @@ export default async function AdminReportsPage({
       : Promise.resolve([]),
   ])
 
+  const typeQuery = viewType !== 'user' ? `type=${viewType}` : ''
+  const hrefFor = (s?: ReportStatus) => {
+    const query = [typeQuery, s ? `status=${s}` : ''].filter(Boolean).join('&')
+    return `/admin/reports${query ? `?${query}` : ''}`
+  }
+  const typeTabs = [
+    { href: '/admin/reports', label: 'Users', active: viewType === 'user' },
+    ...(cloudEnabled
+      ? [
+          {
+            href: '/admin/reports?type=squad',
+            label: 'Squads',
+            active: viewType === 'squad',
+          },
+        ]
+      : []),
+    {
+      href: '/admin/reports?type=content',
+      label: 'Content',
+      active: viewType === 'content',
+    },
+  ]
+  const statusTabs = [
+    { href: hrefFor(), label: 'All', active: !filterStatus },
+    ...VALID_STATUSES.map((s) => ({
+      href: hrefFor(s),
+      label: humanize(s),
+      active: filterStatus === s,
+    })),
+  ]
+  const count =
+    viewType === 'user'
+      ? userReports.length
+      : viewType === 'squad'
+        ? squadReports.length
+        : contentReports.length
+  const noun = viewType === 'content' ? 'content' : viewType
+
   return (
     <AdminShell
       title="Reports"
-      description="Review and resolve user and squad reports"
+      description="Review and resolve reports about users, squads and content."
     >
-      <div>
-        {/* Type tabs */}
-        <div className="flex gap-2 mb-4">
-          <Link
-            href="/admin/reports"
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              viewType === 'user'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            User Reports
-          </Link>
-          {cloudEnabled && (
-            <Link
-              href="/admin/reports?type=squad"
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                viewType === 'squad'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              Squad Reports
-            </Link>
-          )}
-          <Link
-            href="/admin/reports?type=content"
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              viewType === 'content'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            Content Reports
-          </Link>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <LinkTabs options={typeTabs} label="Report type" />
+        <LinkTabs options={statusTabs} label="Status" />
+      </div>
 
-        {/* Status filters */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {([undefined, ...VALID_STATUSES] as const).map((s) => {
-            const typeParam = viewType !== 'user' ? `type=${viewType}` : ''
-            const statusParam = s ? `status=${s}` : ''
-            const query = [typeParam, statusParam].filter(Boolean).join('&')
-            return (
-              <Link
-                key={s ?? 'all'}
-                href={`/admin/reports${query ? `?${query}` : ''}`}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  filterStatus === s
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                {s ?? 'All'}
-              </Link>
-            )
-          })}
-        </div>
-
-        {viewType === 'user' ? (
-          <>
-            <p className="text-sm text-muted-foreground mb-4">
-              Showing {userReports.length} user report
-              {userReports.length !== 1 ? 's' : ''}
-              {filterStatus ? ` with status "${filterStatus}"` : ''}
-            </p>
-
+      <Panel
+        flush
+        title={`${count} ${noun} ${count === 1 ? 'report' : 'reports'}`}
+        description={
+          filterStatus
+            ? `Showing ${humanize(filterStatus).toLowerCase()} reports, newest first.`
+            : 'Newest first. Showing up to 50.'
+        }
+      >
+        {count === 0 ? (
+          <EmptyState
+            icon={Flag}
+            title="Nothing to review"
+            description={
+              filterStatus
+                ? `No ${humanize(filterStatus).toLowerCase()} ${noun} reports.`
+                : `No one has reported any ${noun === 'content' ? 'content' : `${noun}s`} yet.`
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Reporter</TableHead>
-                  <TableHead>Reported User</TableHead>
-                  <TableHead>Category</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-5">Reported</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Reported by
+                  </TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="hidden sm:table-cell">Date</TableHead>
+                  <TableHead className="pr-5" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {userReports.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      No user reports found
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {viewType === 'user' &&
                   userReports.map((report) => (
                     <TableRow key={report.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {report.id.slice(0, 8)}&hellip;
+                      <TableCell className="pl-5">
+                        <Person
+                          name={report.reportedUser.name}
+                          email={report.reportedUser.email}
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {humanize(report.category)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Person
+                          name={report.reporterUser.name}
+                          email={report.reporterUser.email}
+                        />
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm font-medium">
-                          {report.reporterUser.name ?? '—'}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {report.reporterUser.email}
-                        </div>
+                        <StatusBadge tone={STATUS_TONES[report.status]}>
+                          {humanize(report.status)}
+                        </StatusBadge>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm font-medium">
-                          {report.reportedUser.name ?? '—'}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {report.reportedUser.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs capitalize">
-                          {report.category.toLowerCase().replace(/_/g, ' ')}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={STATUS_STYLES[report.status]}
-                          variant="outline"
-                        >
-                          {report.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                         {report.createdAt.toLocaleDateString()}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/admin/reports/${report.id}`}
-                            className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            View
+                      <TableCell className="pr-5 text-right">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                        >
+                          <Link href={`/admin/reports/${report.id}`}>
+                            Review
                           </Link>
-                          {report.reportedUser.urlId && (
-                            <Link
-                              href={`/${report.reportedUser.urlId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs px-2 py-1 rounded-md bg-muted/50 text-muted-foreground hover:bg-muted transition-colors"
-                            >
-                              Profile ↗
-                            </Link>
-                          )}
-                        </div>
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </>
-        ) : viewType === 'squad' ? (
-          <>
-            <p className="text-sm text-muted-foreground mb-4">
-              Showing {squadReports.length} squad report
-              {squadReports.length !== 1 ? 's' : ''}
-              {filterStatus ? ` with status "${filterStatus}"` : ''}
-            </p>
+                  ))}
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Reporter</TableHead>
-                  <TableHead>Squad</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {squadReports.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      No squad reports found
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {viewType === 'squad' &&
                   squadReports.map((report) => (
                     <TableRow key={report.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {report.id.slice(0, 8)}&hellip;
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm font-medium">
-                          {report.reporterUser.name ?? '—'}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {report.reporterUser.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="pl-5">
                         <div className="text-sm font-medium">
                           {report.squad.name}
                         </div>
@@ -323,60 +259,28 @@ export default async function AdminReportsPage({
                           /{report.squad.slug}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-xs capitalize">
-                          {report.category.toLowerCase().replace(/_/g, ' ')}
-                        </span>
+                      <TableCell className="text-sm">
+                        {humanize(report.category)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Person
+                          name={report.reporterUser.name}
+                          email={report.reporterUser.email}
+                        />
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          className={STATUS_STYLES[report.status]}
-                          variant="outline"
-                        >
-                          {report.status}
-                        </Badge>
+                        <StatusBadge tone={STATUS_TONES[report.status]}>
+                          {humanize(report.status)}
+                        </StatusBadge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                         {report.createdAt.toLocaleDateString()}
                       </TableCell>
+                      <TableCell className="pr-5" />
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground mb-4">
-              Showing {contentReports.length} content report
-              {contentReports.length !== 1 ? 's' : ''}
-              {filterStatus ? ` with status "${filterStatus}"` : ''}
-            </p>
+                  ))}
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Reporter</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Content</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Flagged</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contentReports.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      No content reports found
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {viewType === 'content' &&
                   contentReports.map((report) => {
                     const contentName =
                       report.file?.name ?? report.url?.shortCode ?? '—'
@@ -387,75 +291,71 @@ export default async function AdminReportsPage({
                       report.file?.flagged ?? report.url?.flagged ?? false
                     return (
                       <TableRow key={report.id}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {report.id.slice(0, 8)}&hellip;
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm font-medium">
-                            {report.reporterUser.name ?? '—'}
+                        <TableCell className="pl-5">
+                          <div className="flex items-center gap-2">
+                            {contentPath ? (
+                              <Link
+                                href={contentPath}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="truncate text-sm font-medium text-primary hover:underline"
+                              >
+                                {contentName}
+                              </Link>
+                            ) : (
+                              <span className="text-sm">{contentName}</span>
+                            )}
+                            {isFlagged && (
+                              <StatusBadge tone="danger">Flagged</StatusBadge>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {report.reporterUser.email}
+                            {humanize(report.contentType)}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {report.contentType}
-                          </Badge>
+                        <TableCell className="text-sm">
+                          {humanize(report.category)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Person
+                            name={report.reporterUser.name}
+                            email={report.reporterUser.email}
+                          />
                         </TableCell>
                         <TableCell>
-                          {contentPath ? (
-                            <Link
-                              href={contentPath}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-medium text-primary hover:underline"
-                            >
-                              {contentName}
-                            </Link>
-                          ) : (
-                            <span className="text-sm">{contentName}</span>
-                          )}
+                          <StatusBadge tone={STATUS_TONES[report.status]}>
+                            {humanize(report.status)}
+                          </StatusBadge>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-xs capitalize">
-                            {report.category.toLowerCase().replace(/_/g, ' ')}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={STATUS_STYLES[report.status]}
-                            variant="outline"
-                          >
-                            {report.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {isFlagged ? (
-                            <Badge
-                              className="bg-red-500/20 text-red-400 border-red-500/30"
-                              variant="outline"
-                            >
-                              Flagged
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              No
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                           {report.createdAt.toLocaleDateString()}
                         </TableCell>
+                        <TableCell className="pr-5" />
                       </TableRow>
                     )
-                  })
-                )}
+                  })}
               </TableBody>
             </Table>
-          </>
+          </div>
         )}
-      </div>
+      </Panel>
     </AdminShell>
+  )
+}
+
+function Person({
+  name,
+  email,
+}: {
+  name: string | null
+  email: string | null
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="truncate text-sm font-medium">{name ?? '—'}</div>
+      {email && (
+        <div className="truncate text-xs text-muted-foreground">{email}</div>
+      )}
+    </div>
   )
 }

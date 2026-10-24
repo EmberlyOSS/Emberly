@@ -1,0 +1,96 @@
+---
+title: Device Sign-In
+description: Let a desktop app sign in through the browser and receive its own API key.
+---
+
+Device sign-in lets an app connect to an Emberly account without ever seeing the password. The app shows a short code, the person approves it in their browser, and the app receives its own [API key](/api/profile#api-keys). It works the same way as signing in to a TV app.
+
+Flicker uses this. Apps must be registered with the instance; at the moment `flicker` is the only registered app.
+
+## How It Works
+
+1. The app asks for a code with `POST /api/device/code`.
+2. The app shows the `userCode` and opens `verificationUriComplete` in the browser.
+3. The person signs in if needed, checks the code matches, and approves.
+4. Meanwhile the app polls `POST /api/device/token` every `interval` seconds until it gets the key.
+
+Each approval creates an API key named after the app and device, such as "Flicker on Work Laptop", which the person can revoke in **Profile → API**. Approving the same app on the same device again replaces its old key.
+
+---
+
+## 1. Request a Code
+
+### `POST /api/device/code`
+
+No authentication.
+
+```json
+{
+  "clientId": "flicker",
+  "deviceName": "Work Laptop"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "deviceCode": "8Zf2kQ...",
+    "userCode": "WXYZ-K7P3",
+    "verificationUri": "https://embrly.ca/activate",
+    "verificationUriComplete": "https://embrly.ca/activate?code=WXYZ-K7P3",
+    "expiresIn": 600,
+    "interval": 5
+  }
+}
+```
+
+The code expires after 10 minutes. Keep `deviceCode` private; only `userCode` is shown to the person.
+
+---
+
+## 2. Approve in the Browser
+
+The person opens `verificationUriComplete`, or `verificationUri` and types the code. The page calls `POST /api/device/approve` with their browser session; apps don't call it themselves.
+
+---
+
+## 3. Poll for the Key
+
+### `POST /api/device/token`
+
+```json
+{ "deviceCode": "8Zf2kQ..." }
+```
+
+| Status | `data.status` | What to do |
+|--------|---------------|------------|
+| `202` | `pending` | Not approved yet. Wait `interval` seconds and try again. |
+| `200` | `approved` | Done. Save `data.key`. |
+| `403` | `denied` | The person declined. Stop. |
+| `410` | `expired` | The code expired. Start again. |
+| `400` | `invalid` | Unknown code, or the key was already collected. Start again. |
+| `422` | — | The account already has 10 API keys. Ask the person to remove one. |
+
+**Approved:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "approved",
+    "key": "ebk_...",
+    "user": {
+      "id": "clx1a2b...",
+      "name": "codemeapixel",
+      "email": "you@example.com",
+      "image": "/api/avatars/clx1a2b.png",
+      "urlId": "aB3dE"
+    }
+  }
+}
+```
+
+The key is only returned once. Store it securely, for example in the system keychain, and send it as `Authorization: Bearer ebk_...` from then on.

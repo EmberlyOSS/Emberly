@@ -3,6 +3,12 @@ import type { EventPayload } from '@/types/events'
 
 import { loggers } from '@/lib/logger'
 import { emit } from '../bullmq/queue'
+import {
+  buildUserExport,
+  exportDownloadUrl,
+  failUserExport,
+} from '@/lib/export/user-export'
+import { createNotification } from '@/lib/notifications'
 import type { HandlerMap } from '../bullmq/types'
 
 const logger = loggers.events.getChildLogger('account-handler')
@@ -105,6 +111,31 @@ export const accountHandlers: HandlerMap = {
         priority: 'normal',
         sourceEvent: 'account.export-requested',
       })
+    },
+    async (payload: EventPayload<'account.export-requested'>) => {
+      try {
+        const ready = await buildUserExport(payload.exportId)
+        if (!ready) return
+        await emit('account.export-completed', {
+          userId: payload.userId,
+          email: payload.email,
+          exportId: payload.exportId,
+          downloadUrl: exportDownloadUrl(payload.exportId),
+          expiresAt: ready.expiresAt ?? undefined,
+        })
+      } catch (error) {
+        logger.error('Data export failed', error as Error, {
+          exportId: payload.exportId,
+        })
+        await failUserExport(payload.exportId, error)
+        await createNotification({
+          userId: payload.userId,
+          category: 'account',
+          title: "Your data export didn't finish",
+          body: 'Try again from Profile → Data.',
+          link: '/me?tab=data',
+        })
+      }
     },
   ],
 

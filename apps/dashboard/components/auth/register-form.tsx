@@ -16,7 +16,8 @@ import { validatePasswordAction } from '@/lib/security/password-actions'
 export function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const referralCode = searchParams.get('ref') || searchParams.get('referral') || undefined
+  const referralCode =
+    searchParams.get('ref') || searchParams.get('referral') || undefined
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,6 +80,7 @@ export function RegisterForm() {
 
       // First user doesn't require verification, auto-sign in
       const result = await signIn('credentials', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         emailOrUsername: email,
         password,
         redirect: false,
@@ -177,7 +179,12 @@ export function RegisterForm() {
           />
         </div>
         {error && (
-          <div role="alert" aria-live="assertive" aria-atomic="true" className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2">
+          <div
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex items-center space-x-2"
+          >
             <Icons.alertCircle className="h-4 w-4 flex-shrink-0" />
             <span>{error}</span>
           </div>

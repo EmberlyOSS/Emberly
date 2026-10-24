@@ -57,7 +57,7 @@ export function UploadToken() {
       })
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
-      setSelected(data.selected || domain)
+      setSelected(data.selected ?? null)
     } catch (e) {
       // ignore
     }
@@ -69,33 +69,35 @@ export function UploadToken() {
         <Label>Upload Host</Label>
         <div className="flex items-center gap-2 max-w-sm">
           <Select
-            value={selected || ''}
+            value={selected || 'default'}
             onValueChange={setDomain}
             disabled={loadingDomains}
           >
             <SelectTrigger className="w-full bg-background/50 backdrop-blur-sm border-muted-foreground/20 focus:ring-primary/20">
-               <SelectValue placeholder="Select a host" />
+              <SelectValue placeholder="Select a host" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="default">(default)</SelectItem>
-                {(domains || []).map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
+              <SelectItem value="default">
+                Default (your primary domain)
+              </SelectItem>
+              {(domains || []).map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {selected && selected !== 'default' && (
-             <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setDomain('')}
-                disabled={loadingDomains}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-                title="Reset to default"
-              >
-                <RefreshCcw className="h-4 w-4" />
-             </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDomain('')}
+              disabled={loadingDomains}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              title="Reset to default"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </Button>
           )}
         </div>
         <Label>Upload Token</Label>

@@ -23,24 +23,6 @@ export const authHandlers: HandlerMap = {
           ip: payload.context?.ip,
           userAgent: payload.context?.userAgent,
         })
-
-        await emit('email.send', {
-          to: payload.email,
-          template: 'new-device-login',
-          subject: 'New device login to your Emberly account',
-          variables: {
-            email: payload.email,
-            ip: payload.context?.ip || 'Unknown',
-            userAgent: payload.context?.userAgent || 'Unknown',
-            location: payload.context?.geo?.city
-              ? `${payload.context.geo.city}, ${payload.context.geo.country}`
-              : 'Unknown location',
-            loginTime: new Date().toISOString(),
-          },
-          userId: payload.userId,
-          priority: 'high',
-          sourceEvent: 'auth.login',
-        })
       }
     },
   ],

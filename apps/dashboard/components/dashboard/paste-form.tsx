@@ -2,23 +2,13 @@
 
 import { useCallback, useMemo, useState } from 'react'
 
-import CodeMirror from '@uiw/react-codemirror'
-import {
-  Copy,
-  Eye,
-  EyeOff,
-  FileCode,
-  Globe,
-  Lock,
-  Sparkles,
-  Users,
-} from 'lucide-react'
+import CodeMirror, { EditorView } from '@uiw/react-codemirror'
+import { Check, Copy, Eye, EyeOff, FileCode, Globe, Lock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,17 +20,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
 import { getLanguageExtension } from '@/components/file/protected/language-utils'
+
+import { cn } from '@/lib/utils'
 
 import { useToast } from '@/hooks/use-toast'
 
-// Language options for the dropdown
 const LANGUAGE_OPTIONS = [
   { value: 'text', label: 'Plain Text', extension: '.txt', mime: 'text/plain' },
   {
@@ -66,7 +51,12 @@ const LANGUAGE_OPTIONS = [
   { value: 'python', label: 'Python', extension: '.py', mime: 'text/x-python' },
   { value: 'html', label: 'HTML', extension: '.html', mime: 'text/html' },
   { value: 'css', label: 'CSS', extension: '.css', mime: 'text/css' },
-  { value: 'json', label: 'JSON', extension: '.json', mime: 'application/json' },
+  {
+    value: 'json',
+    label: 'JSON',
+    extension: '.json',
+    mime: 'application/json',
+  },
   { value: 'yaml', label: 'YAML', extension: '.yaml', mime: 'text/yaml' },
   { value: 'sql', label: 'SQL', extension: '.sql', mime: 'text/x-sql' },
   { value: 'java', label: 'Java', extension: '.java', mime: 'text/x-java' },
@@ -81,6 +71,53 @@ const LANGUAGE_OPTIONS = [
   { value: 'less', label: 'Less', extension: '.less', mime: 'text/x-less' },
 ] as const
 
+const EDITOR_SETUP = {
+  lineNumbers: true,
+  highlightActiveLine: true,
+  highlightActiveLineGutter: true,
+  foldGutter: true,
+  dropCursor: true,
+  allowMultipleSelections: true,
+  indentOnInput: true,
+  bracketMatching: true,
+  closeBrackets: true,
+  autocompletion: true,
+  rectangularSelection: true,
+  crosshairCursor: true,
+  highlightSelectionMatches: true,
+}
+
+// Blend the editor into the card instead of One Dark's own slate background
+const editorSurface = EditorView.theme(
+  {
+    '&': { backgroundColor: 'transparent', fontSize: '13.5px' },
+    '&.cm-focused': { outline: 'none' },
+    '.cm-scroller': {
+      fontFamily:
+        "ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace",
+      lineHeight: '1.65',
+    },
+    '.cm-content': { padding: '14px 0' },
+    '.cm-gutters': {
+      backgroundColor: 'transparent',
+      border: 'none',
+      color: 'hsl(var(--muted-foreground) / 0.55)',
+    },
+    '.cm-activeLine': { backgroundColor: 'hsl(var(--foreground) / 0.04)' },
+    '.cm-activeLineGutter': {
+      backgroundColor: 'transparent',
+      color: 'hsl(var(--foreground) / 0.8)',
+    },
+    '.cm-placeholder': { color: 'hsl(var(--muted-foreground) / 0.7)' },
+  },
+  { dark: true }
+)
+
+const VISIBILITY = [
+  { value: 'PUBLIC', label: 'Public', icon: Globe },
+  { value: 'PRIVATE', label: 'Private', icon: Lock },
+] as const
+
 export function PasteForm() {
   const [content, setContent] = useState('')
   const [filename, setFilename] = useState('')
@@ -91,11 +128,13 @@ export function PasteForm() {
   const [allowSuggestions, setAllowSuggestions] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
+  const [copied, setCopied] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
   const selectedLanguage = useMemo(
-    () => LANGUAGE_OPTIONS.find((l) => l.value === language) || LANGUAGE_OPTIONS[0],
+    () =>
+      LANGUAGE_OPTIONS.find((l) => l.value === language) || LANGUAGE_OPTIONS[0],
     [language]
   )
 
@@ -103,48 +142,31 @@ export function PasteForm() {
 
   const handleLanguageChange = useCallback((value: string) => {
     setLanguage(value)
-    // Auto-update filename extension if filename exists
     setFilename((prev) => {
       if (!prev) return prev
       const langOption = LANGUAGE_OPTIONS.find((l) => l.value === value)
       if (!langOption) return prev
-      const namePart = prev.replace(/\.[^/.]+$/, '')
-      return namePart + langOption.extension
+      return prev.replace(/\.[^/.]+$/, '') + langOption.extension
     })
   }, [])
 
   const handleCopyToClipboard = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content)
-      toast({
-        title: 'Copied!',
-        description: 'Content copied to clipboard',
-      })
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy to clipboard',
-        variant: 'destructive',
-      })
+      toast({ title: "Couldn't copy", variant: 'destructive' })
     }
   }, [content, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!content.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter some content',
-        variant: 'destructive',
-      })
-      return
-    }
+    if (!content.trim()) return
 
     setIsSubmitting(true)
-
     try {
-      const finalFilename =
-        filename || `paste${selectedLanguage.extension}`
+      const finalFilename = filename || `paste${selectedLanguage.extension}`
       const file = new File([content], finalFilename, {
         type: selectedLanguage.mime,
       })
@@ -159,50 +181,22 @@ export function PasteForm() {
         method: 'POST',
         body: formData,
       })
+      const body = await response.json().catch(() => null)
 
       if (!response.ok) {
-        let errorDescription = 'Failed to create paste'
-        try {
-          const errorData = await response.json()
-          if (errorData?.message) {
-            errorDescription = errorData.message
-          }
-        } catch (jsonError) {
-          console.warn('Could not parse error response JSON:', jsonError)
-        }
-        throw new Error(errorDescription)
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Paste created successfully',
-      })
-
-      try {
-        const responseData = await response.json()
-        if (responseData?.data?.url) {
-          const urlPath = new URL(responseData.data.url).pathname
-          router.push(urlPath)
-        } else {
-          console.warn(
-            'Paste created, but no redirect URL found in response:',
-            responseData
-          )
-          router.push('/dashboard')
-        }
-      } catch (jsonError) {
-        console.error(
-          'Paste created, but failed to parse response JSON for redirect URL:',
-          jsonError
+        throw new Error(
+          body?.error || body?.message || "Couldn't create the paste"
         )
       }
+
+      toast({ title: 'Paste created' })
+      router.push(
+        body?.data?.url ? new URL(body.data.url).pathname : '/dashboard/files'
+      )
     } catch (error) {
       toast({
-        title: 'Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'An unexpected error occurred while creating the paste.',
+        title: "Couldn't create the paste",
+        description: error instanceof Error ? error.message : undefined,
         variant: 'destructive',
       })
     } finally {
@@ -211,227 +205,185 @@ export function PasteForm() {
   }
 
   const editorExtensions = useMemo(() => {
-    if (language === 'text') return []
-    return [getLanguageExtension(language)]
+    const base = [editorSurface, EditorView.lineWrapping]
+    if (language === 'text') return base
+    return [...base, getLanguageExtension(language)]
   }, [language])
 
+  const lineCount = content ? content.split('\n').length : 0
+  const showPreview = isMarkdown && activeTab === 'preview'
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Language, Filename and Editor */}
-      <div className="glass-card p-6 space-y-6">
-        {/* Language and Filename row */}
-        <div className="grid gap-4 md:grid-cols-2 items-end">
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <FileCode className="h-4 w-4 text-muted-foreground" />
-            Language
-          </Label>
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start"
+    >
+      <div className="glass-card overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/50 bg-muted/20 px-3 py-2">
+          <div className="flex min-w-[10rem] flex-1 items-center gap-2 rounded-md border border-border/60 bg-background/60 px-2.5 focus-within:border-primary/50">
+            <FileCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <input
+              id="filename"
+              name="paste-filename"
+              aria-label="Filename"
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
+              placeholder={`paste${selectedLanguage.extension}`}
+              value={filename}
+              onChange={(e) => setFilename(e.target.value)}
+              className="h-8 min-w-0 flex-1 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground/60"
+            />
+          </div>
+
           <Select value={language} onValueChange={handleLanguageChange}>
-            <SelectTrigger className="bg-background/50 border-border/50 h-10">
+            <SelectTrigger
+              className="h-8 w-[9.5rem] border-border/60 bg-background/60 text-sm"
+              aria-label="Language"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {LANGUAGE_OPTIONS.map((lang) => (
                 <SelectItem key={lang.value} value={lang.value}>
-                  <span className="flex items-center gap-2">
-                    {lang.label}
-                    <span className="text-xs text-muted-foreground">
-                      {lang.extension}
-                    </span>
-                  </span>
+                  {lang.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="filename">Filename (Optional)</Label>
-          <Input
-            id="filename"
-            placeholder={`paste${selectedLanguage.extension}`}
-            value={filename}
-            onChange={(e) => setFilename(e.target.value)}
-            className="bg-background/50 border-border/50 h-10"
-          />
-        </div>
-      </div>
+          {isMarkdown && (
+            <div className="flex rounded-md border border-border/60 bg-background/60 p-0.5 text-sm">
+              {(['edit', 'preview'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  aria-pressed={activeTab === tab}
+                  className={cn(
+                    'rounded px-2.5 py-1 capitalize transition-colors',
+                    activeTab === tab
+                      ? 'bg-secondary text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          )}
 
-      {/* Editor Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="flex items-center gap-2">
-            Content
-            {isMarkdown && (
-              <Badge variant="secondary" className="text-xs">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Preview Available
-              </Badge>
+          <div className="ml-auto flex items-center gap-1">
+            {lineCount > 0 && (
+              <span className="px-1 text-xs tabular-nums text-muted-foreground">
+                {lineCount} {lineCount === 1 ? 'line' : 'lines'}
+              </span>
             )}
-          </Label>
-          <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={handleCopyToClipboard}
               disabled={!content}
-              className="h-8 px-2"
+              className="h-8 w-8"
+              aria-label="Copy content"
             >
-              <Copy className="h-4 w-4" />
+              {copied ? (
+                <Check className="h-4 w-4 text-emerald-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </Button>
-            {content && (
-              <Badge variant="outline" className="text-xs">
-                {content.split('\n').length} lines
-              </Badge>
-            )}
           </div>
         </div>
 
-        {isMarkdown ? (
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}
-            className="w-full"
-          >
-            <TabsList className="w-full justify-start glass-subtle">
-              <TabsTrigger value="edit" className="flex items-center gap-2">
-                <FileCode className="h-4 w-4" />
-                Edit
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Preview
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="edit" className="mt-2">
-              <div className="glass-subtle overflow-hidden">
-                <CodeMirror
-                  value={content}
-                  onChange={setContent}
-                  extensions={editorExtensions}
-                  theme="dark"
-                  height="400px"
-                  placeholder="Enter your markdown content here..."
-                  basicSetup={{
-                    lineNumbers: true,
-                    highlightActiveLine: true,
-                    highlightActiveLineGutter: true,
-                    foldGutter: true,
-                    dropCursor: true,
-                    allowMultipleSelections: true,
-                    indentOnInput: true,
-                    bracketMatching: true,
-                    closeBrackets: true,
-                    autocompletion: true,
-                    rectangularSelection: true,
-                    crosshairCursor: true,
-                    highlightSelectionMatches: true,
-                  }}
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="preview" className="mt-2">
-              <div className="glass-subtle p-6 min-h-[400px] max-h-[400px] overflow-auto prose prose-neutral dark:prose-invert max-w-none">
-                {content ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight as any]}
-                  >
-                    {content}
-                  </ReactMarkdown>
-                ) : (
-                  <p className="text-muted-foreground text-center py-16">
-                    Start typing to see the preview...
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <div className="glass-subtle overflow-hidden">
-            <CodeMirror
-              value={content}
-              onChange={setContent}
-              extensions={editorExtensions}
-              theme="dark"
-              height="400px"
-              placeholder="Enter your code or text here..."
-              basicSetup={{
-                lineNumbers: true,
-                highlightActiveLine: true,
-                highlightActiveLineGutter: true,
-                foldGutter: true,
-                dropCursor: true,
-                allowMultipleSelections: true,
-                indentOnInput: true,
-                bracketMatching: true,
-                closeBrackets: true,
-                autocompletion: true,
-                rectangularSelection: true,
-                crosshairCursor: true,
-                highlightSelectionMatches: true,
-              }}
-            />
+        {showPreview ? (
+          <div className="prose prose-neutral dark:prose-invert h-[30rem] max-w-none overflow-auto px-6 py-5">
+            {content ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight as any]}
+              >
+                {content}
+              </ReactMarkdown>
+            ) : (
+              <p className="py-16 text-center text-muted-foreground">
+                Nothing to preview yet.
+              </p>
+            )}
           </div>
+        ) : (
+          <CodeMirror
+            value={content}
+            onChange={setContent}
+            extensions={editorExtensions}
+            theme="dark"
+            height="30rem"
+            placeholder={
+              isMarkdown
+                ? 'Write some markdown…'
+                : 'Paste or type your code here…'
+            }
+            basicSetup={EDITOR_SETUP}
+          />
         )}
       </div>
-      </div>
 
-      {/* Visibility, Password and Collaboration */}
-      <div className="glass-card p-6 space-y-6">
-        {/* Visibility and Password row */}
-        <div className="grid gap-4 md:grid-cols-2">
+      <aside className="glass-card space-y-5 p-5 lg:sticky lg:top-28">
         <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            {visibility === 'PUBLIC' ? (
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            )}
-            Visibility
-          </Label>
-          <Select value={visibility} onValueChange={setVisibility}>
-            <SelectTrigger className="bg-background/50 border-border/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PUBLIC">
-                <span className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  Public
-                </span>
-              </SelectItem>
-              <SelectItem value="PRIVATE">
-                <span className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Private (only me)
-                </span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Visibility</Label>
+          <div className="grid grid-cols-2 gap-1 rounded-lg border border-border/60 bg-background/40 p-1">
+            {VISIBILITY.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setVisibility(value)}
+                aria-pressed={visibility === value}
+                className={cn(
+                  'flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm transition-colors',
+                  visibility === value
+                    ? 'bg-secondary font-medium text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {visibility === 'PUBLIC'
+              ? 'Anyone with the link can view it.'
+              : 'Only you can view it.'}
+          </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            Password Protection (Optional)
+          <Label htmlFor="password">
+            Password{' '}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
           </Label>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Leave empty for no password"
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
+              placeholder="No password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-background/50 border-border/50 pr-10"
+              className="h-9 border-border/50 bg-background/50 pr-9"
             />
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              size="icon"
+              className="absolute right-0.5 top-1/2 h-8 w-8 -translate-y-1/2"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -441,49 +393,36 @@ export function PasteForm() {
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Collaboration Settings */}
-        <div className="border-t border-border/40 pt-6 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            Collaboration Settings
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="allowSuggestions">Allow suggestions</Label>
+            <p className="text-xs text-muted-foreground">
+              Others can propose edits for you to approve.
+            </p>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="allowSuggestions" className="text-sm font-medium">
-                Allow Edit Suggestions
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Other users can suggest edits to this paste that you can review and approve
-              </p>
-            </div>
-            <Switch
-              id="allowSuggestions"
-              checked={allowSuggestions}
-              onCheckedChange={setAllowSuggestions}
-            />
-          </div>
+          <Switch
+            id="allowSuggestions"
+            checked={allowSuggestions}
+            onCheckedChange={setAllowSuggestions}
+          />
         </div>
-      </div>
 
-      {/* Submit Button */}
-      <Button
-        type="submit"
-        className="w-full"
-        size="lg"
-        disabled={isSubmitting || !content.trim()}
-      >
-        {isSubmitting ? (
-          <>
-            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            Creating paste...
-          </>
-        ) : (
-          'Create Paste'
-        )}
-      </Button>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isSubmitting || !content.trim()}
+        >
+          {isSubmitting ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Creating…
+            </>
+          ) : (
+            'Create paste'
+          )}
+        </Button>
+      </aside>
     </form>
   )
 }

@@ -131,7 +131,7 @@ export default function DomainRow({
         className="gap-1.5 bg-rose-500/10 text-rose-400 border-rose-500/20"
       >
         <AlertCircle className="h-3 w-3" />
-        {d.cfStatus || 'Setup Required'}
+        {d.cfStatus ? 'Needs attention' : 'Needs setup'}
       </Badge>
     )
   }
@@ -139,12 +139,12 @@ export default function DomainRow({
   return (
     <>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="p-4 hover:bg-muted/30 transition-colors">
+        <div className="px-5 py-3.5 hover:bg-muted/30 transition-colors">
           <div className="flex items-center gap-4">
             {/* Domain Info */}
             <CollapsibleTrigger asChild>
               <button className="flex items-center gap-3 flex-1 min-w-0 text-left group">
-                <div className="p-2 rounded-lg bg-muted/50 group-hover:bg-muted transition-colors">
+                <div className="shrink-0">
                   {open ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   ) : (
@@ -162,9 +162,13 @@ export default function DomainRow({
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {d.cfHostnameId
-                      ? `ID: ${d.cfHostnameId.slice(0, 12)}...`
-                      : 'Awaiting setup'}
+                    {d.verified
+                      ? d.createdAt
+                        ? `Added ${new Date(d.createdAt).toLocaleDateString()}`
+                        : 'Ready to use'
+                      : open
+                        ? 'Add the DNS record below, then check again'
+                        : 'Open to see the DNS record to add'}
                   </p>
                 </div>
               </button>

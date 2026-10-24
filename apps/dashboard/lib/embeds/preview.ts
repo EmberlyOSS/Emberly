@@ -92,10 +92,6 @@ async function generate(file: PreviewSource): Promise<boolean> {
   return true
 }
 
-/**
- * Makes the file's preview and records its dimensions, once. Returns whether
- * a preview exists afterwards. Concurrent calls for the same file share work.
- */
 export function ensurePreview(file: PreviewSource): Promise<boolean> {
   const existing = pending.get(file.id)
   if (existing) return existing
@@ -114,13 +110,11 @@ export function ensurePreview(file: PreviewSource): Promise<boolean> {
   return job
 }
 
-/** Starts making the preview in the background, e.g. right after an upload. */
 export function queuePreview(file: PreviewSource) {
   if (!baseMime(file.mimeType).startsWith('image/')) return
   void ensurePreview(file)
 }
 
-/** Returns the preview image, making it first if needed. */
 export async function readPreview(file: PreviewSource): Promise<Buffer | null> {
   try {
     return await readFile(previewFile(file.id))

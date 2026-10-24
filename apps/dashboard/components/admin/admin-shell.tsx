@@ -24,6 +24,7 @@ import { useFeatures } from '@/components/providers/features-provider'
 
 type AdminItem = SectionNavItem & {
   cloudOnly?: boolean
+  billingOnly?: boolean
   superAdminOnly?: boolean
 }
 
@@ -70,6 +71,7 @@ const groups: Array<{ label?: string; items: AdminItem[] }> = [
         label: 'Products',
         icon: CreditCard,
         cloudOnly: true,
+        billingOnly: true,
       },
       {
         href: '/admin/email',
@@ -80,7 +82,7 @@ const groups: Array<{ label?: string; items: AdminItem[] }> = [
       },
       {
         href: '/admin/logs',
-        label: 'Audit Logs',
+        label: 'Audit log',
         icon: ChartBar,
         superAdminOnly: true,
       },
@@ -108,14 +110,16 @@ interface AdminShellProps {
 export function AdminShell(props: AdminShellProps) {
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === 'SUPERADMIN'
-  const { cloud: cloudEnabled } = useFeatures()
+  const { cloud: cloudEnabled, billing: billingEnabled } = useFeatures()
 
   const visibleGroups: SectionNavGroup[] = groups
     .map((g) => ({
       label: g.label,
       items: g.items.filter(
         (i) =>
-          (!i.superAdminOnly || isSuperAdmin) && (!i.cloudOnly || cloudEnabled)
+          (!i.superAdminOnly || isSuperAdmin) &&
+          (!i.cloudOnly || cloudEnabled) &&
+          (!i.billingOnly || billingEnabled)
       ),
     }))
     .filter((g) => g.items.length > 0)

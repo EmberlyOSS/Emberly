@@ -203,6 +203,7 @@ export default function SetupPage() {
         new CustomEvent('setup-completed', { detail: { completed: true } })
       )
       const result = await signIn('credentials', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         emailOrUsername: data.admin.email,
         password: data.admin.password,
         redirect: false,

@@ -8,7 +8,16 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@emberly/db'
 import { sendTemplateEmail, NewLoginEmail } from '@/lib/emails'
 import { events } from '@/lib/events'
-import { detectNewLogin, recordLogin } from './login-detection'
+import { createNotification } from '@/lib/notifications'
+
+import { isDeviceActive, resolveDevice } from './devices'
+import {
+  describeLocation,
+  isLocalAddress,
+  describeLoginContext,
+  getRequestLoginContext,
+} from './login-context'
+import { recordLogin } from './login-detection'
 import { verify2FACode } from './service'
 import { ensurePasswordInHistory } from '@/lib/security/password-reuse-checker'
 import { checkPasswordBreach } from '@/lib/security/password-breach-checker'
@@ -63,6 +72,7 @@ declare module 'next-auth' {
       emailVerified?: boolean
       passwordBreachDetectedAt?: string | null
     }
+    deviceId?: string
   }
 }
 
@@ -79,6 +89,7 @@ declare module 'next-auth/jwt' {
     emailVerified?: boolean
     twoFactorEnabled?: boolean
     passwordBreachDetectedAt?: string | null
+    deviceId?: string
   }
 }
 
@@ -218,25 +229,23 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
-          // Consume the token atomically and get the updated user with new sessionVersion
+          // Consume the token so the link only works once
           const updatedUser = await prisma.user.update({
             where: { id: user.id },
             data: {
               magicLinkToken: null,
               magicLinkExpires: null,
-              sessionVersion: { increment: 1 }, // Invalidate old sessions
             },
             select: userSelect,
           })
 
-          // Return user session data with the NEW sessionVersion
           return {
             id: updatedUser.id,
             email: updatedUser.email,
             name: updatedUser.name,
             role: updatedUser.role,
             image: updatedUser.image,
-            sessionVersion: updatedUser.sessionVersion, // Use updated version from DB
+            sessionVersion: updatedUser.sessionVersion,
             alphaUser: updatedUser.alphaUser,
             twoFactorEnabled: updatedUser.twoFactorEnabled,
           }
@@ -334,6 +343,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email
         token.image = user.image
         token.passwordBreachDetectedAt = (user as any).passwordBreachDetectedAt
+        token.deviceId = (user as { deviceId?: string }).deviceId
         console.log(
           `[JWT] User signed in: ${token.email}, emailVerified: ${token.emailVerified}`
         )
@@ -369,24 +379,39 @@ export const authOptions: NextAuthOptions = {
       // Fire-and-forget new login email + last login metadata
       const userEmail = user?.email
       if (userEmail) {
-        // Get context from middleware-stored headers
-        const storedContext = globalThis.__nextAuthLoginContext || {}
-
-        const ip = storedContext.ip
-        const userAgent = storedContext.userAgent
-        const country = storedContext.geo?.country
-        const city = storedContext.geo?.city
-
-        const time = new Date().toISOString()
-        const manageUrl = `${appUrl()}/profile?tab=security`
+        const requestContext = await getRequestLoginContext(
+          (credentials as Record<string, unknown> | undefined)?.timeZone
+        )
+        const { ip, userAgent } = requestContext
+        const loginDate = new Date()
+        const time = loginDate.toISOString()
+        const manageUrl = `${appUrl()}/me?tab=security`
 
         const loginContext = {
-          ip: ip ?? undefined,
-          userAgent: userAgent ?? undefined,
-          geo:
-            country || city
-              ? { country: country ?? undefined, city: city ?? undefined }
-              : undefined,
+          ip,
+          userAgent,
+          geo: requestContext.geo
+            ? {
+                country: requestContext.geo.country,
+                city: requestContext.geo.city,
+              }
+            : undefined,
+        }
+        const loginDetails = describeLoginContext(requestContext, loginDate)
+
+        let device: { id: string; isNew: boolean; isFirst: boolean } | null =
+          null
+        try {
+          device = await resolveDevice(user.id as string, {
+            userAgent,
+            ip,
+            location:
+              describeLocation(requestContext.geo) ??
+              (isLocalAddress(ip) ? 'Local network' : undefined),
+          })
+          ;(user as { deviceId?: string }).deviceId = device.id
+        } catch (err) {
+          console.error('Failed to record device', err)
         }
 
         void prisma.user
@@ -427,15 +452,8 @@ export const authOptions: NextAuthOptions = {
           })()
         }
 
-        // Record login and check if this is a new device/suspicious login
         void (async () => {
           try {
-            const detection = await detectNewLogin(
-              user.id as string,
-              loginContext
-            )
-
-            // Record this login in history
             await recordLogin(user.id as string, loginContext, true)
 
             // Emit auditable auth.login event so audit logs capture every sign-in
@@ -444,22 +462,27 @@ export const authOptions: NextAuthOptions = {
               email: userEmail,
               method: credentials ? 'credentials' : 'oauth',
               success: true,
-              isNewDevice: detection.isNewDevice,
+              isNewDevice: !!device?.isNew,
               context: loginContext,
             })
 
-            // Only send alert if detection says we should
-            if (detection.shouldAlert) {
+            // Alert on devices not seen before, but not on an account's very
+            // first sign-in
+            if (device?.isNew && !device.isFirst) {
+              await createNotification({
+                userId: user.id as string,
+                category: 'security',
+                title: `New sign-in from ${loginDetails.loginDevice}`,
+                body: [loginDetails.loginLocation, loginDetails.loginTime]
+                  .filter(Boolean)
+                  .join(' · '),
+                link: '/me?tab=security',
+              })
               await sendTemplateEmail({
                 to: userEmail,
                 subject: '⚠️ New device sign-in to your Emberly account',
                 template: NewLoginEmail,
-                props: {
-                  loginTime: time,
-                  loginLocation: detection.reason,
-                  loginDevice: userAgent,
-                  reviewUrl: manageUrl,
-                },
+                props: { ...loginDetails, reviewUrl: manageUrl },
               })
             }
           } catch (err) {
@@ -494,6 +517,19 @@ export const authOptions: NextAuthOptions = {
           // keep the role it was issued with. An empty session is signed out.
           if (!freshUser) return {} as Session
 
+          // Sign out everywhere, password resets and admin sign-outs bump the
+          // version; older sessions end here. Signed-out devices end too.
+          if (
+            token.sessionVersion !== undefined &&
+            freshUser.sessionVersion !== token.sessionVersion
+          ) {
+            return {} as Session
+          }
+          if (token.deviceId && !(await isDeviceActive(token.deviceId))) {
+            return {} as Session
+          }
+          session.deviceId = token.deviceId
+
           if (freshUser) {
             // Update session with fresh data
             session.user.role = freshUser.role
@@ -505,11 +541,6 @@ export const authOptions: NextAuthOptions = {
             session.user.emailVerified = freshUser.emailVerified ? true : false // Convert DateTime/null to boolean
             session.user.passwordBreachDetectedAt =
               freshUser.passwordBreachDetectedAt?.toISOString() || null
-
-            // Update token for next request if sessionVersion changed
-            if (freshUser.sessionVersion !== token.sessionVersion) {
-              token.sessionVersion = freshUser.sessionVersion
-            }
           }
         } catch (error) {
           // If DB is unavailable, continue with JWT data

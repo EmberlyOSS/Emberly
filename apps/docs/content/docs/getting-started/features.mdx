@@ -1,90 +1,60 @@
 ---
 title: Features
-description: A complete overview of everything Emberly offers.
+description: Everything Emberly can do.
 ---
 
-## File Upload & Storage
+## Uploads
 
-**Upload any file type** — images, videos, documents, archives, and more.
+- **Any file type**, apart from executables and other types blocked for safety
+- **Drag and drop** onto the dashboard, or drop files anywhere on the page
+- **Large files** upload in parts, with a progress bar
+- **Screenshot tools**: [Flicker](/integrations/flicker), [ShareX](/integrations/sharex), [Flameshot](/integrations/flameshot) and Spectacle
+- **Upload from code** with the [REST API](/api), using an API key
 
-- **Plan-based limits** — 500 MB (Spark) to Unlimited (Ember/Enterprise)
-- **Multiple upload methods** — web dashboard, API, CLI, or integrations
-- **Chunked uploads** — resume on connection loss
-- **Progress tracking** — live upload percentage
-- **Drag & drop** — supported in the web dashboard
-- **Bulk upload** — multiple files at once
+## Sharing
 
-## File Sharing
+| Option | What it does |
+|--------|--------------|
+| **Public link** | Anyone with the link can open the file |
+| **Private** | Only you can open it |
+| **Password** | Viewers enter a password first |
+| **Expiry** | Delete the file, or make it private, at a set time |
+| **Link previews** | Images and videos show inline in Discord and other apps |
+| **Raw link** | Add `/raw` to a link to get just the file, for embedding |
 
-| Option | Description |
-|--------|-------------|
-| **Public links** | Anyone with the URL can download |
-| **Private files** | Only you and named collaborators |
-| **Password protection** | Optional password required to download |
-| **Expiration dates** | Files auto-delete on a set date |
-| **Direct download** | Single-click download, no popup |
-| **Inline preview** | View images and videos in-browser |
+## Text and Code
 
-## Collaboration
+- **[Pastes](/user-guide/paste)** with syntax highlighting
+- **[Collaborators](/user-guide/file-collaboration)** who can edit text files, or suggest changes for you to accept
+- **Text in images**: Emberly reads text in uploaded images, so you can find screenshots by what's in them
 
-- **Add collaborators by email** — view or edit permissions
-- **Revoke access** anytime
-- **Edit suggestions** — collaborators can propose changes without direct edit rights
-- **Shared files section** — see everything shared with you in one place
+## Short Links
 
-## Security
+Turn any long link into a short one with [the link shortener](/user-guide/url-shortener), and see how many times each is clicked.
 
-- **VirusTotal** — every upload scanned against 71+ antivirus engines (hash-based, privacy-first)
-- **Zip bomb detection** — prevents decompression attacks
-- **Dangerous file blocking** — executables, scripts, and high-risk types blocked by default
-- **HIBP integration** — warns you if your login password appears in known data breaches
-- **Password reuse prevention** — cannot reuse your last passwords
-- **2FA** — TOTP two-factor authentication support
-- **Bcrypt password hashing** — passwords are never stored in plain text
+## Your Own Domain
 
-## Custom Domains
-
-Host your files under your own domain (e.g., `files.yourdomain.com`):
-
-- Automatic TLS via Cloudflare
-- Simple CNAME-based verification
-- Set a primary domain for all new uploads
-- Domain slot limits based on plan + perks
+Serve your uploads from a domain you own, like `files.example.com`. Set it up with a single DNS record, or let Emberly do it for you on Cloudflare. HTTPS is handled for you. See [Custom Domains](/user-guide/custom-domains).
 
 ## Analytics
 
-- **Download counts** per file
-- **Storage usage** dashboard
-- **Activity log** — who accessed what and when
-- **Team-level usage** (Flare/Blaze)
+Views, downloads and storage over time, your most popular files, and a CSV export.
 
-## Integrations
+## Security
 
-<Cards>
-  <Card title="ShareX" description="One-click config for Windows screenshot uploads." href="/integrations/sharex" />
-  <Card title="Flameshot" description="Script-based upload for Linux/macOS." href="/integrations/flameshot" />
-  <Card title="PowerShell" description="Automate uploads from the Windows terminal." href="/integrations/powershell" />
-  <Card title="Python SDK" description="Embed Emberly into your Python applications." href="/integrations/python-sdk" />
-  <Card title="Bash / cURL" description="Shell scripts for server-side automation." href="/integrations/bash-scripting" />
-  <Card title="Flicker" description="Native desktop app for screenshots and files." href="/integrations/flicker" />
-</Cards>
+- **[Malware checks](/security/virustotal)** on uploads, using VirusTotal
+- **Zip bomb detection** and blocked dangerous file types
+- **[Breached password warnings](/security/hibp)** using Have I Been Pwned
+- **Two-factor authentication** with an authenticator app, plus recovery codes
+- **Signed-in device list** and sign out everywhere
+- **[Report](/user-guide/reporting)** files, links and users that break the rules
 
-## OCR (Optical Character Recognition)
+## Teams and Profiles
 
-Available on **all plans**:
+- **[Squads](/user-guide/teams-and-squads)**: shared storage and uploads for a team
+- **[Discovery](/user-guide/nexium)**: a public profile and squad listings
+- **[Discord bot](/user-guide/discord-bot)** and linked roles for your server
 
-- Extracts text from image uploads automatically
-- Full-text searchable via the dashboard
-- Retrieve extracted text via the API
+## Run It Yourself
 
-## Plans
-
-| Feature | Spark | Glow | Flare | Blaze | Inferno | Ember |
-|---------|-------|------|-------|-------|---------|-------|
-| Storage | 10 GB | 25 GB | 50 GB | 100 GB | 250 GB | Unlimited |
-| Max Upload | 500 MB | 1 GB | 2 GB | 5 GB | 10 GB | Unlimited |
-| Custom Domains | 3 | 5 | 10 | Unlimited | Unlimited | Unlimited |
-| Price | Free | $4.99/mo | $8.99/mo | $14.99/mo | $24.99/mo | $49.99/mo |
-| Analytics | Basic | Yes | Advanced | Advanced | Advanced | Advanced |
-| Team Features | — | — | — | Yes | Yes | Yes |
-| OCR | Yes | Yes | Yes | Yes | Yes | Yes |
+Emberly is free to [self-host](/self-hosting) with Docker in a few minutes.

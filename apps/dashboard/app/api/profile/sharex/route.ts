@@ -2,8 +2,8 @@ import { appUrl } from '@/lib/config/env'
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/api-auth'
 
-
 import { prisma } from '@emberly/db'
+import { defaultUploadDomain } from '@/lib/domain/default'
 import { loggers } from '@/lib/logger'
 import { urlForHost } from '@/lib/utils'
 
@@ -50,8 +50,12 @@ export async function GET(req: Request) {
       )
     }
 
-    const preferredHost = dbUser.preferredUploadDomain
-      ? urlForHost(dbUser.preferredUploadDomain).replace(/\/+$/, '')
+    const defaultDomain = await defaultUploadDomain(
+      user.id,
+      dbUser.preferredUploadDomain
+    )
+    const preferredHost = defaultDomain
+      ? urlForHost(defaultDomain).replace(/\/+$/, '')
       : null
     const requestBaseUrl = preferredHost || normalizedBaseUrl
 
@@ -75,7 +79,8 @@ export async function GET(req: Request) {
     // If the request came from a verified custom domain owned by the user,
     // override the generated RequestURL so ShareX uses that domain.
     try {
-      const reqHost = (req.headers && (req.headers as Headers).get('host')) || null
+      const reqHost =
+        (req.headers && (req.headers as Headers).get('host')) || null
       if (reqHost) {
         const hostNoPort = reqHost.replace(/:\d+$/, '')
         if (hostNoPort) {
@@ -114,4 +119,3 @@ export async function GET(req: Request) {
     )
   }
 }
-

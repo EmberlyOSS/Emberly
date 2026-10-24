@@ -9,7 +9,7 @@ import { AdminOverviewContent } from './overview-client'
 import { AdminShell } from '@/components/admin/admin-shell'
 
 export const metadata = buildPageMetadata({
-  title: 'Admin Overview',
+  title: 'Admin',
   description: 'Administrative dashboard overview.',
 })
 
@@ -27,7 +27,7 @@ export default async function AdminPage() {
 
   return (
     <AdminShell
-      title="Admin Overview"
+      title="Overview"
       description="Platform administration and management."
     >
       <AdminOverviewContent
