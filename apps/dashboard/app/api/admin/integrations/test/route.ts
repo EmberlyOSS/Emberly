@@ -387,6 +387,7 @@ async function testOVHCloud(
       '',
       String(timestamp),
     ].join('+')
+    // OVH's API signature scheme is defined as SHA-1
     const signature = '$1$' + createHash('sha1').update(toSign).digest('hex')
     const res = await fetch(url, {
       headers: {
