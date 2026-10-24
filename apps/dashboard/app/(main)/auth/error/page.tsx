@@ -1,4 +1,5 @@
 import { DynamicBackground } from '@/components/layout/dynamic-background'
+import { BrandName } from '@/components/shared/brand'
 import { Icons } from '@/components/shared/icons'
 import { Button } from '@/components/ui/button'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
@@ -18,39 +19,48 @@ interface AuthErrorPageProps {
 const errorMessages: Record<string, { title: string; description: string }> = {
   default: {
     title: 'Authentication Failed',
-    description: 'An error occurred while processing your request. Please try again.',
+    description:
+      'An error occurred while processing your request. Please try again.',
   },
   Callback: {
     title: 'Callback Error',
-    description: 'There was an issue processing the authentication callback. Please try signing in again.',
+    description:
+      'There was an issue processing the authentication callback. Please try signing in again.',
   },
   OAuthSignin: {
     title: 'OAuth Sign-in Error',
-    description: 'There was an issue connecting to the OAuth provider. Please try again.',
+    description:
+      'There was an issue connecting to the OAuth provider. Please try again.',
   },
   OAuthCallback: {
     title: 'OAuth Callback Error',
-    description: 'There was an issue with the OAuth provider\'s response. Please try again.',
+    description:
+      "There was an issue with the OAuth provider's response. Please try again.",
   },
   OAuthCreateAccount: {
     title: 'Account Creation Error',
-    description: 'Could not create an account with the OAuth provider. Please try again.',
+    description:
+      'Could not create an account with the OAuth provider. Please try again.',
   },
   EmailCreateAccount: {
     title: 'Account Creation Error',
-    description: 'Could not create an account with your email. Please try again.',
+    description:
+      'Could not create an account with your email. Please try again.',
   },
   Signin: {
     title: 'Sign-in Error',
-    description: 'There was an issue signing you in. Please check your credentials and try again.',
+    description:
+      'There was an issue signing you in. Please check your credentials and try again.',
   },
   CredentialsSignin: {
     title: 'Invalid Credentials',
-    description: 'The email or password you entered is incorrect. Please try again.',
+    description:
+      'The email or password you entered is incorrect. Please try again.',
   },
   SessionCallback: {
     title: 'Session Error',
-    description: 'There was an issue creating your session. Please sign in again.',
+    description:
+      'There was an issue creating your session. Please sign in again.',
   },
   AccessDenied: {
     title: 'Access Denied',
@@ -58,15 +68,19 @@ const errorMessages: Record<string, { title: string; description: string }> = {
   },
   AccountSuspended: {
     title: 'Account Suspended',
-    description: 'Your account has been suspended. Contact support if you believe this is an error.',
+    description:
+      'Your account has been suspended. Contact support if you believe this is an error.',
   },
   Verification: {
     title: 'Verification Failed',
-    description: 'The verification link is invalid or has expired. Please try signing in again.',
+    description:
+      'The verification link is invalid or has expired. Please try signing in again.',
   },
 }
 
-export default async function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
+export default async function AuthErrorPage({
+  searchParams,
+}: AuthErrorPageProps) {
   const params = await searchParams
   const error = params.error || 'default'
   const errorInfo = errorMessages[error] || errorMessages.default
@@ -83,7 +97,7 @@ export default async function AuthErrorPage({ searchParams }: AuthErrorPageProps
               <div className="flex items-center justify-center space-x-3 px-6 py-4">
                 <Icons.logo className="h-8 w-8 text-primary" />
                 <span className="emberly-text text-2xl text-primary">
-                  Emberly
+                  <BrandName />
                 </span>
               </div>
             </div>
@@ -120,25 +134,20 @@ export default async function AuthErrorPage({ searchParams }: AuthErrorPageProps
                 {/* Actions */}
                 <div className="space-y-2 pt-4">
                   <Button asChild className="w-full h-11">
-                    <Link href="/auth/login">
-                      Try Signing In Again
-                    </Link>
+                    <Link href="/auth/login">Try Signing In Again</Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full h-11"
-                    asChild
-                  >
-                    <Link href="/">
-                      Return to Home
-                    </Link>
+                  <Button variant="outline" className="w-full h-11" asChild>
+                    <Link href="/">Return to Home</Link>
                   </Button>
                 </div>
 
                 {/* Help Text */}
                 <p className="text-xs text-muted-foreground pt-4">
                   If you continue to experience issues, please{' '}
-                  <Link href="/contact" className="text-primary hover:underline">
+                  <Link
+                    href="/contact"
+                    className="text-primary hover:underline"
+                  >
                     contact support
                   </Link>
                   .

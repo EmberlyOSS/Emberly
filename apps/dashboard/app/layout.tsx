@@ -4,6 +4,7 @@ import localFont from 'next/font/local'
 
 import { CustomHead } from '@/components/layout/custom-head'
 import { AuthProvider } from '@/components/providers/auth-provider'
+import { BrandingProvider } from '@/components/providers/branding-provider'
 import { FeaturesProvider } from '@/components/providers/features-provider'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { ThemeProviderWrapper } from '@/components/providers/theme-provider-wrapper'
@@ -18,6 +19,7 @@ import { ThemeProvider } from '@/components/theme/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { authOptions } from '@/lib/auth'
 import { getConfig } from '@/lib/config'
+import { getBranding } from '@/lib/branding'
 import { getFeatures } from '@/lib/features'
 import { prisma } from '@emberly/db'
 import { upgradeLegacyDefaultColors } from '@/lib/theme/presets'
@@ -48,9 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = config.settings.general.metaDescription || undefined
 
   return {
-    metadataBase: new URL(
-      appUrl()
-    ),
+    metadataBase: new URL(appUrl()),
     title: { default: siteName, template: `%s | ${siteName}` },
     description,
     icons: config.settings.appearance.favicon
@@ -78,7 +78,7 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const config = await getConfig()
-  const features = await getFeatures()
+  const [features, branding] = await Promise.all([getFeatures(), getBranding()])
   const customCSS = config.settings.advanced?.customCSS || ''
   const hasCustomFont =
     typeof customCSS === 'string' ? customCSS.includes('font-family') : false
@@ -149,11 +149,13 @@ export default async function RootLayout({
             <QueryProvider>
               <AuthProvider>
                 <FeaturesProvider features={features}>
-                  <SetupChecker>
-                    <ThemeEffectsWrapper>
-                      <div className="flex-1">{children}</div>
-                    </ThemeEffectsWrapper>
-                  </SetupChecker>
+                  <BrandingProvider branding={branding}>
+                    <SetupChecker>
+                      <ThemeEffectsWrapper>
+                        <div className="flex-1">{children}</div>
+                      </ThemeEffectsWrapper>
+                    </SetupChecker>
+                  </BrandingProvider>
                 </FeaturesProvider>
               </AuthProvider>
             </QueryProvider>

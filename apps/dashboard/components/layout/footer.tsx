@@ -8,6 +8,7 @@ import { SiDiscord } from 'react-icons/si'
 import { useFeatures } from '@/components/providers/features-provider'
 import { DISCORD_INVITE_URL } from '@/lib/constants/site'
 import StatusIndicator from '@/components/layout/StatusIndicator'
+import { BrandName, PoweredByEmberly } from '@/components/shared/brand'
 import { Icons } from '@/components/shared/icons'
 
 interface FooterLink {
@@ -70,12 +71,17 @@ export function Footer() {
             <div className="max-w-xs space-y-4">
               <Link href="/" className="flex items-center gap-2.5">
                 <Icons.logo className="h-6 w-6" />
-                <span className="emberly-text text-lg">Emberly</span>
+                <span className="emberly-text text-lg">
+                  <BrandName />
+                </span>
               </Link>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Open-source file sharing, short links and team collaboration.
-              </p>
-              <div className="flex gap-2">
+              {cloudEnabled && (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Self-hostable file sharing, short links and team
+                  collaboration.
+                </p>
+              )}
+              <div className={cloudEnabled ? 'flex gap-2' : 'hidden'}>
                 {SOCIALS.map(({ href, label, icon: Icon }) => (
                   <a
                     key={label}
@@ -126,10 +132,17 @@ export function Footer() {
 
           <div className="mt-8 flex flex-col gap-3 border-t border-border/60 pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <p>
-              &copy; {new Date().getFullYear()} NodeByte LTD. All rights
-              reserved.
+              &copy; {new Date().getFullYear()}{' '}
+              {cloudEnabled ? (
+                'NodeByte LTD. All rights reserved.'
+              ) : (
+                <BrandName />
+              )}
             </p>
-            <StatusIndicator />
+            <div className="flex items-center gap-4">
+              <PoweredByEmberly />
+              <StatusIndicator />
+            </div>
           </div>
         </div>
       </div>

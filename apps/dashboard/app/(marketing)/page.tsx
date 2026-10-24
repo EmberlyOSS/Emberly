@@ -170,12 +170,12 @@ const faqItems = (billingEnabled: boolean) => [
   {
     question: 'Can I self-host Emberly?',
     answer:
-      'Absolutely! Emberly is open source. Check our GitHub for deployment guides.',
+      'Absolutely! Emberly is self-hostable. Check our docs for deployment guides.',
   },
 ]
 
 export default async function HomePage() {
-  const setupComplete = await checkSetupCompletion()
+  const setupComplete = await checkSetupCompletion().catch(() => true)
 
   if (!setupComplete) {
     redirect('/setup')
@@ -196,8 +196,7 @@ export default async function HomePage() {
     include: { user: { select: { id: true, name: true, urlId: true } } },
   })
 
-  const BASE_URL =
-    appUrl()
+  const BASE_URL = appUrl()
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -208,7 +207,7 @@ export default async function HomePage() {
         url: BASE_URL,
         name: 'Emberly',
         description:
-          'Open-source file sharing, URL shortening, and talent discovery platform.',
+          'Self-hostable file sharing, URL shortening, and talent discovery platform.',
         potentialAction: {
           '@type': 'SearchAction',
           target: {
@@ -258,7 +257,7 @@ export default async function HomePage() {
           'Team / squad collaboration',
           'Talent discovery profiles',
           'S3-compatible storage buckets',
-          'Open source and self-hostable',
+          'Source available and self-hostable',
         ],
       },
     ],
@@ -278,7 +277,7 @@ export default async function HomePage() {
             <div className="space-y-6">
               <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30">
                 <Sparkles className="h-3 w-3 mr-1" />
-                Open Source Platform
+                Self-Hostable Platform
               </Badge>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
@@ -287,7 +286,7 @@ export default async function HomePage() {
               </h1>
 
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-                The open-source platform for secure file sharing and team
+                The self-hostable platform for secure file sharing and team
                 collaboration. Upload, manage, and share content with custom
                 domains, rich embeds, and built-in talent discovery.
               </p>

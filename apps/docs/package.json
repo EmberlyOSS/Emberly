@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",
-    "start": "next start --port 3001",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
     "postinstall": "fumadocs-mdx"
   },
@@ -32,5 +32,6 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.6.3",
     "unified": "^11.0.5"
-  }
+  },
+  "license": "Elastic-2.0"
 }

@@ -370,7 +370,7 @@ export default function MediaKitPage() {
                   <h3 className="font-medium mb-3">How to describe Emberly</h3>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li>• Developer-first file sharing platform</li>
-                    <li>• Privacy-focused and open source</li>
+                    <li>• Privacy-focused and self-hostable</li>
                     <li>• Self-hostable with modern architecture</li>
                     <li>• Simple, fast, and reliable</li>
                   </ul>

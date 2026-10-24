@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "node",
+  "packages": {
+    "node": "22",
+    "bun": "1.3.14"
+  },
+  "deploy": {
+    "startCommand": "bun run db:deploy && bun run start",
+    "variables": {
+      "NODE_ENV": "production"
+    }
+  }
+}

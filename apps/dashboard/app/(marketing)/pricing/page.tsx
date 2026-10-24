@@ -9,12 +9,9 @@ import CustomPricingCTA from '@/components/pricing/CustomPricingCTA'
 import PricingHero from '@/components/pricing/PricingHero'
 import HomeShell from '@/components/layout/home-shell'
 import PricingTabs from '@/components/pricing/PricingTabs'
-import {
-  getAddOnPricing,
-  getPlanPricing,
-} from '@/lib/products/pricing'
+import { getAddOnPricing, getPlanPricing } from '@/lib/products/pricing'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
-import { isBillingEnabled } from '@/lib/features'
+import { getFeatures, isBillingEnabled } from '@/lib/features'
 
 export const dynamic = 'force-dynamic'
 
@@ -201,14 +198,27 @@ export default async function PricingPage() {
         availableRegions: tierRegions[slug] ?? [],
       }
     })
-    .filter(
-      Boolean
-    ) as import('@/components/pricing/S3Section').StorageTier[]
+    .filter(Boolean) as import('@/components/pricing/S3Section').StorageTier[]
 
   return (
     <HomeShell>
       <div className="container space-y-8">
         <PricingHero />
+
+        {(await getFeatures()).licenseVendor && (
+          <p className="text-center text-sm text-muted-foreground">
+            Running Emberly on your own server?{' '}
+            <a
+              href={
+                process.env.EMBERLY_LICENSING_URL ||
+                'https://licenses.embrly.ca'
+              }
+              className="text-primary hover:underline"
+            >
+              See self-hosting licenses
+            </a>
+          </p>
+        )}
 
         <PricingTabs
           plans={plans}

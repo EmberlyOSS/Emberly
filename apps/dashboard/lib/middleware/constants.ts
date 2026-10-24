@@ -44,6 +44,7 @@ export const CLOUD_ONLY_PAGE_PATHS = [
 // /api/internal/domain-lookup is intentionally excluded — it's infra
 // plumbing proxy.ts itself relies on for custom-domain host rewriting.
 export const CLOUD_ONLY_API_PATHS = [
+  '/api/admin/stripe',
   '/api/payments',
   '/api/products',
   '/api/profile/billing-history',

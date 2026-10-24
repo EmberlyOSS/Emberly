@@ -4,16 +4,20 @@ import { resolve } from 'node:path'
 
 const root = resolve(__dirname, '../..')
 loadEnvConfig(root)
+process.env.DATA_DIR ||= root
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  output: 'standalone',
+  output: process.env.BUILD_STANDALONE ? 'standalone' : undefined,
   outputFileTracingRoot: root,
   transpilePackages: ['@emberly/db'],
   skipTrailingSlashRedirect: true,
   serverExternalPackages: ['tesseract.js'],
   outputFileTracingIncludes: {
-    '/api/**/*': ['../../node_modules/**/*.wasm', '../../node_modules/**/*.proto'],
+    '/api/**/*': [
+      '../../node_modules/**/*.wasm',
+      '../../node_modules/**/*.proto',
+    ],
   },
   images: {
     unoptimized: true,

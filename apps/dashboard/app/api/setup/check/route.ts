@@ -27,14 +27,9 @@ export async function GET() {
     )
   } catch (error) {
     logger.error('Setup check error:', error as Error)
-    // Don't cache errors
     return NextResponse.json(
-      { completed: false },
-      {
-        headers: {
-          'Cache-Control': 'no-store',
-        },
-      }
+      { error: 'Could not reach the database' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } }
     )
   }
 }

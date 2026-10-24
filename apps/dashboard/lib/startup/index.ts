@@ -1,4 +1,5 @@
 import { initializeEventSystem } from '@/lib/events/init'
+import { startLicenseCheckIns } from '@/lib/license/check-in'
 import { loggers } from '@/lib/logger'
 
 const logger = loggers.startup
@@ -16,6 +17,7 @@ export async function runStartupTasks() {
     logger.info('Running startup tasks...')
 
     await initializeEventSystem()
+    await startLicenseCheckIns()
 
     startupComplete = true
     const duration = Date.now() - startTime

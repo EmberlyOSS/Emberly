@@ -1,12 +1,14 @@
 import { ResendVerificationForm } from '@/components/auth/resend-verification-form'
 import { DynamicBackground } from '@/components/layout/dynamic-background'
+import { BrandName } from '@/components/shared/brand'
 import { Icons } from '@/components/shared/icons'
 
 import { buildPageMetadata } from '@/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
   title: 'Resend Verification Email',
-  description: 'Request a new email verification code for your Emberly account.',
+  description:
+    'Request a new email verification code for your Emberly account.',
 })
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +26,7 @@ export default function ResendVerificationPage() {
               <div className="flex items-center justify-center space-x-3 px-6 py-4">
                 <Icons.logo className="h-8 w-8 text-primary" />
                 <span className="emberly-text text-2xl text-primary">
-                  Emberly
+                  <BrandName />
                 </span>
               </div>
             </div>

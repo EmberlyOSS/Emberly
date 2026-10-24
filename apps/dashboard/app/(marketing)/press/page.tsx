@@ -70,7 +70,7 @@ const PRESS_RESOURCES = [
 
 const QUICK_FACTS = [
   { label: 'Founded', value: '2022' },
-  { label: 'Type', value: 'Open Source' },
+  { label: 'Type', value: 'Source Available' },
   { label: 'License', value: 'GPL 3.0' },
   { label: 'Team', value: 'Remote first' },
 ]
@@ -230,7 +230,7 @@ export default function PressPage() {
               <h2 className="text-2xl font-bold">About Emberly</h2>
               <div className="mt-4 space-y-4 text-muted-foreground leading-relaxed">
                 <p>
-                  Emberly is an open-source file sharing platform designed for
+                  Emberly is a self-hostable file sharing platform designed for
                   developers, teams, and communities who value privacy and
                   simplicity. Built with modern web technologies, it offers a
                   self hostable alternative to traditional cloud storage
@@ -239,9 +239,9 @@ export default function PressPage() {
                 <p>
                   Key features include password-protected files, custom domains,
                   rich embeds, chunked uploads for large files, and a clean,
-                  intuitive dashboard for content management. The platform is
-                  fully open source under the GPL 3.0 license, allowing anyone
-                  to audit, modify, and self host their own instance.
+                  intuitive dashboard for content management. Its source code is
+                  public under the Elastic License 2.0, so anyone can audit it,
+                  modify it and self host their own instance.
                 </p>
                 <p>
                   Founded in 2022, Emberly is maintained by a remote first team
@@ -252,7 +252,7 @@ export default function PressPage() {
               <div className="mt-6 flex flex-wrap gap-2">
                 <Badge variant="secondary" className="bg-background/50">
                   <Sparkles className="h-3 w-3 mr-1" />
-                  Open Source
+                  Source Available
                 </Badge>
                 <Badge variant="secondary" className="bg-background/50">
                   <Shield className="h-3 w-3 mr-1" />

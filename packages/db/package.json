@@ -8,12 +8,12 @@
     "./client": "./src/client.ts"
   },
   "scripts": {
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate --no-hints",
     "migrate": "prisma migrate dev",
     "deploy": "prisma migrate deploy",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --no-hints"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
@@ -25,5 +25,6 @@
     "dotenv": "^17.2.3",
     "prisma": "^7.3.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "license": "Elastic-2.0"
 }

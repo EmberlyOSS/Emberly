@@ -1,3 +1,4 @@
+import { getBranding } from '@/lib/branding'
 import { appUrl } from '@/lib/config/env'
 import type { Metadata } from 'next'
 
@@ -50,6 +51,7 @@ export async function buildRichMetadata({
   uploadedAt,
   uploaderName,
 }: BuildMetadataOptions): Promise<Metadata> {
+  const { embedName: brand } = await getBranding()
   const classification = classifyMimeType(mimeType)
   const fileUrl = new URL(fileUrlPath, baseUrl).toString()
   const ogImageUrl = new URL(
@@ -152,7 +154,7 @@ export async function buildRichMetadata({
     openGraphImages = [
       {
         url: ogImageUrl,
-        alt: `${fileName} — shared via Emberly`,
+        alt: `${fileName} — shared via ${brand}`,
         width: 1200,
         height: 630,
       },
@@ -168,7 +170,7 @@ export async function buildRichMetadata({
       title,
       description,
       url: fileUrl,
-      siteName: 'Emberly',
+      siteName: brand,
       locale: 'en_US',
       type: ogType as any,
       images: openGraphImages,
@@ -200,11 +202,11 @@ export async function buildRichMetadata({
  */
 export function buildMinimalMetadata(
   fileName: string,
-  _rawUrl?: string
+  brand = 'Emberly'
 ): Metadata {
   return {
     title: fileName,
-    description: 'Shared via Emberly',
+    description: `Shared via ${brand}`,
     robots: {
       index: false,
       follow: false,
@@ -228,15 +230,16 @@ export function buildDirectMediaMetadata(options: {
   fileName: string
   rawUrl: string
   mimeType: string
+  brand?: string
 }): Metadata {
-  const { fileName, rawUrl, mimeType } = options
+  const { fileName, rawUrl, mimeType, brand = 'Emberly' } = options
   const normalizedMime = mimeType.toLowerCase().split(';')[0].trim()
   const isImage = normalizedMime.startsWith('image/')
   const isVideo = normalizedMime.startsWith('video/')
   const isAudio = normalizedMime.startsWith('audio/')
 
   if (!isImage && !isVideo && !isAudio) {
-    return buildMinimalMetadata(fileName)
+    return buildMinimalMetadata(fileName, brand)
   }
 
   const other: Record<string, string> = {}
@@ -251,10 +254,10 @@ export function buildDirectMediaMetadata(options: {
 
   return {
     title: fileName,
-    description: 'Shared via Emberly',
+    description: `Shared via ${brand}`,
     openGraph: {
       title: fileName,
-      description: 'Shared via Emberly',
+      description: `Shared via ${brand}`,
       type: isVideo ? ('video.other' as any) : 'website',
       images: isImage
         ? [
@@ -288,13 +291,13 @@ export function buildDirectMediaMetadata(options: {
       ? {
           card: 'summary_large_image',
           title: fileName,
-          description: 'Shared via Emberly',
+          description: `Shared via ${brand}`,
           images: [rawUrl],
         }
       : {
           card: 'summary',
           title: fileName,
-          description: 'Shared via Emberly',
+          description: `Shared via ${brand}`,
         },
     other,
   }
@@ -400,7 +403,7 @@ export async function buildSiteMetadata(overrides?: {
 const SITE_TAGLINE = 'Share Files. Build Together.'
 
 const SITE_DESCRIPTION =
-  'Emberly is an open-source platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly — with custom domains, expiring links, password protection, and squad (team) collaboration.'
+  'Emberly is a self-hostable platform for file sharing, URL shortening, and talent discovery. Fast, private, and developer-friendly — with custom domains, expiring links, password protection, and squad (team) collaboration.'
 
 const SITE_KEYWORDS = [
   // Core product
@@ -419,7 +422,7 @@ const SITE_KEYWORDS = [
   'team file sharing',
   'nexium',
   // Tech descriptors
-  'open source',
+  'self-hosted',
   'self hosted',
   'privacy focused',
   'developer tools',

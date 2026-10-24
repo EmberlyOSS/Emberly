@@ -16,15 +16,14 @@
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",
-    "@types/express": "^5.0.6",
     "discord.js": "^14.25.1",
-    "dotenv": "^16.0.3",
-    "express": "^5.2.1"
+    "dotenv": "^16.0.3"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
     "prisma": "^5.8.0",
     "@types/node": "^25.2.2"
   },
-  "private": true
+  "private": true,
+  "license": "Elastic-2.0"
 }

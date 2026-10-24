@@ -19,7 +19,8 @@ function generateUrlId() {
 
 const setupSchema = z.object({
   admin: z.object({
-    name: z.string()
+    name: z
+      .string()
       .min(2, 'Username must be at least 2 characters')
       .max(50, 'Username must be at most 50 characters')
       .trim()
@@ -27,14 +28,8 @@ const setupSchema = z.object({
         (name) => !name.includes('@'),
         'Username cannot contain @ symbol (looks like an email)'
       )
-      .refine(
-        (name) => !name.includes(' '),
-        'Username cannot contain spaces'
-      )
-      .refine(
-        (name) => name.length >= 2,
-        'Username cannot be only whitespace'
-      ),
+      .refine((name) => !name.includes(' '), 'Username cannot contain spaces')
+      .refine((name) => name.length >= 2, 'Username cannot be only whitespace'),
     email: z.string().email(),
     password: z.string().min(8),
   }),
@@ -137,6 +132,7 @@ export async function POST(req: Request) {
           enableAnimations: true,
           enableBackgroundEffect: false,
           favicon: null,
+          logo: null,
           customColors: {} as Record<string, string>,
           systemThemes: {},
         },
@@ -169,4 +165,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

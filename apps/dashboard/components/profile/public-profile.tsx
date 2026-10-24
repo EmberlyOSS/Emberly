@@ -5,12 +5,7 @@ import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -411,9 +406,9 @@ export function PublicProfile({
             <div className="flex flex-col sm:flex-row gap-5 items-start">
               {/* Avatar */}
               <div className="relative shrink-0">
-                {user.image ? (
-                  <div className="rounded-2xl border-4 border-background shadow-xl overflow-hidden w-28 h-28 md:w-36 md:h-36">
-                    <div className="relative w-full h-full">
+                {user.image && user.avatarDecoration ? (
+                  <div className="relative w-28 h-28 md:w-36 md:h-36">
+                    <div className="absolute inset-[8.33%] overflow-hidden rounded-full border-4 border-background bg-background shadow-xl">
                       <Image
                         src={user.image}
                         alt={displayName}
@@ -421,15 +416,23 @@ export function PublicProfile({
                         className="object-cover"
                         priority
                       />
-                      {user.avatarDecoration && (
-                        <Image
-                          src={user.avatarDecoration}
-                          alt=""
-                          fill
-                          className="object-cover pointer-events-none"
-                        />
-                      )}
                     </div>
+                    <Image
+                      src={user.avatarDecoration}
+                      alt=""
+                      fill
+                      className="pointer-events-none object-contain"
+                    />
+                  </div>
+                ) : user.image ? (
+                  <div className="relative rounded-2xl border-4 border-background shadow-xl overflow-hidden w-28 h-28 md:w-36 md:h-36">
+                    <Image
+                      src={user.image}
+                      alt={displayName}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
                   </div>
                 ) : (
                   <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 flex items-center justify-center border-4 border-background shadow-xl">

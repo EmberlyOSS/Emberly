@@ -19,11 +19,7 @@ import {
   Zap,
 } from 'lucide-react'
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import HomeShell from '@/components/layout/home-shell'
@@ -60,9 +56,9 @@ const CORE_VALUES = [
   },
   {
     icon: Code2,
-    title: 'Open Source',
+    title: 'Source Available',
     description:
-      'Fully transparent codebase. Audit it, fork it, contribute to it.',
+      'Fully transparent codebase. Audit it, self-host it, contribute to it.',
     color: 'text-primary',
     bg: 'bg-primary/10',
   },
@@ -197,7 +193,7 @@ import { buildPageMetadata } from '@/lib/embeds/metadata'
 export const metadata = buildPageMetadata({
   title: 'About Us',
   description:
-    'Emberly is an open source platform for file sharing, URL shortening, and talent discovery. Privacy-first, developer-friendly, and built for teams.',
+    'Emberly is a self-hostable platform for file sharing, URL shortening, and talent discovery. Privacy-first, developer-friendly, and built for teams.',
 })
 
 export default async function AboutPage() {
@@ -214,7 +210,7 @@ export default async function AboutPage() {
               <div>
                 <Badge className="mb-4 bg-primary/20 text-primary border-primary/30 hover:bg-primary/30">
                   <Sparkles className="h-3 w-3 mr-1" />
-                  Open Source
+                  Self-Hostable
                 </Badge>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
                   More than hosting,
@@ -226,8 +222,8 @@ export default async function AboutPage() {
                   Emberly started as a privacy-first file sharing tool for
                   developers and has grown into a full platform: file hosting,
                   URL shortening, and Nexium our built in talent discovery and
-                  squad collaboration network. Self-hostable, open source, and
-                  built for teams.
+                  squad collaboration network. Self-hostable, source available
+                  and built for teams.
                 </p>
 
                 <div className="mt-8 flex flex-wrap gap-3">

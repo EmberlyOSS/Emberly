@@ -158,6 +158,7 @@ export const configSchema = z
             enableAnimations: z.boolean().optional().default(false),
             enableBackgroundEffect: z.boolean().optional().default(false),
             favicon: z.string().nullable().optional().default(null),
+            logo: z.string().nullable().optional().default(null),
             customColors: z.record(z.string()).optional().default({}),
             systemThemes: z.record(z.any()).optional().default({}),
           })
@@ -324,6 +325,7 @@ export const DEFAULT_CONFIG: EmberlyConfig = {
       enableAnimations: false,
       enableBackgroundEffect: false,
       favicon: null,
+      logo: null,
       customColors: {
         background: '20 14% 4%',
         foreground: '30 20% 96%',
@@ -673,4 +675,3 @@ export async function getIntegrations() {
   const config = await getConfig()
   return config.settings.integrations ?? DEFAULT_CONFIG.settings.integrations!
 }
-

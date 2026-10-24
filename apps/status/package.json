@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack --port 3002",
     "build": "next build",
-    "start": "next start --port 3002",
-    "postinstall": "prisma generate",
+    "start": "next start",
+    "postinstall": "prisma generate --no-hints",
     "lint": "biome lint ./src",
     "lint:fix": "biome lint --write ./src",
     "biome:check": "biome check ./src",
@@ -14,7 +14,7 @@
     "cron:monitors": "bun scripts/run-monitors.mjs",
     "seed:emberly": "bun scripts/seed-emberly.ts",
     "typecheck": "tsc --noEmit",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate --no-hints",
     "db:deploy": "prisma migrate deploy",
     "db:migrate": "prisma migrate dev"
   },
@@ -86,5 +86,6 @@
     "prettier": "^3.8.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
-  }
+  },
+  "license": "Elastic-2.0"
 }

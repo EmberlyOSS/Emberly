@@ -16,5 +16,6 @@
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
     "tailwindcss-animate": "^1.0.7"
-  }
+  },
+  "license": "Elastic-2.0"
 }

@@ -37,12 +37,9 @@ import {
 
 import { useFeatures } from '@/components/providers/features-provider'
 import { DISCORD_INVITE_URL } from '@/lib/constants/site'
+import { BrandName } from '@/components/shared/brand'
 import { Icons } from '@/components/shared/icons'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -314,7 +311,9 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
         className="flex items-center space-x-2.5 group shrink-0"
       >
         <Icons.logo className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
-        <span className="emberly-text text-lg font-medium">Emberly</span>
+        <span className="emberly-text text-lg font-medium">
+          <BrandName />
+        </span>
       </Link>
 
       {/* Desktop nav — centered dropdown pill */}

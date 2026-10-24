@@ -1,18 +1,18 @@
-import './global.css';
-import { RootProvider } from 'fumadocs-ui/provider';
-import { Inter } from 'next/font/google';
-import type { ReactNode } from 'react';
-import type { Metadata, Viewport } from 'next';
+import './global.css'
+import { RootProvider } from 'fumadocs-ui/provider'
+import { Inter } from 'next/font/google'
+import type { ReactNode } from 'react'
+import type { Metadata, Viewport } from 'next'
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
-});
+})
 
 export const viewport: Viewport = {
   themeColor: '#F97316',
-};
+}
 
 export const metadata: Metadata = {
   title: {
@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     default: 'Emberly Documentation',
   },
   description:
-    'Official documentation for Emberly, the fast, secure and open-source file sharing platform.',
+    'Official documentation for Emberly, the fast, secure and self-hostable file sharing platform.',
   metadataBase: new URL('https://docs.embrly.ca'),
   openGraph: {
     siteName: 'Emberly Docs',
     type: 'website',
   },
-};
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -47,6 +47,5 @@ export default function Layout({ children }: { children: ReactNode }) {
         </RootProvider>
       </body>
     </html>
-  );
+  )
 }
-

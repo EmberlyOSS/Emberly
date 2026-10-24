@@ -2,6 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 
+import { PoweredByEmberly } from '@/components/shared/brand'
+
 import { Footer } from './footer'
 
 interface FooterWrapperProps {
@@ -35,7 +37,14 @@ export default function FooterWrapper({
 
   const shouldHide = looksLikeFileView || patternExcluded
 
-  if (!showFooter || shouldHide) return null
+  if (shouldHide) return null
+  if (!showFooter) {
+    return (
+      <div className="flex justify-center py-4">
+        <PoweredByEmberly />
+      </div>
+    )
+  }
 
   return <Footer />
 }

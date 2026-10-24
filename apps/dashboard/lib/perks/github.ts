@@ -3,11 +3,20 @@
  */
 
 import { loggers } from '@/lib/logger'
-import { recalculateContributorLevel, addPerkRole, removePerkRole } from './index'
+import {
+  recalculateContributorLevel,
+  addPerkRole,
+  removePerkRole,
+} from './index'
 import { PERK_ROLES } from './constants'
 import { events } from '@/lib/events'
 import { prisma } from '@emberly/db'
-import { getGitHubUser, getOrgRepos, getRepoCommits, getCommitDetail } from '@/lib/github'
+import {
+  getGitHubUser,
+  getOrgRepos,
+  getRepoCommits,
+  getCommitDetail,
+} from '@/lib/github'
 
 const logger = loggers.api
 
@@ -28,23 +37,36 @@ export async function getContributorLinesOfCode(
     for (const repo of repos) {
       try {
         // Get all commits by the user in this repo
-        const commits = await getRepoCommits('EmberlyOSS', repo.name, githubUsername, 100)
+        const commits = await getRepoCommits(
+          'EmberlyOSS',
+          repo.name,
+          githubUsername,
+          100
+        )
 
         for (const commit of commits) {
           try {
             // Get commit details to count line changes
-            const commitDetail = await getCommitDetail('EmberlyOSS', repo.name, commit.sha)
+            const commitDetail = await getCommitDetail(
+              'EmberlyOSS',
+              repo.name,
+              commit.sha
+            )
 
             // Count additions (line additions are more valuable than just commits)
             totalLines += commitDetail?.stats?.additions || 0
           } catch (error) {
-            logger.debug(`Failed to get commit details for ${commit.sha}`, { error: error instanceof Error ? error.message : String(error) })
+            logger.debug(`Failed to get commit details for ${commit.sha}`, {
+              error: error instanceof Error ? error.message : String(error),
+            })
             continue
           }
         }
       } catch (error) {
         // Repo might be private or other access issues, continue with next
-        logger.debug(`Failed to get commits for ${repo.name}`, { error: error instanceof Error ? error.message : String(error) })
+        logger.debug(`Failed to get commits for ${repo.name}`, {
+          error: error instanceof Error ? error.message : String(error),
+        })
         continue
       }
     }
@@ -70,11 +92,14 @@ export async function verifyContributorStatus(
   try {
     // Import here to avoid circular dependency
     const { hasEarnedOneTimePerk } = await import('./index')
-    
+
     // Check if user already earned contributor perk once
     const alreadyEarned = await hasEarnedOneTimePerk(userId, 'CONTRIBUTOR')
-    
-    const linesOfCode = await getContributorLinesOfCode(githubUsername, personalAccessToken)
+
+    const linesOfCode = await getContributorLinesOfCode(
+      githubUsername,
+      personalAccessToken
+    )
 
     if (linesOfCode >= 1000) {
       // User qualifies as contributor
@@ -82,20 +107,21 @@ export async function verifyContributorStatus(
         // First time earning - award the perk
         await recalculateContributorLevel(userId, linesOfCode)
         logger.info('Contributor perk awarded to user', { userId, linesOfCode })
-        
+
         // Get user email for event emission
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: { email: true },
         })
-        
+
         if (user?.email) {
           // Emit perk-gained event
           await events.emit('user.perk-gained', {
             userId,
             email: user.email,
             perkName: 'GitHub Contributor',
-            perkDescription: 'Unlock exclusive perks for contributing to the Emberly open source project',
+            perkDescription:
+              'Unlock exclusive perks for contributing to the Emberly project',
             perkIcon: '⭐',
             expiresAt: undefined, // Contributor perk doesn't expire
           })
@@ -103,7 +129,10 @@ export async function verifyContributorStatus(
       } else {
         // Already earned before - just update level if it increased
         await recalculateContributorLevel(userId, linesOfCode)
-        logger.info('Contributor level updated for user', { userId, linesOfCode })
+        logger.info('Contributor level updated for user', {
+          userId,
+          linesOfCode,
+        })
       }
       return true
     } else {
@@ -114,7 +143,10 @@ export async function verifyContributorStatus(
       }
       // Already earned once, but levels dropped below threshold
       // Don't remove the perk - it's permanent once earned
-      logger.warn('User contributor LOC dropped below threshold but perk retained', { userId, linesOfCode })
+      logger.warn(
+        'User contributor LOC dropped below threshold but perk retained',
+        { userId, linesOfCode }
+      )
       return false
     }
   } catch (error) {
@@ -151,7 +183,12 @@ export async function getGitHubUserInfo(
   name?: string
 } | null> {
   try {
-    let user: { id: number; login: string; avatar_url: string; name: string | null } | null
+    let user: {
+      id: number
+      login: string
+      avatar_url: string
+      name: string | null
+    } | null
 
     if (githubUsername) {
       user = await getGitHubUser(githubUsername)
@@ -164,7 +201,10 @@ export async function getGitHubUserInfo(
         },
       })
       if (!res.ok) {
-        logger.error('Failed to get GitHub user info via token', new Error(`HTTP ${res.status}`))
+        logger.error(
+          'Failed to get GitHub user info via token',
+          new Error(`HTTP ${res.status}`)
+        )
         return null
       }
       user = await res.json()

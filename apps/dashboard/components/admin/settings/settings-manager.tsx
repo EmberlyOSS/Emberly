@@ -28,6 +28,7 @@ import {
   Globe,
   HardDrive,
   Heart,
+  KeyRound,
   Image,
   InfoIcon,
   Key,
@@ -80,6 +81,8 @@ import type { EmberlyConfig } from '@/lib/config'
 import type { BackgroundEffect, AnimationSpeed } from '@/lib/theme/theme-types'
 
 import { LinodePoolManager } from '@/components/admin/settings/linode-pool-manager'
+import { LicensePanel } from '@/components/admin/settings/license-panel'
+import { StripeSetupPanel } from '@/components/admin/settings/stripe-setup-panel'
 import { OVHCloudPoolManager } from '@/components/admin/settings/ovhcloud-pool-manager'
 import { StorageBucketManager } from '@/components/admin/settings/storage-bucket-manager'
 import { UserBucketAssignment } from '@/components/admin/settings/user-bucket-assignment'
@@ -509,7 +512,7 @@ export function SettingsManager() {
   const { toast } = useToast()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === 'SUPERADMIN'
-  const { cloud: cloudEnabled } = useFeatures()
+  const { cloud: cloudEnabled, storageFromEnv, whiteLabel } = useFeatures()
 
   const [savedConfig, setSavedConfig] = useState<EmberlyConfig | null>(null)
   const [workingConfig, setWorkingConfig] = useState<EmberlyConfig | null>(null)
@@ -1338,6 +1341,14 @@ export function SettingsManager() {
             </SettingsSection>
           )}
 
+          <SettingsSection
+            icon={KeyRound}
+            title="License & branding"
+            description="Your license key and instance logo"
+          >
+            <LicensePanel />
+          </SettingsSection>
+
           {/* Credits */}
           <SettingsSection
             icon={Heart}
@@ -1345,8 +1356,12 @@ export function SettingsManager() {
             description="Manage footer credits visibility"
           >
             <SettingRow
-              label="Show Credits Footer"
-              description="Display Emberly credits in the footer"
+              label="Show footer"
+              description={
+                whiteLabel
+                  ? 'Show the site footer'
+                  : 'Hiding the footer still leaves a small "Powered by Emberly" credit. A white-label license removes it.'
+              }
               changed={isFieldChanged('general', ['credits', 'showFooter'])}
             >
               <Switch
@@ -1367,7 +1382,8 @@ export function SettingsManager() {
               <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400">
                 <Heart className="h-4 w-4" />
                 <AlertDescription>
-                  If you disable credits, please consider{' '}
+                  {whiteLabel ? 'Thanks for supporting Emberly! ' : ''}If you
+                  hide the footer, please consider{' '}
                   <a
                     href="https://github.com/sponsors/EmberlyOSS"
                     target="_blank"
@@ -1517,255 +1533,278 @@ export function SettingsManager() {
               />
             </SettingRow>
 
-            <div className="space-y-2 pl-0.5">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Storage Provider</Label>
-                {isFieldChanged('general', ['storage', 'provider']) && (
-                  <ChangeIndicator />
-                )}
-              </div>
-              <Select
-                value={workingConfig.settings.general.storage.provider}
-                onValueChange={(value) =>
-                  handleSettingChange('general', {
-                    storage: {
-                      ...workingConfig.settings.general.storage,
-                      provider: value as 'local' | 's3',
-                    },
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={cn(
-                    'max-w-xs',
-                    getFieldClasses('general', ['storage', 'provider'])
-                  )}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="local">
-                    <div className="flex items-center gap-2">
-                      <HardDrive className="h-4 w-4" />
-                      Local Storage
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="s3">
-                    <div className="flex items-center gap-2">
-                      <Cloud className="h-4 w-4" />
-                      S3 Storage
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {workingConfig.settings.general.storage.provider === 's3' && (
-              <GlassCard className="mt-4" gradient={false}>
-                <div className="p-4 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Cloud className="h-4 w-4" />
-                    S3 Configuration
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label className="text-sm">Bucket Name</Label>
-                      <Input
-                        value={workingConfig.settings.general.storage.s3.bucket}
-                        onChange={(e) =>
-                          handleSettingChange('general', {
-                            storage: {
-                              ...workingConfig.settings.general.storage,
-                              s3: {
-                                ...workingConfig.settings.general.storage.s3,
-                                bucket: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                        placeholder="my-bucket"
-                        className={getFieldClasses('general', [
-                          'storage',
-                          's3',
-                          'bucket',
-                        ])}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Region</Label>
-                      <Input
-                        value={workingConfig.settings.general.storage.s3.region}
-                        onChange={(e) =>
-                          handleSettingChange('general', {
-                            storage: {
-                              ...workingConfig.settings.general.storage,
-                              s3: {
-                                ...workingConfig.settings.general.storage.s3,
-                                region: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                        placeholder="us-east-1"
-                        className={getFieldClasses('general', [
-                          'storage',
-                          's3',
-                          'region',
-                        ])}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Access Key ID</Label>
-                      <Input
-                        type="password"
-                        value={
-                          workingConfig.settings.general.storage.s3.accessKeyId
-                        }
-                        onChange={(e) =>
-                          handleSettingChange('general', {
-                            storage: {
-                              ...workingConfig.settings.general.storage,
-                              s3: {
-                                ...workingConfig.settings.general.storage.s3,
-                                accessKeyId: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                        placeholder="AKIAXXXXXXXXXXXXXXXX"
-                        className={getFieldClasses('general', [
-                          'storage',
-                          's3',
-                          'accessKeyId',
-                        ])}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Secret Access Key</Label>
-                      <Input
-                        type="password"
-                        value={
-                          workingConfig.settings.general.storage.s3
-                            .secretAccessKey
-                        }
-                        onChange={(e) =>
-                          handleSettingChange('general', {
-                            storage: {
-                              ...workingConfig.settings.general.storage,
-                              s3: {
-                                ...workingConfig.settings.general.storage.s3,
-                                secretAccessKey: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                        placeholder="••••••••••••••••••••"
-                        className={getFieldClasses('general', [
-                          'storage',
-                          's3',
-                          'secretAccessKey',
-                        ])}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm">
-                      Custom Endpoint (Optional)
+            {storageFromEnv ? (
+              <p className="rounded-lg border border-border/70 bg-secondary/30 p-3 text-sm text-muted-foreground">
+                Storage is set by the <code>STORAGE_PROVIDER</code> and{' '}
+                <code>S3_*</code> environment variables on this server. Change
+                them there and restart to switch storage.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2 pl-0.5">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium">
+                      Storage Provider
                     </Label>
-                    <Input
-                      value={
-                        workingConfig.settings.general.storage.s3.endpoint || ''
-                      }
-                      onChange={(e) =>
-                        handleSettingChange('general', {
-                          storage: {
-                            ...workingConfig.settings.general.storage,
-                            s3: {
-                              ...workingConfig.settings.general.storage.s3,
-                              endpoint: e.target.value,
-                            },
-                          },
-                        })
-                      }
-                      placeholder="https://s3.custom-domain.com"
-                      className={getFieldClasses('general', [
-                        'storage',
-                        's3',
-                        'endpoint',
-                      ])}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      For S3-compatible services like MinIO or DigitalOcean
-                      Spaces
-                    </p>
+                    {isFieldChanged('general', ['storage', 'provider']) && (
+                      <ChangeIndicator />
+                    )}
                   </div>
-
-                  <SettingRow
-                    label="Force Path Style"
-                    description="Enable for S3-compatible services requiring path-style URLs"
-                    changed={isFieldChanged('general', [
-                      'storage',
-                      's3',
-                      'forcePathStyle',
-                    ])}
+                  <Select
+                    value={workingConfig.settings.general.storage.provider}
+                    onValueChange={(value) =>
+                      handleSettingChange('general', {
+                        storage: {
+                          ...workingConfig.settings.general.storage,
+                          provider: value as 'local' | 's3',
+                        },
+                      })
+                    }
                   >
-                    <Switch
-                      checked={
-                        workingConfig.settings.general.storage.s3.forcePathStyle
-                      }
-                      onCheckedChange={(checked) =>
-                        handleSettingChange('general', {
-                          storage: {
-                            ...workingConfig.settings.general.storage,
-                            s3: {
-                              ...workingConfig.settings.general.storage.s3,
-                              forcePathStyle: checked,
-                            },
-                          },
-                        })
-                      }
-                      className={getFieldClasses('general', [
-                        'storage',
-                        's3',
-                        'forcePathStyle',
-                      ])}
-                    />
-                  </SettingRow>
-
-                  <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
-                    <div>
-                      {s3TestState && !s3TestState.loading && (
-                        <span
-                          className={`text-xs flex items-center gap-1.5 ${s3TestState.ok ? 'text-green-500' : 'text-destructive'}`}
-                        >
-                          {s3TestState.ok ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : (
-                            <AlertCircle className="h-3.5 w-3.5" />
-                          )}
-                          {s3TestState.message}
-                        </span>
+                    <SelectTrigger
+                      className={cn(
+                        'max-w-xs',
+                        getFieldClasses('general', ['storage', 'provider'])
                       )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-1.5 shrink-0"
-                      disabled={s3TestState?.loading}
-                      onClick={handleS3Test}
                     >
-                      {s3TestState?.loading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      )}
-                      Test Connection
-                    </Button>
-                  </div>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="local">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className="h-4 w-4" />
+                          Local Storage
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="s3">
+                        <div className="flex items-center gap-2">
+                          <Cloud className="h-4 w-4" />
+                          S3 Storage
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </GlassCard>
+
+                {workingConfig.settings.general.storage.provider === 's3' && (
+                  <GlassCard className="mt-4" gradient={false}>
+                    <div className="p-4 space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Cloud className="h-4 w-4" />
+                        S3 Configuration
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Bucket Name</Label>
+                          <Input
+                            value={
+                              workingConfig.settings.general.storage.s3.bucket
+                            }
+                            onChange={(e) =>
+                              handleSettingChange('general', {
+                                storage: {
+                                  ...workingConfig.settings.general.storage,
+                                  s3: {
+                                    ...workingConfig.settings.general.storage
+                                      .s3,
+                                    bucket: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            placeholder="my-bucket"
+                            className={getFieldClasses('general', [
+                              'storage',
+                              's3',
+                              'bucket',
+                            ])}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Region</Label>
+                          <Input
+                            value={
+                              workingConfig.settings.general.storage.s3.region
+                            }
+                            onChange={(e) =>
+                              handleSettingChange('general', {
+                                storage: {
+                                  ...workingConfig.settings.general.storage,
+                                  s3: {
+                                    ...workingConfig.settings.general.storage
+                                      .s3,
+                                    region: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            placeholder="us-east-1"
+                            className={getFieldClasses('general', [
+                              'storage',
+                              's3',
+                              'region',
+                            ])}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Access Key ID</Label>
+                          <Input
+                            type="password"
+                            value={
+                              workingConfig.settings.general.storage.s3
+                                .accessKeyId
+                            }
+                            onChange={(e) =>
+                              handleSettingChange('general', {
+                                storage: {
+                                  ...workingConfig.settings.general.storage,
+                                  s3: {
+                                    ...workingConfig.settings.general.storage
+                                      .s3,
+                                    accessKeyId: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            placeholder="AKIAXXXXXXXXXXXXXXXX"
+                            className={getFieldClasses('general', [
+                              'storage',
+                              's3',
+                              'accessKeyId',
+                            ])}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Secret Access Key</Label>
+                          <Input
+                            type="password"
+                            value={
+                              workingConfig.settings.general.storage.s3
+                                .secretAccessKey
+                            }
+                            onChange={(e) =>
+                              handleSettingChange('general', {
+                                storage: {
+                                  ...workingConfig.settings.general.storage,
+                                  s3: {
+                                    ...workingConfig.settings.general.storage
+                                      .s3,
+                                    secretAccessKey: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            placeholder="••••••••••••••••••••"
+                            className={getFieldClasses('general', [
+                              'storage',
+                              's3',
+                              'secretAccessKey',
+                            ])}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          Custom Endpoint (Optional)
+                        </Label>
+                        <Input
+                          value={
+                            workingConfig.settings.general.storage.s3
+                              .endpoint || ''
+                          }
+                          onChange={(e) =>
+                            handleSettingChange('general', {
+                              storage: {
+                                ...workingConfig.settings.general.storage,
+                                s3: {
+                                  ...workingConfig.settings.general.storage.s3,
+                                  endpoint: e.target.value,
+                                },
+                              },
+                            })
+                          }
+                          placeholder="https://s3.custom-domain.com"
+                          className={getFieldClasses('general', [
+                            'storage',
+                            's3',
+                            'endpoint',
+                          ])}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          For S3-compatible services like MinIO or DigitalOcean
+                          Spaces
+                        </p>
+                      </div>
+
+                      <SettingRow
+                        label="Force Path Style"
+                        description="Enable for S3-compatible services requiring path-style URLs"
+                        changed={isFieldChanged('general', [
+                          'storage',
+                          's3',
+                          'forcePathStyle',
+                        ])}
+                      >
+                        <Switch
+                          checked={
+                            workingConfig.settings.general.storage.s3
+                              .forcePathStyle
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSettingChange('general', {
+                              storage: {
+                                ...workingConfig.settings.general.storage,
+                                s3: {
+                                  ...workingConfig.settings.general.storage.s3,
+                                  forcePathStyle: checked,
+                                },
+                              },
+                            })
+                          }
+                          className={getFieldClasses('general', [
+                            'storage',
+                            's3',
+                            'forcePathStyle',
+                          ])}
+                        />
+                      </SettingRow>
+
+                      <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
+                        <div>
+                          {s3TestState && !s3TestState.loading && (
+                            <span
+                              className={`text-xs flex items-center gap-1.5 ${s3TestState.ok ? 'text-green-500' : 'text-destructive'}`}
+                            >
+                              {s3TestState.ok ? (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              )}
+                              {s3TestState.message}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 shrink-0"
+                          disabled={s3TestState?.loading}
+                          onClick={handleS3Test}
+                        >
+                          {s3TestState?.loading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          Test Connection
+                        </Button>
+                      </div>
+                    </div>
+                  </GlassCard>
+                )}
+              </>
             )}
 
             <div className="space-y-2 pl-0.5">
@@ -2203,6 +2242,13 @@ export function SettingsManager() {
                   Test Connection
                 </Button>
               </div>
+              <StripeSetupPanel
+                secretKey={
+                  isFieldChanged('integrations', ['stripe'])
+                    ? workingConfig?.settings.integrations?.stripe?.secretKey
+                    : undefined
+                }
+              />
             </SettingsSection>
           )}
 

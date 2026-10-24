@@ -292,4 +292,5 @@ export const loggers = {
   config: createLogger('config'),
   startup: createLogger('startup'),
   middleware: createLogger('middleware'),
+  licenses: createLogger('licenses'),
 }

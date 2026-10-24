@@ -2,9 +2,11 @@ import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
   CopyObjectCommand,
+  CreateBucketCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -29,6 +31,7 @@ function toS3Key(path: string): string {
 
 export class S3StorageProvider implements StorageProvider {
   private client: S3Client
+  private presignClient: S3Client
   private bucket: string
   private endpoint?: string
 
@@ -40,25 +43,42 @@ export class S3StorageProvider implements StorageProvider {
       throw new Error('S3 secret access key is required')
 
     this.bucket = config.bucket
-    this.endpoint = config.endpoint
-    this.client = new S3Client({
-      region: config.region,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-      requestHandler: {
-        requestTimeout: 300000, // 5 minutes
-        connectionTimeout: 30000, // 30 seconds
-        socketTimeout: 300000, // 5 minutes
-      },
-      maxAttempts: 3,
-      retryMode: 'adaptive',
-      ...(config.endpoint && {
-        endpoint: config.endpoint,
-        forcePathStyle: config.forcePathStyle ?? false,
-      }),
-    })
+    this.endpoint = config.publicEndpoint || config.endpoint
+    const createClient = (endpoint?: string) =>
+      new S3Client({
+        region: config.region,
+        credentials: {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey,
+        },
+        requestHandler: {
+          requestTimeout: 300000, // 5 minutes
+          connectionTimeout: 30000, // 30 seconds
+          socketTimeout: 300000, // 5 minutes
+        },
+        maxAttempts: 3,
+        retryMode: 'adaptive',
+        ...(endpoint && {
+          endpoint,
+          forcePathStyle: config.forcePathStyle ?? false,
+        }),
+      })
+    this.client = createClient(config.endpoint)
+    this.presignClient = config.publicEndpoint
+      ? createClient(config.publicEndpoint)
+      : this.client
+  }
+
+  async ensureBucket(): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }))
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } })
+        .$metadata?.httpStatusCode
+      if (status !== 404) throw error
+      await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }))
+      logger.info('Created storage bucket', { bucket: this.bucket })
+    }
   }
 
   async uploadFile(
@@ -183,7 +203,7 @@ export class S3StorageProvider implements StorageProvider {
 
     const downloadExpiresIn = expiresIn > 3600 ? expiresIn : 21600
 
-    return await getSignedUrl(this.client, command, {
+    return await getSignedUrl(this.presignClient, command, {
       expiresIn: downloadExpiresIn,
     })
   }
@@ -199,7 +219,7 @@ export class S3StorageProvider implements StorageProvider {
         : undefined,
     })
 
-    return await getSignedUrl(this.client, command, { expiresIn: 21600 })
+    return await getSignedUrl(this.presignClient, command, { expiresIn: 21600 })
   }
 
   async getFileSize(path: string): Promise<number> {
@@ -330,7 +350,7 @@ export class S3StorageProvider implements StorageProvider {
         UploadId: uploadId,
         PartNumber: partNumber,
       })
-      return getSignedUrl(this.client, command, { expiresIn: 3600 })
+      return getSignedUrl(this.presignClient, command, { expiresIn: 3600 })
     }
 
     const uploadPart = async (data: Buffer, partNum: number): Promise<void> => {
@@ -577,7 +597,7 @@ export class S3StorageProvider implements StorageProvider {
       PartNumber: partNumber,
     })
 
-    return getSignedUrl(this.client, command, { expiresIn: 3600 })
+    return getSignedUrl(this.presignClient, command, { expiresIn: 3600 })
   }
 
   async completeMultipartUpload(

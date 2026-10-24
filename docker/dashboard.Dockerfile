@@ -2,6 +2,7 @@
 
 ARG NODE_VERSION=22
 ARG BUN_VERSION=1.3.14
+ARG PRISMA_VERSION=7.10.1
 
 FROM oven/bun:${BUN_VERSION}-alpine AS bun
 
@@ -26,14 +27,16 @@ COPY turbo.json ./
 COPY packages packages
 COPY apps/dashboard apps/dashboard
 ENV BUILD_STANDALONE=1
-RUN bun --cwd packages/db run db:generate \
- && bun --cwd apps/dashboard run build
+RUN bun run --cwd packages/db db:generate \
+ && bun run --cwd apps/dashboard build
 
 FROM build AS worker
+WORKDIR /repo/apps/dashboard
 ENV NODE_ENV=production
-CMD ["bun", "--cwd", "apps/dashboard", "scripts/worker.ts"]
+CMD ["bun", "scripts/worker.ts"]
 
 FROM node:${NODE_VERSION}-alpine AS runtime
+ARG PRISMA_VERSION
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -49,7 +52,7 @@ COPY --from=build /repo/packages/db/prisma /app/migrate/prisma
 COPY --from=build /repo/packages/db/prisma.config.ts /app/migrate/prisma.config.ts
 RUN cd /app/migrate \
  && npm init -y >/dev/null \
- && npm install --no-audit --no-fund --omit=dev prisma@7 dotenv@17 >/dev/null \
+ && npm install --no-audit --no-fund --omit=dev prisma@${PRISMA_VERSION} dotenv@17.4.2 >/dev/null \
  && chown -R emberly:emberly /app/migrate
 
 COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/.next/standalone ./

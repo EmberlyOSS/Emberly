@@ -62,5 +62,6 @@ export interface S3Config {
   accessKeyId: string
   secretAccessKey: string
   endpoint?: string
+  publicEndpoint?: string
   forcePathStyle?: boolean
 }

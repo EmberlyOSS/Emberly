@@ -5,6 +5,7 @@ import type { StorageBucket } from '@emberly/db'
 import { getConfig } from '../config/index'
 import { LocalStorageProvider } from './providers/local'
 import { S3StorageProvider } from './providers/s3'
+import { envS3Config } from './env'
 import type { StorageProvider } from './types'
 
 const logger = loggers.storage
@@ -50,6 +51,19 @@ function providerFromBucket(bucket: {
 /** The global config-driven provider (singleton). Used as the fallback for legacy files (storageBucketId = null). */
 export async function getStorageProvider(): Promise<StorageProvider> {
   if (storageProvider) return storageProvider
+
+  const fromEnv = envS3Config()
+  if (fromEnv) {
+    const provider = new S3StorageProvider(fromEnv)
+    await provider.ensureBucket()
+    logger.info('Using S3 storage from environment', {
+      bucket: fromEnv.bucket,
+      endpoint: fromEnv.endpoint,
+    })
+    storageProvider = provider
+    _g.__storageProvider = storageProvider
+    return storageProvider
+  }
 
   const config = await getConfig()
   const { provider, s3 } = config.settings.general.storage

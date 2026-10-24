@@ -1,3 +1,4 @@
+import { getBranding } from '@/lib/branding'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
@@ -10,11 +11,7 @@ import { getServerSession } from 'next-auth'
 import { ProtectedFile } from '@/components/file/protected-file'
 import { DynamicBackground } from '@/components/layout/dynamic-background'
 import { Icons } from '@/components/shared/icons'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -136,8 +133,10 @@ export async function generateMetadata({
   const rawUrl = `${baseUrl}${canonicalPath}/raw`
 
   // Return minimal metadata for inaccessible or protected files
+  const { embedName: brand } = await getBranding()
+
   if (isPrivate || isPasswordProtected) {
-    return buildMinimalMetadata('Protected File')
+    return buildMinimalMetadata('Protected File', brand)
   }
 
   // When rich embeds are disabled, point crawlers to the raw file URL
@@ -147,6 +146,7 @@ export async function generateMetadata({
       fileName: file.name,
       rawUrl,
       mimeType: file.mimeType,
+      brand,
     })
   }
 

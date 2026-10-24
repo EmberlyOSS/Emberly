@@ -1,0 +1,59 @@
+name: emberly
+
+services:
+  emberly:
+    image: ghcr.io/emberlyoss/emberly:latest
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+      target: runtime
+    restart: unless-stopped
+    ports:
+      - "${EMBERLY_PORT:-3000}:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env (openssl rand -base64 32)}
+      DATABASE_URL: postgresql://emberly:${POSTGRES_PASSWORD:-emberly}@postgres:5432/emberly
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - emberly-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: emberly
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-emberly}
+      POSTGRES_DB: emberly
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emberly -d emberly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  emberly-data:
+  postgres-data:
+  redis-data:

@@ -50,7 +50,10 @@ export const fetchCache = 'force-no-store'
 export const maxDuration = 300 // 5 minutes max
 
 function sanitizeFilename(filename: string): string {
-  return filename.replace(/[\\/]/g, '_').replace(/^\.+/, '_').replace(/\.\.+/g, '_')
+  return filename
+    .replace(/[\\/]/g, '_')
+    .replace(/^\.+/, '_')
+    .replace(/\.\.+/g, '_')
 }
 
 export async function GET(req: Request) {
@@ -71,7 +74,9 @@ export async function GET(req: Request) {
     const storageProvider = await getStorageProvider()
     const isS3Storage = storageProvider instanceof S3StorageProvider
 
-    logger.info(`Starting data export for user ${userId}, storage: ${isS3Storage ? 'S3' : 'local'}`)
+    logger.info(
+      `Starting data export for user ${userId}, storage: ${isS3Storage ? 'S3' : 'local'}`
+    )
 
     // Fetch user data
     const userData = await prisma.user.findUnique({
@@ -169,9 +174,14 @@ export async function GET(req: Request) {
           if (isS3Storage) {
             // Download from S3
             try {
-              fileBuffer = await getFileContentFromStorage(storageProvider, file.path)
+              fileBuffer = await getFileContentFromStorage(
+                storageProvider,
+                file.path
+              )
             } catch (downloadErr) {
-              logger.warn(`Skipping S3 file ${file.name}: ${(downloadErr as Error).message}`)
+              logger.warn(
+                `Skipping S3 file ${file.name}: ${(downloadErr as Error).message}`
+              )
               processedFiles++
               continue
             }
@@ -192,32 +202,43 @@ export async function GET(req: Request) {
             }
 
             if (!localPath) {
-              logger.warn(`Skipping local file ${file.name}: not found in any expected location`)
+              logger.warn(
+                `Skipping local file ${file.name}: not found in any expected location`
+              )
               processedFiles++
               continue
             }
 
             // Check file size before reading
             try {
-              const fileStats = await stat(localPath)
+              const fileStats = await stat(/*turbopackIgnore: true*/ localPath)
               // Skip files larger than 100MB to prevent memory issues
               if (fileStats.size > 100 * 1024 * 1024) {
-                logger.warn(`Skipping large file ${file.name}: ${fileStats.size} bytes`)
+                logger.warn(
+                  `Skipping large file ${file.name}: ${fileStats.size} bytes`
+                )
                 processedFiles++
                 continue
               }
 
               // Add file directly from path (more efficient than reading into memory)
-              const datePrefix = new Date(file.uploadedAt).toISOString().split('T')[0]
+              const datePrefix = new Date(file.uploadedAt)
+                .toISOString()
+                .split('T')[0]
               const safeName = sanitizeFilename(file.name)
-              archive.file(localPath, { name: `files/${datePrefix}/${safeName}` })
+              archive.file(localPath, {
+                name: `files/${datePrefix}/${safeName}`,
+              })
               processedFiles++
 
-              const progress = 15 + Math.round((processedFiles / totalFiles) * 80)
+              const progress =
+                15 + Math.round((processedFiles / totalFiles) * 80)
               updateProgress(userId, progress)
               continue
             } catch (readErr) {
-              logger.warn(`Error reading local file ${file.name}: ${(readErr as Error).message}`)
+              logger.warn(
+                `Error reading local file ${file.name}: ${(readErr as Error).message}`
+              )
               processedFiles++
               continue
             }
@@ -225,16 +246,22 @@ export async function GET(req: Request) {
 
           // For S3 files, append buffer to archive
           if (fileBuffer) {
-            const datePrefix = new Date(file.uploadedAt).toISOString().split('T')[0]
+            const datePrefix = new Date(file.uploadedAt)
+              .toISOString()
+              .split('T')[0]
             const safeName = sanitizeFilename(file.name)
-            archive.append(fileBuffer, { name: `files/${datePrefix}/${safeName}` })
+            archive.append(fileBuffer, {
+              name: `files/${datePrefix}/${safeName}`,
+            })
           }
 
           processedFiles++
           const progress = 15 + Math.round((processedFiles / totalFiles) * 80)
           updateProgress(userId, progress)
         } catch (fileErr) {
-          logger.warn(`Error processing file ${file.name}: ${(fileErr as Error).message}`)
+          logger.warn(
+            `Error processing file ${file.name}: ${(fileErr as Error).message}`
+          )
           processedFiles++
         }
       }
@@ -289,7 +316,9 @@ export async function GET(req: Request) {
           logger.info(`Export cleanup completed for user ${currentUserId}`)
         }
       } catch (cleanupError) {
-        logger.warn('Error cleaning up export directory:', { error: (cleanupError as Error).message })
+        logger.warn('Error cleaning up export directory:', {
+          error: (cleanupError as Error).message,
+        })
       }
       if (currentUserId) {
         clearProgress(currentUserId)
@@ -299,7 +328,10 @@ export async function GET(req: Request) {
     // Create response headers
     const headers = new Headers()
     headers.set('Content-Type', 'application/zip')
-    headers.set('Content-Disposition', `attachment; filename="emberly-data-export-${timestamp}.zip"`)
+    headers.set(
+      'Content-Disposition',
+      `attachment; filename="emberly-data-export-${timestamp}.zip"`
+    )
     headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
 
     // Convert Node stream to web stream
@@ -370,4 +402,3 @@ async function getFileContentFromStorage(
 
   return Buffer.concat(chunks)
 }
-

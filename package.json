@@ -1,7 +1,7 @@
 {
   "name": "emberly",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "Elastic-2.0",
   "author": "CodeMeAPixel",
   "homepage": "https://embrly.ca",
   "repository": {
@@ -14,26 +14,34 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --filter=@emberly/dashboard",
+    "dev": "bun run --cwd apps/dashboard dev",
     "dev:all": "turbo run dev",
     "build": "turbo run build --filter=@emberly/dashboard",
     "build:all": "turbo run build",
-    "start": "bun --cwd apps/dashboard run start",
-    "worker": "bun --cwd apps/dashboard run worker",
+    "start": "bun run --cwd apps/dashboard start",
+    "worker": "bun run --cwd apps/dashboard worker",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,md,css}\"",
     "db:generate": "turbo run db:generate",
-    "db:migrate": "bun --cwd packages/db run migrate",
-    "db:deploy": "bun --cwd packages/db run deploy",
-    "db:seed": "bun --cwd apps/dashboard run db:seed",
-    "db:studio": "bun --cwd packages/db run studio"
+    "db:migrate": "bun run --cwd packages/db migrate",
+    "db:deploy": "bun run --cwd packages/db deploy",
+    "db:seed": "bun run --cwd apps/dashboard db:seed",
+    "db:studio": "bun run --cwd packages/db studio",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.8.1",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,json,md,css}": "prettier --write"
   }
 }

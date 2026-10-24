@@ -98,6 +98,7 @@ export async function POST(req: Request) {
       where: { id: user.id },
       data: {
         image: publicPath,
+        avatarDecoration: null,
       },
       select: { id: true, image: true },
     })

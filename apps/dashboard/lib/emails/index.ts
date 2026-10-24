@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer'
 import type { Transporter } from 'nodemailer'
 import { Resend } from 'resend'
 import { prisma } from '@emberly/db'
+import { getEmailBrander } from '@/lib/branding'
 import { getIntegrations } from '@/lib/config'
 
 let cachedResend: Resend | null = null
@@ -148,24 +149,27 @@ export async function sendEmail({
     throw new Error('Provide react, html, or text content')
   }
 
+  const brand = await getEmailBrander()
+  const htmlContent = brand(html ?? (react ? await render(react) : undefined))
+  const textContent = brand(text)
+  subject = brand(subject)
+
   const integrations = await getIntegrations()
   const provider =
     ((integrations as Record<string, unknown>).emailProvider as
-      | string
-      | undefined) ?? 'resend'
+      string | undefined) ?? 'resend'
 
   let messageId: string | undefined
 
   if (provider === 'smtp') {
     const { transport, from: defaultFrom } = await getSmtpTransport()
-    const htmlContent = html ?? (react ? await render(react) : undefined)
     const info = await transport.sendMail({
       from: from || defaultFrom,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       replyTo: Array.isArray(replyTo) ? replyTo.join(', ') : replyTo,
       html: htmlContent,
-      text,
+      text: textContent,
       headers,
     })
     messageId = info.messageId
@@ -176,10 +180,9 @@ export async function sendEmail({
       to,
       subject,
       replyTo,
-      react,
-      html,
-      text,
       headers,
+      ...(htmlContent ? { html: htmlContent } : { text: textContent ?? '' }),
+      ...(htmlContent && textContent ? { text: textContent } : {}),
     }
 
     const response = await resend.emails.send(payload)

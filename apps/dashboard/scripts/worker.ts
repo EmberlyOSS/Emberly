@@ -1,8 +1,12 @@
+import { resolve } from 'node:path'
+
 import { Worker } from 'bullmq'
 import { loggers } from '@/lib/logger'
 import { bullmqConnection } from '@/lib/events/bullmq/connection'
 import { createProcessor } from '@/lib/events/bullmq/processor'
 import { allHandlers } from '@/lib/events/handlers'
+
+process.env.DATA_DIR ||= resolve(import.meta.dirname, '../../..')
 
 const logger = loggers.events
 

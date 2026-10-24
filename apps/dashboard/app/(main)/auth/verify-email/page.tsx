@@ -1,12 +1,14 @@
 import { VerifyEmailForm } from '@/components/auth/verify-email-form'
 import { DynamicBackground } from '@/components/layout/dynamic-background'
+import { BrandName } from '@/components/shared/brand'
 import { Icons } from '@/components/shared/icons'
 
 import { buildPageMetadata } from '@/lib/embeds/metadata'
 
 export const metadata = buildPageMetadata({
   title: 'Verify Email',
-  description: 'Verify your email address to complete your Emberly account setup.',
+  description:
+    'Verify your email address to complete your Emberly account setup.',
 })
 
 export const dynamic = 'force-dynamic'
@@ -29,7 +31,7 @@ export default async function VerifyEmailPage(props: {
               <div className="flex items-center justify-center space-x-3 px-6 py-4">
                 <Icons.logo className="h-8 w-8 text-primary" />
                 <span className="emberly-text text-2xl text-primary">
-                  Emberly
+                  <BrandName />
                 </span>
               </div>
             </div>

@@ -7,5 +7,6 @@
     "build": "go build -o dist/warden .",
     "test": "go test ./...",
     "typecheck": "go vet ./..."
-  }
+  },
+  "license": "Elastic-2.0"
 }

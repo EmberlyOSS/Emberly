@@ -64,9 +64,9 @@ You must follow our [Acceptable Use Policy](/legal/acceptable-use), which forms 
 - Except where required by law, payments are non-refundable. If something went wrong, contact ${SUPPORT} and we'll look at it in good faith.
 - When Emberly is running free of charge, extra limits may be granted through a request on the [Applications](/applications) page at our discretion.
 
-## 6. Open source
+## 6. Source code
 
-Emberly's source code is published under the AGPL-3.0 licence. That licence governs your use of the code. These Terms govern your use of the hosted Service that we operate.
+Emberly's source code is published under the Elastic License 2.0. That licence governs your use of the code. These Terms govern your use of the hosted Service that we operate.
 
 ## 7. Suspension and termination
 
@@ -344,7 +344,7 @@ const security: LegalDocument = {
 - Uploads are checked against known malware before they become publicly accessible.
 - Access to production systems is limited to the people who need it.
 - API keys and third-party credentials are never shown back in full, and one-time credentials you give us (such as a Cloudflare token for DNS setup) are never stored.
-- Emberly is open source, so our code can be reviewed by anyone.
+- Emberly's source code is public, so it can be reviewed by anyone.
 
 ## Reporting a vulnerability
 

@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { Icons } from "@/components/shared/icons"
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
+import { Icons } from '@/components/shared/icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,14 +14,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog'
+import { useBranding } from '@/components/providers/branding-provider'
 
 interface RecoveryCodesStatus {
   total: number
@@ -37,6 +38,7 @@ interface RecoveryCodesResponse {
 }
 
 export function RecoveryCodesManager() {
+  const branding = useBranding()
   const { toast } = useToast()
   const [status, setStatus] = useState<RecoveryCodesStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -63,17 +65,17 @@ export function RecoveryCodesManager() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("/api/profile/2fa/recovery-codes")
-      if (!res.ok) throw new Error("Failed to fetch status")
+      const res = await fetch('/api/profile/2fa/recovery-codes')
+      if (!res.ok) throw new Error('Failed to fetch status')
       const json = await res.json()
       // API responses are wrapped as { data, success }
       setStatus(json.data)
     } catch (error) {
-      console.error("Error fetching recovery codes status:", error)
+      console.error('Error fetching recovery codes status:', error)
       toast({
-        title: "Error",
-        description: "Failed to load recovery codes status",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load recovery codes status',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -83,29 +85,31 @@ export function RecoveryCodesManager() {
   const fetchAndShowCodes = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("/api/profile/2fa/recovery-codes?includeCodes=true")
-      if (!res.ok) throw new Error("Failed to fetch codes")
+      const res = await fetch(
+        '/api/profile/2fa/recovery-codes?includeCodes=true'
+      )
+      if (!res.ok) throw new Error('Failed to fetch codes')
       const json = await res.json()
       const codes = json.data?.recoveryCodes ?? []
-      
+
       if (codes.length === 0) {
         toast({
-          title: "No codes available",
-          description: "You need to generate recovery codes first",
-          variant: "destructive",
+          title: 'No codes available',
+          description: 'You need to generate recovery codes first',
+          variant: 'destructive',
         })
         return
       }
-      
+
       setNewCodes(codes)
       setShowCodes(true)
       sessionStorage.setItem('recovery-codes-temp', JSON.stringify(codes))
     } catch (error) {
-      console.error("Error fetching codes:", error)
+      console.error('Error fetching codes:', error)
       toast({
-        title: "Error",
-        description: "Failed to load recovery codes",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load recovery codes',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -115,13 +119,13 @@ export function RecoveryCodesManager() {
   const handleRegenerate = async () => {
     setIsRegenerating(true)
     try {
-      const res = await fetch("/api/profile/2fa/recovery-codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "" }), // Password optional for now
+      const res = await fetch('/api/profile/2fa/recovery-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: '' }), // Password optional for now
       })
 
-      if (!res.ok) throw new Error("Failed to regenerate codes")
+      if (!res.ok) throw new Error('Failed to regenerate codes')
       const json = await res.json()
       const data: RecoveryCodesResponse = json.data
       const codes = data?.recoveryCodes ?? []
@@ -129,20 +133,20 @@ export function RecoveryCodesManager() {
       setShowCodes(true)
       // Store in session storage temporarily
       sessionStorage.setItem('recovery-codes-temp', JSON.stringify(codes))
-      
+
       // Refresh status
       await fetchStatus()
-      
+
       toast({
-        title: "Success",
-        description: "Recovery codes regenerated. Save them in a safe place!",
+        title: 'Success',
+        description: 'Recovery codes regenerated. Save them in a safe place!',
       })
     } catch (error) {
-      console.error("Error regenerating codes:", error)
+      console.error('Error regenerating codes:', error)
       toast({
-        title: "Error",
-        description: "Failed to regenerate recovery codes",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to regenerate recovery codes',
+        variant: 'destructive',
       })
     } finally {
       setIsRegenerating(false)
@@ -154,8 +158,8 @@ export function RecoveryCodesManager() {
     setCopiedIndex(index)
     setTimeout(() => setCopiedIndex(null), 2000)
     toast({
-      title: "Copied",
-      description: "Recovery code copied to clipboard",
+      title: 'Copied',
+      description: 'Recovery code copied to clipboard',
     })
   }
 
@@ -164,26 +168,26 @@ export function RecoveryCodesManager() {
     const allCodes = newCodes.join('\n')
     navigator.clipboard.writeText(allCodes)
     toast({
-      title: "Copied",
-      description: "All recovery codes copied to clipboard",
+      title: 'Copied',
+      description: 'All recovery codes copied to clipboard',
     })
   }
 
   const downloadCodes = () => {
     if (newCodes.length === 0) return
 
-    const content = `Emberly 2FA Recovery Codes
+    const content = `${branding.name} 2FA Recovery Codes
 Generated: ${new Date().toLocaleString()}
 
 IMPORTANT: Save these codes in a safe place. Each code can be used once to access your account if you lose your authenticator app.
 
-${newCodes.map((code, idx) => `${idx + 1}. ${code}`).join("\n")}
+${newCodes.map((code, idx) => `${idx + 1}. ${code}`).join('\n')}
 
 Do not share these codes with anyone.`
 
-    const blob = new Blob([content], { type: "text/plain" })
+    const blob = new Blob([content], { type: 'text/plain' })
     const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
+    const a = document.createElement('a')
     a.href = url
     a.download = `emberly-recovery-codes-${new Date().getTime()}.txt`
     document.body.appendChild(a)
@@ -192,8 +196,8 @@ Do not share these codes with anyone.`
     document.body.removeChild(a)
 
     toast({
-      title: "Downloaded",
-      description: "Recovery codes saved to your device",
+      title: 'Downloaded',
+      description: 'Recovery codes saved to your device',
     })
   }
 
@@ -213,7 +217,9 @@ Do not share these codes with anyone.`
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold">Recovery Codes</h3>
-          <p className="text-sm text-muted-foreground">No recovery codes found</p>
+          <p className="text-sm text-muted-foreground">
+            No recovery codes found
+          </p>
         </div>
       </div>
     )
@@ -225,42 +231,55 @@ Do not share these codes with anyone.`
         <div>
           <h3 className="text-lg font-semibold">Recovery Codes</h3>
           <p className="text-sm text-muted-foreground">
-            One-time use codes to access your account if you lose your authenticator app
+            One-time use codes to access your account if you lose your
+            authenticator app
           </p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="space-y-1">
-            <p className="text-xs sm:text-sm text-muted-foreground">Total Codes</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Total Codes
+            </p>
             <p className="text-xl sm:text-2xl font-semibold">{status.total}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs sm:text-sm text-muted-foreground">Remaining</p>
-            <p className="text-xl sm:text-2xl font-semibold text-green-600">{status.remaining}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Remaining
+            </p>
+            <p className="text-xl sm:text-2xl font-semibold text-green-600">
+              {status.remaining}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-xs sm:text-sm text-muted-foreground">Used</p>
-            <p className="text-xl sm:text-2xl font-semibold text-orange-600">{status.used}</p>
+            <p className="text-xl sm:text-2xl font-semibold text-orange-600">
+              {status.used}
+            </p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs sm:text-sm text-muted-foreground">Generated</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Generated
+            </p>
             <p className="text-xs sm:text-sm">
               {status.generatedAt
                 ? new Date(status.generatedAt).toLocaleDateString()
-                : "Never"}
+                : 'Never'}
             </p>
           </div>
         </div>
 
         {status.remaining <= 3 && status.remaining > 0 && (
           <div className="rounded-md bg-yellow-50 dark:bg-yellow-950 p-3 text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">
-            ⚠️ You have only {status.remaining} codes remaining. Consider regenerating them soon.
+            ⚠️ You have only {status.remaining} codes remaining. Consider
+            regenerating them soon.
           </div>
         )}
 
         {status.remaining === 0 && (
           <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-xs sm:text-sm text-red-800 dark:text-red-200">
-            ❌ All recovery codes have been used. You must regenerate them to continue having backup access.
+            ❌ All recovery codes have been used. You must regenerate them to
+            continue having backup access.
           </div>
         )}
 
@@ -309,7 +328,8 @@ Do not share these codes with anyone.`
               <AlertDialogHeader>
                 <AlertDialogTitle>Regenerate Recovery Codes?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will invalidate all existing recovery codes and create new ones. Make sure to save the new codes.
+                  This will invalidate all existing recovery codes and create
+                  new ones. Make sure to save the new codes.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -371,7 +391,8 @@ Do not share these codes with anyone.`
               <div>
                 <p className="font-semibold">Important:</p>
                 <p className="text-xs mt-1">
-                  DO NOT share these codes with anyone. They provide direct access to your account if you lose your primary 2FA method.
+                  DO NOT share these codes with anyone. They provide direct
+                  access to your account if you lose your primary 2FA method.
                 </p>
               </div>
             </div>

@@ -8,10 +8,7 @@ import {
 import { events } from '@/lib/events'
 import { loggers } from '@/lib/logger'
 import { upsertSubscriptionRecord } from '@/lib/stripe/billing'
-import {
-  getStripeClient,
-  isStripeConfigured,
-} from '@/lib/stripe/client'
+import { getStripeClient, isStripeConfigured } from '@/lib/stripe/client'
 import { getIntegrations } from '@/lib/config'
 import { deleteObjectStorageBucket } from '@/lib/storage/providers/vultr'
 import { deleteLinodeBucket } from '@/lib/storage/providers/linode'
@@ -78,6 +75,12 @@ async function settleAppliedCredits(
       },
     })
   })
+}
+
+function invoiceSubscriptionId(invoice: any): string | null {
+  const id =
+    invoice?.subscription ?? invoice?.parent?.subscription_details?.subscription
+  return typeof id === 'string' ? id : (id?.id ?? null)
 }
 
 export async function POST(req: Request) {
@@ -349,7 +352,7 @@ export async function POST(req: Request) {
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as any
-        const subscriptionId = invoice.subscription
+        const subscriptionId = invoiceSubscriptionId(invoice)
         if (subscriptionId) {
           const stripeSub = await stripe.subscriptions.retrieve(
             subscriptionId,
@@ -439,7 +442,7 @@ export async function POST(req: Request) {
       }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as any
-        const subscriptionId = invoice.subscription
+        const subscriptionId = invoiceSubscriptionId(invoice)
         if (subscriptionId) {
           await prisma.subscription.updateMany({
             where: { stripeSubscriptionId: subscriptionId },

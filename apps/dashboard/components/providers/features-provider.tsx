@@ -12,6 +12,9 @@ const FeaturesContext = createContext<Features>({
   customDomains: false,
   managedStorage: false,
   perks: false,
+  storageFromEnv: false,
+  whiteLabel: false,
+  licenseVendor: false,
 })
 
 export function FeaturesProvider({

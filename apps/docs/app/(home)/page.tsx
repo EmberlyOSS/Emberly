@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from 'next/link'
 import {
   Rocket,
   BookUser,
@@ -8,7 +8,7 @@ import {
   Server,
   Users,
   ArrowRight,
-} from 'lucide-react';
+} from 'lucide-react'
 
 const sections = [
   {
@@ -29,7 +29,8 @@ const sections = [
   },
   {
     title: 'Integrations',
-    description: 'Connect ShareX, Flicker, Flameshot, PowerShell, Python, and more.',
+    description:
+      'Connect ShareX, Flicker, Flameshot, PowerShell, Python, and more.',
     href: '/docs/integrations',
     label: 'View integrations',
     icon: Plug,
@@ -37,7 +38,8 @@ const sections = [
   },
   {
     title: 'API Reference',
-    description: 'Complete REST API documentation for files, domains, and account management.',
+    description:
+      'Complete REST API documentation for files, domains, and account management.',
     href: '/docs/api',
     label: 'API docs',
     icon: Braces,
@@ -45,7 +47,8 @@ const sections = [
   },
   {
     title: 'Security',
-    description: 'VirusTotal scanning, HIBP checks, password protection, and encryption.',
+    description:
+      'VirusTotal scanning, HIBP checks, password protection, and encryption.',
     href: '/docs/security',
     label: 'Security docs',
     icon: Shield,
@@ -61,13 +64,14 @@ const sections = [
   },
   {
     title: 'Staff & Operations',
-    description: 'Moderation, support, and incident response for the Emberly team.',
+    description:
+      'Moderation, support, and incident response for the Emberly team.',
     href: '/docs/staff',
     label: 'Staff docs',
     icon: Users,
     color: 'var(--staff-color)',
   },
-];
+]
 
 const quickLinks = [
   { label: 'Plans & Pricing', href: '/docs/getting-started/plans-overview' },
@@ -77,7 +81,7 @@ const quickLinks = [
   { label: 'Webhooks', href: '/docs/integrations/webhooks' },
   { label: 'Billing API', href: '/docs/api/billing' },
   { label: 'Contributing', href: '/docs/self-hosting/contributing' },
-];
+]
 
 export default function HomePage() {
   return (
@@ -87,7 +91,7 @@ export default function HomePage() {
       {/* Hero */}
       <div className="mb-20 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 text-xs font-medium tracking-wide uppercase border rounded-full border-fd-border text-fd-muted-foreground bg-fd-card">
-          Open Source & Self-hostable File Sharing
+          Self-hostable File Sharing
         </div>
         <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-6xl text-fd-foreground">
           Emberly{' '}
@@ -96,8 +100,9 @@ export default function HomePage() {
           </span>
         </h1>
         <p className="max-w-2xl mx-auto text-lg leading-relaxed text-fd-muted-foreground">
-          Everything you need to upload, share, and manage files from quick screenshots to
-          large documents with custom domains, teams, and full API access.
+          Everything you need to upload, share, and manage files from quick
+          screenshots to large documents with custom domains, teams, and full
+          API access.
         </p>
         <div className="flex flex-wrap justify-center gap-3 mt-8">
           <Link
@@ -119,7 +124,7 @@ export default function HomePage() {
       {/* Section grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map((s) => {
-          const Icon = s.icon;
+          const Icon = s.icon
           return (
             <Link
               key={s.href}
@@ -148,7 +153,7 @@ export default function HomePage() {
                 <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
               </span>
             </Link>
-          );
+          )
         })}
       </div>
 
@@ -183,5 +188,5 @@ export default function HomePage() {
         </a>
       </p>
     </main>
-  );
+  )
 }

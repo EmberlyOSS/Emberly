@@ -13,7 +13,7 @@ fi
 
 if [ "${EMBERLY_SKIP_MIGRATIONS:-false}" != "true" ]; then
   attempt=1
-  until (cd /app/migrate && npx --no-install prisma migrate deploy); do
+  until (cd /app/migrate && ./node_modules/.bin/prisma migrate deploy); do
     if [ "$attempt" -ge 10 ]; then
       echo "Database migrations failed after $attempt attempts" >&2
       exit 1

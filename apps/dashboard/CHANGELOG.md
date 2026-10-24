@@ -17,22 +17,33 @@ bun run build
 bun run start   # and `bun run worker` if you run the worker separately
 ```
 
-- **Uploads folder.** Local storage now lives under `DATA_DIR`, which defaults to the folder the app runs from (`apps/dashboard`). If you store files locally, set `DATA_DIR` to the folder that holds your existing `uploads` directory (the old repository root), or move `uploads` there.
+- **Uploads stay where they are.** Locally stored files are still read from the `uploads` folder at the root of the repository. A new optional `DATA_DIR` setting moves them elsewhere; the Docker image uses `/data`.
+- **Hosted (cloud) mode needs a license key.** `EMBERLY_RUN_CLOUD` now only takes effect together with an `EMBERLY_LICENSE_KEY` that includes the `cloud` feature. Self-hosted instances are unaffected.
 - **Renamed settings.** The old names still work but log a warning:
   - `APP_URL` replaces `NEXTAUTH_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_APP_URL` and `APP_BASE_URL`
   - `AUTH_SECRET` replaces `NEXTAUTH_SECRET`
   - `STRIPE_SECRET_KEY` replaces `STRIPE_SECRET`
   - `STRIPE_WEBHOOK_SECRET` replaces `STRIPE_WEBHOOK`
 - **Removed settings:** `NEXT_PUBLIC_EMBERLY_RUN_CLOUD` (`EMBERLY_RUN_CLOUD` alone now controls cloud mode) and the unused `NEXT_PUBLIC_STRIPE_PRODUCT_STARTER` and `NEXT_PUBLIC_STRIPE_PRODUCT_PRO`.
+- Run `bun run db:deploy`. Migration `20261024000000_clear_unrequested_avatar_decorations` removes Discord avatar decorations from profiles that don't use their Discord avatar.
 - Run `bun run db:deploy`. Migration `20261023200000_add_device_authorization` adds the `DeviceAuthorization` table.
 
 ### Added
 
+- **License keys.** Set `EMBERLY_LICENSE_KEY` to unlock licensed features. Keys are checked offline, never contact a server, and can be tied to your domain.
+- **Automatic license renewals.** Instances with a license key check in with licenses.embrly.ca once a day and pick up renewed keys or domain changes on their own. A check-in sends only the key, an anonymous instance ID, your domain and the Emberly version. If it can't connect, Emberly keeps using its current key. Set `EMBERLY_LICENSE_CHECKIN=false` to turn it off. Instances without a license never check in.
+- **White-label branding** with a license: your own logo across the app, your name in emails and link previews instead of Emberly, and no "Powered by Emberly" credit. Without a license you can still set your instance's name and favicon.
+- **Docker support.** An official image (`ghcr.io/emberlyoss/emberly`) and a `compose.yaml` that runs Emberly with PostgreSQL and Redis. It runs database migrations on start, keeps uploads in a `/data` volume and includes a health check. Set `APP_URL` and `AUTH_SECRET`, then `docker compose up -d`.
+- **Dokploy template** in `docker/dokploy`, which asks for a domain and generates the secret and database password for you.
+- **S3 storage from environment variables.** Set `STORAGE_PROVIDER=s3` and the `S3_*` variables to use AWS, Cloudflare R2, Backblaze, RustFS, MinIO or any S3-compatible store without opening the admin panel. Emberly creates the bucket on first start if it doesn't exist. `compose.s3.yaml` adds a RustFS server for a bucket out of the box.
+- **`S3_PUBLIC_ENDPOINT`** for S3 servers that Emberly reaches on a private address. Upload links handed to apps such as Flicker use the public address instead.
 - **Sign in to apps from the browser** — desktop apps such as Flicker can ask for a short code, open `/activate`, and receive their own API key once you approve, so they never handle your password. Approving again from the same app and device replaces its old key, and every key can be revoked in Profile → API. Endpoints: `POST /api/device/code`, `POST /api/device/approve` (signed in) and `POST /api/device/token`.
 - **`GET /api/instance`** — public details about the server for apps: name, version, whether it's the hosted cloud, whether billing is on, and which features are available.
 
 ### Changed
 
+- **New license.** Emberly is now licensed under the Elastic License 2.0 instead of the GNU AGPL v3. You can still use, modify and self-host it freely, including for your business, and you no longer have to publish your changes. You may not offer Emberly to others as a hosted service without a license, or get around license keys. Earlier releases remain under the AGPL.
+- **Self-hosted instances show their own name** in the navigation, sign-in pages and footer, with a small "Powered by Emberly" credit. Links in emails now point to your instance instead of embrly.ca.
 - **Settings are read when the server starts, not when it's built.** Changing your address or switching cloud mode now only needs a restart. Previously some of them were baked into the build, so the browser and the server could disagree until you rebuilt.
 - **Builds no longer hang** when Redis isn't reachable, which also makes building in CI and Docker possible without a Redis server.
 - **Type errors now fail the build** instead of being ignored.
@@ -40,6 +51,8 @@ bun run start   # and `bun run worker` if you run the worker separately
 
 ### Fixed
 
+- **A database outage sent everyone to the setup page.** When Emberly couldn't reach the database it assumed no admin existed yet and redirected visitors to `/setup`. It now reports the outage instead. Creating an admin was never possible during an outage.
+- **Discord avatar decorations appeared without being chosen** and sat awkwardly over the picture. Emberly saved your Discord decoration automatically whenever it checked your booster perk, even if you used a different avatar. Decorations now only appear when you choose your Discord avatar in your profile, are removed when you pick another avatar or upload your own, and are drawn around a round avatar the way Discord shows them. Decorations that were added automatically are cleared by the migration below.
 - **Signed-in users sent back to the login page.** If only `AUTH_SECRET` was set, or `NEXTAUTH_COOKIE_DOMAIN` was set, the checks in front of protected pages couldn't read the session and treated everyone as signed out.
 - **Link previews that switched between the image and the page** — when Discord or another app previewed a file, Emberly checked the uploader's rich-embed setting through an internal request with a two-second timeout. When that request was slow it assumed rich embeds were on, so files from people who turned them off sometimes previewed as the Emberly page instead of the image. The setting is now read directly from the database and cached for a minute. Older files with spaces or special characters in their names were also never matched and always used the rich page.
 - **Changing the favicon reported an error** even though it saved. It also wrote a copy of the whole instance configuration to storage, where on S3-compatible storage it ended up in the bucket. That copy was never read and is no longer written.
