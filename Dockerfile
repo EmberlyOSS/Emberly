@@ -58,7 +58,7 @@ RUN cd /app/migrate \
 COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/.next/standalone ./
 COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/.next/static ./apps/dashboard/.next/static
 COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/public ./apps/dashboard/public
-COPY --chmod=755 docker/dashboard-entrypoint.sh /usr/local/bin/emberly-entrypoint
+COPY --chmod=755 apps/dashboard/docker-entrypoint.sh /usr/local/bin/emberly-entrypoint
 
 USER emberly
 VOLUME ["/data"]

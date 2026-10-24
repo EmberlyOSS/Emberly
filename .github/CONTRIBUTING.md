@@ -223,7 +223,7 @@ apps/
 packages/
   config/               # Shared TypeScript/Tailwind config and theme
   db/                   # Prisma schema, migrations and client
-docker/                 # Dockerfiles and deployment templates
+dokploy/                # Dokploy one-click template
 ```
 
 Changes to the database go in `packages/db/prisma/schema.prisma`, followed by `bun run db:migrate` to create a migration.

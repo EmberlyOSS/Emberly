@@ -26,7 +26,7 @@ docker compose up -d
 Open your `APP_URL` and the setup wizard creates the first admin account. Uploads are kept in a Docker volume, and database migrations run automatically on every start.
 
 - **S3 storage out of the box:** `docker compose -f compose.yaml -f compose.s3.yaml up -d` adds a RustFS server.
-- **Dokploy:** a one-click template lives in [`docker/dokploy`](docker/dokploy).
+- **Dokploy:** a one-click template lives in [`dokploy`](dokploy).
 - **Without Docker:** `bun install`, `bun run db:deploy`, `bun run build` and `bun run start`. Railpack and Nixpacks configs are included.
 
 The full guide, including every setting, is at [docs.embrly.ca](https://docs.embrly.ca/docs/self-hosting).
@@ -63,7 +63,7 @@ apps/
 packages/
   config/       Shared TypeScript and Tailwind config, and the Ember theme
   db/           Prisma schema, migrations and client
-docker/         Dockerfiles, entrypoint and the Dokploy template
+dokploy/        Dokploy one-click template
 ```
 
 Self-hosted instances only run `apps/dashboard`. The other apps power the hosted Emberly service.

@@ -16,7 +16,7 @@ This is a Turborepo monorepo using Bun workspaces. License: Elastic License 2.0.
 | `apps/status`     | Status page at emberlystat.us                                                            | Next.js, Prisma, own database                                     |
 | `packages/db`     | Prisma schema, migrations and client for the dashboard                                   | Prisma 7 with the `pg` adapter                                    |
 | `packages/config` | Shared tsconfig, Tailwind preset and Ember theme tokens                                  |                                                                   |
-| `docker/`         | Dockerfiles, entrypoint, Dokploy template                                                |                                                                   |
+| `dokploy/`        | Dokploy one-click template                                                               |
 
 ## Commands
 
@@ -55,6 +55,8 @@ types/             shared TypeScript types
 proxy.ts           request routing, auth gates, trailing slashes, bot embeds
 scripts/           worker, plan seeding, license key tool
 ```
+
+Each app has its own `Dockerfile`; the dashboard's is at the repository root because it builds from the whole workspace.
 
 Imports use `@/` for the dashboard root (`@/lib/...`, `@/components/...`) and `@emberly/db` for the database.
 

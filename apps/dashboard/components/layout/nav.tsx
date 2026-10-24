@@ -212,7 +212,8 @@ export function NavContent({ logoHref = '/' }: NavContentProps) {
 
   const isSuperAdmin = role === 'SUPERADMIN'
   const isAdmin = role === 'ADMIN' || isSuperAdmin
-  const { cloud: cloudEnabled, billing: billingEnabled } = useFeatures()
+  const { cloud: cloudEnabled, billing, licenseVendor } = useFeatures()
+  const billingEnabled = billing || licenseVendor
 
   // Build admin routes filtered by role
   const adminItems = useMemo(

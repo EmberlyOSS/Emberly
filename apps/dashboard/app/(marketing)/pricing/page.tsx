@@ -9,9 +9,12 @@ import CustomPricingCTA from '@/components/pricing/CustomPricingCTA'
 import PricingHero from '@/components/pricing/PricingHero'
 import HomeShell from '@/components/layout/home-shell'
 import PricingTabs from '@/components/pricing/PricingTabs'
+import LicensesSection, {
+  type LicensePlan,
+} from '@/components/pricing/LicensesSection'
 import { getAddOnPricing, getPlanPricing } from '@/lib/products/pricing'
 import { buildPageMetadata } from '@/lib/embeds/metadata'
-import { getFeatures, isBillingEnabled } from '@/lib/features'
+import { getFeatures } from '@/lib/features'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,9 +24,56 @@ export const metadata = buildPageMetadata({
     'Flexible plans for individuals, teams, and self-hosted deployments. Start free or scale up with advanced features.',
 })
 
+const LICENSING_URL = () =>
+  (process.env.EMBERLY_LICENSING_URL || 'https://licenses.embrly.ca').replace(
+    /\/+$/,
+    ''
+  )
+
+async function fetchLicensePlans(): Promise<{
+  plans: LicensePlan[]
+  buyUrl: string
+}> {
+  const fallback = { plans: [], buyUrl: LICENSING_URL() }
+  try {
+    const res = await fetch(`${LICENSING_URL()}/api/v1/plans`, {
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return fallback
+    const data = (await res.json()) as {
+      plans?: LicensePlan[]
+      buyUrl?: string
+    }
+    return { plans: data.plans ?? [], buyUrl: data.buyUrl ?? fallback.buyUrl }
+  } catch {
+    return fallback
+  }
+}
+
 export default async function PricingPage() {
-  // No plans to show while Emberly is running free
-  if (!(await isBillingEnabled())) notFound()
+  const features = await getFeatures()
+  const licenses = features.licenseVendor ? await fetchLicensePlans() : null
+  if (!features.billing && !licenses) notFound()
+
+  if (!features.billing && licenses) {
+    return (
+      <HomeShell>
+        <div className="container space-y-8 py-6">
+          <div className="mx-auto max-w-2xl space-y-4 text-center">
+            <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+              Self-hosting licenses
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Emberly is free to use here. Running your own Emberly? A license
+              adds your own branding, or lets you host it for your customers.
+            </p>
+          </div>
+          <LicensesSection plans={licenses.plans} buyUrl={licenses.buyUrl} />
+        </div>
+      </HomeShell>
+    )
+  }
 
   const session = await getServerSession(authOptions)
 
@@ -205,22 +255,8 @@ export default async function PricingPage() {
       <div className="container space-y-8">
         <PricingHero />
 
-        {(await getFeatures()).licenseVendor && (
-          <p className="text-center text-sm text-muted-foreground">
-            Running Emberly on your own server?{' '}
-            <a
-              href={
-                process.env.EMBERLY_LICENSING_URL ||
-                'https://licenses.embrly.ca'
-              }
-              className="text-primary hover:underline"
-            >
-              See self-hosting licenses
-            </a>
-          </p>
-        )}
-
         <PricingTabs
+          licenses={licenses}
           plans={plans}
           activePlanKey={activePlanKey}
           addOns={addOns}

@@ -8,10 +8,14 @@ process.env.NEXTAUTH_URL ||= appUrl()
 const DEV_SECRET = 'emberly-dev-nextauth-secret-please-set-auth-secret-in-env'
 
 export function resolvedAuthSecret() {
-  return authSecret() ?? (process.env.NODE_ENV !== 'production' ? DEV_SECRET : undefined)
+  return (
+    authSecret() ??
+    (process.env.NODE_ENV !== 'production' ? DEV_SECRET : undefined)
+  )
 }
 
-export const sessionCookieDomain = () => process.env.NEXTAUTH_COOKIE_DOMAIN || undefined
+export const sessionCookieDomain = () =>
+  process.env.NEXTAUTH_COOKIE_DOMAIN || undefined
 
 export function sessionCookieName() {
   if (sessionCookieDomain()) {
@@ -22,10 +26,33 @@ export function sessionCookieName() {
     : 'next-auth.session-token'
 }
 
-export function getSessionToken(req: NextRequest) {
-  return getToken({
-    req,
-    secret: resolvedAuthSecret(),
-    cookieName: sessionCookieName(),
-  })
+const COOKIE_NAMES = [
+  '__Secure-next-auth.session-token',
+  'next-auth.session-token',
+]
+
+export async function getSessionToken(req: NextRequest) {
+  const secret = resolvedAuthSecret()
+  const names = [
+    ...new Set(
+      [
+        sessionCookieName(),
+        process.env.NEXTAUTH_COOKIE_NAME,
+        ...COOKIE_NAMES,
+      ].filter(Boolean)
+    ),
+  ] as string[]
+  for (const cookieName of names) {
+    if (
+      !req.cookies
+        .getAll()
+        .some(
+          (c) => c.name === cookieName || c.name.startsWith(`${cookieName}.`)
+        )
+    )
+      continue
+    const token = await getToken({ req, secret, cookieName })
+    if (token) return token
+  }
+  return null
 }

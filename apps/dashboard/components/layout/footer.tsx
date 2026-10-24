@@ -61,7 +61,8 @@ const SOCIALS = [
 ]
 
 export function Footer() {
-  const { cloud: cloudEnabled, billing: billingEnabled } = useFeatures()
+  const { cloud: cloudEnabled, billing, licenseVendor } = useFeatures()
+  const billingEnabled = billing || licenseVendor
 
   return (
     <footer className="w-full px-4 pb-6 pt-10">
