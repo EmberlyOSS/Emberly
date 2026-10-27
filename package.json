@@ -19,6 +19,7 @@
     "dev:all": "turbo run dev",
     "build": "turbo run build --filter=@emberly/dashboard",
     "build:all": "turbo run build",
+    "licenses": "node scripts/site-licenses.mjs",
     "start": "bun run --cwd apps/dashboard start",
     "worker": "bun run --cwd apps/dashboard worker",
     "lint": "turbo run lint",

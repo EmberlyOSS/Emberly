@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/auth/api-auth'
 
-import { compare } from 'bcryptjs'
+import { checkFilePassword, clientAddress } from '@/lib/files/password-guard'
 
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
-import { processImageOCR } from '@/lib/ocr'
+import { rateLimiter } from '@/lib/cache/rate-limit'
+import { runOnDemandOCR } from '@/lib/ocr/on-demand'
 
 const logger = loggers.files
 
@@ -76,33 +77,69 @@ export async function GET(
         )
       }
 
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
+      const result = await checkFilePassword(
+        file.password,
+        providedPassword,
+        clientAddress(req.headers)
+      )
+      if (!result.ok) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Invalid password',
+            error: result.limited
+              ? 'Too many wrong passwords. Try again later.'
+              : 'Invalid password',
           },
-          { status: 401 }
+          {
+            status: result.limited ? 429 : 401,
+            headers: result.limited
+              ? { 'Retry-After': String(result.retryAfter) }
+              : undefined,
+          }
         )
       }
     }
 
-    if (!file.isOcrProcessed || (file.isOcrProcessed && !file.ocrText)) {
-      const result = await processImageOCR(file.path, id)
+    // Anyone can re-run an image that was never processed; only the owner can retry one that found nothing
+    const needsRun = !file.isOcrProcessed || (isOwner && !file.ocrText)
 
-      if (result.success && result.text) {
-        await prisma.file.update({
-          where: { id },
-          data: {
-            isOcrProcessed: true,
-            ocrText: result.text,
-            ocrConfidence: result.confidence,
-          },
-        })
+    if (needsRun) {
+      const limit = await rateLimiter.check(
+        `ocr:${user?.id ?? clientAddress(req.headers)}`,
+        20,
+        10 * 60
+      )
+      if (!limit.allowed) {
+        return NextResponse.json(
+          { success: false, error: 'Too many requests. Try again later.' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(
+                Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000))
+              ),
+            },
+          }
+        )
       }
 
-      return NextResponse.json(result)
+      const run = await runOnDemandOCR(file.path, id)
+      if (run.status === 'busy') {
+        return NextResponse.json(
+          { success: false, error: 'Text extraction is busy. Try again soon.' },
+          { status: 503, headers: { 'Retry-After': '30' } }
+        )
+      }
+      if (run.status === 'cooling-down') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Couldn’t read text from this image. Try again later.',
+          },
+          { status: 503, headers: { 'Retry-After': '300' } }
+        )
+      }
+      return NextResponse.json(run.result)
     }
 
     return NextResponse.json({
@@ -115,8 +152,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch OCR text',
+        error: 'Failed to fetch OCR text',
       },
       { status: 500 }
     )

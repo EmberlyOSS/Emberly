@@ -411,7 +411,7 @@ export function UploadForm({
               autoComplete="new-password"
               data-1p-ignore
               data-lpignore="true"
-              placeholder="No password"
+              placeholder="None, or at least 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-9 border-border/50 bg-background/50 pr-9"

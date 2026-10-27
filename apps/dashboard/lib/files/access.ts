@@ -13,7 +13,7 @@
  * in extra headers (e.g. CORS headers for the raw route) by wrapping the
  * result, but usually the bare Response is all that's needed.
  */
-import { compare } from 'bcryptjs'
+import { checkFilePassword, clientAddress } from '@/lib/files/password-guard'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +32,8 @@ interface AccessOptions {
   providedPassword?: string | null
   /** HTTP status to use for "not found / private" responses (default 404). */
   privateStatus?: number
+  /** The incoming request, so wrong password guesses are limited per address. */
+  request?: Request
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +74,7 @@ export function fileCacheControl(
 
 export async function checkFileAccess(
   file: FileAccessFields,
-  { userId, providedPassword, privateStatus = 404 }: AccessOptions
+  { userId, providedPassword, privateStatus = 404, request }: AccessOptions
 ): Promise<Response | null> {
   const isOwner = !!userId && userId === file.userId
 
@@ -92,11 +94,20 @@ export async function checkFileAccess(
         headers: { 'Cache-Control': NO_STORE },
       })
     }
-    const valid = await compare(providedPassword, file.password)
-    if (!valid) {
+    const result = await checkFilePassword(
+      file.password,
+      providedPassword,
+      clientAddress(request?.headers)
+    )
+    if (!result.ok) {
       return new Response(null, {
-        status: 401,
-        headers: { 'Cache-Control': NO_STORE },
+        status: result.limited ? 429 : 401,
+        headers: {
+          'Cache-Control': NO_STORE,
+          ...(result.limited
+            ? { 'Retry-After': String(result.retryAfter) }
+            : {}),
+        },
       })
     }
   }

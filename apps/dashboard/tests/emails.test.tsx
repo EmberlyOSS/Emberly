@@ -10,6 +10,8 @@ import {
   plainTextOptions,
   withEmailBrand,
 } from '@/lib/emails/components'
+import { buildAccountNotice } from '@/lib/emails/notices'
+import { AccountNoticeEmail } from '@/lib/emails/templates/account-notice'
 import { AdminBroadcastEmail } from '@/lib/emails/templates/admin-broadcast'
 import { NewLoginEmail } from '@/lib/emails/templates/new-login'
 import { VerificationCodeEmail } from '@/lib/emails/templates/verification-code'
@@ -94,5 +96,55 @@ describe('formatting', () => {
       'Oct 24, 2026, 12:46 PM UTC'
     )
     expect(formatEmailDate('not a date')).toBe('not a date')
+  })
+})
+
+describe('account notices', () => {
+  const site = 'https://files.acme.test'
+  const templates = {
+    'role-changed': { oldRole: 'USER', newRole: 'ADMIN' },
+    'account-suspended': {
+      reason: 'Spam',
+      isPermanent: true,
+      appealUrl: `${site}/contact`,
+    },
+    'account-unsuspended': {},
+    'api-key-created': {
+      keyName: 'CI',
+      scopes: 'upload',
+      expiresAt: 'Never',
+      ip: 'Unknown',
+    },
+    'api-key-revoked': { keyName: 'CI', revokedBy: 'admin' },
+    'backup-codes-generated': { codesCount: 10 },
+    'backup-code-used': { codesRemaining: 1 },
+    'session-revoked': { revokedBy: 'user' },
+    'suspicious-activity': { activityType: 'many_failed_logins' },
+  }
+
+  // These used to fall through to the generic fallback email
+  test('every notice has its own content', async () => {
+    for (const [template, vars] of Object.entries(templates)) {
+      const notice = buildAccountNotice(template, vars, site)
+      expect(notice).not.toBeNull()
+      const out = await html(createElement(AccountNoticeEmail, notice!))
+      expect(out).toContain(
+        notice!.heading.replace(/’/g, '&#x27;').slice(0, 10)
+      )
+      expect(out).not.toContain('Unknown')
+    }
+    expect(buildAccountNotice('basic', {}, site)).toBeNull()
+  })
+
+  test('a role change reads naturally', () => {
+    const notice = buildAccountNotice(
+      'role-changed',
+      { oldRole: 'USER', newRole: 'ADMIN' },
+      site
+    )
+    expect(notice?.intro).toBe(
+      'An administrator changed your account’s role from User to Admin.'
+    )
+    expect(notice?.callout?.title).toBe('You can now open the admin area')
   })
 })

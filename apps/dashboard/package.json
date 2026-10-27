@@ -14,7 +14,7 @@
     "db:seed": "bun --env-file=../../.env scripts/seed-plans.ts",
     "previews:backfill": "bun --env-file=../../.env scripts/backfill-previews.ts",
     "next:dev": "next dev --turbopack",
-    "next:build": "next build",
+    "next:build": "node ../../scripts/site-licenses.mjs && next build",
     "next:start": "next start"
   },
   "dependencies": {

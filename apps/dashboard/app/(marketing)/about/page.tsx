@@ -421,6 +421,39 @@ export default async function AboutPage() {
           </GlassCard>
         )}
 
+        <GlassCard>
+          <div className="flex flex-col gap-6 p-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl space-y-2">
+              <h2 className="text-2xl font-bold">Built on open source</h2>
+              <p className="leading-relaxed text-muted-foreground">
+                Emberly started as a fork of{' '}
+                <a
+                  href="https://github.com/FlintSH/Flare"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Flare
+                </a>{' '}
+                by Zachary Lowery, and is built with Next.js, React, Prisma,
+                Radix, shadcn/ui, CodeMirror and Tesseract.js, along with
+                hundreds of other open-source projects. Thank you to everyone
+                who makes them.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="shrink-0 bg-background/50"
+              asChild
+            >
+              <Link href="/licenses">
+                <BookOpen className="mr-2 h-4 w-4" />
+                Licenses and credits
+              </Link>
+            </Button>
+          </div>
+        </GlassCard>
+
         {/* CTA Section */}
         <GlassCard>
           <div className="p-8 text-center">

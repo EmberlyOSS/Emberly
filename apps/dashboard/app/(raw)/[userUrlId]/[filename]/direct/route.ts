@@ -30,6 +30,7 @@ export async function GET(
     const deny = await checkFileAccess(file, {
       userId: session?.user?.id,
       providedPassword,
+      request: req,
     })
     if (deny) return deny
 

@@ -75,6 +75,10 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md). Please report security issues pr
 - [Discord](https://discord.gg/36spBmzZVB)
 - [support@embrly.ca](mailto:support@embrly.ca)
 
+## Acknowledgements
+
+Emberly started as a fork of [Flare](https://github.com/FlintSH/Flare) by Zachary Lowery ([@FlintSH](https://github.com/FlintSH)). Thank you to Zach and Flare's contributors for the foundation Emberly is built on. Portions derived from Flare remain under its MIT license, reproduced in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ## License
 
 Emberly is licensed under the [Elastic License 2.0](LICENSE). You can use, modify and self-host it, including for your business. You may not offer it to others as a hosted service, or get around its license keys. Releases before the switch remain available under the GNU AGPL v3.

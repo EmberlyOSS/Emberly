@@ -8,6 +8,7 @@ import { getProviderForStoredFile } from '@/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/lib/api/cors'
 import { readPreview } from '@/lib/embeds/preview'
 import { PREVIEW_TYPE, isPreviewable } from '@/lib/embeds/preview-rules'
+import { fileSecurityHeaders, isRasterImage } from '@/lib/files/safe-headers'
 
 const logger = loggers.files
 
@@ -98,10 +99,18 @@ export async function GET(
           headers: {
             'Content-Type': PREVIEW_TYPE,
             'Cache-Control': fileCacheControl(file),
+            ...fileSecurityHeaders(PREVIEW_TYPE),
             ...getCORSHeaders(),
           },
         })
       }
+    }
+
+    // Only plain raster images are safe to send back as-is; SVG can carry scripts
+    if (!isRasterImage(file.mimeType)) {
+      const baseUrl = request.headers.get('host') || 'localhost:3000'
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      return NextResponse.redirect(`${protocol}://${baseUrl}/banner.png`)
     }
 
     const storageProvider = await getProviderForStoredFile(file.storageBucketId)
@@ -111,6 +120,7 @@ export async function GET(
       headers: {
         'Content-Type': file.mimeType,
         'Cache-Control': fileCacheControl(file),
+        ...fileSecurityHeaders(file.mimeType),
         ...getCORSHeaders(),
       },
     })

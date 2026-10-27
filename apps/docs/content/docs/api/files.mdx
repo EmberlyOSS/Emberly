@@ -29,7 +29,7 @@ Send the file as `multipart/form-data`. This is what ShareX and the other upload
 |-------|------|-------------|
 | `file` | file | **Required.** The file to upload. |
 | `visibility` | `PUBLIC` or `PRIVATE` | Defaults to `PUBLIC`. Private files are only visible to you. |
-| `password` | string | Ask viewers for this password before showing the file. |
+| `password` | string | Ask viewers for this password before showing the file. 8 to 72 characters. |
 | `expiresAt` | ISO 8601 date | Delete the file at this time. |
 | `domain` | string | One of your verified [custom domains](/api/domains) to use in the returned link. |
 | `allowSuggestions` | `true` or `false` | Let collaborators suggest edits to text files. |
@@ -199,11 +199,11 @@ Chunked uploads are public. Use [`PATCH /api/files/{id}`](#update-a-file) afterw
 ```json
 {
   "visibility": "PRIVATE",
-  "password": "hunter2"
+  "password": "correct horse"
 }
 ```
 
-Both fields are optional. Set `password` to `null` to remove it. The response is the updated file, without the `success`/`data` wrapper:
+Both fields are optional. Passwords must be 8 to 72 characters; set `password` to `null` to remove it. The response is the updated file, without the `success`/`data` wrapper:
 
 ```json
 {

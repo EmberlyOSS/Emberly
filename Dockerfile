@@ -25,6 +25,8 @@ FROM deps AS build
 COPY turbo.json ./
 COPY packages packages
 COPY apps/dashboard apps/dashboard
+COPY LICENSE THIRD_PARTY_NOTICES.md ./
+COPY scripts scripts
 ENV BUILD_STANDALONE=1
 RUN bun run --cwd packages/db db:generate \
  && bun run --cwd apps/dashboard build
@@ -59,6 +61,8 @@ COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/.next/standalone 
 COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/.next/static ./apps/dashboard/.next/static
 COPY --from=build --chown=emberly:emberly /repo/apps/dashboard/public ./apps/dashboard/public
 COPY --chmod=755 apps/dashboard/docker-entrypoint.sh /usr/local/bin/emberly-entrypoint
+COPY LICENSE THIRD_PARTY_NOTICES.md ./
+COPY --from=build /repo/apps/dashboard/public/licenses/packages.txt ./THIRD_PARTY_LICENSES.txt
 
 USER emberly
 VOLUME ["/data"]

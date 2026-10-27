@@ -15,6 +15,7 @@ import {
   recordPasswordHistory,
 } from '@/lib/security/password-reuse-checker'
 import { removePreview } from '@/lib/embeds/preview'
+import { isSafeColors, isSafeThemeName } from '@/lib/theme/safe-colors'
 
 const logger = loggers.users
 
@@ -173,8 +174,18 @@ export async function PUT(req: Request) {
       updateData.randomizeFileUrls = body.randomizeFileUrls
     if (typeof body.enableRichEmbeds === 'boolean')
       updateData.enableRichEmbeds = body.enableRichEmbeds
-    if (typeof body.theme === 'string') updateData.theme = body.theme
-    if (body.customColors) updateData.customColors = body.customColors
+    if (typeof body.theme === 'string') {
+      if (!isSafeThemeName(body.theme)) {
+        return apiError('Invalid theme', HTTP_STATUS.BAD_REQUEST)
+      }
+      updateData.theme = body.theme
+    }
+    if (body.customColors) {
+      if (!isSafeColors(body.customColors)) {
+        return apiError('Invalid theme colors', HTTP_STATUS.BAD_REQUEST)
+      }
+      updateData.customColors = body.customColors
+    }
     // theme: null clears the user's choice so they follow the system theme again
     if (body.theme === null) {
       updateData.theme = null

@@ -13,6 +13,10 @@ jobs:
   dashboard:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
     runs-on: ubuntu-latest
+    env:
+      # Docker Hub is optional: set DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets to publish there too
+      DOCKERHUB_ENABLED: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+      DOCKERHUB_IMAGE: docker.io/${{ vars.DOCKERHUB_NAMESPACE || secrets.DOCKERHUB_USERNAME }}/emberly
     steps:
       - uses: actions/checkout@v6
 
@@ -25,10 +29,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - if: env.DOCKERHUB_ENABLED == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/emberly
+          images: |
+            ghcr.io/${{ github.repository_owner }}/emberly
+            ${{ env.DOCKERHUB_ENABLED == 'true' && env.DOCKERHUB_IMAGE || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

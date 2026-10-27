@@ -23,6 +23,7 @@ import {
   scheduleFileExpiration,
 } from '@/lib/events/handlers/file-expiry'
 import { getUniqueFilename } from '@/lib/files/filename'
+import { filePasswordProblem } from '@/lib/files/password-guard'
 import { validateUploadRequest } from '@/lib/files/upload-validation'
 import {
   validateFileSecurityChecks,
@@ -119,6 +120,11 @@ export async function POST(req: Request) {
           HTTP_STATUS.BAD_REQUEST
         )
       }
+    }
+
+    const passwordProblem = password ? filePasswordProblem(password) : null
+    if (passwordProblem) {
+      return apiError(passwordProblem, HTTP_STATUS.BAD_REQUEST)
     }
 
     if (!result.success) {

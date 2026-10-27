@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ userUrlId: string; filename: string }> },
+  { params }: { params: Promise<{ userUrlId: string; filename: string }> }
 ) {
   const { userUrlId, filename } = await params
   const urlPath = `/${userUrlId}/${filename}`
@@ -29,7 +29,13 @@ export async function GET(
 
   // Fetch file record (handles space→dash fallback automatically)
   const file = await findFileByUrlPath(userUrlId, filename, {
-    select: { name: true, mimeType: true, visibility: true, password: true, userId: true },
+    select: {
+      name: true,
+      mimeType: true,
+      visibility: true,
+      password: true,
+      userId: true,
+    },
   })
 
   if (!file || !file.mimeType.startsWith('video/')) {
@@ -37,8 +43,16 @@ export async function GET(
   }
 
   const session = await getServerSession(authOptions)
-  const deny = await checkFileAccess(file, { userId: (session?.user as { id?: string })?.id, providedPassword: password })
-  if (deny) return new NextResponse(deny.status === 404 ? 'Forbidden' : 'Unauthorized', { status: deny.status })
+  const deny = await checkFileAccess(file, {
+    userId: (session?.user as { id?: string })?.id,
+    providedPassword: password,
+    request,
+  })
+  if (deny)
+    return new NextResponse(
+      deny.status === 404 ? 'Forbidden' : 'Unauthorized',
+      { status: deny.status }
+    )
 
   const rawUrl = buildRawUrl(urlPath, password)
 

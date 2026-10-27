@@ -387,7 +387,7 @@ function FileSettingsDialog({
                 data-lpignore="true"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave empty for no password"
+                placeholder="None, or at least 8 characters"
               />
             </div>
           </div>

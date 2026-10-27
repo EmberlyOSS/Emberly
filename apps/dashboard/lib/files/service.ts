@@ -16,7 +16,12 @@ import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { File, Prisma, User } from '@emberly/db'
-import { compare, hash } from 'bcryptjs'
+import { hash } from 'bcryptjs'
+
+import {
+  checkFilePassword,
+  filePasswordProblem,
+} from '@/lib/files/password-guard'
 import { removePreview } from '@/lib/embeds/preview'
 
 const logger = loggers.files
@@ -37,7 +42,8 @@ export interface FileAccessResult {
 export async function verifyFileAccess(
   fileId: string,
   userId: string | null,
-  password?: string
+  password?: string,
+  client = 'unknown'
 ): Promise<FileAccessResult> {
   const file = await prisma.file.findUnique({
     where: { id: fileId },
@@ -63,9 +69,13 @@ export async function verifyFileAccess(
       return { allowed: false, reason: 'Password required', file }
     }
 
-    const passwordMatches = await compare(password, file.password)
-    if (!passwordMatches) {
-      return { allowed: false, reason: 'Invalid password', file }
+    const result = await checkFilePassword(file.password, password, client)
+    if (!result.ok) {
+      return {
+        allowed: false,
+        reason: result.limited ? 'Too many attempts' : 'Invalid password',
+        file,
+      }
     }
   }
 
@@ -111,6 +121,8 @@ export async function updateFileMetadata(
 
   if (updates.password !== undefined) {
     if (updates.password) {
+      const problem = filePasswordProblem(updates.password)
+      if (problem) throw new Error(problem)
       updateData.password = await hash(updates.password, 10)
     } else {
       updateData.password = null

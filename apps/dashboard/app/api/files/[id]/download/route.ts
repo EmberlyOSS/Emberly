@@ -1,12 +1,14 @@
 import { getAuthenticatedUser } from '@/lib/auth/api-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { compare } from 'bcryptjs'
+import { checkFilePassword, clientAddress } from '@/lib/files/password-guard'
 
 import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/lib/api/cors'
+import { fileCacheControl } from '@/lib/files/access'
+import { fileSecurityHeaders } from '@/lib/files/safe-headers'
 
 const logger = loggers.files
 
@@ -66,9 +68,18 @@ export async function GET(
         return new Response(null, { status: 401 })
       }
 
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
-        return new Response(null, { status: 401 })
+      const result = await checkFilePassword(
+        file.password,
+        providedPassword,
+        clientAddress(request.headers)
+      )
+      if (!result.ok) {
+        return new Response(null, {
+          status: result.limited ? 429 : 401,
+          headers: result.limited
+            ? { 'Retry-After': String(result.retryAfter) }
+            : undefined,
+        })
       }
     }
 
@@ -99,6 +110,8 @@ export async function GET(
         'Content-Length': chunkSize.toString(),
         'Content-Type': file.mimeType,
         'Content-Disposition': `attachment; filename=${encodeFilename(file.name)}`,
+        ...fileSecurityHeaders(file.mimeType),
+        'Cache-Control': fileCacheControl(file),
         ...getCORSHeaders(),
       }
 
@@ -112,6 +125,8 @@ export async function GET(
     const headers = {
       'Content-Type': file.mimeType,
       'Content-Disposition': `attachment; filename=${encodeFilename(file.name)}`,
+      ...fileSecurityHeaders(file.mimeType),
+      'Cache-Control': fileCacheControl(file),
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
       ...getCORSHeaders(),
@@ -172,9 +187,18 @@ export async function POST(
         return new Response(null, { status: 401 })
       }
 
-      const isPasswordValid = await compare(providedPassword, file.password)
-      if (!isPasswordValid) {
-        return new Response(null, { status: 401 })
+      const result = await checkFilePassword(
+        file.password,
+        providedPassword,
+        clientAddress(request.headers)
+      )
+      if (!result.ok) {
+        return new Response(null, {
+          status: result.limited ? 429 : 401,
+          headers: result.limited
+            ? { 'Retry-After': String(result.retryAfter) }
+            : undefined,
+        })
       }
     }
 
@@ -191,6 +215,8 @@ export async function POST(
     const headers = {
       'Content-Type': file.mimeType,
       'Content-Disposition': `attachment; filename=${encodeFilename(file.name)}`,
+      ...fileSecurityHeaders(file.mimeType),
+      'Cache-Control': fileCacheControl(file),
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
     }
