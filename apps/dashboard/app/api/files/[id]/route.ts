@@ -9,6 +9,7 @@ import { emitAuditEvent } from '@/lib/events/audit-helper'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { removePreview } from '@/lib/embeds/preview'
+import { filePasswordProblem } from '@/lib/files/password-guard'
 
 const logger = loggers.files
 
@@ -64,6 +65,10 @@ export async function PATCH(
     }
 
     if (typeof password !== 'undefined') {
+      const problem = password ? filePasswordProblem(password) : null
+      if (problem) {
+        return NextResponse.json({ error: problem }, { status: 400 })
+      }
       updates.password = password ? await hash(password, 10) : null
     }
 

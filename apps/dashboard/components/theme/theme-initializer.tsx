@@ -1,5 +1,6 @@
 import { getConfig } from '@/lib/config'
 import { generateHueColors, parseHueThemeId } from '@/lib/theme/hue'
+import { safeColors } from '@/lib/theme/safe-colors'
 
 type ThemeInitializerProps = {
   userTheme?: string | null
@@ -37,7 +38,7 @@ export async function ThemeInitializer({
     colorsToUse = generateHueColors(hue)
   }
 
-  const cssVariables = Object.entries(colorsToUse)
+  const cssVariables = Object.entries(safeColors(colorsToUse))
     .map(([key, value]) => {
       const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
       return `--${cssKey}: ${value};`

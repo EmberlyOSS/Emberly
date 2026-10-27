@@ -241,7 +241,10 @@ export function FileCard({
         },
         body: JSON.stringify({ password: password || null }),
       })
-      if (!response.ok) throw new Error()
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error)
+      }
       toast({
         title: password
           ? 'Password protection enabled'
@@ -252,10 +255,10 @@ export function FileCard({
       })
       setIsPasswordDialogOpen(false)
       setFile((prev) => ({ ...prev, password: password || null }))
-    } catch {
+    } catch (error) {
       toast({
         title: 'Failed to update password',
-        description: 'Please try again',
+        description: (error as Error).message || 'Please try again',
         variant: 'destructive',
       })
     }
@@ -546,7 +549,7 @@ export function FileCard({
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave empty to remove protection"
+                placeholder="At least 8 characters, or empty to remove"
               />
             </div>
             <div className="flex justify-end gap-2">

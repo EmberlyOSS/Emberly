@@ -4,7 +4,6 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { compare } from 'bcryptjs'
 import { ShieldAlert } from 'lucide-react'
 import { getServerSession } from 'next-auth'
 
@@ -26,6 +25,7 @@ import {
 } from '@/lib/embeds/metadata'
 import { queuePreview } from '@/lib/embeds/preview'
 import { findFileByUrlPath } from '@/lib/files/lookup'
+import { checkFilePassword, clientAddress } from '@/lib/files/password-guard'
 import { formatFileSize } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -288,11 +288,12 @@ export default async function FilePage({
       )
     }
 
-    const isPasswordValid = await compare(
+    const passwordCheck = await checkFilePassword(
+      serializedFile.password,
       providedPassword,
-      serializedFile.password
+      clientAddress(await headers())
     )
-    if (!isPasswordValid) {
+    if (!passwordCheck.ok) {
       return (
         <div className="flex-1 relative min-h-screen overflow-hidden">
           <DynamicBackground />
@@ -307,10 +308,14 @@ export default async function FilePage({
             <Card className="w-full max-w-md glass">
               <div className="p-6">
                 <h1 className="text-xl font-medium text-center mb-4">
-                  Incorrect Password
+                  {passwordCheck.limited
+                    ? 'Too many attempts'
+                    : 'Incorrect Password'}
                 </h1>
                 <p className="text-sm text-muted-foreground text-center mb-6">
-                  The password you entered is incorrect
+                  {passwordCheck.limited
+                    ? `Too many wrong passwords. Try again in ${Math.ceil(passwordCheck.retryAfter / 60)} minutes.`
+                    : 'The password you entered is incorrect'}
                 </p>
                 <form className="space-y-4" action={urlPath}>
                   <div className="space-y-2">

@@ -54,3 +54,9 @@ Out-of-scope (unless chainable to significant impact):
 - Missing best-practice headers only
 - Self-XSS without escalation path
 - Rate-limit bypass with no practical abuse impact
+
+## Acknowledgements
+
+Thank you to everyone who has reported security issues responsibly.
+
+- **birb ([@parabirb](https://github.com/parabirb))**, whose audit of [Flare](https://github.com/FlintSH/Flare), the project Emberly was originally forked from, found issues that also affected Emberly: stored XSS through uploaded SVG and HTML files, unlimited file password guessing, and unthrottled OCR. Fixed in Emberly 3.2.1.

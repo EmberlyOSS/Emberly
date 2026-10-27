@@ -52,10 +52,10 @@ Change visibility anytime from the file's **⋯** menu → **Visibility**.
 Add an optional password to any file:
 
 1. Open the file's **⋯** menu → **Add password** (or **Change password**)
-2. Enter a password
+2. Enter a password of at least 8 characters
 3. Save
 
-Anyone accessing the file will be prompted for the password. Passwords are bcrypt-hashed server-side — we never see them in plain text.
+Anyone accessing the file will be prompted for the password. Passwords are bcrypt-hashed server-side — we never see them in plain text. After 10 wrong guesses in 15 minutes, that visitor has to wait before trying again.
 
 ---
 

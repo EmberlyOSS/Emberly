@@ -47,6 +47,7 @@ const COLUMNS: Array<{ title: string; links: FooterLink[] }> = [
       { href: '/changelogs', label: 'Changelog' },
       { href: '/discord', label: 'Community' },
       { href: '/legal', label: 'Legal' },
+      { href: '/licenses', label: 'Licenses' },
     ],
   },
 ]
@@ -140,6 +141,13 @@ export function Footer() {
               ) : (
                 <BrandName />
               )}
+              <span aria-hidden> · </span>
+              <Link
+                href="/licenses"
+                className="transition-colors hover:text-foreground"
+              >
+                Licenses
+              </Link>
             </p>
             <div className="flex items-center gap-4">
               <PoweredByEmberly />

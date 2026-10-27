@@ -1,4 +1,6 @@
 import { hash } from 'bcryptjs'
+
+import { filePasswordProblem } from '@/lib/files/password-guard'
 import { NextResponse } from 'next/server'
 
 import { getServerSession } from 'next-auth'
@@ -87,6 +89,11 @@ export async function PATCH(
 
     const body = await request.json()
     const { visibility, password } = body
+
+    const passwordProblem = password ? filePasswordProblem(password) : null
+    if (passwordProblem) {
+      return NextResponse.json({ error: passwordProblem }, { status: 400 })
+    }
 
     const file = await prisma.file.update({
       where: {

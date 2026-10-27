@@ -7,6 +7,7 @@ import {
 } from '@/lib/auth/login-context'
 import { isPreviewable, previewSize } from '@/lib/embeds/preview-rules'
 import { isDiscordWebhookUrl } from '@/lib/events/utils/discord-webhook'
+import { describeStorageError, isStorageNotFound } from '@/lib/storage/errors'
 import { humanize } from '@/lib/utils/humanize'
 
 describe('isDiscordWebhookUrl', () => {
@@ -112,5 +113,30 @@ describe('sign-in location', () => {
     expect(
       describeLoginContext({ ip: '8.8.8.8' }, when).loginLocation
     ).toBeUndefined()
+  })
+})
+
+describe('storage errors', () => {
+  const s3 = (status: number, name = 'Unknown') =>
+    Object.assign(new Error('UnknownError'), {
+      name,
+      $metadata: { httpStatusCode: status, requestId: 'REQ1' },
+    })
+
+  test('pull out what matters for the logs', () => {
+    expect(describeStorageError(s3(403))).toMatchObject({
+      code: 'Unknown',
+      status: 403,
+      requestId: 'REQ1',
+    })
+    expect(describeStorageError(s3(403)).hint).toContain('missing')
+  })
+
+  test('recognise missing objects', () => {
+    expect(isStorageNotFound(s3(404, 'NotFound'))).toBe(true)
+    expect(
+      isStorageNotFound(Object.assign(new Error('x'), { code: 'ENOENT' }))
+    ).toBe(true)
+    expect(isStorageNotFound(s3(403))).toBe(false)
   })
 })

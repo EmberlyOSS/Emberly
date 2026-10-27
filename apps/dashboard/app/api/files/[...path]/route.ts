@@ -8,6 +8,8 @@ import { prisma } from '@emberly/db'
 import { loggers } from '@/lib/logger'
 import { getProviderForStoredFile } from '@/lib/storage'
 import { handleCORSPreflight, getCORSHeaders } from '@/lib/api/cors'
+import { fileSecurityHeaders } from '@/lib/files/safe-headers'
+import { describeStorageError, isStorageNotFound } from '@/lib/storage/errors'
 
 const logger = loggers.files
 
@@ -27,6 +29,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ): Promise<Response> {
+  let logContext: Record<string, unknown> = {}
   try {
     const { path } = await params
     const session = await getServerSession(authOptions)
@@ -71,8 +74,16 @@ export async function GET(
     const deny = await checkFileAccess(file, {
       userId: session?.user?.id,
       providedPassword,
+      request,
     })
     if (deny) return deny
+
+    logContext = {
+      fileId: file.id,
+      urlPath,
+      storagePath: file.path,
+      storageBucketId: file.storageBucket?.id ?? null,
+    }
 
     if (isDownloadRequest) {
       await prisma.file.update({
@@ -109,6 +120,7 @@ export async function GET(
         'Content-Type': file.mimeType,
         'Content-Disposition': `${shouldForceDownload ? 'attachment' : 'inline'}; filename=${encodeFilename(file.name)}`,
         'Cache-Control': fileCacheControl(file),
+        ...fileSecurityHeaders(file.mimeType),
         ...getCORSHeaders(),
       }
 
@@ -125,24 +137,23 @@ export async function GET(
       'Accept-Ranges': 'bytes',
       'Content-Length': size.toString(),
       'Cache-Control': fileCacheControl(file),
+      ...fileSecurityHeaders(file.mimeType),
       ...getCORSHeaders(),
     }
 
     return new NextResponse(stream as unknown as ReadableStream, { headers })
   } catch (error) {
-    const errAny = error as any
-    logger.error('File serve error:', error as Error)
-    try {
-      logger.error('File serve error details', {
-        name: errAny?.name,
-        code: errAny?.code || errAny?.name,
-        fault: errAny?.$fault,
-        awsMetadata: errAny?.$metadata,
-        message: errAny?.message,
+    if (isStorageNotFound(error)) {
+      logger.warn('Stored file is missing', logContext)
+      return new Response(null, {
+        status: 404,
+        headers: { 'Cache-Control': NO_STORE },
       })
-    } catch {
-      // ignore logging errors
     }
+    logger.error('File serve error', error, {
+      ...logContext,
+      storage: describeStorageError(error),
+    })
 
     // A storage failure is not "not found"; never let it be cached as one
     return new Response(null, {

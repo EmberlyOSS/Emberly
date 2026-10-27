@@ -88,10 +88,7 @@ export async function validateCustomDomain(
 
   // Check if domain is the main app domain - no validation needed
   const appDomain = trimTrailingSlashes(
-    (appUrl()).replace(
-      /^https?:\/\//,
-      ''
-    )
+    appUrl().replace(/^https?:\/\//, '')
   ).toLowerCase()
 
   if (
@@ -161,10 +158,7 @@ export async function validateSquadCustomDomain(
   ).toLowerCase()
 
   const appDomain = trimTrailingSlashes(
-    (appUrl()).replace(
-      /^https?:\/\//,
-      ''
-    )
+    appUrl().replace(/^https?:\/\//, '')
   ).toLowerCase()
 
   if (

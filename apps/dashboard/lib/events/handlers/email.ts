@@ -8,6 +8,8 @@ import {
   BasicEmail,
   AdminBroadcastEmail,
   AccountChangeEmail,
+  AccountNoticeEmail,
+  buildAccountNotice,
   PerkGainedEmail,
   QuotaReachedEmail,
   StorageAssignedEmail,
@@ -679,6 +681,18 @@ async function sendEmail(options: {
             ? variables.dashboardUrl
             : undefined,
       },
+      skipTracking: true,
+    })
+    return { messageId: result.id || `email-${Date.now()}` }
+  }
+
+  const notice = buildAccountNotice(template, variables, appUrl())
+  if (notice) {
+    const result = await sendTemplateEmail({
+      to,
+      subject,
+      template: AccountNoticeEmail,
+      props: notice,
       skipTracking: true,
     })
     return { messageId: result.id || `email-${Date.now()}` }

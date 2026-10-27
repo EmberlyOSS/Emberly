@@ -5,6 +5,7 @@ import { Readable } from 'stream'
 
 import { authOptions } from '@/lib/auth'
 import { NO_STORE, checkFileAccess, fileCacheControl } from '@/lib/files/access'
+import { fileSecurityHeaders } from '@/lib/files/safe-headers'
 import { getProviderForStoredFile } from '@/lib/storage'
 
 export const CORS_HEADERS = {
@@ -52,6 +53,7 @@ export async function denyFileAccess(
   const deny = await checkFileAccess(file, {
     userId: session?.user?.id,
     providedPassword: new URL(req.url).searchParams.get('password'),
+    request: req,
   })
   return deny ? emptyResponse(deny.status) : null
 }
@@ -117,6 +119,7 @@ export async function serveStoredFile(
     'Content-Type': file.mimeType,
     'Content-Disposition': `inline; filename=${encodeFilename(file.name)}`,
     'Cache-Control': fileCacheControl(file),
+    ...fileSecurityHeaders(file.mimeType),
   }
 
   const range = head ? null : req.headers.get('range')

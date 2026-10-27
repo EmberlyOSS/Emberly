@@ -10,6 +10,31 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 - **A Downloads page.** `/downloads` offers Flicker, Emberly's desktop app, with a button for the visitor's system (Windows, macOS or Linux) and every installer listed by platform, with sizes. The version, date and files come from the latest Flicker release on GitHub, cached for 10 minutes, and the last good copy is shown if GitHub is unavailable. The page also covers ShareX, Flameshot, Spectacle, scripts and the API, with setup guides. It's linked from the navbar, the footer and **Profile → Uploads**, and works on self-hosted instances too.
 
+### Fixed
+
+- **Admin → Reports and Admin → Applications crashed when there was nothing to show**, with "Something went wrong" instead of the empty list.
+- **Eight emails used a generic fallback layout**: role changed, account suspended and restored, API key created and revoked, backup codes generated and used, session revoked, and suspicious activity. Each now has its own wording and details, and links to the right settings page.
+- **Files missing from storage returned an error instead of "not found".** Raw links and `/api/files` now return `404` when the stored object is gone. Other storage failures are logged with the file, its storage path and the storage provider's status and request ID, instead of `[object Object]`. With S3, a `403` usually means the object is missing and the access key can't list the bucket, or the key can't read it.
+
+### Changed
+
+- **File passwords must be at least 8 characters.** This applies to new passwords only; existing ones keep working until they're changed.
+- **Credit to Flare.** Emberly began as a fork of [Flare](https://github.com/FlintSH/Flare) by Zachary Lowery. The README now says so, `LICENSE` points to Flare's MIT license in `THIRD_PARTY_NOTICES.md`, and the Docker image now includes both.
+- **Open-source credits.** `THIRD_PARTY_NOTICES.md` now also credits shadcn/ui (whose components `components/ui` is built on), the Inter typeface, and the Font Awesome icons on the Downloads page, and Inter's license now ships with the font files. A new **Licenses** page (`/licenses`), linked from the footer, shows Emberly's own license, these notices, and the license of all 799 open-source packages Emberly ships with, with a search box. The list is generated on every build, and the Docker image also includes it as `THIRD_PARTY_LICENSES.txt`; run `bun run licenses` to generate it yourself. The About page has a new **Built on open source** section that credits Flare and links to it.
+- **The Docker image can also be published to Docker Hub.** Set the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets (and optionally a `DOCKERHUB_NAMESPACE` variable) and each release is pushed there as well as to GitHub Packages.
+
+### Security
+
+These issues were found by birb ([@parabirb](https://github.com/parabirb)) in an audit of Flare, the project Emberly was originally forked from, and also affected Emberly. Thank you.
+
+- **Uploaded SVG and HTML files could run scripts on the Emberly site.** Raw file links and thumbnails served them with the uploader's file type and no Content-Security-Policy, so opening one ran its JavaScript with the viewer's session. Every response that serves an uploaded file now sends `Content-Security-Policy: sandbox` and `X-Content-Type-Options: nosniff`, and thumbnails are only served for raster images. Related: [GHSA-4fr7-p4rm-r2f6](https://github.com/FlintSH/Flare/security/advisories/GHSA-4fr7-p4rm-r2f6).
+- **File passwords could be guessed without limit.** After 10 wrong passwords for a file from one address in 15 minutes, that address gets `429` for the file, and after 100 wrong passwords in total the file stops accepting guesses for the rest of the window. A correct password is remembered for 10 minutes, so streaming a protected video no longer checks it on every request. Related: [GHSA-qxr9-m5ff-27rv](https://github.com/FlintSH/Flare/security/advisories/GHSA-qxr9-m5ff-27rv).
+- **Anyone could start text extraction (OCR) repeatedly** on a public image, exhausting CPU and memory. On-demand OCR now runs one image at a time with at most 10 waiting (more get `503`), each account or address can start 20 per 10 minutes (then `429`), an image that failed isn't retried for 5 minutes, and failed images are only retried by their owner. Errors no longer include storage details. Related: [GHSA-7p5v-2m9m-3p9m](https://github.com/FlintSH/Flare/security/advisories/GHSA-7p5v-2m9m-3p9m).
+- **Theme colors weren't validated** before being written into the page's styles. Colors and theme names must now be plain values, and anything else saved earlier is dropped when the page is rendered. This wasn't exploitable against other people in Emberly, since only superadmins set the site's colors and your own colors only apply to you. Related: [GHSA-jf87-vxjh-6gv2](https://github.com/FlintSH/Flare/security/advisories/GHSA-jf87-vxjh-6gv2).
+- **Downloads of private and password-protected files** now send `Cache-Control: private, no-store`, so a CDN can't keep a copy. Raw links already did. Related: [GHSA-5gjg-xfq3-pp83](https://github.com/FlintSH/Flare/security/advisories/GHSA-5gjg-xfq3-pp83).
+
+After upgrading, purge `/*/*/raw`, `/api/files/*` and `/api/files/*/thumbnail` from any CDN or caching proxy, since public files were cached with the old headers.
+
 ---
 
 ## [3.2.0] - 2026-10-24
