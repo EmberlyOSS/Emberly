@@ -1,5 +1,13 @@
 import { compare } from 'bcryptjs'
-import { createHash } from 'crypto'
+import { randomBytes, scrypt } from 'crypto'
+import { promisify } from 'util'
+
+const scryptAsync = promisify(scrypt) as (
+  password: string,
+  salt: Buffer,
+  keylen: number,
+  options: { N: number; r: number; p: number }
+) => Promise<Buffer>
 
 const WINDOW_MS = 15 * 60 * 1000
 const PER_CLIENT_LIMIT = 10
@@ -18,8 +26,17 @@ interface Attempts {
 const attempts = new Map<string, Attempts>()
 const accepted = new Map<string, number>()
 
-const digest = (...parts: string[]) =>
-  createHash('sha256').update(parts.join('\0')).digest('hex')
+// Remembered passwords are keyed by a cheap scrypt with a per-process secret, never a fast hash
+const SECRET = randomBytes(32)
+async function rememberKeyFor(
+  storedHash: string,
+  client: string,
+  password: string
+) {
+  const salt = Buffer.concat([SECRET, Buffer.from(`${storedHash}\0${client}`)])
+  const key = await scryptAsync(password, salt, 32, { N: 1024, r: 8, p: 1 })
+  return key.toString('hex')
+}
 
 function sweep(now: number) {
   if (attempts.size + accepted.size < 10_000) return
@@ -76,10 +93,10 @@ export async function checkFilePassword(
   const now = Date.now()
   sweep(now)
 
-  const rememberKey = digest(storedHash, client, password)
+  const rememberKey = await rememberKeyFor(storedHash, client, password)
   if ((accepted.get(rememberKey) ?? 0) > now) return { ok: true }
 
-  const file = digest(storedHash)
+  const file = storedHash
   const perClient = bucket(`${file}:${client}`, now)
   const perFile = bucket(file, now)
 
