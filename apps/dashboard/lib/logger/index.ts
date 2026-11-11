@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 
 import pino, { Logger as PinoLogger } from 'pino'
+import { clientIp } from '@/lib/security/client-ip'
 
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
 
@@ -216,10 +217,7 @@ export class Logger {
       method: req.method,
       url: req.url,
       userAgent: req.headers.get('user-agent') || undefined,
-      ip:
-        req.headers.get('x-forwarded-for') ||
-        req.headers.get('x-real-ip') ||
-        undefined,
+      ip: clientIp(req.headers),
       ...context,
     }
 

@@ -9,6 +9,7 @@ import {
   POLL_INTERVAL_SECONDS,
   createDeviceAuthorization,
 } from '@/lib/device-auth'
+import { clientIp } from '@/lib/security/client-ip'
 
 const Body = z.object({
   clientId: z.string(),
@@ -16,7 +17,7 @@ const Body = z.object({
 })
 
 export async function POST(req: Request) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+  const ip = clientIp(req.headers) ?? 'unknown'
   const { allowed } = await rateLimiter.check(`device:code:${ip}`, 10, 600)
   if (!allowed)
     return apiError(
@@ -33,9 +34,7 @@ export async function POST(req: Request) {
     parsed.data.clientId,
     parsed.data.deviceName
   )
-  const base = (
-    appUrl()
-  ).replace(/\/$/, '')
+  const base = appUrl().replace(/\/$/, '')
 
   return apiResponse({
     deviceCode,

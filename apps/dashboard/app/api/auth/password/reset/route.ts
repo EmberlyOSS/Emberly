@@ -14,6 +14,7 @@ import {
 import { events } from '@/lib/events'
 import { appUrl } from '@/lib/config/env'
 import { createNotification } from '@/lib/notifications'
+import { clientIp } from '@/lib/security/client-ip'
 
 const requestSchema = z.object({
   email: z.string().email(),
@@ -22,7 +23,7 @@ const requestSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
+  const ip = clientIp(req.headers) ?? 'unknown'
 
   // Rate limit: 5 attempts per 10 minutes per IP
   const { allowed } = await rateLimiter.check(
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
         userId: user.id,
         email: user.email,
         context: {
-          ip: req.headers.get('x-forwarded-for')?.split(',')[0] ?? undefined,
+          ip: clientIp(req.headers),
         },
       })
       .catch((err) =>

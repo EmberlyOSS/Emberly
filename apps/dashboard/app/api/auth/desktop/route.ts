@@ -10,6 +10,7 @@ import {
   auditSuspiciousActivity,
   emitAuditEvent,
 } from '@/lib/events/audit-helper'
+import { clientIp } from '@/lib/security/client-ip'
 
 const logger = loggers.auth
 
@@ -66,10 +67,7 @@ export async function POST(req: Request) {
     const { emailOrUsername, password, twoFactorCode } = parsed.data
 
     // Extract IP for rate limiting and audit
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      'unknown'
+    const ip = clientIp(req.headers) ?? 'unknown'
     const failKey = `auth:desktop:fail:${ip}`
 
     // Helper: track a failed attempt and emit a security audit event at threshold 3

@@ -12,11 +12,13 @@ import { sendTemplateEmail, VerificationCodeEmail } from '@/lib/emails'
 import { events } from '@/lib/events'
 import { processReferralSignup } from '@/lib/referrals'
 import { generateSecureToken, generateShortCode } from '@/lib/auth/service'
+import { clientIp } from '@/lib/security/client-ip'
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  name: z.string()
+  name: z
+    .string()
     .min(2, 'Username must be at least 2 characters')
     .max(50, 'Username must be at most 50 characters')
     .trim()
@@ -24,10 +26,7 @@ const registerSchema = z.object({
       (name) => !name.includes('@'),
       'Username cannot contain @ symbol (looks like an email)'
     )
-    .refine(
-      (name) => !name.includes(' '),
-      'Username cannot contain spaces'
-    ),
+    .refine((name) => !name.includes(' '), 'Username cannot contain spaces'),
   referralCode: z.string().optional(), // Referral code from query/body
 })
 
@@ -45,7 +44,7 @@ function generateUrlId() {
 export async function POST(req: Request) {
   try {
     // Rate limit: 5 registration attempts per minute per IP
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+    const ip = clientIp(req.headers) ?? 'unknown'
     const rateLimit = await rateLimiter.checkFixed(`register:${ip}`, 5, 60)
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -53,7 +52,9 @@ export async function POST(req: Request) {
         {
           status: 429,
           headers: {
-            'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+            'Retry-After': String(
+              Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
+            ),
             'X-RateLimit-Remaining': String(rateLimit.remaining),
           },
         }
@@ -70,10 +71,7 @@ export async function POST(req: Request) {
 
     const exists = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: body.email },
-          { name: body.name },
-        ]
+        OR: [{ email: body.email }, { name: body.name }],
       },
     })
 
@@ -137,7 +135,9 @@ export async function POST(req: Request) {
 
     // Assign default Spark plan if it exists
     try {
-      const spark = await prisma.product.findFirst({ where: { slug: 'spark', active: true } })
+      const spark = await prisma.product.findFirst({
+        where: { slug: 'spark', active: true },
+      })
       if (spark) {
         await prisma.subscription.create({
           data: {
@@ -177,7 +177,10 @@ export async function POST(req: Request) {
     if (body.referralCode) {
       void (async () => {
         try {
-          const result = await processReferralSignup(user.id, body.referralCode!)
+          const result = await processReferralSignup(
+            user.id,
+            body.referralCode!
+          )
           console.log(`[Referral] ${result.message}`)
         } catch (err) {
           console.error('Failed to process referral', err)
@@ -186,11 +189,15 @@ export async function POST(req: Request) {
     }
 
     // Emit auditable account.created event (fire-and-forget)
-    void events.emit('account.created', {
-      userId: user.id,
-      email: user.email ?? body.email,
-      method: 'signup',
-    }).catch((err) => console.error('[Events] Failed to emit account.created', err))
+    void events
+      .emit('account.created', {
+        userId: user.id,
+        email: user.email ?? body.email,
+        method: 'signup',
+      })
+      .catch((err) =>
+        console.error('[Events] Failed to emit account.created', err)
+      )
 
     return NextResponse.json({
       user: {
@@ -217,4 +224,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

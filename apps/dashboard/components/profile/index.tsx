@@ -505,8 +505,8 @@ export function ProfileClient({
             <GlassCardHeader>
               <GlassCardTitle>Referral Program</GlassCardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Earn $10 billing credits for each friend who signs up using your
-                referral link. They also get $10 credit!
+                Earn up to $10 in billing credits when a friend you refer makes
+                their first payment. They get $10 when they verify their email.
               </p>
             </GlassCardHeader>
             <GlassCardContent>

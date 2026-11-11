@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 
 import { describeDevice } from '@/lib/utils/user-agent'
+import { clientIp } from '@/lib/security/client-ip'
 
 export interface RequestLoginContext {
   ip?: string
@@ -38,11 +39,7 @@ export async function getRequestLoginContext(
     return { timeZone: validTimeZone(clientTimeZone) }
   }
 
-  const ip =
-    h.get('cf-connecting-ip') ||
-    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    h.get('x-real-ip') ||
-    undefined
+  const ip = clientIp(h)
 
   const country =
     h.get('cf-ipcountry') || h.get('x-vercel-ip-country') || undefined

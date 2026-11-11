@@ -37,6 +37,7 @@ With Docker Compose, `DATABASE_URL` and `REDIS_URL` are set for you. Set `POSTGR
 | `EMBERLY_LICENSE_KEY` | — | Your license key. Optional: you can also paste it in **Admin → Settings → License & branding**. See [License & Branding](/self-hosting/licensing). |
 | `EMBERLY_LICENSE_CHECKIN` | `true` | Set to `false` on servers that can't reach licenses.embrly.ca |
 | `EMBERLY_RUN_EVENT_WORKER` | `true` | Runs background jobs (emails, notifications, Discord alerts, OCR, malware scans) in the app process. Only set it to `false` if you run `bun run worker` as its own service. |
+| `TRUSTED_PROXY` | `1` | Who to trust for the visitor's IP address, used by rate limits. Set `cloudflare` if the site is behind Cloudflare, otherwise the number of reverse proxies in front of the app. Keep the app itself off the public internet, or visitors can fake their address. |
 | `NEXTAUTH_TRUSTED_ORIGINS` | — | Extra origins allowed to sign in, comma separated |
 | `NEXTAUTH_COOKIE_DOMAIN` | — | Share the session across subdomains, e.g. `.example.com` |
 | `EMBERLY_SKIP_MIGRATIONS` | `false` | Docker only: skip running migrations when the container starts |

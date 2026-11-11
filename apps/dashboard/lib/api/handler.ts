@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { loggers } from '@/lib/logger'
 import { LoggingContext } from '@/lib/logger/middleware'
+import { clientIp } from '@/lib/security/client-ip'
 
 const logger = loggers.api
 
@@ -60,7 +61,7 @@ export function withApiHandler<T = unknown>(
         method: req.method,
         url: req.url,
         userAgent: req.headers.get('user-agent'),
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+        ip: clientIp(req.headers),
       })
 
       if (options.requireAuth || options.requireAdmin) {

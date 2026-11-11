@@ -15,6 +15,7 @@ import { deleteLinodeBucket } from '@/lib/storage/providers/linode'
 import { deleteOVHStorageContainer } from '@/lib/storage/providers/ovhcloud'
 import { provisionBucketForUserSubscription } from '@/lib/storage/bucket-provisioning'
 import { stripeWebhookSecret } from '@/lib/config/env'
+import { rewardReferrerForPayment } from '@/lib/referrals'
 
 const logger = loggers.api
 
@@ -337,6 +338,16 @@ export async function POST(req: Request) {
               )
             }
 
+            if (session.payment_status === 'paid') {
+              await rewardReferrerForPayment(
+                user.id,
+                session.amount_total || 0,
+                session.id
+              ).catch((err) =>
+                logger.error('[Webhook] Referral reward failed', err)
+              )
+            }
+
             // Emit payment event - admin Discord notification is handled by event system
             await events.emit('billing.payment-succeeded', {
               userId: user.id,
@@ -421,6 +432,14 @@ export async function POST(req: Request) {
 
             // Log invoice payment
             const amountPaid = invoice.amount_paid || 0
+
+            await rewardReferrerForPayment(
+              user.id,
+              amountPaid,
+              invoice.id
+            ).catch((err) =>
+              logger.error('[Webhook] Referral reward failed', err)
+            )
 
             // Emit billing event
             await events.emit('billing.payment-succeeded', {

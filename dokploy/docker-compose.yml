@@ -1,6 +1,6 @@
 services:
   emberly:
-    image: ghcr.io/emberlyoss/emberly:latest
+    image: ghcr.io/emberlyoss/emberly:3.2.1
     restart: unless-stopped
     expose:
       - 3000
@@ -10,6 +10,7 @@ services:
       DATABASE_URL: postgresql://emberly:${POSTGRES_PASSWORD}@postgres:5432/emberly
       REDIS_URL: redis://redis:6379
       EMBERLY_RUN_EVENT_WORKER: ${EMBERLY_RUN_EVENT_WORKER:-true}
+      TRUSTED_PROXY: ${TRUSTED_PROXY:-1}
     volumes:
       - emberly-data:/data
     depends_on:

@@ -6,6 +6,17 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [3.2.2] - 2026-11-10
+
+### Upgrading
+
+- **Set `TRUSTED_PROXY` if you're behind Cloudflare or more than one reverse proxy.** Rate limits now read the visitor's address only from what your own proxies set. Use `TRUSTED_PROXY=cloudflare` behind Cloudflare, or the number of reverse proxies in front of the app (the default is `1`). If it's wrong, visitors can end up sharing one rate limit. Keep the app's own port off the public internet.
+
+### Security
+
+- **Referral credits could be generated with throwaway accounts.** Credits were given at signup, with no email verification, payment or limit, and could be applied to real Stripe invoices where billing is on. A referred account now gets its credit after verifying its email. The referrer's credit comes after that account's first payment, is never more than the amount paid, needs a verified referrer, and stops after 10 rewarded referrals. Referrals between the same mailbox are refused, including plus-addressed and dotted Gmail variants. Reported by [kta1kri](https://github.com/kta1kri).
+- **Rate limits trusted a header visitors can set.** Registration, password reset, resend verification, desktop sign-in, device sign-in, contact, file password and signed-out OCR limits used the first `X-Forwarded-For` value, so an attacker could change it on every request. They now use one helper that only trusts your proxies, configured with `TRUSTED_PROXY`.
+
 ## [3.2.1] - 2026-10-27
 
 ### Added
