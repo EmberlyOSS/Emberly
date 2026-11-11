@@ -1,6 +1,7 @@
 import { compare } from 'bcryptjs'
 import { randomBytes, scrypt } from 'crypto'
 import { promisify } from 'util'
+import { clientIp } from '@/lib/security/client-ip'
 
 const scryptAsync = promisify(scrypt) as (
   password: string,
@@ -55,15 +56,8 @@ function bucket(key: string, now: number): Attempts {
   return entry
 }
 
-/** The caller's address, as reported by Cloudflare or the reverse proxy. */
 export function clientAddress(headers?: Headers | null): string {
-  if (!headers) return 'unknown'
-  return (
-    headers.get('cf-connecting-ip') ||
-    headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    headers.get('x-real-ip') ||
-    'unknown'
-  )
+  return clientIp(headers) ?? 'unknown'
 }
 
 /** Why a new file password can't be used, or null when it's fine. */

@@ -109,7 +109,7 @@ export function RegisterForm() {
         </p>
         {referralCode && (
           <p className="text-sm text-primary font-medium">
-            🎉 Invited by a friend — you&apos;ll both get credits when you join!
+            🎉 Invited by a friend — verify your email to get your credits!
           </p>
         )}
       </div>

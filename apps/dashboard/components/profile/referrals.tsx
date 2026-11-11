@@ -84,14 +84,18 @@ export function ProfileReferrals() {
       }
 
       const result = await res.json()
-      setStats((prev) => prev ? { ...prev, referralCode: result.referralCode } : null)
+      setStats((prev) =>
+        prev ? { ...prev, referralCode: result.referralCode } : null
+      )
       setCustomCode('')
       toast({
         title: 'Success!',
         description: 'Your referral code has been created',
       })
     } catch (error) {
-      setCodeError(error instanceof Error ? error.message : 'Failed to create code')
+      setCodeError(
+        error instanceof Error ? error.message : 'Failed to create code'
+      )
       toast({
         title: 'Error',
         description: codeError,
@@ -170,7 +174,9 @@ export function ProfileReferrals() {
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">Create Your Referral Code</h3>
           <p className="text-sm text-muted-foreground">
-            Set a custom referral code to share with friends. When they sign up using your link, you both receive $10 in billing credits!
+            Set a custom referral code to share with friends. They get $10 in
+            billing credits when they verify their email, and you get up to $10
+            when they make their first payment.
           </p>
 
           <form onSubmit={handleCreateCode} className="space-y-3">
@@ -202,7 +208,9 @@ export function ProfileReferrals() {
             </div>
 
             <div className="text-xs text-muted-foreground space-y-1">
-              <p className="break-words">• 3-30 characters (letters, numbers, dashes, underscores)</p>
+              <p className="break-words">
+                • 3-30 characters (letters, numbers, dashes, underscores)
+              </p>
               <p className="break-words">• Example: my-name or username123</p>
             </div>
 
@@ -216,12 +224,22 @@ export function ProfileReferrals() {
 
         <div className="p-3 sm:p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10">
           <div className="text-sm space-y-2">
-            <div className="font-semibold text-blue-600 dark:text-blue-400">How Billing Credits Work</div>
+            <div className="font-semibold text-blue-600 dark:text-blue-400">
+              How Billing Credits Work
+            </div>
             <ul className="space-y-1.5 text-muted-foreground text-xs ml-3 sm:ml-4 list-disc">
-              <li className="break-words">Credits are automatically applied to your next purchase</li>
-              <li className="break-words">They reduce the amount you owe on subscriptions or add-ons</li>
-              <li className="break-words">Credits are applied at checkout before payment</li>
-              <li className="break-words">Any remaining balance is charged to your payment method</li>
+              <li className="break-words">
+                Credits are automatically applied to your next purchase
+              </li>
+              <li className="break-words">
+                They reduce the amount you owe on subscriptions or add-ons
+              </li>
+              <li className="break-words">
+                Credits are applied at checkout before payment
+              </li>
+              <li className="break-words">
+                Any remaining balance is charged to your payment method
+              </li>
             </ul>
           </div>
         </div>
@@ -235,7 +253,9 @@ export function ProfileReferrals() {
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Your Referral Code</h3>
         <p className="text-sm text-muted-foreground">
-          Share your unique referral code with friends. When they sign up using your link, you both receive $10 in billing credits!
+          Share your unique referral code with friends. They get $10 in billing
+          credits when they verify their email, and you get up to $10 when they
+          make their first payment.
         </p>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-lg">
@@ -243,33 +263,33 @@ export function ProfileReferrals() {
             {stats.referralCode}
           </code>
           <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={copyToClipboard}
-            className="gap-2 flex-1 sm:flex-none"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy Link
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={shareReferral}
-            className="gap-2 flex-1 sm:flex-none"
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyToClipboard}
+              className="gap-2 flex-1 sm:flex-none"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy Link
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={shareReferral}
+              className="gap-2 flex-1 sm:flex-none"
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
           </div>
         </div>
       </div>
@@ -277,16 +297,23 @@ export function ProfileReferrals() {
       {/* Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
-          <div className="text-sm text-muted-foreground mb-1">Billing Credits</div>
-          <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400 break-all">${stats.totalCredits.toFixed(2)}
+          <div className="text-sm text-muted-foreground mb-1">
+            Billing Credits
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400 break-all">
+            ${stats.totalCredits.toFixed(2)}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {stats.totalCredits > 0 ? 'Applied to next purchase' : 'Earned from referrals'}
+            {stats.totalCredits > 0
+              ? 'Applied to next purchase'
+              : 'Earned from referrals'}
           </div>
         </div>
 
         <div className="p-4 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20">
-          <div className="text-sm text-muted-foreground mb-1">Total Referrals</div>
+          <div className="text-sm text-muted-foreground mb-1">
+            Total Referrals
+          </div>
           <div className="text-3xl font-bold">{stats.referralCount}</div>
           <div className="text-xs text-muted-foreground mt-1">
             Users who joined
@@ -297,10 +324,9 @@ export function ProfileReferrals() {
           <div className="text-sm text-muted-foreground mb-1">Credited</div>
           <div className="text-3xl font-bold">{stats.creditedCount}</div>
           <div className="text-xs text-muted-foreground mt-1">
-            {stats.lastCreditedAt 
+            {stats.lastCreditedAt
               ? `Last on ${new Date(stats.lastCreditedAt).toLocaleDateString()}`
-              : 'No credits yet'
-            }
+              : 'No credits yet'}
           </div>
         </div>
       </div>
@@ -308,12 +334,22 @@ export function ProfileReferrals() {
       {/* How it Works Section */}
       <div className="p-3 sm:p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10">
         <div className="text-sm space-y-2">
-          <div className="font-semibold text-blue-600 dark:text-blue-400">How Billing Credits Work</div>
+          <div className="font-semibold text-blue-600 dark:text-blue-400">
+            How Billing Credits Work
+          </div>
           <ul className="space-y-1.5 text-muted-foreground text-xs ml-3 sm:ml-4 list-disc">
-            <li className="break-words">Credits are automatically applied to your next purchase</li>
-            <li className="break-words">They reduce the amount you owe on subscriptions or add-ons</li>
-            <li className="break-words">Credits are applied at checkout before payment</li>
-            <li className="break-words">Any remaining balance is charged to your payment method</li>
+            <li className="break-words">
+              Credits are automatically applied to your next purchase
+            </li>
+            <li className="break-words">
+              They reduce the amount you owe on subscriptions or add-ons
+            </li>
+            <li className="break-words">
+              Credits are applied at checkout before payment
+            </li>
+            <li className="break-words">
+              Any remaining balance is charged to your payment method
+            </li>
           </ul>
         </div>
       </div>
@@ -329,8 +365,12 @@ export function ProfileReferrals() {
                 className="p-3 rounded-lg bg-muted/30 dark:bg-black/5 border border-border/50 dark:border-border/20 flex items-center justify-between"
               >
                 <div>
-                  <div className="font-medium">{referral.name || 'Unknown'}</div>
-                  <div className="text-sm text-muted-foreground">{referral.email}</div>
+                  <div className="font-medium">
+                    {referral.name || 'Unknown'}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {referral.email}
+                  </div>
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
                   {new Date(referral.createdAt).toLocaleDateString()}
@@ -351,4 +391,3 @@ export function ProfileReferrals() {
     </div>
   )
 }
-

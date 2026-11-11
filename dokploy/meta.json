@@ -1,0 +1,16 @@
+{
+  "id": "emberly",
+  "name": "Emberly",
+  "version": "3.2.1",
+  "description": "Emberly is a self-hosted file sharing platform with short links, pastes, custom domains and ShareX, Flameshot and desktop app support. Deploy it on Dokploy with Docker Compose, PostgreSQL and Redis in a few clicks.",
+  "logo": "emberly.svg",
+  "links": {
+    "github": "https://github.com/EmberlyOSS/Emberly",
+    "website": "https://embrly.ca",
+    "docs": "https://docs.embrly.ca"
+  },
+  "tags": ["file-sharing", "storage", "media-system"],
+  "seoTitle": "Emberly Docker Compose Setup",
+  "seoDescription": "Self-hosted file sharing, short links and pastes. Deploy Emberly with Docker Compose on Dokploy in minutes.",
+  "newConfig": true
+}
