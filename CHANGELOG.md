@@ -6,7 +6,7 @@ The format is based on "Keep a Changelog" and follows [Semantic Versioning](http
 
 ## [Unreleased]
 
-## [3.2.1] - 2026-11-10
+## [3.2.2] - 2026-11-10
 
 ### Upgrading
 
